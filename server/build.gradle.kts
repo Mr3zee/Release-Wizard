@@ -37,3 +37,36 @@ dependencies {
     testImplementation(libs.kotlin.testJunit)
     testImplementation(libs.koin.test)
 }
+
+// Custom task to compile wasm frontend and prepare it for serving statically
+val prepareWebApp = tasks.register<Copy>("prepareWebApp") {
+    description = "Compiles wasm frontend in production mode and copies it to server's resources"
+    group = "distribution"
+
+    val composeApp = project.rootProject.project("composeApp")
+
+    // Depend on the wasm frontend production build task
+    dependsOn(composeApp.tasks.named("wasmJsBrowserDistribution"))
+
+    // Define the task inputs and outputs for better caching
+    val sourceDir = composeApp.layout.buildDirectory.dir("dist/wasmJs/productionExecutable")
+    val targetDir = project.layout.projectDirectory.dir("src/main/resources/static")
+    
+    // Configure the copy task
+    from(sourceDir)
+    into(targetDir)
+    
+    // Log after copying
+    doLast {
+        logger.lifecycle("Wasm frontend files copied to ${targetDir.asFile.absolutePath}")
+    }
+}
+
+// Task to run the web app (prepare + run server)
+tasks.register("runWebApp") {
+    description = "Compiles wasm frontend in production mode and serves it statically on root"
+    group = "application"
+    
+    // Just depend on the run task, which now depends on prepareWebApp
+    dependsOn(prepareWebApp)
+}
