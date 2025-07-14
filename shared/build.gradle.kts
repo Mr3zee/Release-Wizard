@@ -41,10 +41,15 @@ kotlin {
     
     sourceSets {
         commonMain.dependencies {
-            // put your Multiplatform dependencies here
+            // Koin
+            implementation(libs.koin.core)
+            
+            // Kotlinx-RPC
+            implementation(libs.kotlinx.rpc.core)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+            implementation(libs.koin.test)
         }
     }
 }
