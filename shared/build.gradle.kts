@@ -15,13 +15,13 @@ kotlin {
             jvmTarget.set(JvmTarget.JVM_11)
         }
     }
-    
+
     iosX64()
     iosArm64()
     iosSimulatorArm64()
-    
+
     jvm()
-    
+
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
         browser {
@@ -29,6 +29,22 @@ kotlin {
             val projectDirPath = project.projectDir.path
             commonWebpackConfig {
                 devServer = (devServer ?: KotlinWebpackConfig.DevServer()).apply {
+                    port = 3000
+                    proxy = (proxy ?: mutableListOf()).apply {
+                        add(
+                            KotlinWebpackConfig.DevServer.Proxy(
+                                context = mutableListOf("/api"),
+                                target = "http://localhost:8080"
+                            )
+
+                        )
+                        add(
+                            KotlinWebpackConfig.DevServer.Proxy(
+                                context = mutableListOf("/rpc"),
+                                target = "ws://localhost:8080"
+                            )
+                        )
+                    }
                     static = (static ?: mutableListOf()).apply {
                         // Serve sources to debug inside browser
                         add(rootDirPath)
@@ -38,12 +54,12 @@ kotlin {
             }
         }
     }
-    
+
     sourceSets {
         commonMain.dependencies {
             // Koin
             implementation(libs.koin.core)
-            
+
             // Kotlinx-RPC
             implementation(libs.kotlinx.rpc.core)
         }
