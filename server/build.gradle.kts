@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.kotlinJvm)
     alias(libs.plugins.ktor)
+    alias(libs.plugins.kxrpc)
+    alias(libs.plugins.kotlinSerialization)
     application
 }
 
@@ -24,14 +26,33 @@ dependencies {
     implementation(libs.exposed.dao)
     implementation(libs.exposed.jdbc)
     implementation(libs.exposed.kotlin.datetime)
+    implementation(libs.exposed.json)
     
     // Koin
     implementation(libs.koin.core)
     implementation(libs.koin.ktor)
     
-    // Kotlinx-RPC
-    implementation(libs.kotlinx.rpc.krpc.ktor.server)
-    implementation(libs.kotlinx.rpc.krpc.serialization.json)
+    // Ktor Client for integrations
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.cio)
+    implementation("io.ktor:ktor-client-content-negotiation:${libs.versions.ktor.get()}")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:${libs.versions.ktor.get()}")
+    
+    // Kotlinx libraries
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.datetime)
+    implementation(libs.kotlinx.serialization.json)
+    
+    // Database
+    implementation("com.h2database:h2:2.2.220")
+    
+    // Security
+    implementation("io.ktor:ktor-server-auth-jvm:${libs.versions.ktor.get()}")
+    implementation("io.ktor:ktor-server-auth-jwt-jvm:${libs.versions.ktor.get()}")
+    implementation("io.ktor:ktor-server-content-negotiation-jvm:${libs.versions.ktor.get()}")
+    implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:${libs.versions.ktor.get()}")
+    implementation("io.ktor:ktor-server-websockets-jvm:${libs.versions.ktor.get()}")
+    implementation("org.mindrot:jbcrypt:0.4")
 
     testImplementation(libs.ktor.serverTestHost)
     testImplementation(libs.kotlin.testJunit)

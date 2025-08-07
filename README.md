@@ -1,26 +1,121 @@
-This is a Kotlin Multiplatform project targeting Android, iOS, Web, Server.
+# Release Wizard
 
-* `/composeApp` is for code that will be shared across your Compose Multiplatform applications.
-  It contains several subfolders:
-  - `commonMain` is for code that’s common for all targets.
-  - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
-    For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
-    `iosMain` would be the right folder for such calls.
+A powerful Kotlin release automation tool built with Compose Multiplatform. Release Wizard helps you create, manage, and execute complex release pipelines using a visual block-based editor.
 
-* `/iosApp` contains iOS applications. Even if you’re sharing your UI with Compose Multiplatform, 
-  you need this entry point for your iOS app. This is also where you should add SwiftUI code for your project.
+## Features
 
-* `/server` is for the Ktor server application.
+- **Visual Pipeline Builder**: Drag-and-drop interface for creating release workflows
+- **Block-Based System**: Pre-built blocks for common tasks (Slack messages, TeamCity builds, GitHub actions, etc.)
+- **Multi-Platform Support**: Desktop, Web, and Mobile applications
+- **Real-time Monitoring**: Live updates during release execution
+- **Connection Management**: Secure integration with external services
+- **Flexible Parameters**: Project and block-level parameter system
+- **Retry Logic**: Automatic retry and manual restart capabilities
 
-* `/shared` is for the code that will be shared between all targets in the project.
-  The most important subfolder is `commonMain`. If preferred, you can add code to the platform-specific folders here too.
+## Architecture
 
+### Project Structure
 
-Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html),
-[Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform/#compose-multiplatform),
-[Kotlin/Wasm](https://kotl.in/wasm/)…
+* `/composeApp` - Compose Multiplatform UI application (Desktop, Web, Mobile)
+  - `commonMain` - Shared UI code across all platforms
+  - Platform-specific folders for platform-specific implementations
 
-We would appreciate your feedback on Compose/Web and Kotlin/Wasm in the public Slack channel [#compose-web](https://slack-chats.kotlinlang.org/c/compose-web).
-If you face any issues, please report them on [YouTrack](https://youtrack.jetbrains.com/newIssue?project=CMP).
+* `/server` - Ktor server application for backend API and web hosting
+  - REST API endpoints for project and release management
+  - Real-time WebSocket connections for live updates
+  - Static file serving for web frontend
 
-You can open the web application by running the `:composeApp:wasmJsBrowserDevelopmentRun` Gradle task.
+* `/shared` - Shared business logic and models
+  - Domain models (Project, Release, Block, Connection, User)
+  - RPC service interfaces using kotlinx-rpc
+  - Common utilities and constants
+
+* `/iosApp` - iOS application entry point
+
+### Tech Stack
+
+- **Frontend**: Compose Multiplatform with Material 3 Design
+- **Backend**: Ktor with kotlinx-rpc for type-safe API communication
+- **Database**: Exposed ORM with R2DBC for reactive database access
+- **Dependency Injection**: Koin
+- **Serialization**: kotlinx.serialization
+- **Real-time Communication**: kotlinx-rpc with WebSocket support
+
+## Block Types
+
+- **Slack Message**: Send notifications to Slack channels
+- **TeamCity Build**: Trigger and monitor TeamCity builds
+- **GitHub Action**: Execute GitHub workflow actions
+- **GitHub Release**: Create and manage GitHub releases
+- **Maven Central**: Monitor publication status on Maven Central
+- **User Action**: Pause for manual user confirmation
+- **Container**: Group blocks into logical containers
+
+## Running the Application
+
+### Web Application
+```bash
+# Build and serve the web app
+./gradlew server:runWebApp
+```
+
+Then open http://localhost:8080 in your browser.
+
+### Desktop Application
+```bash
+# Run the desktop app
+./gradlew composeApp:run
+```
+
+### Development Mode (Web)
+```bash
+# Run with hot reload
+./gradlew composeApp:wasmJsBrowserDevelopmentRun
+```
+
+### Mobile Development
+
+For iOS development, open the project in Xcode:
+```bash
+open iosApp/iosApp.xcodeproj
+```
+
+## Development
+
+### Building
+```bash
+# Build all modules
+./gradlew build
+
+# Build specific module
+./gradlew shared:build
+./gradlew composeApp:build
+./gradlew server:build
+```
+
+### Testing
+```bash
+# Run all tests
+./gradlew test
+```
+
+## Configuration
+
+The application supports various connection types that need to be configured:
+
+- **Slack**: Bot tokens and workspace configuration
+- **TeamCity**: Server URL and authentication
+- **GitHub**: Personal access tokens
+- **Maven Central**: Developer credentials
+
+Connections are managed securely with encrypted credential storage.
+
+## Contributing
+
+This project uses Kotlin Multiplatform with Compose Multiplatform for UI development. Key technologies:
+
+- [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)
+- [Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform/)
+- [Ktor](https://ktor.io/)
+- [kotlinx-rpc](https://github.com/Kotlin/kotlinx-rpc)
+- [Exposed](https://github.com/JetBrains/Exposed)
