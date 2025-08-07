@@ -8,7 +8,6 @@ import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -39,6 +38,8 @@ private val LightColors = ColorScheme(
     surfaceVariant = Color(0xFFE5E5EA),
     onSurfaceVariant = Color(0xFF2C2C2E),
 
+    surfaceTint = Color(0xFF0A84FF),
+
     error = Color(0xFFFF3B30),
     onError = Color.White,
     errorContainer = Color(0xFFFFDAD4),
@@ -58,20 +59,6 @@ private val LightColors = ColorScheme(
 
     inverseSurface = Color(0xFF1C1C1E),
     inverseOnSurface = Color(0xFFF2F2F7),
-
-    // Deprecated params, but required in constructor on some platforms
-    primaryFixed = Color(0xFF0A84FF),
-    primaryFixedDim = Color(0xFF0A84FF),
-    onPrimaryFixed = Color.White,
-    onPrimaryFixedVariant = Color.White,
-    secondaryFixed = Color(0xFF8E8E93),
-    secondaryFixedDim = Color(0xFF8E8E93),
-    onSecondaryFixed = Color.White,
-    onSecondaryFixedVariant = Color.White,
-    tertiaryFixed = Color(0xFF30D158),
-    tertiaryFixedDim = Color(0xFF30D158),
-    onTertiaryFixed = Color.White,
-    onTertiaryFixedVariant = Color.White,
 )
 
 private val DarkColors = LightColors.copy(
@@ -89,7 +76,6 @@ private val MacTypography = Typography(
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.SemiBold,
         fontSize = 34.sp,
-        platformStyle = PlatformTextStyle(includeFontPadding = false)
     ),
     displayMedium = TextStyle(fontSize = 28.sp, fontWeight = FontWeight.SemiBold),
     displaySmall = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.SemiBold),
