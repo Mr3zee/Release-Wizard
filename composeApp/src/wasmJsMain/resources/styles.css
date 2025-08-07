@@ -4,4 +4,9 @@ html, body {
     margin: 0;
     padding: 0;
     overflow: hidden;
+    background-color: #F5F5F7; /* macOS window background */
+    color: #1C1C1E; /* macOS label color */
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }

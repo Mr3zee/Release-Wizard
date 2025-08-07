@@ -6,6 +6,8 @@ import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
+    alias(libs.plugins.kxrpc)
+    alias(libs.plugins.kotlinSerialization)
 }
 
 kotlin {
@@ -62,6 +64,11 @@ kotlin {
 
             // Kotlinx-RPC
             implementation(libs.kotlinx.rpc.core)
+            
+            // Kotlinx libraries
+            implementation(libs.kotlinx.coroutines.core)
+            implementation(libs.kotlinx.datetime)
+            implementation(libs.kotlinx.serialization.json)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

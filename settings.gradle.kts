@@ -14,6 +14,7 @@ pluginManagement {
         }
         mavenCentral()
         gradlePluginPortal()
+        maven("https://maven.pkg.jetbrains.space/public/p/krpc/grpc")
     }
 }
 
@@ -27,6 +28,7 @@ dependencyResolutionManagement {
             }
         }
         mavenCentral()
+        maven("https://maven.pkg.jetbrains.space/public/p/krpc/grpc")
     }
 }
 
