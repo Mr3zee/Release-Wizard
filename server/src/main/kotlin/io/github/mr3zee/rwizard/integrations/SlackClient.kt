@@ -34,7 +34,6 @@ class SlackClient(
 
     companion object {
         const val BASE_URL = "https://slack.com/api"
-        const val RATE_LIMIT_DELAY = 1000L // 1 second between requests
     }
 
     /**
@@ -65,8 +64,6 @@ class SlackClient(
      * Fetch list of channels accessible to the bot
      */
     suspend fun getChannels(excludeArchived: Boolean = true): Result<List<SlackChannel>> = try {
-        delay(RATE_LIMIT_DELAY) // Simple rate limiting
-        
         val response = client.get("$BASE_URL/conversations.list") {
             headers {
                 append("Authorization", "Bearer ${credentials.botToken}")
@@ -106,8 +103,6 @@ class SlackClient(
         message: String,
         threadTs: String? = null
     ): Result<SlackMessageResponse> = try {
-        delay(RATE_LIMIT_DELAY) // Simple rate limiting
-        
         val response = client.post("$BASE_URL/chat.postMessage") {
             headers {
                 append("Authorization", "Bearer ${credentials.botToken}")
@@ -141,8 +136,6 @@ class SlackClient(
         messageTs: String,
         newMessage: String
     ): Result<SlackMessageResponse> = try {
-        delay(RATE_LIMIT_DELAY)
-        
         val response = client.post("$BASE_URL/chat.update") {
             headers {
                 append("Authorization", "Bearer ${credentials.botToken}")
