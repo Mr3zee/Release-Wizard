@@ -7,12 +7,12 @@ import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
-import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
+import sun.jvm.hotspot.HelloWorld.e
 
 /**
  * GitHub API integration client for Release Wizard
@@ -44,8 +44,8 @@ class GitHubClient(
         val response = client.get("$BASE_URL/user") {
             headers {
                 append("Authorization", "token ${credentials.token}")
-                append("Accept", "application/vnd.github.v3+json")
-                append("User-Agent", "Release-Wizard")
+                append("Accept", MediaType.GITHUB_V3_JSON.value)
+                append("User-Agent", UserAgent.RELEASE_WIZARD.value)
             }
         }
         
@@ -61,22 +61,22 @@ class GitHubClient(
      * Fetch repositories accessible to the authenticated user
      */
     suspend fun getRepositories(
-        visibility: String = "all", // all, owner, public, private
-        affiliation: String = "owner,collaborator", // owner, collaborator, organization_member
-        sort: String = "updated" // created, updated, pushed, full_name
+        visibility: GitHubRepoVisibility = GitHubRepoVisibility.ALL,
+        affiliation: Set<GitHubRepoAffiliation> = setOf(GitHubRepoAffiliation.OWNER, GitHubRepoAffiliation.COLLABORATOR),
+        sort: GitHubRepoSort = GitHubRepoSort.UPDATED
     ): Result<List<GitHubRepository>> = try {
         delay(RATE_LIMIT_DELAY) // Simple rate limiting
-        
+
         val response = client.get("$BASE_URL/user/repos") {
             headers {
                 append("Authorization", "token ${credentials.token}")
-                append("Accept", "application/vnd.github.v3+json")
-                append("User-Agent", "Release-Wizard")
+                append("Accept", MediaType.GITHUB_V3_JSON.value)
+                append("User-Agent", UserAgent.RELEASE_WIZARD.value)
             }
             url {
-                parameters.append("visibility", visibility)
-                parameters.append("affiliation", affiliation)
-                parameters.append("sort", sort)
+                parameters.append("visibility", visibility.api)
+                parameters.append("affiliation", affiliation.joinToString(",") { it.api })
+                parameters.append("sort", sort.api)
                 parameters.append("per_page", "100")
             }
         }
@@ -107,8 +107,8 @@ class GitHubClient(
         val response = client.get("$BASE_URL/repos/$owner/$repo") {
             headers {
                 append("Authorization", "token ${credentials.token}")
-                append("Accept", "application/vnd.github.v3+json")
-                append("User-Agent", "Release-Wizard")
+                append("Accept", MediaType.GITHUB_V3_JSON.value)
+                append("User-Agent", UserAgent.RELEASE_WIZARD.value)
             }
         }
         
@@ -129,8 +129,8 @@ class GitHubClient(
         val response = client.get("$BASE_URL/repos/$owner/$repo/branches") {
             headers {
                 append("Authorization", "token ${credentials.token}")
-                append("Accept", "application/vnd.github.v3+json")
-                append("User-Agent", "Release-Wizard")
+                append("Accept", MediaType.GITHUB_V3_JSON.value)
+                append("User-Agent", UserAgent.RELEASE_WIZARD.value)
             }
             url {
                 parameters.append("per_page", "100")
@@ -157,10 +157,10 @@ class GitHubClient(
         
         val response = client.post("$BASE_URL/repos/$owner/$repo/releases") {
             headers {
-                append("Authorization", "token ${credentials.token}")
-                append("Accept", "application/vnd.github.v3+json")
-                append("User-Agent", "Release-Wizard")
-                append("Content-Type", "application/json")
+                append("Authorization", "token ${credentials.token"})
+                append("Accept", MediaType.GITHUB_V3_JSON.value)
+                append("User-Agent", UserAgent.RELEASE_WIZARD.value)
+                append("Content-Type", MediaType.APPLICATION_JSON.value)
             }
             setBody(request)
         }
@@ -182,8 +182,8 @@ class GitHubClient(
         val response = client.get("$BASE_URL/repos/$owner/$repo/releases") {
             headers {
                 append("Authorization", "token ${credentials.token}")
-                append("Accept", "application/vnd.github.v3+json")
-                append("User-Agent", "Release-Wizard")
+                append("Accept", MediaType.GITHUB_V3_JSON.value)
+                append("User-Agent", UserAgent.RELEASE_WIZARD.value)
             }
             url {
                 parameters.append("per_page", "50")
@@ -205,18 +205,18 @@ class GitHubClient(
         uploadUrl: String,
         fileName: String,
         fileContent: ByteArray,
-        contentType: String = "application/octet-stream"
+        contentType: MediaType = MediaType.APPLICATION_OCTET_STREAM
     ): Result<GitHubReleaseAsset> = try {
         delay(RATE_LIMIT_DELAY)
-        
+
         // GitHub upload URL needs to be modified to include the filename
         val finalUploadUrl = uploadUrl.replace("{?name,label}", "?name=$fileName")
-        
+
         val response = client.post(finalUploadUrl) {
             headers {
                 append("Authorization", "token ${credentials.token}")
-                append("Content-Type", contentType)
-                append("User-Agent", "Release-Wizard")
+                append("Content-Type", contentType.value)
+                append("User-Agent", UserAgent.RELEASE_WIZARD.value)
             }
             setBody(fileContent)
         }
