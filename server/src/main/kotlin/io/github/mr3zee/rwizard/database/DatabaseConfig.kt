@@ -12,8 +12,23 @@ object DatabaseConfig {
     lateinit var database: R2dbcDatabase
 
     fun init() {
+        // Build PostgreSQL R2DBC URL from environment variables with sensible defaults
+        fun env(name: String, default: String? = null): String? =
+            System.getenv(name) ?: System.getProperty(name) ?: default
+
+        val url = env("POSTGRES_URL")
+            ?: env("DATABASE_URL")
+            ?: run {
+                val host = env("DB_HOST", "localhost")!!
+                val port = env("DB_PORT", "5432")!!
+                val dbName = env("DB_NAME", "rwizard")!!
+                val user = env("DB_USER", "postgres")!!
+                val password = env("DB_PASSWORD", "postgres")!!
+                "r2dbc:postgresql://$host:$port/$dbName?user=$user&password=$password"
+            }
+
         database = R2dbcDatabase.connect(
-            "r2dbc:h2:file:///./data/rwizard",
+            url,
             databaseConfig = {
                 defaultMaxAttempts = 3
                 defaultR2dbcIsolationLevel = IsolationLevel.READ_COMMITTED

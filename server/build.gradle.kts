@@ -29,7 +29,7 @@ dependencies {
     implementation(libs.exposed.json)
     // Exposed R2DBC
     implementation("org.jetbrains.exposed:exposed-r2dbc:${libs.versions.exposed.get()}")
-    implementation(libs.r2dbc.h2)
+    implementation(libs.r2dbc.postgresql)
     
     // Koin
     implementation(libs.koin.core)
@@ -46,8 +46,6 @@ dependencies {
     implementation(libs.kotlinx.datetime)
     implementation(libs.kotlinx.serialization.json)
     
-    // Database
-    implementation("com.h2database:h2:2.2.220")
     
     // Security
     implementation("io.ktor:ktor-server-auth-jvm:${libs.versions.ktor.get()}")
