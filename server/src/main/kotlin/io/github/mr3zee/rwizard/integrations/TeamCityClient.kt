@@ -50,7 +50,7 @@ class TeamCityClient(
         val response = client.get("${credentials.serverUrl}/app/rest/server") {
             headers {
                 append("Authorization", authHeader)
-                append("Accept", "application/json")
+                append("Accept", MediaType.APPLICATION_JSON.value)
             }
         }
         
@@ -77,7 +77,7 @@ class TeamCityClient(
         val response = client.get(url) {
             headers {
                 append("Authorization", authHeader)
-                append("Accept", "application/json")
+                append("Accept", MediaType.APPLICATION_JSON.value)
             }
         }
         
@@ -107,7 +107,7 @@ class TeamCityClient(
         val response = client.get("${credentials.serverUrl}/app/rest/projects") {
             headers {
                 append("Authorization", authHeader)
-                append("Accept", "application/json")
+                append("Accept", MediaType.APPLICATION_JSON.value)
             }
         }
         
@@ -148,8 +148,8 @@ class TeamCityClient(
         val response = client.post("${credentials.serverUrl}/app/rest/buildQueue") {
             headers {
                 append("Authorization", authHeader)
-                append("Accept", "application/json")
-                append("Content-Type", "application/json")
+                append("Accept", MediaType.APPLICATION_JSON.value)
+                append("Content-Type", MediaType.APPLICATION_JSON.value)
             }
             setBody(buildRequest)
         }
@@ -171,7 +171,7 @@ class TeamCityClient(
         val response = client.get("${credentials.serverUrl}/app/rest/builds/id:$buildId") {
             headers {
                 append("Authorization", authHeader)
-                append("Accept", "application/json")
+                append("Accept", MediaType.APPLICATION_JSON.value)
             }
         }
         
@@ -192,7 +192,7 @@ class TeamCityClient(
         val response = client.get("${credentials.serverUrl}/app/rest/builds") {
             headers {
                 append("Authorization", authHeader)
-                append("Accept", "application/json")
+                append("Accept", MediaType.APPLICATION_JSON.value)
             }
             url {
                 parameters.append("locator", "buildType:$buildTypeId,count:$count")
@@ -225,8 +225,8 @@ class TeamCityClient(
         client.post("${credentials.serverUrl}/app/rest/builds/id:$buildId") {
             headers {
                 append("Authorization", authHeader)
-                append("Accept", "application/json")
-                append("Content-Type", "application/json")
+                append("Accept", MediaType.APPLICATION_JSON.value)
+                append("Content-Type", MediaType.APPLICATION_JSON.value)
             }
             setBody(cancelRequest)
         }

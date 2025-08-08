@@ -43,7 +43,7 @@ class SlackClient(
         val response = client.get("$BASE_URL/auth.test") {
             headers {
                 append("Authorization", "Bearer ${credentials.botToken}")
-                append("Content-Type", "application/json")
+                append("Content-Type", MediaType.APPLICATION_JSON.value)
             }
         }
         
@@ -70,7 +70,11 @@ class SlackClient(
             }
             url {
                 parameters.append("exclude_archived", excludeArchived.toString())
-                parameters.append("types", "public_channel,private_channel")
+                parameters.append(
+                    "types",
+                    setOf(SlackConversationType.PUBLIC_CHANNEL, SlackConversationType.PRIVATE_CHANNEL)
+                        .joinToString(",") { it.api }
+                )
                 parameters.append("limit", "200")
             }
         }
@@ -106,7 +110,7 @@ class SlackClient(
         val response = client.post("$BASE_URL/chat.postMessage") {
             headers {
                 append("Authorization", "Bearer ${credentials.botToken}")
-                append("Content-Type", "application/json")
+                append("Content-Type", MediaType.APPLICATION_JSON.value)
             }
             setBody(SlackMessageRequest(
                 channel = channelId,
@@ -139,7 +143,7 @@ class SlackClient(
         val response = client.post("$BASE_URL/chat.update") {
             headers {
                 append("Authorization", "Bearer ${credentials.botToken}")
-                append("Content-Type", "application/json")
+                append("Content-Type", MediaType.APPLICATION_JSON.value)
             }
             setBody(SlackUpdateMessageRequest(
                 channel = channelId,
