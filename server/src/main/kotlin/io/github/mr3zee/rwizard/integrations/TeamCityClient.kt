@@ -47,10 +47,10 @@ class TeamCityClient(
      * Test the TeamCity connection by fetching server information
      */
     suspend fun testConnection(): Result<TeamCityServerInfo> = try {
-        val response = client.get("${credentials.serverUrl}/app/rest/server") {
+        val response = client.get("${serverUrl}/app/rest/server") {
             headers {
                 append("Authorization", authHeader)
-                append("Accept", MediaType.APPLICATION_JSON.value)
+                append("Accept", ContentType.Application.Json.toString())
             }
         }
         
@@ -65,29 +65,29 @@ class TeamCityClient(
     /**
      * Fetch build configurations (build types) from TeamCity
      */
-    suspend fun getBuildConfigurations(projectId: String? = null): Result<List<TeamCityBuildConfiguration>> = try {
+    suspend fun getBuildConfigurations(projectId: String? = null): Result<List<TeamCityBuildConfig>> = try {
         delay(RATE_LIMIT_DELAY)
         
         val url = if (projectId != null) {
-            "${credentials.serverUrl}/app/rest/buildTypes?locator=project:$projectId"
+            "${serverUrl}/app/rest/buildTypes?locator=project:$projectId"
         } else {
-            "${credentials.serverUrl}/app/rest/buildTypes"
+            "${serverUrl}/app/rest/buildTypes"
         }
         
         val response = client.get(url) {
             headers {
                 append("Authorization", authHeader)
-                append("Accept", MediaType.APPLICATION_JSON.value)
+                append("Accept", ContentType.Application.Json.toString())
             }
         }
         
         val result = response.body<TeamCityBuildTypesResult>()
-        val buildConfigurations = result.buildType?.map { buildType ->
-            TeamCityBuildConfiguration(
+        val buildConfigurations: List<TeamCityBuildConfig> = result.buildType?.map { buildType ->
+            TeamCityBuildConfig(
                 id = buildType.id,
                 name = buildType.name,
-                projectName = buildType.projectName ?: "",
-                projectId = buildType.projectId ?: ""
+                projectId = buildType.projectId ?: "",
+                href = buildType.href
             )
         } ?: emptyList()
         
@@ -104,10 +104,10 @@ class TeamCityClient(
     suspend fun getProjects(): Result<List<TeamCityProject>> = try {
         delay(RATE_LIMIT_DELAY)
         
-        val response = client.get("${credentials.serverUrl}/app/rest/projects") {
+        val response = client.get("${serverUrl}/app/rest/projects") {
             headers {
                 append("Authorization", authHeader)
-                append("Accept", MediaType.APPLICATION_JSON.value)
+                append("Accept", ContentType.Application.Json.toString())
             }
         }
         
@@ -145,11 +145,11 @@ class TeamCityClient(
             comment = if (comment != null) TeamCityComment(text = comment) else null
         )
         
-        val response = client.post("${credentials.serverUrl}/app/rest/buildQueue") {
+        val response = client.post("${serverUrl}/app/rest/buildQueue") {
             headers {
                 append("Authorization", authHeader)
-                append("Accept", MediaType.APPLICATION_JSON.value)
-                append("Content-Type", MediaType.APPLICATION_JSON.value)
+                append("Accept", ContentType.Application.Json.toString())
+                append("Content-Type", ContentType.Application.Json.toString())
             }
             setBody(buildRequest)
         }
@@ -168,10 +168,10 @@ class TeamCityClient(
     suspend fun getBuildStatus(buildId: String): Result<TeamCityBuild> = try {
         delay(RATE_LIMIT_DELAY)
         
-        val response = client.get("${credentials.serverUrl}/app/rest/builds/id:$buildId") {
+        val response = client.get("${serverUrl}/app/rest/builds/id:$buildId") {
             headers {
                 append("Authorization", authHeader)
-                append("Accept", MediaType.APPLICATION_JSON.value)
+                append("Accept", ContentType.Application.Json.toString())
             }
         }
         
@@ -189,10 +189,10 @@ class TeamCityClient(
     suspend fun getRecentBuilds(buildTypeId: String, count: Int = 10): Result<List<TeamCityBuild>> = try {
         delay(RATE_LIMIT_DELAY)
         
-        val response = client.get("${credentials.serverUrl}/app/rest/builds") {
+        val response = client.get("${serverUrl}/app/rest/builds") {
             headers {
                 append("Authorization", authHeader)
-                append("Accept", MediaType.APPLICATION_JSON.value)
+                append("Accept", ContentType.Application.Json.toString())
             }
             url {
                 parameters.append("locator", "buildType:$buildTypeId,count:$count")
@@ -222,11 +222,11 @@ class TeamCityClient(
             )
         )
         
-        client.post("${credentials.serverUrl}/app/rest/builds/id:$buildId") {
+        client.post("${serverUrl}/app/rest/builds/id:$buildId") {
             headers {
                 append("Authorization", authHeader)
-                append("Accept", MediaType.APPLICATION_JSON.value)
-                append("Content-Type", MediaType.APPLICATION_JSON.value)
+                append("Accept", ContentType.Application.Json.toString())
+                append("Content-Type", ContentType.Application.Json.toString())
             }
             setBody(cancelRequest)
         }

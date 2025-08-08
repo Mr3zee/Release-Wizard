@@ -12,7 +12,6 @@ import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
-import sun.jvm.hotspot.HelloWorld.e
 
 /**
  * GitHub API integration client for Release Wizard
@@ -157,7 +156,7 @@ class GitHubClient(
         
         val response = client.post("$BASE_URL/repos/$owner/$repo/releases") {
             headers {
-                append("Authorization", "token ${credentials.token"})
+                append("Authorization", "token ${credentials.token}")
                 append("Accept", MediaType.GITHUB_V3_JSON.value)
                 append("User-Agent", UserAgent.RELEASE_WIZARD.value)
                 append("Content-Type", MediaType.APPLICATION_JSON.value)
