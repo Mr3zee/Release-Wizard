@@ -1,20 +1,30 @@
 package io.github.mr3zee.rwizard.database
 
-import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.transactions.transaction
+import io.github.mr3zee.rwizard.database.DatabaseConfig.database
+import io.r2dbc.spi.IsolationLevel
+import kotlinx.coroutines.runBlocking
+import org.jetbrains.exposed.v1.core.Transaction
+import org.jetbrains.exposed.v1.r2dbc.R2dbcDatabase
+import org.jetbrains.exposed.v1.r2dbc.SchemaUtils
+import org.jetbrains.exposed.v1.r2dbc.transactions.suspendTransaction
 
 object DatabaseConfig {
+    lateinit var database: R2dbcDatabase
+
     fun init() {
-        Database.connect(
-            url = "jdbc:h2:./data/rwizard;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;AUTO_SERVER=TRUE",
-            driver = "org.h2.Driver"
+        database = R2dbcDatabase.connect(
+            "r2dbc:h2:file:///./data/rwizard",
+            databaseConfig = {
+                defaultMaxAttempts = 3
+                defaultR2dbcIsolationLevel = IsolationLevel.READ_COMMITTED
+            }
         )
-        
-        createTables()
+        // Create tables on startup using a suspended transaction
+        runBlocking { createTables() }
     }
-    
-    private fun createTables() {
-        transaction {
+
+    private suspend fun createTables() {
+        tr {
             SchemaUtils.create(
                 Users,
                 UserCredentials,
@@ -31,5 +41,7 @@ object DatabaseConfig {
             )
         }
     }
-    
 }
+
+suspend fun <T> tr(block: suspend Transaction.() -> T): T =
+    suspendTransaction(db = database) { block() }

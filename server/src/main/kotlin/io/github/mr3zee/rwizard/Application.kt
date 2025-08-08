@@ -50,10 +50,5 @@ fun Application.module() {
         get("/api/health") {
             call.respond(mapOf("status" to "healthy", "timestamp" to System.currentTimeMillis()))
         }
-        
-        // Legacy API endpoint example
-        get("/api/greeting") {
-            call.respondText("Ktor: ${Greeting().greet()}", ContentType.Text.Plain)
-        }
     }
 }

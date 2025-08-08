@@ -1,27 +1,36 @@
+@file:OptIn(ExperimentalTime::class, ExperimentalUuidApi::class)
+
 package io.github.mr3zee.rwizard.services
 
 import io.github.mr3zee.rwizard.api.*
 import io.github.mr3zee.rwizard.database.*
 import io.github.mr3zee.rwizard.domain.model.User
-import io.github.mr3zee.rwizard.domain.model.UUID
-import kotlinx.datetime.Clock
-import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.transactions.transaction
+import kotlinx.coroutines.flow.singleOrNull
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.r2dbc.insert
+import org.jetbrains.exposed.v1.r2dbc.selectAll
+import org.jetbrains.exposed.v1.r2dbc.update
 import org.mindrot.jbcrypt.BCrypt
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.hours
+import kotlin.time.ExperimentalTime
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
+import kotlin.uuid.toJavaUuid
+import kotlin.uuid.toKotlinUuid
 
 class AuthServiceImpl : AuthService {
     
     override suspend fun login(request: LoginRequest): AuthResponse {
         return try {
-            transaction {
-                val userRow = Users.leftJoin(io.github.mr3zee.rwizard.database.UserCredentials)
+            tr {
+                val userRow = Users.leftJoin(UserCredentials)
                     .selectAll()
                     .where { (Users.username eq request.username) and (Users.isActive eq true) }
                     .singleOrNull()
                     
                 if (userRow == null) {
-                    return@transaction AuthResponse(
+                    return@tr AuthResponse(
                         success = false,
                         error = "Invalid username or password"
                     )
@@ -29,21 +38,21 @@ class AuthServiceImpl : AuthService {
                 
                 val storedHash = userRow[UserCredentials.passwordHash]
                 if (!BCrypt.checkpw(request.password, storedHash)) {
-                    return@transaction AuthResponse(
+                    return@tr AuthResponse(
                         success = false,
                         error = "Invalid username or password"
                     )
                 }
                 
                 // Create session
-                val sessionId = java.util.UUID.randomUUID()
+                val sessionId = Uuid.random()
                 val token = generateToken()
                 val refreshToken = generateToken()
                 val now = Clock.System.now()
                 val expiresAt = now.plus(24.hours)
                 
                 UserSessions.insert {
-                    it[id] = sessionId
+                    it[id] = sessionId.toJavaUuid()
                     it[userId] = userRow[Users.id]
                     it[this.token] = token
                     it[this.refreshToken] = refreshToken
@@ -58,7 +67,7 @@ class AuthServiceImpl : AuthService {
                 }
                 
                 val user = User(
-                    id = UUID(userRow[Users.id].toString()),
+                    id = userRow[Users.id].value.toKotlinUuid(),
                     username = userRow[Users.username],
                     email = userRow[Users.email],
                     displayName = userRow[Users.displayName],
@@ -87,7 +96,7 @@ class AuthServiceImpl : AuthService {
     
     override suspend fun refreshToken(refreshToken: String): AuthResponse {
         return try {
-            transaction {
+            tr {
                 val sessionRow = UserSessions.leftJoin(Users)
                     .selectAll()
                     .where {
@@ -98,7 +107,7 @@ class AuthServiceImpl : AuthService {
                     .singleOrNull()
                     
                 if (sessionRow == null) {
-                    return@transaction AuthResponse(
+                    return@tr AuthResponse(
                         success = false,
                         error = "Invalid refresh token"
                     )
@@ -118,7 +127,7 @@ class AuthServiceImpl : AuthService {
                 }
                 
                 val user = User(
-                    id = UUID(sessionRow[Users.id].toString()),
+                    id = sessionRow[Users.id].value.toKotlinUuid(),
                     username = sessionRow[Users.username],
                     email = sessionRow[Users.email],
                     displayName = sessionRow[Users.displayName],
@@ -147,7 +156,7 @@ class AuthServiceImpl : AuthService {
     
     override suspend fun logout(token: String): SuccessResponse {
         return try {
-            transaction {
+            tr {
                 UserSessions.update({ UserSessions.token eq token }) {
                     it[isRevoked] = true
                 }
@@ -160,7 +169,7 @@ class AuthServiceImpl : AuthService {
     
     override suspend fun validateToken(token: String): TokenValidationResponse {
         return try {
-            transaction {
+            tr {
                 val sessionRow = UserSessions.leftJoin(Users)
                     .selectAll()
                     .where {
@@ -171,11 +180,11 @@ class AuthServiceImpl : AuthService {
                     .singleOrNull()
                     
                 if (sessionRow == null) {
-                    return@transaction TokenValidationResponse(isValid = false)
+                    return@tr TokenValidationResponse(isValid = false)
                 }
                 
                 val user = User(
-                    id = UUID(sessionRow[Users.id].toString()),
+                    id = sessionRow[Users.id].value.toKotlinUuid(),
                     username = sessionRow[Users.username],
                     email = sessionRow[Users.email],
                     displayName = sessionRow[Users.displayName],
@@ -206,7 +215,7 @@ class AuthServiceImpl : AuthService {
         return UserResponse(success = false, error = "Not implemented")
     }
     
-    override suspend fun deleteUser(userId: UUID): SuccessResponse {
+    override suspend fun deleteUser(userId: Uuid): SuccessResponse {
         return SuccessResponse(success = false, error = "Not implemented")
     }
     
@@ -214,7 +223,7 @@ class AuthServiceImpl : AuthService {
         return UserListResponse(success = false, error = "Not implemented")
     }
     
-    override suspend fun getUser(userId: UUID): UserResponse {
+    override suspend fun getUser(userId: Uuid): UserResponse {
         return UserResponse(success = false, error = "Not implemented")
     }
     
@@ -226,7 +235,7 @@ class AuthServiceImpl : AuthService {
         return ApiKeyListResponse(success = false, error = "Not implemented")
     }
     
-    override suspend fun revokeApiKey(keyId: UUID): SuccessResponse {
+    override suspend fun revokeApiKey(keyId: Uuid): SuccessResponse {
         return SuccessResponse(success = false, error = "Not implemented")
     }
     
@@ -238,11 +247,11 @@ class AuthServiceImpl : AuthService {
         return SuccessResponse(success = false, error = "Not implemented")
     }
     
-    override suspend fun getUserPermissions(userId: UUID): UserPermissionListResponse {
+    override suspend fun getUserPermissions(userId: Uuid): UserPermissionListResponse {
         return UserPermissionListResponse(success = false, error = "Not implemented")
     }
     
     private fun generateToken(): String {
-        return java.util.UUID.randomUUID().toString() + java.util.UUID.randomUUID().toString()
+        return Uuid.random().toString() + Uuid.random().toString()
     }
 }

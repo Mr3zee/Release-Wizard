@@ -1,18 +1,21 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
 package io.github.mr3zee.rwizard.api
 
 import io.github.mr3zee.rwizard.domain.model.*
-import kotlinx.coroutines.flow.Flow
 import kotlinx.rpc.annotations.Rpc
 import kotlinx.serialization.Serializable
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @Rpc
 interface ProjectService {
     
     // Project management
     suspend fun createProject(request: CreateProjectRequest): ProjectResponse
-    suspend fun getProject(projectId: UUID): ProjectResponse
+    suspend fun getProject(projectId: Uuid): ProjectResponse
     suspend fun updateProject(request: UpdateProjectRequest): ProjectResponse
-    suspend fun deleteProject(projectId: UUID): SuccessResponse
+    suspend fun deleteProject(projectId: Uuid): SuccessResponse
     suspend fun listProjects(request: ListProjectsRequest = ListProjectsRequest()): ProjectListResponse
     
     // Project templates and validation
@@ -23,8 +26,8 @@ interface ProjectService {
     // Message templates
     suspend fun createMessageTemplate(request: CreateMessageTemplateRequest): MessageTemplateResponse
     suspend fun updateMessageTemplate(request: UpdateMessageTemplateRequest): MessageTemplateResponse
-    suspend fun deleteMessageTemplate(templateId: UUID): SuccessResponse
-    suspend fun listMessageTemplates(projectId: UUID): MessageTemplateListResponse
+    suspend fun deleteMessageTemplate(templateId: Uuid): SuccessResponse
+    suspend fun listMessageTemplates(projectId: Uuid): MessageTemplateListResponse
 }
 
 // Request/Response DTOs
@@ -33,17 +36,17 @@ data class CreateProjectRequest(
     val name: String,
     val description: String,
     val parameters: List<ProjectParameter> = emptyList(),
-    val connections: List<UUID> = emptyList(), // Connection IDs
+    val connections: List<Uuid> = emptyList(), // Connection IDs
     val blockGraph: BlockGraph = BlockGraph(emptyList(), emptyList())
 )
 
 @Serializable
 data class UpdateProjectRequest(
-    val projectId: UUID,
+    val projectId: Uuid,
     val name: String? = null,
     val description: String? = null,
     val parameters: List<ProjectParameter>? = null,
-    val connections: List<UUID>? = null,
+    val connections: List<Uuid>? = null,
     val blockGraph: BlockGraph? = null
 )
 
@@ -68,7 +71,7 @@ enum class SortOrder {
 
 @Serializable
 data class CreateFromTemplateRequest(
-    val templateId: UUID,
+    val templateId: Uuid,
     val name: String,
     val description: String,
     val parameterOverrides: Map<String, String> = emptyMap()
@@ -76,7 +79,7 @@ data class CreateFromTemplateRequest(
 
 @Serializable
 data class CreateMessageTemplateRequest(
-    val projectId: UUID,
+    val projectId: Uuid,
     val name: String,
     val description: String,
     val template: String
@@ -84,7 +87,7 @@ data class CreateMessageTemplateRequest(
 
 @Serializable
 data class UpdateMessageTemplateRequest(
-    val templateId: UUID,
+    val templateId: Uuid,
     val name: String? = null,
     val description: String? = null,
     val template: String? = null
@@ -121,7 +124,7 @@ data class ValidationError(
 
 @Serializable
 data class ProjectTemplate(
-    val id: UUID,
+    val id: Uuid,
     val name: String,
     val description: String,
     val category: String,

@@ -1,11 +1,16 @@
+@file:OptIn(ExperimentalTime::class, ExperimentalUuidApi::class)
+
 package io.github.mr3zee.rwizard.domain.model
 
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlinx.serialization.Serializable
+import kotlin.time.ExperimentalTime
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @Serializable
 data class User(
-    val id: UUID,
+    val id: Uuid,
     val username: String,
     val email: String,
     val displayName: String,
@@ -25,8 +30,8 @@ enum class UserRole {
 
 @Serializable
 data class UserSession(
-    val id: UUID,
-    val userId: UUID,
+    val id: Uuid,
+    val userId: Uuid,
     val token: String,
     val refreshToken: String? = null,
     val expiresAt: Instant,
@@ -39,7 +44,7 @@ data class UserSession(
 
 @Serializable
 data class UserCredentials(
-    val userId: UUID,
+    val userId: Uuid,
     val passwordHash: String, // Hashed password
     val salt: String,
     val createdAt: Instant,
@@ -49,10 +54,10 @@ data class UserCredentials(
 
 @Serializable
 data class UserPermission(
-    val userId: UUID,
-    val projectId: UUID? = null, // null means global permission
+    val userId: Uuid,
+    val projectId: Uuid? = null, // null means global permission
     val permission: Permission,
-    val grantedBy: UUID,
+    val grantedBy: Uuid,
     val grantedAt: Instant
 )
 
@@ -74,12 +79,12 @@ enum class Permission {
 
 @Serializable
 data class ApiKey(
-    val id: UUID,
-    val userId: UUID,
+    val id: Uuid,
+    val userId: Uuid,
     val name: String,
     val keyHash: String, // Hashed API key
     val permissions: List<Permission>,
-    val projectIds: List<UUID> = emptyList(), // Empty means all projects (if has global perms)
+    val projectIds: List<Uuid> = emptyList(), // Empty means all projects (if has global perms)
     val expiresAt: Instant? = null, // null means no expiration
     val lastUsedAt: Instant? = null,
     val isActive: Boolean = true,

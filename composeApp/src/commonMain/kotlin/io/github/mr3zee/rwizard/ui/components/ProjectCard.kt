@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalTime::class)
+
 package io.github.mr3zee.rwizard.ui.components
 
 import androidx.compose.foundation.clickable
@@ -15,6 +17,8 @@ import androidx.compose.ui.unit.dp
 import io.github.mr3zee.rwizard.domain.model.Project
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -109,7 +113,7 @@ fun ProjectCard(
     }
 }
 
-private fun formatDate(instant: kotlinx.datetime.Instant): String {
+private fun formatDate(instant: Instant): String {
     val localDateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
     return "${localDateTime.date}"
 }

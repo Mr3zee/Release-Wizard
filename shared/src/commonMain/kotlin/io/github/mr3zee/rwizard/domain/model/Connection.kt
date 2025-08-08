@@ -1,11 +1,16 @@
+@file:OptIn(ExperimentalTime::class, ExperimentalUuidApi::class)
+
 package io.github.mr3zee.rwizard.domain.model
 
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlinx.serialization.Serializable
+import kotlin.time.ExperimentalTime
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @Serializable
 sealed class Connection {
-    abstract val id: UUID
+    abstract val id: Uuid
     abstract val name: String
     abstract val description: String
     abstract val createdAt: Instant
@@ -13,7 +18,7 @@ sealed class Connection {
     
     @Serializable
     data class Slack(
-        override val id: UUID,
+        override val id: Uuid,
         override val name: String,
         override val description: String,
         override val createdAt: Instant,
@@ -25,7 +30,7 @@ sealed class Connection {
     
     @Serializable
     data class TeamCity(
-        override val id: UUID,
+        override val id: Uuid,
         override val name: String,
         override val description: String,
         override val createdAt: Instant,
@@ -36,7 +41,7 @@ sealed class Connection {
     
     @Serializable
     data class GitHub(
-        override val id: UUID,
+        override val id: Uuid,
         override val name: String,
         override val description: String,
         override val createdAt: Instant,
@@ -47,7 +52,7 @@ sealed class Connection {
     
     @Serializable
     data class MavenCentralPortal(
-        override val id: UUID,
+        override val id: Uuid,
         override val name: String,
         override val description: String,
         override val createdAt: Instant,
@@ -59,7 +64,7 @@ sealed class Connection {
 
 @Serializable
 data class ConnectionCredentials(
-    val connectionId: UUID,
+    val connectionId: Uuid,
     val type: ConnectionType,
     val encryptedData: String, // Encrypted JSON containing sensitive data
     val createdAt: Instant,
@@ -103,8 +108,8 @@ sealed class Credentials {
 
 @Serializable
 data class MessageTemplate(
-    val id: UUID,
-    val projectId: UUID,
+    val id: Uuid,
+    val projectId: Uuid,
     val name: String,
     val description: String,
     val template: String, // Template with placeholders like {{parameter_name}}

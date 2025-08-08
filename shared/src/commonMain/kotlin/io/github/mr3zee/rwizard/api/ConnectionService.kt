@@ -1,8 +1,14 @@
+@file:OptIn(ExperimentalTime::class, ExperimentalUuidApi::class)
+
 package io.github.mr3zee.rwizard.api
 
 import io.github.mr3zee.rwizard.domain.model.*
 import kotlinx.rpc.annotations.Rpc
 import kotlinx.serialization.Serializable
+import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @Rpc
 interface ConnectionService {
@@ -14,19 +20,19 @@ interface ConnectionService {
     suspend fun createMavenCentralConnection(request: CreateMavenCentralConnectionRequest): ConnectionResponse
     
     suspend fun updateConnection(request: UpdateConnectionRequest): ConnectionResponse
-    suspend fun deleteConnection(connectionId: UUID): SuccessResponse
+    suspend fun deleteConnection(connectionId: Uuid): SuccessResponse
     suspend fun listConnections(type: ConnectionType? = null): ConnectionListResponse
-    suspend fun getConnection(connectionId: UUID): ConnectionResponse
+    suspend fun getConnection(connectionId: Uuid): ConnectionResponse
     
     // Connection testing
-    suspend fun testConnection(connectionId: UUID): ConnectionTestResponse
+    suspend fun testConnection(connectionId: Uuid): ConnectionTestResponse
     
     // Connection-specific operations
-    suspend fun getSlackChannels(connectionId: UUID): SlackChannelListResponse
-    suspend fun getTeamCityProjects(connectionId: UUID): TeamCityProjectListResponse
-    suspend fun getTeamCityBuildConfigurations(connectionId: UUID, projectId: String): TeamCityBuildConfigListResponse
-    suspend fun getGitHubRepositories(connectionId: UUID): GitHubRepositoryListResponse
-    suspend fun getGitHubWorkflows(connectionId: UUID, repository: String): GitHubWorkflowListResponse
+    suspend fun getSlackChannels(connectionId: Uuid): SlackChannelListResponse
+    suspend fun getTeamCityProjects(connectionId: Uuid): TeamCityProjectListResponse
+    suspend fun getTeamCityBuildConfigurations(connectionId: Uuid, projectId: String): TeamCityBuildConfigListResponse
+    suspend fun getGitHubRepositories(connectionId: Uuid): GitHubRepositoryListResponse
+    suspend fun getGitHubWorkflows(connectionId: Uuid, repository: String): GitHubWorkflowListResponse
 }
 
 @Rpc
@@ -41,19 +47,19 @@ interface AuthService {
     // User management (admin only)
     suspend fun createUser(request: CreateUserRequest): UserResponse
     suspend fun updateUser(request: UpdateUserRequest): UserResponse
-    suspend fun deleteUser(userId: UUID): SuccessResponse
+    suspend fun deleteUser(userId: Uuid): SuccessResponse
     suspend fun listUsers(request: ListUsersRequest = ListUsersRequest()): UserListResponse
-    suspend fun getUser(userId: UUID): UserResponse
+    suspend fun getUser(userId: Uuid): UserResponse
     
     // API Key management
     suspend fun createApiKey(request: CreateApiKeyRequest): ApiKeyResponse
     suspend fun listApiKeys(): ApiKeyListResponse
-    suspend fun revokeApiKey(keyId: UUID): SuccessResponse
+    suspend fun revokeApiKey(keyId: Uuid): SuccessResponse
     
     // Permission management
     suspend fun grantPermission(request: GrantPermissionRequest): SuccessResponse
     suspend fun revokePermission(request: RevokePermissionRequest): SuccessResponse
-    suspend fun getUserPermissions(userId: UUID): UserPermissionListResponse
+    suspend fun getUserPermissions(userId: Uuid): UserPermissionListResponse
 }
 
 // Connection Request DTOs
@@ -92,7 +98,7 @@ data class CreateMavenCentralConnectionRequest(
 
 @Serializable
 data class UpdateConnectionRequest(
-    val connectionId: UUID,
+    val connectionId: Uuid,
     val name: String? = null,
     val description: String? = null,
     val credentials: Credentials? = null
@@ -116,7 +122,7 @@ data class CreateUserRequest(
 
 @Serializable
 data class UpdateUserRequest(
-    val userId: UUID,
+    val userId: Uuid,
     val email: String? = null,
     val displayName: String? = null,
     val role: UserRole? = null,
@@ -136,22 +142,22 @@ data class ListUsersRequest(
 data class CreateApiKeyRequest(
     val name: String,
     val permissions: List<Permission>,
-    val projectIds: List<UUID> = emptyList(),
-    val expiresAt: kotlinx.datetime.Instant? = null
+    val projectIds: List<Uuid> = emptyList(),
+    val expiresAt: Instant? = null
 )
 
 @Serializable
 data class GrantPermissionRequest(
-    val userId: UUID,
+    val userId: Uuid,
     val permission: Permission,
-    val projectId: UUID? = null
+    val projectId: Uuid? = null
 )
 
 @Serializable
 data class RevokePermissionRequest(
-    val userId: UUID,
+    val userId: Uuid,
     val permission: Permission,
-    val projectId: UUID? = null
+    val projectId: Uuid? = null
 )
 
 // Response DTOs
@@ -183,7 +189,7 @@ data class AuthResponse(
     val user: User? = null,
     val token: String? = null,
     val refreshToken: String? = null,
-    val expiresAt: kotlinx.datetime.Instant? = null,
+    val expiresAt: Instant? = null,
     val error: String? = null
 )
 
@@ -191,7 +197,7 @@ data class AuthResponse(
 data class TokenValidationResponse(
     val isValid: Boolean,
     val user: User? = null,
-    val expiresAt: kotlinx.datetime.Instant? = null
+    val expiresAt: Instant? = null
 )
 
 @Serializable

@@ -1,11 +1,16 @@
+@file:OptIn(ExperimentalTime::class, ExperimentalUuidApi::class)
+
 package io.github.mr3zee.rwizard.domain.model
 
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlinx.serialization.Serializable
+import kotlin.time.ExperimentalTime
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @Serializable
 data class Project(
-    val id: UUID,
+    val id: Uuid,
     val name: String,
     val description: String,
     val parameters: List<ProjectParameter>,
@@ -62,7 +67,7 @@ data class BlockGraph(
 
 @Serializable
 sealed class Block {
-    abstract val id: UUID
+    abstract val id: Uuid
     abstract val name: String
     abstract val description: String
     abstract val parameters: List<BlockParameter>
@@ -71,7 +76,7 @@ sealed class Block {
     
     @Serializable
     data class Container(
-        override val id: UUID,
+        override val id: Uuid,
         override val name: String,
         override val description: String,
         override val parameters: List<BlockParameter> = emptyList(),
@@ -82,7 +87,7 @@ sealed class Block {
     
     @Serializable
     data class SlackMessage(
-        override val id: UUID,
+        override val id: Uuid,
         override val name: String,
         override val description: String,
         override val parameters: List<BlockParameter>,
@@ -95,7 +100,7 @@ sealed class Block {
     
     @Serializable
     data class TeamCityBuild(
-        override val id: UUID,
+        override val id: Uuid,
         override val name: String,
         override val description: String,
         override val parameters: List<BlockParameter>,
@@ -107,7 +112,7 @@ sealed class Block {
     
     @Serializable
     data class MavenCentralStatus(
-        override val id: UUID,
+        override val id: Uuid,
         override val name: String,
         override val description: String,
         override val parameters: List<BlockParameter>,
@@ -117,7 +122,7 @@ sealed class Block {
     
     @Serializable
     data class GitHubAction(
-        override val id: UUID,
+        override val id: Uuid,
         override val name: String,
         override val description: String,
         override val parameters: List<BlockParameter>,
@@ -130,7 +135,7 @@ sealed class Block {
     
     @Serializable
     data class GitHubRelease(
-        override val id: UUID,
+        override val id: Uuid,
         override val name: String,
         override val description: String,
         override val parameters: List<BlockParameter>,
@@ -143,7 +148,7 @@ sealed class Block {
     
     @Serializable
     data class UserAction(
-        override val id: UUID,
+        override val id: Uuid,
         override val name: String,
         override val description: String,
         override val parameters: List<BlockParameter>,
@@ -172,7 +177,7 @@ sealed class ParameterSource {
     data class ProjectParameter(val parameterName: String) : ParameterSource()
     
     @Serializable
-    data class BlockOutput(val blockId: UUID, val outputName: String) : ParameterSource()
+    data class BlockOutput(val blockId: Uuid, val outputName: String) : ParameterSource()
     
     @Serializable
     data class DefaultValue(val value: String) : ParameterSource()
@@ -197,9 +202,9 @@ enum class OutputType {
 
 @Serializable
 data class BlockConnection(
-    val id: UUID,
-    val fromBlockId: UUID,
-    val toBlockId: UUID,
+    val id: Uuid,
+    val fromBlockId: Uuid,
+    val toBlockId: Uuid,
     val type: BlockConnectionType
 )
 

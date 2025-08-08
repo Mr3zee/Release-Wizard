@@ -1,48 +1,54 @@
+@file:OptIn(ExperimentalTime::class, ExperimentalUuidApi::class)
+
 package io.github.mr3zee.rwizard.api
 
 import io.github.mr3zee.rwizard.domain.model.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.rpc.annotations.Rpc
 import kotlinx.serialization.Serializable
+import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @Rpc
 interface ReleaseService {
     
     // Release lifecycle management
     suspend fun createRelease(request: CreateReleaseRequest): ReleaseResponse
-    suspend fun getRelease(releaseId: UUID): ReleaseResponse
+    suspend fun getRelease(releaseId: Uuid): ReleaseResponse
     suspend fun listReleases(request: ListReleasesRequest = ListReleasesRequest()): ReleaseListResponse
     
-    suspend fun startRelease(releaseId: UUID): ReleaseResponse
-    suspend fun pauseRelease(releaseId: UUID): ReleaseResponse
-    suspend fun cancelRelease(releaseId: UUID): ReleaseResponse
-    suspend fun deleteRelease(releaseId: UUID): SuccessResponse
+    suspend fun startRelease(releaseId: Uuid): ReleaseResponse
+    suspend fun pauseRelease(releaseId: Uuid): ReleaseResponse
+    suspend fun cancelRelease(releaseId: Uuid): ReleaseResponse
+    suspend fun deleteRelease(releaseId: Uuid): SuccessResponse
     
     // Block execution management
-    suspend fun restartBlock(blockExecutionId: UUID, parameters: Map<String, String> = emptyMap()): BlockExecutionResponse
-    suspend fun pauseBlock(blockExecutionId: UUID): BlockExecutionResponse
-    suspend fun cancelBlock(blockExecutionId: UUID): BlockExecutionResponse
+    suspend fun restartBlock(blockExecutionId: Uuid, parameters: Map<String, String> = emptyMap()): BlockExecutionResponse
+    suspend fun pauseBlock(blockExecutionId: Uuid): BlockExecutionResponse
+    suspend fun cancelBlock(blockExecutionId: Uuid): BlockExecutionResponse
     
     // Real-time updates
-    fun subscribeToReleaseUpdates(releaseId: UUID): Flow<ReleaseUpdate>
-    fun subscribeToBlockUpdates(blockExecutionId: UUID): Flow<BlockExecutionUpdate>
+    fun subscribeToReleaseUpdates(releaseId: Uuid): Flow<ReleaseUpdate>
+    fun subscribeToBlockUpdates(blockExecutionId: Uuid): Flow<BlockExecutionUpdate>
     
     // Logs and monitoring
-    suspend fun getBlockLogs(blockExecutionId: UUID, request: LogRequest = LogRequest()): LogResponse
-    fun streamBlockLogs(blockExecutionId: UUID): Flow<ExecutionLog>
+    suspend fun getBlockLogs(blockExecutionId: Uuid, request: LogRequest = LogRequest()): LogResponse
+    fun streamBlockLogs(blockExecutionId: Uuid): Flow<ExecutionLog>
     
     // User input handling
-    suspend fun getPendingUserInputs(releaseId: UUID): UserInputListResponse
-    suspend fun submitUserInput(inputId: UUID, value: String): UserInputResponse
+    suspend fun getPendingUserInputs(releaseId: Uuid): UserInputListResponse
+    suspend fun submitUserInput(inputId: Uuid, value: String): UserInputResponse
     
     // Release analytics
-    suspend fun getReleaseStatistics(projectId: UUID, request: StatisticsRequest = StatisticsRequest()): StatisticsResponse
+    suspend fun getReleaseStatistics(projectId: Uuid, request: StatisticsRequest = StatisticsRequest()): StatisticsResponse
 }
 
 // Request DTOs
 @Serializable
 data class CreateReleaseRequest(
-    val projectId: UUID,
+    val projectId: Uuid,
     val name: String,
     val description: String,
     val parameterValues: Map<String, String>
@@ -50,7 +56,7 @@ data class CreateReleaseRequest(
 
 @Serializable
 data class ListReleasesRequest(
-    val projectId: UUID? = null,
+    val projectId: Uuid? = null,
     val status: ReleaseStatus? = null,
     val search: String? = null,
     val limit: Int = 50,
@@ -70,14 +76,14 @@ data class LogRequest(
     val source: String? = null,
     val limit: Int = 100,
     val offset: Int = 0,
-    val fromTimestamp: kotlinx.datetime.Instant? = null,
-    val toTimestamp: kotlinx.datetime.Instant? = null
+    val fromTimestamp: Instant? = null,
+    val toTimestamp: Instant? = null
 )
 
 @Serializable
 data class StatisticsRequest(
-    val fromDate: kotlinx.datetime.Instant? = null,
-    val toDate: kotlinx.datetime.Instant? = null,
+    val fromDate: Instant? = null,
+    val toDate: Instant? = null,
     val groupBy: StatisticsGroupBy = StatisticsGroupBy.DAY
 )
 
@@ -175,70 +181,70 @@ data class BlockUsageCount(
 // Real-time update DTOs
 @Serializable
 sealed class ReleaseUpdate {
-    abstract val releaseId: UUID
-    abstract val timestamp: kotlinx.datetime.Instant
+    abstract val releaseId: Uuid
+    abstract val timestamp: Instant
     
     @Serializable
     data class StatusUpdate(
-        override val releaseId: UUID,
-        override val timestamp: kotlinx.datetime.Instant,
+        override val releaseId: Uuid,
+        override val timestamp: Instant,
         val oldStatus: ReleaseStatus,
         val newStatus: ReleaseStatus
     ) : ReleaseUpdate()
     
     @Serializable
     data class BlockUpdate(
-        override val releaseId: UUID,
-        override val timestamp: kotlinx.datetime.Instant,
+        override val releaseId: Uuid,
+        override val timestamp: Instant,
         val blockExecution: BlockExecution
     ) : ReleaseUpdate()
     
     @Serializable
     data class LogUpdate(
-        override val releaseId: UUID,
-        override val timestamp: kotlinx.datetime.Instant,
+        override val releaseId: Uuid,
+        override val timestamp: Instant,
         val log: ExecutionLog
     ) : ReleaseUpdate()
     
     @Serializable
     data class UserInputRequired(
-        override val releaseId: UUID,
-        override val timestamp: kotlinx.datetime.Instant,
+        override val releaseId: Uuid,
+        override val timestamp: Instant,
         val userInput: UserInput
     ) : ReleaseUpdate()
 }
 
 @Serializable
 sealed class BlockExecutionUpdate {
-    abstract val blockExecutionId: UUID
-    abstract val timestamp: kotlinx.datetime.Instant
+    abstract val blockExecutionId: Uuid
+    abstract val timestamp: Instant
     
     @Serializable
     data class StatusUpdate(
-        override val blockExecutionId: UUID,
-        override val timestamp: kotlinx.datetime.Instant,
+        override val blockExecutionId: Uuid,
+        override val timestamp: Instant,
         val oldStatus: BlockExecutionStatus,
         val newStatus: BlockExecutionStatus
     ) : BlockExecutionUpdate()
     
     @Serializable
     data class LogUpdate(
-        override val blockExecutionId: UUID,
-        override val timestamp: kotlinx.datetime.Instant,
+        override val blockExecutionId: Uuid,
+        override val timestamp: Instant,
         val log: ExecutionLog
     ) : BlockExecutionUpdate()
     
     @Serializable
     data class MetadataUpdate(
-        override val blockExecutionId: UUID,
-        override val timestamp: kotlinx.datetime.Instant,
+        override val blockExecutionId: Uuid,
+        override val timestamp: Instant,
         val metadata: Map<String, String>
     ) : BlockExecutionUpdate()
     
     @Serializable
     data class OutputUpdate(
-        override val blockExecutionId: UUID,
-        override val timestamp: kotlinx.datetime.Instant,
+        override val blockExecutionId: Uuid,
+        override val timestamp: Instant,
         val outputs: Map<String, String>
     ) : BlockExecutionUpdate()
 }

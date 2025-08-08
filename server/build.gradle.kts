@@ -27,6 +27,9 @@ dependencies {
     implementation(libs.exposed.jdbc)
     implementation(libs.exposed.kotlin.datetime)
     implementation(libs.exposed.json)
+    // Exposed R2DBC
+    implementation("org.jetbrains.exposed:exposed-r2dbc:${libs.versions.exposed.get()}")
+    implementation(libs.r2dbc.h2)
     
     // Koin
     implementation(libs.koin.core)

@@ -1,9 +1,10 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
 package io.github.mr3zee.rwizard.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Settings
@@ -13,15 +14,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import io.github.mr3zee.rwizard.domain.model.UUID
 import io.github.mr3zee.rwizard.domain.model.Project
 import io.github.mr3zee.rwizard.ui.components.ProjectCard
 import io.github.mr3zee.rwizard.ui.components.EmptyState
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProjectListScreen(
-    onNavigateToProject: (UUID) -> Unit,
+    onNavigateToProject: (Uuid) -> Unit,
     onCreateProject: () -> Unit,
     onNavigateToConnections: () -> Unit
 ) {
