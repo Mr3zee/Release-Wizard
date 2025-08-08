@@ -1,26 +1,40 @@
+@file:OptIn(ExperimentalUuidApi::class, ExperimentalTime::class)
+
 package io.github.mr3zee.rwizard.services
 
 import io.github.mr3zee.rwizard.api.*
 import io.github.mr3zee.rwizard.database.*
 import io.github.mr3zee.rwizard.domain.model.*
-import kotlinx.datetime.Clock
-import kotlinx.serialization.encodeToString
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.singleOrNull
+import kotlinx.coroutines.flow.toList
 import kotlinx.serialization.json.Json
-import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.transactions.transaction
-import org.jetbrains.exposed.sql.SortOrder as ExposedSortOrder
+import org.jetbrains.exposed.v1.core.lowerCase
+import org.jetbrains.exposed.v1.core.or
+import org.jetbrains.exposed.v1.core.statements.UpsertSqlExpressionBuilder.eq
+import org.jetbrains.exposed.v1.r2dbc.andWhere
+import org.jetbrains.exposed.v1.r2dbc.deleteWhere
+import org.jetbrains.exposed.v1.r2dbc.insert
+import org.jetbrains.exposed.v1.r2dbc.selectAll
+import org.jetbrains.exposed.v1.r2dbc.update
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
+import kotlin.uuid.toJavaUuid
+import kotlin.uuid.toKotlinUuid
+import org.jetbrains.exposed.v1.core.SortOrder as ExposedSortOrder
 
 class ProjectServiceImpl : ProjectService {
     
     override suspend fun createProject(request: CreateProjectRequest): ProjectResponse {
         return try {
-            transaction {
-                val projectId = java.util.UUID.randomUUID()
+            tr {
+                val projectId = Uuid.random()
                 val now = Clock.System.now()
                 
-                val projectUUID = UUID(projectId.toString())
                 val project = Project(
-                    id = projectUUID,
+                    id = projectId,
                     name = request.name,
                     description = request.description,
                     parameters = request.parameters,
@@ -31,7 +45,7 @@ class ProjectServiceImpl : ProjectService {
                 )
                 
                 Projects.insert {
-                    it[id] = projectId
+                    it[id] = projectId.toJavaUuid()
                     it[name] = request.name
                     it[description] = request.description
                     it[parameters] = Json.encodeToString(request.parameters.map { param ->
@@ -54,8 +68,8 @@ class ProjectServiceImpl : ProjectService {
                 // Insert project connections
                 request.connections.forEach { connectionId ->
                     ProjectConnections.insert {
-                        it[projectId] = projectId
-                        it[connectionId] = java.util.UUID.fromString(connectionId.value)
+                        it[this.projectId] = projectId.toJavaUuid()
+                        it[this.connectionId] = connectionId.toJavaUuid()
                     }
                 }
                 
@@ -66,15 +80,17 @@ class ProjectServiceImpl : ProjectService {
         }
     }
     
-    override suspend fun getProject(projectId: UUID): ProjectResponse {
+    override suspend fun getProject(projectId: Uuid): ProjectResponse {
         return try {
-            transaction {
+            tr {
+                val javaUuid = projectId.toJavaUuid()
+
                 val row = Projects.selectAll()
-                    .where { Projects.id eq java.util.UUID.fromString(projectId.value) }
+                    .where { Projects.id eq javaUuid }
                     .singleOrNull()
                     
                 if (row == null) {
-                    return@transaction ProjectResponse(
+                    return@tr ProjectResponse(
                         success = false, 
                         error = "Project not found"
                     )
@@ -83,8 +99,8 @@ class ProjectServiceImpl : ProjectService {
                 // Get project connections
                 val connectionIds = ProjectConnections
                     .selectAll()
-                    .where { ProjectConnections.projectId eq java.util.UUID.fromString(projectId.value) }
-                    .map { UUID(it[ProjectConnections.connectionId].toString()) }
+                    .where { ProjectConnections.projectId eq javaUuid }
+                    .map { it[ProjectConnections.connectionId].value.toKotlinUuid() }
                 
                 val project = Project(
                     id = projectId,
@@ -107,10 +123,13 @@ class ProjectServiceImpl : ProjectService {
     
     override suspend fun updateProject(request: UpdateProjectRequest): ProjectResponse {
         return try {
-            transaction {
+            tr {
                 val now = Clock.System.now()
-                
-                Projects.update({ Projects.id eq java.util.UUID.fromString(request.projectId.value) }) {
+
+                val projectId = request.projectId
+                val javaUuid = projectId.toJavaUuid()
+
+                Projects.update({ Projects.id eq javaUuid }) {
                     request.name?.let { name -> it[Projects.name] = name }
                     request.description?.let { description -> it[Projects.description] = description }
                     it[updatedAt] = now
@@ -118,29 +137,30 @@ class ProjectServiceImpl : ProjectService {
                 
                 // TODO: Update parameters, connections, and block graph
                 
-                getProject(request.projectId)
+                getProject(projectId)
             }
         } catch (e: Exception) {
             ProjectResponse(success = false, error = "Failed to update project: ${e.message}")
         }
     }
     
-    override suspend fun deleteProject(projectId: UUID): SuccessResponse {
+    override suspend fun deleteProject(projectId: Uuid): SuccessResponse {
         return try {
-            transaction {
+            tr {
+                val javaUuid = projectId.toJavaUuid()
                 // Delete project connections first
                 ProjectConnections.deleteWhere { 
-                    ProjectConnections.projectId eq java.util.UUID.fromString(projectId.value) 
+                    ProjectConnections.projectId eq javaUuid
                 }
                 
                 // Delete message templates
                 MessageTemplates.deleteWhere { 
-                    MessageTemplates.projectId eq java.util.UUID.fromString(projectId.value) 
+                    MessageTemplates.projectId eq javaUuid
                 }
                 
                 // Delete the project
                 Projects.deleteWhere { 
-                    Projects.id eq java.util.UUID.fromString(projectId.value) 
+                    Projects.id eq javaUuid
                 }
             }
             SuccessResponse(success = true, message = "Project deleted successfully")
@@ -151,14 +171,14 @@ class ProjectServiceImpl : ProjectService {
     
     override suspend fun listProjects(request: ListProjectsRequest): ProjectListResponse {
         return try {
-            transaction {
+            tr {
                 var query = Projects.selectAll()
                 
                 // Apply search filter
                 request.search?.let { search ->
                     query = query.andWhere { 
                         Projects.name.lowerCase() like "%${search.lowercase()}%" or
-                        Projects.description.lowerCase() like "%${search.lowercase()}%"
+                        (Projects.description.lowerCase() like "%${search.lowercase()}%")
                     }
                 }
                 
@@ -166,34 +186,34 @@ class ProjectServiceImpl : ProjectService {
                 query = when (request.sortBy) {
                     ProjectSortBy.NAME -> {
                         if (request.sortOrder == SortOrder.ASC) {
-                            query.orderBy(Projects.name, SortOrder.ASC)
+                            query.orderBy(Projects.name to ExposedSortOrder.ASC)
                         } else {
-                            query.orderBy(Projects.name, SortOrder.DESC)
+                            query.orderBy(Projects.name, ExposedSortOrder.DESC)
                         }
                     }
                     ProjectSortBy.CREATED_AT -> {
                         if (request.sortOrder == SortOrder.ASC) {
-                            query.orderBy(Projects.createdAt, SortOrder.ASC)
+                            query.orderBy(Projects.createdAt, ExposedSortOrder.ASC)
                         } else {
-                            query.orderBy(Projects.createdAt, SortOrder.DESC)
+                            query.orderBy(Projects.createdAt, ExposedSortOrder.DESC)
                         }
                     }
                     ProjectSortBy.UPDATED_AT -> {
                         if (request.sortOrder == SortOrder.ASC) {
-                            query.orderBy(Projects.updatedAt, SortOrder.ASC)
+                            query.orderBy(Projects.updatedAt, ExposedSortOrder.ASC)
                         } else {
-                            query.orderBy(Projects.updatedAt, SortOrder.DESC)
+                            query.orderBy(Projects.updatedAt, ExposedSortOrder.DESC)
                         }
                     }
                 }
                 
                 // Apply pagination
                 val total = query.count()
-                val rows = query.limit(request.limit, request.offset.toLong()).toList()
+                val rows = query.limit(request.limit).offset(request.offset.toLong())
                 
                 val projects = rows.map { row ->
                     Project(
-                        id = UUID(row[Projects.id].toString()),
+                        id = row[Projects.id].value.toKotlinUuid(),
                         name = row[Projects.name],
                         description = row[Projects.description],
                         parameters = emptyList(), // TODO: Deserialize
@@ -207,7 +227,7 @@ class ProjectServiceImpl : ProjectService {
                 
                 ProjectListResponse(
                     success = true,
-                    projects = projects,
+                    projects = projects.toList(),
                     total = total.toInt()
                 )
             }
@@ -248,11 +268,11 @@ class ProjectServiceImpl : ProjectService {
         return MessageTemplateResponse(success = false, error = "Not implemented")
     }
     
-    override suspend fun deleteMessageTemplate(templateId: UUID): SuccessResponse {
+    override suspend fun deleteMessageTemplate(templateId: Uuid): SuccessResponse {
         return SuccessResponse(success = false, error = "Not implemented")
     }
     
-    override suspend fun listMessageTemplates(projectId: UUID): MessageTemplateListResponse {
+    override suspend fun listMessageTemplates(projectId: Uuid): MessageTemplateListResponse {
         return MessageTemplateListResponse(success = false, error = "Not implemented")
     }
 }

@@ -1,12 +1,17 @@
+@file:OptIn(ExperimentalTime::class, ExperimentalUuidApi::class)
+
 package io.github.mr3zee.rwizard.domain.model
 
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlinx.serialization.Serializable
+import kotlin.time.ExperimentalTime
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @Serializable
 data class Release(
-    val id: UUID,
-    val projectId: UUID,
+    val id: Uuid,
+    val projectId: Uuid,
     val name: String,
     val description: String,
     val parameterValues: Map<String, String>, // Project parameter values
@@ -31,9 +36,9 @@ enum class ReleaseStatus {
 
 @Serializable
 data class BlockExecution(
-    val id: UUID,
-    val releaseId: UUID,
-    val blockId: UUID,
+    val id: Uuid,
+    val releaseId: Uuid,
+    val blockId: Uuid,
     val blockType: String, // Block class name for reference
     val status: BlockExecutionStatus,
     val parameterValues: Map<String, String>,
@@ -61,8 +66,8 @@ enum class BlockExecutionStatus {
 
 @Serializable
 data class ExecutionLog(
-    val id: UUID,
-    val blockExecutionId: UUID,
+    val id: Uuid,
+    val blockExecutionId: Uuid,
     val level: LogLevel,
     val message: String,
     val timestamp: Instant,
@@ -80,8 +85,8 @@ enum class LogLevel {
 
 @Serializable
 data class UserInput(
-    val id: UUID,
-    val blockExecutionId: UUID,
+    val id: Uuid,
+    val blockExecutionId: Uuid,
     val prompt: String,
     val inputType: UserInputType,
     val options: List<String> = emptyList(), // For choice-based inputs

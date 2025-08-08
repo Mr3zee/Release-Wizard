@@ -1,15 +1,21 @@
+@file:OptIn(ExperimentalTime::class, ExperimentalUuidApi::class)
+
 package io.github.mr3zee.rwizard.services
 
 import io.github.mr3zee.rwizard.api.*
 import io.github.mr3zee.rwizard.domain.model.*
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 class ConnectionServiceImpl : ConnectionService {
     
     override suspend fun createSlackConnection(request: CreateSlackConnectionRequest): ConnectionResponse {
         return try {
-            val now = kotlinx.datetime.Clock.System.now()
+            val now = Clock.System.now()
             val connection = Connection.Slack(
-                id = UUID.v4(),
+                id = Uuid.random(),
                 name = request.name,
                 description = request.description,
                 createdAt = now,
@@ -29,9 +35,9 @@ class ConnectionServiceImpl : ConnectionService {
     
     override suspend fun createTeamCityConnection(request: CreateTeamCityConnectionRequest): ConnectionResponse {
         return try {
-            val now = kotlinx.datetime.Clock.System.now()
+            val now = Clock.System.now()
             val connection = Connection.TeamCity(
-                id = UUID.v4(),
+                id = Uuid.random(),
                 name = request.name,
                 description = request.description,
                 createdAt = now,
@@ -50,9 +56,9 @@ class ConnectionServiceImpl : ConnectionService {
     
     override suspend fun createGitHubConnection(request: CreateGitHubConnectionRequest): ConnectionResponse {
         return try {
-            val now = kotlinx.datetime.Clock.System.now()
+            val now = Clock.System.now()
             val connection = Connection.GitHub(
-                id = UUID.v4(),
+                id = Uuid.random(),
                 name = request.name,
                 description = request.description,
                 createdAt = now,
@@ -71,9 +77,9 @@ class ConnectionServiceImpl : ConnectionService {
     
     override suspend fun createMavenCentralConnection(request: CreateMavenCentralConnectionRequest): ConnectionResponse {
         return try {
-            val now = kotlinx.datetime.Clock.System.now()
+            val now = Clock.System.now()
             val connection = Connection.MavenCentralPortal(
-                id = UUID.v4(),
+                id = Uuid.random(),
                 name = request.name,
                 description = request.description,
                 createdAt = now,
@@ -94,7 +100,7 @@ class ConnectionServiceImpl : ConnectionService {
         return ConnectionResponse(success = false, error = "Update connection not implemented")
     }
     
-    override suspend fun deleteConnection(connectionId: UUID): SuccessResponse {
+    override suspend fun deleteConnection(connectionId: Uuid): SuccessResponse {
         return SuccessResponse(success = false, error = "Delete connection not implemented")
     }
     
@@ -102,11 +108,11 @@ class ConnectionServiceImpl : ConnectionService {
         return ConnectionListResponse(success = false, error = "List connections not implemented")
     }
     
-    override suspend fun getConnection(connectionId: UUID): ConnectionResponse {
+    override suspend fun getConnection(connectionId: Uuid): ConnectionResponse {
         return ConnectionResponse(success = false, error = "Get connection not implemented")
     }
     
-    override suspend fun testConnection(connectionId: UUID): ConnectionTestResponse {
+    override suspend fun testConnection(connectionId: Uuid): ConnectionTestResponse {
         return ConnectionTestResponse(success = false, error = "Test connection not implemented")
     }
     
@@ -155,27 +161,27 @@ class ConnectionServiceImpl : ConnectionService {
         }
     }
     
-    override suspend fun getSlackChannels(connectionId: UUID): SlackChannelListResponse {
+    override suspend fun getSlackChannels(connectionId: Uuid): SlackChannelListResponse {
         // TODO: Implement Slack API integration to fetch channels
         return SlackChannelListResponse(success = false, error = "Not implemented")
     }
     
-    override suspend fun getTeamCityProjects(connectionId: UUID): TeamCityProjectListResponse {
+    override suspend fun getTeamCityProjects(connectionId: Uuid): TeamCityProjectListResponse {
         // TODO: Implement TeamCity API integration to fetch projects
         return TeamCityProjectListResponse(success = false, error = "Not implemented")
     }
     
-    override suspend fun getTeamCityBuildConfigurations(connectionId: UUID, projectId: String): TeamCityBuildConfigListResponse {
+    override suspend fun getTeamCityBuildConfigurations(connectionId: Uuid, projectId: String): TeamCityBuildConfigListResponse {
         // TODO: Implement TeamCity API integration to fetch build configurations
         return TeamCityBuildConfigListResponse(success = false, error = "Not implemented")
     }
     
-    override suspend fun getGitHubRepositories(connectionId: UUID): GitHubRepositoryListResponse {
+    override suspend fun getGitHubRepositories(connectionId: Uuid): GitHubRepositoryListResponse {
         // TODO: Implement GitHub API integration to fetch repositories
         return GitHubRepositoryListResponse(success = false, error = "Not implemented")
     }
     
-    override suspend fun getGitHubWorkflows(connectionId: UUID, repository: String): GitHubWorkflowListResponse {
+    override suspend fun getGitHubWorkflows(connectionId: Uuid, repository: String): GitHubWorkflowListResponse {
         // TODO: Implement GitHub API integration to fetch workflows
         return GitHubWorkflowListResponse(success = false, error = "Not implemented")
     }

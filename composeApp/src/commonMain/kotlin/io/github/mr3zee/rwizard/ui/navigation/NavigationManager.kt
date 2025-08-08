@@ -1,18 +1,21 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
 package io.github.mr3zee.rwizard.ui.navigation
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import io.github.mr3zee.rwizard.domain.model.UUID
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 sealed class Screen {
     data object ProjectList : Screen()
-    data class ProjectDetail(val projectId: UUID) : Screen()
-    data class ProjectEditor(val projectId: UUID?) : Screen() // null for new project
-    data class ReleaseCreation(val projectId: UUID) : Screen()
-    data class ReleaseMonitor(val releaseId: UUID) : Screen()
+    data class ProjectDetail(val projectId: Uuid) : Screen()
+    data class ProjectEditor(val projectId: Uuid?) : Screen() // null for new project
+    data class ReleaseCreation(val projectId: Uuid) : Screen()
+    data class ReleaseMonitor(val releaseId: Uuid) : Screen()
     data object ConnectionList : Screen()
-    data class ConnectionEditor(val connectionId: UUID?) : Screen() // null for new connection
+    data class ConnectionEditor(val connectionId: Uuid?) : Screen() // null for new connection
 }
 
 class NavigationManager {

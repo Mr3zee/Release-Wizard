@@ -13,6 +13,7 @@ import io.github.mr3zee.rwizard.ui.navigation.Screen
 import io.github.mr3zee.rwizard.ui.theme.ReleaseWizardTheme
 import io.github.mr3zee.rwizard.ui.screens.*
 import org.jetbrains.compose.ui.tooling.preview.Preview
+import kotlin.uuid.ExperimentalUuidApi
 
 @Composable
 @Preview
@@ -22,7 +23,7 @@ fun App() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalUuidApi::class)
 @Composable
 fun ReleaseWizardApp() {
     val navigationManager = remember { NavigationManager() }

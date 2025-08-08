@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
 package io.github.mr3zee.rwizard.ui.screens
 
 import androidx.compose.foundation.layout.*
@@ -9,15 +11,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import io.github.mr3zee.rwizard.domain.model.UUID
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProjectDetailScreen(
-    projectId: UUID,
+    projectId: Uuid,
     onNavigateBack: () -> Unit,
-    onEditProject: (UUID) -> Unit,
-    onStartRelease: (UUID) -> Unit
+    onEditProject: (Uuid) -> Unit,
+    onStartRelease: (Uuid) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -64,7 +67,7 @@ fun ProjectDetailScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProjectEditorScreen(
-    projectId: UUID?,
+    projectId: Uuid?,
     onNavigateBack: () -> Unit,
     onSaveProject: () -> Unit
 ) {
@@ -108,9 +111,9 @@ fun ProjectEditorScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReleaseCreationScreen(
-    projectId: UUID,
+    projectId: Uuid,
     onNavigateBack: () -> Unit,
-    onStartRelease: (UUID) -> Unit
+    onStartRelease: (Uuid) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -140,7 +143,7 @@ fun ReleaseCreationScreen(
             Spacer(modifier = Modifier.height(16.dp))
             Text("Project ID: $projectId")
             Spacer(modifier = Modifier.height(24.dp))
-            Button(onClick = { onStartRelease(UUID.v4()) }) {
+            Button(onClick = { onStartRelease(Uuid.random()) }) {
                 Text("Start Release")
             }
         }
@@ -150,7 +153,7 @@ fun ReleaseCreationScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReleaseMonitorScreen(
-    releaseId: UUID,
+    releaseId: Uuid,
     onNavigateBack: () -> Unit
 ) {
     Scaffold(
@@ -189,7 +192,7 @@ fun ReleaseMonitorScreen(
 fun ConnectionListScreen(
     onNavigateBack: () -> Unit,
     onCreateConnection: () -> Unit,
-    onEditConnection: (UUID) -> Unit
+    onEditConnection: (Uuid) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -227,7 +230,7 @@ fun ConnectionListScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConnectionEditorScreen(
-    connectionId: UUID?,
+    connectionId: Uuid?,
     onNavigateBack: () -> Unit,
     onSaveConnection: () -> Unit
 ) {
