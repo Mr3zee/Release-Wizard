@@ -198,6 +198,11 @@ Project can have connections. The same connections can be reused between differe
 
 Ask you if you need to use any additional libraries or to upgrade existing ones.
 
+## Build Script
+
+Don't change build scripts during normal development.
+If you need a change — ask for it in the issue.
+
 ## Services and communication — kotlinx.rpc
 
 Use kotlinx.rpc for communications between services.
@@ -229,4 +234,4 @@ Use exposed for database access:
 
 ## Other
 - Securely store credentials for connections
-- Support authentication system
+- Support authentication system. Use auth on the Ktor level, not the RPC level
