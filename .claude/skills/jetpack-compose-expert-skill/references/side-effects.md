@@ -511,6 +511,63 @@ fun GoodCapture() {
 }
 ```
 
+## Structured Concurrency in Compose (MANDATORY)
+
+Compose provides built-in coroutine scopes that respect the composable lifecycle. **Always** use these instead of creating your own scopes or jobs.
+
+### Rules
+
+1. **Never use `CoroutineScope(...)` in composables or ViewModels for UI work.** Use `LaunchedEffect`, `rememberCoroutineScope`, or `viewModelScope` instead.
+2. **Never create stray `Job()` instances.** They break cancellation propagation and leak coroutines.
+3. **Never use `GlobalScope`.** It has no parent, no lifecycle, and no cancellation.
+4. **For parallel decomposition in suspend functions**, use `coroutineScope { }` (lexical builder), not `CoroutineScope(...)`:
+
+```kotlin
+// WRONG: stray scope, leaks coroutines, breaks cancellation
+suspend fun loadData() {
+    CoroutineScope(Dispatchers.IO).launch {
+        fetchFromNetwork()
+    }
+}
+
+// WRONG: stray Job, not tied to any lifecycle
+class MyViewModel : ViewModel() {
+    private val job = Job()
+    private val scope = CoroutineScope(Dispatchers.Main + job)
+}
+
+// CORRECT: lexical scope, tied to caller's lifecycle
+suspend fun loadData() = coroutineScope {
+    val a = async { fetchProfileFromNetwork() }
+    val b = async { fetchSettingsFromNetwork() }
+    combine(a.await(), b.await())
+}
+
+// CORRECT: Compose-managed scope in event handlers
+@Composable
+fun MyScreen() {
+    val scope = rememberCoroutineScope()
+    Button(onClick = { scope.launch { doWork() } }) {
+        Text("Go")
+    }
+}
+
+// CORRECT: Compose-managed scope for lifecycle-bound work
+@Composable
+fun MyScreen(userId: String) {
+    LaunchedEffect(userId) {
+        val data = loadData() // suspend fun, structured
+        // ...
+    }
+}
+```
+
+### Why This Matters
+
+- `CoroutineScope(...)` creates an **unmanaged** scope — nothing cancels it when the composable leaves composition or the ViewModel is cleared.
+- `coroutineScope { }` is a **suspend builder** that creates a child scope of the current coroutine — it automatically cancels children when the parent is cancelled.
+- Stray `Job` instances mean exceptions in child coroutines don't propagate to parents, violating structured concurrency and hiding failures.
+
 ---
 
-**Summary:** Effects bridge declarative Compose with imperative systems. Master key selection in `LaunchedEffect`, always cleanup in `DisposableEffect`, use `rememberUpdatedState` for long-running effects that need fresh values, and prefer effect-based patterns over manual lifecycle management.
+**Summary:** Effects bridge declarative Compose with imperative systems. Master key selection in `LaunchedEffect`, always cleanup in `DisposableEffect`, use `rememberUpdatedState` for long-running effects that need fresh values, and prefer effect-based patterns over manual lifecycle management. **Always enforce structured concurrency** — use Compose-provided scopes (`LaunchedEffect`, `rememberCoroutineScope`) and the lexical `coroutineScope { }` builder; never create stray `CoroutineScope()` or `Job()` instances.

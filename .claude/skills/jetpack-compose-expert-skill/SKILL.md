@@ -96,6 +96,14 @@ for platform-specific APIs.
    platform-agnostic. Only split to `jvmMain`/`jsMain`/`wasmJsMain`/`iosMain` when calling
    platform-specific APIs.
 
+7. **Enforce Kotlin coroutines structured concurrency**. Never create stray `CoroutineScope()`
+   or unmanaged `Job` instances. In Compose, always use the scopes the framework provides:
+   `LaunchedEffect`, `rememberCoroutineScope`, or `produceState`. In plain Kotlin, prefer
+   the lexical `coroutineScope { }` / `supervisorScope { }` suspend builders over constructing
+   `CoroutineScope(...)` manually. Stray scopes and jobs leak coroutines, break cancellation
+   propagation, and make code harder to reason about. See `references/side-effects.md` for
+   Compose-specific patterns.
+
 ## Source Code Receipts
 
 Beyond the guidance docs, this skill bundles the **actual source code** from

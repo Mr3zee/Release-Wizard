@@ -109,3 +109,55 @@ fun Route.releaseRoutes() {
 
 - Use Exposed with R2DBC for repositories.
 - Keep schema evolution in migration files local to the module.
+
+## Coroutines — Structured Concurrency (MANDATORY)
+
+All coroutine usage in services and repositories **must** follow structured concurrency.
+
+### In service/repository methods
+
+Ktor route handlers run inside a coroutine context. Service and repository methods should be `suspend` functions. When you need parallel child coroutines, use the lexical `coroutineScope { }` builder:
+
+```kotlin
+class DefaultReleasesService(
+    private val releasesRepo: ReleasesRepository,
+    private val blocksRepo: BlocksRepository,
+) : ReleasesService {
+    override suspend fun getReleaseWithBlocks(id: ReleaseId): ReleaseWithBlocks = coroutineScope {
+        val release = async { releasesRepo.getById(id) }
+        val blocks = async { blocksRepo.listByRelease(id) }
+        ReleaseWithBlocks(release.await(), blocks.await())
+    }
+}
+```
+
+### Anti-patterns
+
+```kotlin
+// BAD: stray scope — leaks coroutines, breaks cancellation on shutdown
+class BadService {
+    private val scope = CoroutineScope(Dispatchers.IO)
+    fun doWork() { scope.launch { /* ... */ } }
+}
+
+// BAD: stray Job — no parent, breaks structured concurrency
+class BadService2 {
+    private val job = SupervisorJob()
+    private val scope = CoroutineScope(Dispatchers.Default + job)
+}
+
+// BAD: GlobalScope — never
+fun fireAndForget() { GlobalScope.launch { /* ... */ } }
+```
+
+### Application-level background tasks
+
+The only acceptable place for a standalone `CoroutineScope` is application-level background work (e.g., periodic cleanup). Tie it to the Ktor lifecycle:
+
+```kotlin
+fun Application.configureBackgroundTasks() {
+    val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    environment.monitor.subscribe(ApplicationStopped) { scope.cancel() }
+    scope.launch { periodicCleanup() }
+}
+```
