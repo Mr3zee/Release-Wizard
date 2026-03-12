@@ -11,6 +11,7 @@
 ```kotlin
 plugins {
     alias(libs.plugins.kotlinJvm)
+    alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.ktor)
     application
 }
@@ -21,15 +22,33 @@ dependencies {
     implementation(projects.shared)
     implementation(libs.ktor.serverCore)
     implementation(libs.ktor.serverNetty)
+    implementation(libs.ktor.serverContentNegotiation)
+    implementation(libs.ktor.serverStatusPages)
+    implementation(libs.ktor.serializationKotlinxJson)
+    implementation(libs.exposed.core)
+    implementation(libs.exposed.jdbc)
+    implementation(libs.exposed.json)
+    implementation(libs.exposed.kotlinDatetime)
+    implementation(libs.postgresql)
+    implementation(libs.hikaricp)
     implementation(libs.koin.ktor)
     implementation(libs.koin.loggerSlf4j)
     implementation(libs.logback)
 
     testImplementation(libs.ktor.serverTestHost)
+    testImplementation(libs.ktor.clientContentNegotiation)
+    testImplementation(libs.ktor.clientSerializationKotlinxJson)
     testImplementation(libs.koin.test)
     testImplementation(libs.kotlin.testJunit)
+    testImplementation(libs.h2)
 }
 ```
+
+## Key version constraints
+
+- **Koin 4.1.1+** required for Ktor 3.x. Koin 4.0.x targets Ktor 2.x and fails at runtime.
+- **Exposed 0.61.0** with `exposed-json` for JSONB column support.
+- Server tests need `ktor-client-content-negotiation` and `ktor-serialization-kotlinx-json` as **test** dependencies for the test client JSON serialization.
 
 ## Adding dependencies
 

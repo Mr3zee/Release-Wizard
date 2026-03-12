@@ -7,7 +7,7 @@ Use layered architecture with Koin dependency injection in the server module.
 The server package (`server/src/main/kotlin/com/github/mr3zee/`) contains:
 
 - `Application.kt`: entrypoint, Ktor plugin setup, and Koin installation
-- `Config.kt`: `@Serializable` config types loaded from application config
+- `Config.kt`: plain data classes + `loadConfig()` function for env vars with defaults
 - `<Feature>Module.kt`: Koin module definitions per feature
 - `Routes.kt`: HTTP route definitions
 - `Service.kt`: business logic layer
@@ -28,6 +28,7 @@ Install Koin via `install(Koin)` in the Ktor application:
 fun main() {
     embeddedServer(Netty, port = SERVER_PORT, host = "0.0.0.0") {
         install(Koin) {
+            slf4jLogger()
             modules(appModule, releasesModule, connectionsModule, blocksModule)
         }
         configureRouting()
@@ -36,6 +37,8 @@ fun main() {
 ```
 
 Routes inject services using `val service by inject<ReleasesService>()` from the Ktor `Route`/`Application` scope.
+
+**Koin version requirement**: Use **Koin 4.1.1+** for Ktor 3.x compatibility. Koin 4.0.x targets Ktor 2.x and will fail at runtime with `NoClassDefFoundError: io/ktor/server/routing/RoutingKt`.
 
 ## Dependency wiring with Koin modules
 
@@ -46,28 +49,25 @@ Organize Koin modules by feature. Each feature defines its own `org.koin.dsl.mod
 ```kotlin
 val appModule = module {
     single { loadConfig() }
-    single { dataSource(get<Config>().database) }
+    single<DataSource> { dataSource(get<Config>().database) }
+    single<Database> { initDatabase(get<DataSource>()) }
 }
 ```
 
 **Feature Koin modules** — one per domain feature:
 
 ```kotlin
-val releasesModule = module {
-    single<ReleasesRepository> { ExposedReleasesRepository(get()) }
-    single<ReleasesService> { DefaultReleasesService(get(), get<Config>().releases) }
-}
-
-val connectionsModule = module {
-    single<ConnectionsRepository> { ExposedConnectionsRepository(get()) }
-    single<ConnectionsService> { DefaultConnectionsService(get()) }
+val projectsModule = module {
+    single<ProjectsRepository> { ExposedProjectsRepository(get()) }  // get() resolves Database
+    single<ProjectsService> { DefaultProjectsService(get()) }
 }
 ```
 
 Rules:
 - Shared infrastructure (data source, HTTP client, config) is defined **once** in `appModule`.
 - Feature modules declare only their own repository, client, and service bindings.
-- Bind by interface (`single<ReleasesService> { DefaultReleasesService(...) }`) to allow test overrides.
+- Bind by interface (`single<ProjectsService> { DefaultProjectsService(...) }`) to allow test overrides.
+- **Repositories receive `Database` via constructor** — never rely on Exposed's global state.
 - When a service needs capabilities from multiple repositories, inject those repositories separately
   instead of repository-interface inheritance.
 - Route handlers inject services, never repositories directly.
@@ -101,14 +101,47 @@ fun Route.releaseRoutes() {
 
 ## Configuration pattern
 
-- Model config as `@Serializable` data classes.
-- Support environment variable overrides.
+- Model config as **plain data classes** (not `@Serializable` — they have no serialization use case).
+- Read environment variables in a dedicated `loadConfig()` function, not in default parameter values.
 - Provide config as a Koin singleton so features can inject and read their subsection.
+
+```kotlin
+data class Config(
+    val database: DatabaseConfig = DatabaseConfig(),
+    val server: ServerConfig = ServerConfig(),
+)
+
+fun loadConfig(): Config {
+    return Config(
+        database = DatabaseConfig(
+            url = System.getenv("DB_URL") ?: "jdbc:postgresql://localhost:5432/release_wizard",
+            ...
+        ),
+    )
+}
+```
 
 ## Persistence
 
-- Use Exposed with R2DBC for repositories.
-- Keep schema evolution in migration files local to the module.
+- Use Exposed with JDBC (blocking) wrapped in `newSuspendedTransaction(Dispatchers.IO, db)`.
+- **Never use bare `transaction { }`** in suspend functions — it blocks coroutine threads.
+- Repositories accept `Database` via constructor and pass it to `newSuspendedTransaction`.
+- Use a `dbQuery` helper in repositories:
+
+```kotlin
+class ExposedProjectsRepository(private val db: Database) : ProjectsRepository {
+    private suspend fun <T> dbQuery(block: suspend () -> T): T =
+        newSuspendedTransaction(Dispatchers.IO, db) { block() }
+
+    override suspend fun findAll(): List<Project> = dbQuery {
+        ProjectTable.selectAll().map { it.toProject() }
+    }
+}
+```
+
+## JSON Configuration
+
+Use the shared `AppJson` instance from `shared/.../JsonConfig.kt` everywhere (server, client, persistence). Do not create separate `Json { }` instances.
 
 ## Coroutines — Structured Concurrency (MANDATORY)
 
@@ -148,6 +181,9 @@ class BadService2 {
 
 // BAD: GlobalScope — never
 fun fireAndForget() { GlobalScope.launch { /* ... */ } }
+
+// BAD: bare transaction {} in suspend function — blocks coroutine thread
+suspend fun findAll() = transaction { ... }
 ```
 
 ### Application-level background tasks
