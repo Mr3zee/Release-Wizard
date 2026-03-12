@@ -152,14 +152,25 @@ fun Application.module() {
 
 For tests, pass `DatabaseConfig` directly to `appModule()` — no YAML needed.
 
-## Persistence
+## Persistence (Exposed 1.x)
 
+- **Package migration**: Exposed 1.x uses `org.jetbrains.exposed.v1.*` packages (NOT `org.jetbrains.exposed.sql.*`):
+  - Core: `org.jetbrains.exposed.v1.core.*` (Table, Column, ResultRow, SortOrder, `eq`)
+  - JDBC: `org.jetbrains.exposed.v1.jdbc.*` (Database, SchemaUtils, insert, update, deleteWhere, selectAll)
+  - Transactions: `org.jetbrains.exposed.v1.jdbc.transactions.transaction`, `...transactions.experimental.newSuspendedTransaction`
+  - UUID tables: `org.jetbrains.exposed.v1.core.dao.id.java.UUIDTable` (for `java.util.UUID`)
+  - JSON: `org.jetbrains.exposed.v1.json.jsonb`
+  - Datetime: `org.jetbrains.exposed.v1.datetime.timestamp`
 - Use Exposed with JDBC (blocking) wrapped in `newSuspendedTransaction(Dispatchers.IO, db)`.
 - **Never use bare `transaction { }`** in suspend functions — it blocks coroutine threads.
 - Repositories accept `Database` via constructor and pass it to `newSuspendedTransaction`.
 - Use a `dbQuery` helper in repositories:
 
 ```kotlin
+import org.jetbrains.exposed.v1.core.*
+import org.jetbrains.exposed.v1.jdbc.*
+import org.jetbrains.exposed.v1.jdbc.transactions.experimental.newSuspendedTransaction
+
 class ExposedProjectsRepository(private val db: Database) : ProjectsRepository {
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
         newSuspendedTransaction(Dispatchers.IO, db) { block() }
@@ -169,6 +180,12 @@ class ExposedProjectsRepository(private val db: Database) : ProjectsRepository {
     }
 }
 ```
+
+### kotlinx-datetime 0.7.x compatibility
+
+- Domain models use `import kotlinx.datetime.Instant` (typealias to `kotlin.time.Instant`)
+- For `Clock.System.now()`, always use `import kotlin.time.Clock` — `kotlinx.datetime.Clock.System` was removed in 0.7.x
+- Exposed's `timestamp()` column returns `kotlinx.datetime.Instant` which is compatible via typealias
 
 ## JSON Configuration
 

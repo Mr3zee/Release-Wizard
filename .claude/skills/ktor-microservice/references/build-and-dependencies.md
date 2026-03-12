@@ -48,7 +48,9 @@ dependencies {
 ## Key version constraints
 
 - **Koin 4.1.1+** required for Ktor 3.x. Koin 4.0.x targets Ktor 2.x and fails at runtime.
-- **Exposed 0.61.0** with `exposed-json` for JSONB column support.
+- **Exposed 1.1.1** — uses `org.jetbrains.exposed.v1.*` packages (not the old `org.jetbrains.exposed.sql.*`). See `service-architecture.md` for the full import mapping.
+- **kotlinx-datetime 0.7.1** — `kotlinx.datetime.Instant` is a typealias to `kotlin.time.Instant`. Use `kotlin.time.Clock` for `Clock.System.now()` (the old `kotlinx.datetime.Clock.System` was removed).
+- **kotlinx-serialization 1.9.0** — Compose Multiplatform and Ktor transitively pull this version; declare it explicitly to avoid version drift.
 - Server tests need `ktor-client-content-negotiation` and `ktor-serialization-kotlinx-json` as **test** dependencies for the test client JSON serialization.
 
 ## Adding dependencies

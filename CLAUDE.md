@@ -27,7 +27,10 @@ Dependencies flow: `composeApp` → `shared`, `server` → `shared`. No dependen
 | Language | Kotlin | 2.3.0 |
 | Build | Gradle with version catalog | `gradle/libs.versions.toml` |
 
-**Important**: Koin 4.1.1+ is required for Ktor 3.x compatibility. Koin 4.0.x targets Ktor 2.x and will fail at runtime.
+**Important version constraints**:
+- **Koin 4.1.1+** required for Ktor 3.x. Koin 4.0.x targets Ktor 2.x and fails at runtime.
+- **Exposed 1.x** uses `org.jetbrains.exposed.v1.*` packages (not `org.jetbrains.exposed.sql.*`). See Server Conventions below.
+- **kotlinx-datetime 0.7.x** deprecated `kotlinx.datetime.Instant`/`Clock` in favor of `kotlin.time.Instant`/`Clock`. Always use `kotlin.time.Clock` for `Clock.System.now()` — `kotlinx.datetime.Clock.System` is removed. Domain models keep `import kotlinx.datetime.Instant` (typealias to `kotlin.time.Instant`) for Exposed compatibility.
 
 ## Build & Run Commands
 
@@ -84,7 +87,14 @@ All domain models live in `shared/src/commonMain/.../model/` and use `@Serializa
 ## Server Conventions
 
 - **Config**: Server uses `application.yaml` + `EngineMain`. Ktor handles host/port from `ktor.deployment.*`. Custom config (database) is read via `environment.config.databaseConfig()` in `Application.module()` and passed to `appModule(dbConfig)`. No `loadConfig()` function — all config comes from the YAML file.
-- **Database**: Use `newSuspendedTransaction(Dispatchers.IO, db)` for all Exposed queries — never block coroutine threads with bare `transaction {}`.
+- **Database (Exposed 1.x)**: All Exposed imports use `org.jetbrains.exposed.v1.*` packages:
+  - Core types: `org.jetbrains.exposed.v1.core.*` (Table, Column, ResultRow, SortOrder, eq, etc.)
+  - JDBC operations: `org.jetbrains.exposed.v1.jdbc.*` (Database, SchemaUtils, insert, update, deleteWhere, selectAll)
+  - Transactions: `org.jetbrains.exposed.v1.jdbc.transactions.transaction`, `...transactions.experimental.newSuspendedTransaction`
+  - UUID tables: `org.jetbrains.exposed.v1.core.dao.id.java.UUIDTable` (for `java.util.UUID`)
+  - JSON columns: `org.jetbrains.exposed.v1.json.jsonb`
+  - Datetime columns: `org.jetbrains.exposed.v1.datetime.timestamp`
+- **Suspend transactions**: Use `newSuspendedTransaction(Dispatchers.IO, db)` for all Exposed queries — never block coroutine threads with bare `transaction {}`.
 - **Repositories**: Accept `Database` via constructor injection. Wire via Koin: `single<Repo> { ExposedRepo(get()) }`.
 - **Routes**: Validate UUID path parameters before passing to service. Use `ApiRoutes` constants from shared module.
 - **Tests**: Use `testApplication` + real Koin modules + H2 in PostgreSQL mode. Pass `DatabaseConfig` directly to `appModule(testDbConfig())` — no YAML or Koin overrides needed. Use unique DB URLs per test (`System.nanoTime()` in JDBC URL).
