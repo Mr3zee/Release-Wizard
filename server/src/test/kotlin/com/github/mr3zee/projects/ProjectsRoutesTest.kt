@@ -41,11 +41,12 @@ class ProjectsRoutesTest {
     private fun Application.testModule() {
         install(Koin) {
             slf4jLogger()
+            allowOverride(true)
             modules(
                 appModule,
                 projectsModule,
                 module {
-                    single { testDbConfig() }
+                    single<Config> { testDbConfig() }
                 },
             )
         }

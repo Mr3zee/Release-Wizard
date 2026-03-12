@@ -26,10 +26,11 @@ Install Koin via `install(Koin)` in the Ktor application:
 
 ```kotlin
 fun main() {
-    embeddedServer(Netty, port = SERVER_PORT, host = "0.0.0.0") {
+    val config = loadConfig()
+    embeddedServer(Netty, port = config.server.port, host = config.server.host) {
         install(Koin) {
             slf4jLogger()
-            modules(appModule, releasesModule, connectionsModule, blocksModule)
+            modules(appModule, projectsModule /*, releasesModule, connectionsModule */)
         }
         configureRouting()
     }.start(wait = true)

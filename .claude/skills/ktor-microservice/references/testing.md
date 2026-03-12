@@ -21,11 +21,12 @@ class ProjectsRoutesTest {
     private fun Application.testModule() {
         install(Koin) {
             slf4jLogger()
+            allowOverride(true)  // required in Koin 4.x for test overrides
             modules(
                 appModule,
                 projectsModule,
                 module {
-                    single { testDbConfig() }  // override Config
+                    single<Config> { testDbConfig() }  // override Config
                 },
             )
         }

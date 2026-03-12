@@ -1,19 +1,16 @@
 package com.github.mr3zee.model
 
+import com.github.mr3zee.AppJson
 import com.github.mr3zee.api.CreateProjectRequest
 import com.github.mr3zee.api.ProjectListResponse
 import com.github.mr3zee.api.ProjectResponse
 import com.github.mr3zee.api.UpdateProjectRequest
 import kotlinx.datetime.Clock
-import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class SerializationTest {
-    private val json = Json {
-        ignoreUnknownKeys = true
-        prettyPrint = true
-    }
+    private val json = AppJson
 
     @Test
     fun dagGraphRoundTrip() {

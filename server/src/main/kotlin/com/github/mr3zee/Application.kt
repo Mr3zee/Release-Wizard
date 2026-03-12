@@ -15,7 +15,8 @@ import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
 
 fun main() {
-    embeddedServer(Netty, port = SERVER_PORT, host = "0.0.0.0", module = Application::module)
+    val config = loadConfig()
+    embeddedServer(Netty, port = config.server.port, host = config.server.host, module = Application::module)
         .start(wait = true)
 }
 

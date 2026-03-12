@@ -86,7 +86,7 @@ All domain models live in `shared/src/commonMain/.../model/` and use `@Serializa
 - **Database**: Use `newSuspendedTransaction(Dispatchers.IO, db)` for all Exposed queries — never block coroutine threads with bare `transaction {}`.
 - **Repositories**: Accept `Database` via constructor injection. Wire via Koin: `single<Repo> { ExposedRepo(get()) }`.
 - **Routes**: Validate UUID path parameters before passing to service. Use `ApiRoutes` constants from shared module.
-- **Tests**: Use `testApplication` + real Koin modules + H2 in PostgreSQL mode. Override `Config` via Koin module override. Use unique DB URLs per test (`System.nanoTime()` in JDBC URL).
+- **Tests**: Use `testApplication` + real Koin modules + H2 in PostgreSQL mode. Override `Config` via Koin module override with `allowOverride(true)`. Use unique DB URLs per test (`System.nanoTime()` in JDBC URL).
 
 ## Key Constraints
 
@@ -103,10 +103,15 @@ Implementation plans are maintained as `PLAN.md` at the project root. When start
 2. Check off completed items as work progresses
 3. Remove the plan when the feature is fully implemented
 
-After completing each phase:
-1. Run a review agent on all changes
-2. Fix critical/important/minor issues
-3. Commit changes
-4. Update memory, CLAUDE.md, and relevant skills with learnings
+After completing each phase, follow this workflow in order:
+1. **Implement** — build the phase
+2. **Review** — run a review agent on all changes
+3. **Fix** — address issues from the review
+4. **Review again** — re-run review on the fixes
+5. **Fix again** — if needed (max 2 review/fix rounds total, then move on)
+6. **Update findings** — update memory, CLAUDE.md, and relevant skills with learnings
+7. **Review findings** — review the documentation updates for accuracy
+8. **Commit** — commit all changes
+9. **Complete** — phase is done, move to next
 
 This keeps multi-session work coherent without relying on conversation context.
