@@ -119,9 +119,33 @@ After completing each phase, follow this workflow in order:
 3. **Fix** — address issues from the review
 4. **Review again** — re-run review on the fixes
 5. **Fix again** — if needed (max 2 review/fix rounds total, then move on)
-6. **Update findings** — update memory, CLAUDE.md, and relevant skills with learnings
-7. **Review findings** — review the documentation updates for accuracy
-8. **Commit** — commit all changes
-9. **Complete** — phase is done, move to next
+6. **UI verification** — if the phase included UI changes, run compose-ui-test-server to verify visually (see below)
+7. **Update findings** — update memory, CLAUDE.md, and relevant skills with learnings
+8. **Review findings** — review the documentation updates for accuracy
+9. **Commit** — commit all changes
+10. **Complete** — phase is done, move to next
 
 This keeps multi-session work coherent without relying on conversation context.
+
+## UI Verification (compose-ui-test-server)
+
+After any phase with UI changes, verify the UI with compose-ui-test-server. The library is installed in `composeApp/jvmMain` and `main.kt` uses `runApplication()` from the library.
+
+```bash
+# Launch with test server enabled (requires server running for API calls)
+COMPOSE_UI_TEST_SERVER_ENABLED=true ./gradlew :composeApp:run
+
+# Health check
+curl http://localhost:54345/health
+
+# Interact with UI elements by test tag
+curl http://localhost:54345/onNodeWithTag/{tag}/performClick
+curl "http://localhost:54345/onNodeWithTag/{tag}/performTextInput?text=..."
+curl "http://localhost:54345/waitUntilExactlyOneExists/tag/{tag}?timeout=5000"
+curl http://localhost:54345/waitForIdle
+
+# Capture screenshot for visual verification
+curl "http://localhost:54345/captureScreenshot?path=/tmp/screenshot.png"
+```
+
+Always `waitForIdle` between actions. URL-encode special characters in text inputs.

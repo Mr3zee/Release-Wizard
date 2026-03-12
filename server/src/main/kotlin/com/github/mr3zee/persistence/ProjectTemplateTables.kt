@@ -4,9 +4,9 @@ import com.github.mr3zee.AppJson
 import com.github.mr3zee.model.DagGraph
 import com.github.mr3zee.model.Parameter
 import kotlinx.serialization.builtins.ListSerializer
-import org.jetbrains.exposed.dao.id.UUIDTable
-import org.jetbrains.exposed.sql.json.jsonb
-import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
+import org.jetbrains.exposed.v1.core.dao.id.java.UUIDTable
+import org.jetbrains.exposed.v1.json.jsonb
+import org.jetbrains.exposed.v1.datetime.timestamp
 
 object ProjectTemplateTable : UUIDTable("project_templates") {
     val name = varchar("name", 255)

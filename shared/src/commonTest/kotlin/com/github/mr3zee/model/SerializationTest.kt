@@ -5,7 +5,7 @@ import com.github.mr3zee.api.CreateProjectRequest
 import com.github.mr3zee.api.ProjectListResponse
 import com.github.mr3zee.api.ProjectResponse
 import com.github.mr3zee.api.UpdateProjectRequest
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

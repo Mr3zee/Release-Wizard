@@ -118,6 +118,34 @@ Release Wizard is a Kotlin library release pipeline builder. Users construct pip
 - [x] Updated serialization test for DagGraph with positions
 - [x] All 25 shared tests pass, all 10 server tests pass, all targets compile (JVM, JS, WasmJS)
 
+### 2f. UI Verification (compose-ui-test-server)
+
+- [x] Install compose-ui-test-server in composeApp
+- [ ] Launch app with test server, verify project list, create project, navigate to editor
+- [ ] Verify editor toolbar, canvas, properties panel render correctly via screenshots
+
+---
+
+## UI Verification Process
+
+After every phase with UI changes, verify the UI using `compose-ui-test-server`:
+
+1. **Start the server** (requires the backend to be running for API calls):
+   ```bash
+   COMPOSE_UI_TEST_SERVER_ENABLED=true ./gradlew :composeApp:run &
+   ```
+2. **Health check**: `curl http://localhost:54345/health`
+3. **Interact**: click buttons, enter text, wait for elements via HTTP endpoints
+4. **Screenshot**: `curl "http://localhost:54345/captureScreenshot?path=/tmp/screenshot.png"`
+5. **Verify**: read screenshots to validate UI layout and state
+
+Key test tags available:
+- Project list: `project_list_screen`, `create_project_fab`, `project_name_input`, `project_list`, `project_item_{id}`
+- Editor: `dag_editor_screen`, `dag_canvas`, `save_button`, `add_block_{TYPE}`, `add_container`, `undo_button`, `redo_button`, `delete_button`
+- Properties: `block_name_field`, `block_type_selector`, `block_timeout_field`, `add_parameter_button`
+
+---
+
 ## Phase 3: Connections & Authentication
 
 *(Not yet started)*

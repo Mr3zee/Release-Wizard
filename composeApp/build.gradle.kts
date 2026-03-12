@@ -34,6 +34,7 @@ kotlin {
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(projects.shared)
+            implementation(libs.kotlinx.datetime)
 
             // Ktor client
             implementation(libs.ktor.clientCore)
@@ -47,6 +48,9 @@ kotlin {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
             implementation(libs.ktor.clientCio)
+            implementation(libs.compose.uiTestServer)
+            @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
+            implementation(compose.uiTest)
         }
         jsMain.dependencies {
             implementation(libs.ktor.clientJs)

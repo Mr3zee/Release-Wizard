@@ -3,11 +3,14 @@ package com.github.mr3zee.projects
 import com.github.mr3zee.model.*
 import com.github.mr3zee.persistence.ProjectTemplateTable
 import kotlinx.coroutines.Dispatchers
-import kotlinx.datetime.Clock
-import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
+import org.jetbrains.exposed.v1.core.*
+import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.jdbc.*
+import org.jetbrains.exposed.v1.jdbc.Database
+import org.jetbrains.exposed.v1.jdbc.transactions.experimental.newSuspendedTransaction
 import java.util.UUID
+import kotlin.time.Clock
 
 class ExposedProjectsRepository(private val db: Database) : ProjectsRepository {
 
