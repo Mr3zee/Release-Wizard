@@ -11,6 +11,7 @@ data class Connection(
     val type: ConnectionType,
     val config: ConnectionConfig,
     val createdAt: Instant,
+    val updatedAt: Instant,
 )
 
 @Serializable

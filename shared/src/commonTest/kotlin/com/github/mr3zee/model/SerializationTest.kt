@@ -1,10 +1,7 @@
 package com.github.mr3zee.model
 
 import com.github.mr3zee.AppJson
-import com.github.mr3zee.api.CreateProjectRequest
-import com.github.mr3zee.api.ProjectListResponse
-import com.github.mr3zee.api.ProjectResponse
-import com.github.mr3zee.api.UpdateProjectRequest
+import com.github.mr3zee.api.*
 import kotlin.time.Clock
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -141,6 +138,52 @@ class SerializationTest {
         val encoded = json.encodeToString(ProjectListResponse.serializer(), response)
         val decoded = json.decodeFromString(ProjectListResponse.serializer(), encoded)
         assertEquals(response, decoded)
+    }
+
+    @Test
+    fun connectionRoundTrip() {
+        val now = Clock.System.now()
+        val connection = Connection(
+            id = ConnectionId("c1"),
+            name = "My GitHub",
+            type = ConnectionType.GITHUB,
+            config = ConnectionConfig.GitHubConfig(token = "ghp_test", owner = "mr3zee", repo = "release-wizard"),
+            createdAt = now,
+            updatedAt = now,
+        )
+        val encoded = json.encodeToString(Connection.serializer(), connection)
+        val decoded = json.decodeFromString(Connection.serializer(), encoded)
+        assertEquals(connection, decoded)
+    }
+
+    @Test
+    fun connectionDtosRoundTrip() {
+        val createRequest = CreateConnectionRequest(
+            name = "My Slack",
+            type = ConnectionType.SLACK,
+            config = ConnectionConfig.SlackConfig(webhookUrl = "https://hooks.slack.com/test"),
+        )
+        val encoded1 = json.encodeToString(CreateConnectionRequest.serializer(), createRequest)
+        val decoded1 = json.decodeFromString(CreateConnectionRequest.serializer(), encoded1)
+        assertEquals(createRequest, decoded1)
+
+        val updateRequest = UpdateConnectionRequest(name = "Updated")
+        val encoded2 = json.encodeToString(UpdateConnectionRequest.serializer(), updateRequest)
+        val decoded2 = json.decodeFromString(UpdateConnectionRequest.serializer(), encoded2)
+        assertEquals(updateRequest, decoded2)
+    }
+
+    @Test
+    fun authDtosRoundTrip() {
+        val loginRequest = LoginRequest(username = "admin", password = "pass")
+        val encoded1 = json.encodeToString(LoginRequest.serializer(), loginRequest)
+        val decoded1 = json.decodeFromString(LoginRequest.serializer(), encoded1)
+        assertEquals(loginRequest, decoded1)
+
+        val userInfo = UserInfo(username = "admin")
+        val encoded2 = json.encodeToString(UserInfo.serializer(), userInfo)
+        val decoded2 = json.decodeFromString(UserInfo.serializer(), encoded2)
+        assertEquals(userInfo, decoded2)
     }
 
     @Test

@@ -24,6 +24,8 @@ dependencies {
     implementation(libs.ktor.serverConfigYaml)
     implementation(libs.ktor.serverContentNegotiation)
     implementation(libs.ktor.serverStatusPages)
+    implementation(libs.ktor.serverAuth)
+    implementation(libs.ktor.serverSessions)
     implementation(libs.ktor.serializationKotlinxJson)
 
     // Database

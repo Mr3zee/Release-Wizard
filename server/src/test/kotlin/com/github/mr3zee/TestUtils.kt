@@ -2,11 +2,10 @@ package com.github.mr3zee
 
 import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.auth.authModule
-import com.github.mr3zee.auth.authRoutes
-import com.github.mr3zee.connections.connectionRoutes
 import com.github.mr3zee.connections.connectionsModule
-import com.github.mr3zee.projects.projectRoutes
 import com.github.mr3zee.projects.projectsModule
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
+import io.ktor.client.plugins.cookies.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
@@ -14,27 +13,40 @@ import io.ktor.server.auth.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
-import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
+import io.ktor.server.testing.*
 import io.ktor.util.*
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
 
-fun Application.module() {
-    val dbConfig = environment.config.databaseConfig()
-    val authConfig = environment.config.authConfig()
-    val encryptionConfig = environment.config.encryptionConfig()
+fun testDbConfig() = DatabaseConfig(
+    url = "jdbc:h2:mem:test_${System.nanoTime()};DB_CLOSE_DELAY=-1;MODE=PostgreSQL",
+    user = "sa",
+    password = "",
+    driver = "org.h2.Driver",
+)
 
+fun testAuthConfig() = AuthConfig(
+    username = "admin",
+    password = "admin",
+    sessionSignKey = "6162636465666768696a6b6c6d6e6f707172737475767778797a313233343536",
+)
+
+fun testEncryptionConfig() = EncryptionConfig(
+    key = "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY=",
+)
+
+fun Application.testModule() {
+    val authConfig = testAuthConfig()
     install(Koin) {
         slf4jLogger()
         modules(
-            appModule(dbConfig, encryptionConfig, authConfig),
+            appModule(testDbConfig(), testEncryptionConfig(), authConfig),
             authModule,
             projectsModule,
             connectionsModule,
         )
     }
-
     install(Sessions) {
         cookie<UserSession>("SESSION") {
             cookie.path = "/"
@@ -43,42 +55,26 @@ fun Application.module() {
             transform(SessionTransportTransformerMessageAuthentication(hex(authConfig.sessionSignKey)))
         }
     }
-
     install(Authentication) {
         session<UserSession>("session-auth") {
             validate { it }
-            challenge {
-                call.respond(HttpStatusCode.Unauthorized, "Not authenticated")
-            }
+            challenge { call.respond(HttpStatusCode.Unauthorized, "Not authenticated") }
         }
     }
-
     install(ContentNegotiation) {
         json(AppJson)
     }
-
     install(StatusPages) {
         exception<IllegalArgumentException> { call, cause ->
             call.respondText(cause.message ?: "Bad request", status = HttpStatusCode.BadRequest)
         }
-        exception<Throwable> { call, cause ->
-            call.application.environment.log.error("Unhandled exception", cause)
-            call.respondText("Internal server error", status = HttpStatusCode.InternalServerError)
-        }
     }
-
     configureRouting()
 }
 
-fun Application.configureRouting() {
-    routing {
-        get("/") {
-            call.respondText("Release Wizard API")
-        }
-        authRoutes()
-        authenticate("session-auth") {
-            projectRoutes()
-            connectionRoutes()
-        }
+fun ApplicationTestBuilder.jsonClient() = createClient {
+    install(ClientContentNegotiation) {
+        json(AppJson)
     }
+    install(HttpCookies)
 }

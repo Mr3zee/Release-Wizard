@@ -121,8 +121,8 @@ Release Wizard is a Kotlin library release pipeline builder. Users construct pip
 ### 2f. UI Verification (compose-ui-test-server)
 
 - [x] Install compose-ui-test-server in composeApp
-- [ ] Launch app with test server, verify project list, create project, navigate to editor
-- [ ] Verify editor toolbar, canvas, properties panel render correctly via screenshots
+- [x] Launch app with test server, verify project list, create project, navigate to editor
+- [x] Verify editor toolbar, canvas, properties panel render correctly via screenshots
 
 ---
 
@@ -140,15 +140,83 @@ After every phase with UI changes, verify the UI using `compose-ui-test-server`:
 5. **Verify**: read screenshots to validate UI layout and state
 
 Key test tags available:
-- Project list: `project_list_screen`, `create_project_fab`, `project_name_input`, `project_list`, `project_item_{id}`
+- Project list: `project_list_screen`, `create_project_fab`, `project_name_input`, `project_list`, `project_item_{id}`, `connections_button`, `logout_button`
 - Editor: `dag_editor_screen`, `dag_canvas`, `save_button`, `add_block_{TYPE}`, `add_container`, `undo_button`, `redo_button`, `delete_button`
 - Properties: `block_name_field`, `block_type_selector`, `block_timeout_field`, `add_parameter_button`
+- Login: `login_screen`, `login_username`, `login_password`, `login_button`
+- Connections: `connection_list_screen`, `create_connection_fab`, `connection_list`, `connection_item_{id}`, `connection_form_screen`, `connection_name_field`, `connection_type_selector`, `save_connection_button`
 
 ---
 
 ## Phase 3: Connections & Authentication
 
-*(Not yet started)*
+**Goal**: Session-based auth + connection CRUD with encrypted credential storage.
+
+### 3a. Dependencies
+
+- [x] Add `ktor-server-auth`, `ktor-server-sessions` to `libs.versions.toml` and `server/build.gradle.kts`
+
+### 3b. Shared: DTOs & API Routes
+
+- [x] `api/AuthDtos.kt` — LoginRequest, UserInfo
+- [x] `api/ConnectionDtos.kt` — Create/Update/Response/List/TestResult DTOs
+- [x] Update `ApiRoutes.kt` — Auth routes (login, logout, me), Connection test route
+- [x] Update `Connection.kt` — add `updatedAt` field
+
+### 3c. Server: Authentication
+
+- [x] `Config.kt` — AuthConfig, EncryptionConfig + config reader extensions
+- [x] `auth/UserSession.kt` — @Serializable session data class implementing Principal
+- [x] `auth/AuthService.kt` — interface + ConfigAuthService (validates against config)
+- [x] `auth/AuthModule.kt` — Koin module
+- [x] `auth/AuthRoutes.kt` — POST /login, POST /logout, GET /me
+- [x] `Application.kt` — install Sessions (cookie with HMAC signing), Authentication (session provider)
+- [x] `Application.kt` — wrap `/api/v1/*` routes in `authenticate("session-auth")`
+- [x] `application.yaml` — auth config (username, password, sessionSignKey)
+
+### 3d. Server: Connections
+
+- [x] `security/EncryptionService.kt` — AES-256-GCM encrypt/decrypt
+- [x] `persistence/ConnectionTable.kt` — Exposed table with encrypted_config text column
+- [x] `connections/ConnectionsRepository.kt` — interface
+- [x] `connections/ExposedConnectionsRepository.kt` — encrypts config on write, decrypts on read
+- [x] `connections/ConnectionsService.kt` — interface + DefaultConnectionsService with credential masking
+- [x] `connections/ConnectionsRoutes.kt` — CRUD + POST /:id/test (stub)
+- [x] `connections/ConnectionsModule.kt` — Koin module
+- [x] `AppModule.kt` — updated to accept AuthConfig + EncryptionConfig, provides EncryptionService
+- [x] `DatabaseFactory.kt` — create ConnectionTable
+- [x] `application.yaml` — encryption key config
+
+### 3e. Client
+
+- [x] `api/AuthApiClient.kt` — login, logout, me
+- [x] `api/ConnectionApiClient.kt` — CRUD + test
+- [x] `api/HttpClientFactory.kt` — install HttpCookies for session persistence
+- [x] `auth/AuthViewModel.kt` — auth state management (checkSession, login, logout)
+- [x] `auth/LoginScreen.kt` — login form with username/password
+- [x] `connections/ConnectionsViewModel.kt` — connections CRUD + test
+- [x] `connections/ConnectionListScreen.kt` — list with test/delete actions
+- [x] `connections/ConnectionFormScreen.kt` — create form with type-specific fields
+- [x] `navigation/Screen.kt` — add ConnectionList, ConnectionForm screens
+- [x] `navigation/AppNavigation.kt` — route new screens, pass onLogout
+- [x] `App.kt` — auth gate (LoginScreen when not authenticated), connections wiring
+- [x] `projects/ProjectListScreen.kt` — add Connections + Logout buttons to TopAppBar
+
+### 3f. Tests & Verification
+
+- [x] `auth/AuthRoutesTest.kt` — 7 tests (login, invalid login, me, me unauthorized, logout, protected endpoint requires auth, protected endpoint after login)
+- [x] `connections/ConnectionsRoutesTest.kt` — 8 tests (list, create+get, blank name, update, delete, test endpoint, unauthenticated, encrypted credentials masked)
+- [x] Updated `ProjectsRoutesTest.kt` — all tests login first + unauthenticated test
+- [x] All test clients install `HttpCookies` for session persistence
+- [x] Shared serialization tests — Connection round-trip, ConnectionDtos round-trip, AuthDtos round-trip
+- [x] All 26 server tests pass, all 28 shared tests pass, all targets compile (JVM, JS, WasmJS)
+
+### 3g. UI Verification (compose-ui-test-server)
+
+- [x] Launch app with test server, verify login screen
+- [x] Login, verify project list with Connections/Logout buttons
+- [x] Navigate to connections, verify empty state
+- [x] Create connection, verify it appears in list
 
 ## Phase 4: DAG Execution Engine
 

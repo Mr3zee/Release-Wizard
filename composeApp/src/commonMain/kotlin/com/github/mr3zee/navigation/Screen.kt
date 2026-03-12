@@ -8,4 +8,6 @@ sealed class Screen {
     data class ProjectEditor(val projectId: ProjectId?) : Screen()
     data object ReleaseList : Screen()
     data class ReleaseView(val releaseId: ReleaseId) : Screen()
+    data object ConnectionList : Screen()
+    data object ConnectionForm : Screen()
 }

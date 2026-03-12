@@ -13,8 +13,15 @@ object ApiRoutes {
         fun byId(id: String) = "$BASE/$id"
     }
 
+    object Auth {
+        const val LOGIN = "$API_V1/auth/login"
+        const val LOGOUT = "$API_V1/auth/logout"
+        const val ME = "$API_V1/auth/me"
+    }
+
     object Connections {
         const val BASE = "$API_V1/connections"
         fun byId(id: String) = "$BASE/$id"
+        fun test(id: String) = "$BASE/$id/test"
     }
 }

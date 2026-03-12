@@ -13,11 +13,14 @@ import androidx.compose.ui.unit.dp
 import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.model.ProjectTemplate
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProjectListScreen(
     viewModel: ProjectListViewModel,
     onCreateProject: () -> Unit,
     onEditProject: (ProjectId) -> Unit,
+    onConnections: (() -> Unit)? = null,
+    onLogout: (() -> Unit)? = null,
 ) {
     val projects by viewModel.projects.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -31,6 +34,29 @@ fun ProjectListScreen(
     var projectToDelete by remember { mutableStateOf<ProjectTemplate?>(null) }
 
     Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Projects") },
+                actions = {
+                    if (onConnections != null) {
+                        TextButton(
+                            onClick = onConnections,
+                            modifier = Modifier.testTag("connections_button"),
+                        ) {
+                            Text("Connections")
+                        }
+                    }
+                    if (onLogout != null) {
+                        TextButton(
+                            onClick = onLogout,
+                            modifier = Modifier.testTag("logout_button"),
+                        ) {
+                            Text("Logout")
+                        }
+                    }
+                },
+            )
+        },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showCreateDialog = true },
@@ -46,11 +72,6 @@ fun ProjectListScreen(
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            Text(
-                text = "Projects",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(16.dp),
-            )
 
             if (isLoading) {
                 Box(

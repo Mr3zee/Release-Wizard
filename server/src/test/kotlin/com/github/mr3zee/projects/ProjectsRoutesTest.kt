@@ -1,60 +1,23 @@
 package com.github.mr3zee.projects
 
-import com.github.mr3zee.AppJson
-import com.github.mr3zee.DatabaseConfig
-import com.github.mr3zee.appModule
-import com.github.mr3zee.configureRouting
-import com.github.mr3zee.api.CreateProjectRequest
-import com.github.mr3zee.api.ProjectListResponse
-import com.github.mr3zee.api.ProjectResponse
-import com.github.mr3zee.api.UpdateProjectRequest
+import com.github.mr3zee.api.*
+import com.github.mr3zee.jsonClient
+import com.github.mr3zee.testModule
+import io.ktor.client.*
 import io.ktor.client.call.*
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 import io.ktor.client.request.*
 import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
-import io.ktor.server.application.*
-import io.ktor.server.plugins.contentnegotiation.*
-import io.ktor.server.plugins.statuspages.*
-import io.ktor.server.response.*
 import io.ktor.server.testing.*
-import org.koin.ktor.plugin.Koin
-import org.koin.logger.slf4jLogger
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class ProjectsRoutesTest {
 
-    private fun testDbConfig() = DatabaseConfig(
-        url = "jdbc:h2:mem:test_${System.nanoTime()};DB_CLOSE_DELAY=-1;MODE=PostgreSQL",
-        user = "sa",
-        password = "",
-        driver = "org.h2.Driver",
-    )
-
-    private fun Application.testModule() {
-        install(Koin) {
-            slf4jLogger()
-            modules(
-                appModule(testDbConfig()),
-                projectsModule,
-            )
-        }
-        install(ContentNegotiation) {
-            json(AppJson)
-        }
-        install(StatusPages) {
-            exception<IllegalArgumentException> { call, cause ->
-                call.respondText(cause.message ?: "Bad request", status = HttpStatusCode.BadRequest)
-            }
-        }
-        configureRouting()
-    }
-
-    private fun ApplicationTestBuilder.jsonClient() = createClient {
-        install(ClientContentNegotiation) {
-            json(AppJson)
+    private suspend fun HttpClient.login() {
+        post(ApiRoutes.Auth.LOGIN) {
+            contentType(ContentType.Application.Json)
+            setBody(LoginRequest(username = "admin", password = "admin"))
         }
     }
 
@@ -62,6 +25,7 @@ class ProjectsRoutesTest {
     fun `list projects returns empty list initially`() = testApplication {
         application { testModule() }
         val client = jsonClient()
+        client.login()
         val response = client.get("/api/v1/projects")
         assertEquals(HttpStatusCode.OK, response.status)
         val body = response.body<ProjectListResponse>()
@@ -72,6 +36,7 @@ class ProjectsRoutesTest {
     fun `create and get project`() = testApplication {
         application { testModule() }
         val client = jsonClient()
+        client.login()
 
         val createResponse = client.post("/api/v1/projects") {
             contentType(ContentType.Application.Json)
@@ -93,6 +58,7 @@ class ProjectsRoutesTest {
     fun `create project with blank name returns 400`() = testApplication {
         application { testModule() }
         val client = jsonClient()
+        client.login()
 
         val response = client.post("/api/v1/projects") {
             contentType(ContentType.Application.Json)
@@ -105,6 +71,7 @@ class ProjectsRoutesTest {
     fun `update project preserves createdAt and updates updatedAt`() = testApplication {
         application { testModule() }
         val client = jsonClient()
+        client.login()
 
         val createResponse = client.post("/api/v1/projects") {
             contentType(ContentType.Application.Json)
@@ -127,6 +94,7 @@ class ProjectsRoutesTest {
     fun `update nonexistent project returns 404`() = testApplication {
         application { testModule() }
         val client = jsonClient()
+        client.login()
 
         val response = client.put("/api/v1/projects/00000000-0000-0000-0000-000000000000") {
             contentType(ContentType.Application.Json)
@@ -139,6 +107,7 @@ class ProjectsRoutesTest {
     fun `delete project`() = testApplication {
         application { testModule() }
         val client = jsonClient()
+        client.login()
 
         val createResponse = client.post("/api/v1/projects") {
             contentType(ContentType.Application.Json)
@@ -157,6 +126,7 @@ class ProjectsRoutesTest {
     fun `delete nonexistent project returns 404`() = testApplication {
         application { testModule() }
         val client = jsonClient()
+        client.login()
 
         val response = client.delete("/api/v1/projects/00000000-0000-0000-0000-000000000000")
         assertEquals(HttpStatusCode.NotFound, response.status)
@@ -166,6 +136,7 @@ class ProjectsRoutesTest {
     fun `get nonexistent project returns 404`() = testApplication {
         application { testModule() }
         val client = jsonClient()
+        client.login()
 
         val response = client.get("/api/v1/projects/00000000-0000-0000-0000-000000000000")
         assertEquals(HttpStatusCode.NotFound, response.status)
@@ -175,6 +146,7 @@ class ProjectsRoutesTest {
     fun `malformed UUID returns 400`() = testApplication {
         application { testModule() }
         val client = jsonClient()
+        client.login()
 
         val response = client.get("/api/v1/projects/not-a-uuid")
         assertEquals(HttpStatusCode.BadRequest, response.status)
@@ -184,6 +156,7 @@ class ProjectsRoutesTest {
     fun `list projects returns created projects`() = testApplication {
         application { testModule() }
         val client = jsonClient()
+        client.login()
 
         client.post("/api/v1/projects") {
             contentType(ContentType.Application.Json)
@@ -197,5 +170,13 @@ class ProjectsRoutesTest {
         val listResponse = client.get("/api/v1/projects")
         val body = listResponse.body<ProjectListResponse>()
         assertEquals(2, body.projects.size)
+    }
+
+    @Test
+    fun `unauthenticated request returns 401`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        val response = client.get("/api/v1/projects")
+        assertEquals(HttpStatusCode.Unauthorized, response.status)
     }
 }
