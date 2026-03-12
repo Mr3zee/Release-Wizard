@@ -1,24 +1,28 @@
 ---
 name: jetpack-compose-expert-skill
 description: >
-  Jetpack Compose expert skill for Android UI development. Guides state management decisions
+  Compose Multiplatform & Jetpack Compose expert skill for Kotlin UI development across
+  Android, Desktop (JVM), Web (JS/WasmJS), and iOS. Guides state management decisions
   (@Composable, remember, mutableStateOf, derivedStateOf, State hoisting), view composition
   and structure, Modifier chains, lazy lists, navigation, animation, side effects, theming,
   accessibility, and performance optimization. Backed by actual androidx source code analysis.
-  Use this skill whenever the user mentions Compose, @Composable, remember, LaunchedEffect,
-  Scaffold, NavHost, MaterialTheme, LazyColumn, Modifier, recomposition, Style, styleable,
-  MutableStyleState, or any Jetpack Compose API. Also trigger when the user says "Android UI",
-  "Kotlin UI", "compose layout", "compose navigation", "compose animation", "material3",
-  "compose styles", "styles api", or asks about modern Android development patterns. Even
-  casual mentions like "my compose screen is slow" or "how do I pass data between screens"
-  should trigger this skill.
+  Use this skill whenever the user mentions Compose, Compose Multiplatform, KMP Compose,
+  @Composable, remember, LaunchedEffect, Scaffold, NavHost, MaterialTheme, LazyColumn,
+  Modifier, recomposition, Style, styleable, MutableStyleState, or any Compose API. Also
+  trigger when the user says "Android UI", "Kotlin UI", "Desktop UI", "compose layout",
+  "compose navigation", "compose animation", "material3", "compose styles", "styles api",
+  "multiplatform compose", or asks about modern Kotlin UI development patterns on any platform.
+  Even casual mentions like "my compose screen is slow", "how do I pass data between screens",
+  or "compose desktop window" should trigger this skill.
 ---
 
-# Jetpack Compose Expert Skill
+# Compose Multiplatform & Jetpack Compose Expert Skill
 
-Non-opinionated, practical guidance for writing correct, performant Jetpack Compose code.
+Non-opinionated, practical guidance for writing correct, performant Compose code — covering
+both **JetBrains Compose Multiplatform** (Desktop, Web, iOS) and **Android Jetpack Compose**.
 Focuses on real pitfalls developers encounter daily, backed by analysis of the actual
-`androidx/androidx` source code (branch: `androidx-main`).
+`androidx/androidx` source code (branch: `androidx-main`) and JetBrains Compose Multiplatform
+extensions.
 
 ## Workflow
 
@@ -26,7 +30,8 @@ When helping with Compose code, follow this checklist:
 
 ### 1. Understand the request
 - What Compose layer is involved? (Runtime, UI, Foundation, Material3, Navigation)
-- Is this a state problem, layout problem, performance problem, or architecture question?
+- What platform(s) are targeted? (Android, Desktop/JVM, Web/JS, Web/WasmJS, iOS, or commonMain for all)
+- Is this a state problem, layout problem, performance problem, platform-specific problem, or architecture question?
 
 ### 2. Consult the right reference
 Read the relevant reference file(s) from `references/` before answering:
@@ -46,9 +51,11 @@ Read the relevant reference file(s) from `references/` before answering:
 | Semantics, content descriptions, traversal order, testing | `references/accessibility.md` |
 | Removed/replaced APIs, migration paths from older Compose versions | `references/deprecated-patterns.md` |
 | **Styles API** (experimental): `Style {}`, `MutableStyleState`, `Modifier.styleable()` | `references/styles-experimental.md` |
+| **KMP / Compose Multiplatform**: platform differences, expect/actual, Desktop & Web specifics | `references/compose-multiplatform-kmp.md` |
 
 ### 3. Apply and verify
 - Write code that follows the patterns in the reference
+- For KMP projects, prefer `commonMain` code; use `expect`/`actual` only when platform APIs differ
 - Flag any anti-patterns you see in the user's existing code
 - Suggest the minimal correct solution — don't over-engineer
 
@@ -57,6 +64,16 @@ When referencing Compose internals, point to the exact source file:
 ```
 // See: compose/runtime/runtime/src/commonMain/kotlin/androidx/compose/runtime/Composer.kt
 ```
+
+## Compose Multiplatform (KMP) Guidance
+
+For KMP / Compose Multiplatform topics (platform differences, `expect`/`actual`, Desktop window
+management, Web entry points, iOS integration, resources, lifecycle, navigation, testing),
+read the full reference: **`references/compose-multiplatform-kmp.md`**
+
+Quick summary: Compose Multiplatform shares the same compiler and runtime as Android Jetpack
+Compose. Core APIs are identical — write all UI in `commonMain`, use `expect`/`actual` only
+for platform-specific APIs.
 
 ## Key Principles
 
@@ -74,6 +91,10 @@ When referencing Compose internals, point to the exact source file:
 
 5. **Side effects exist to bridge Compose's declarative world with imperative APIs**. Use the
    right one for the job — misusing them causes bugs that are hard to trace.
+
+6. **Prefer `commonMain` over platform source sets**. The vast majority of Compose code is
+   platform-agnostic. Only split to `jvmMain`/`jsMain`/`wasmJsMain`/`iosMain` when calling
+   platform-specific APIs.
 
 ## Source Code Receipts
 
@@ -95,6 +116,8 @@ the raw source from `references/source-code/`:
 2. **Go deeper with source** — if the user wants receipts or you need to verify, read from `references/source-code/`
 
 ### Source tree map
+
+**androidx/androidx** (Android Jetpack Compose & shared Compose runtime/foundation/material3):
 ```
 compose/
 ├── runtime/runtime/src/commonMain/kotlin/androidx/compose/runtime/
@@ -104,3 +127,13 @@ compose/
 ├── material3/material3/src/commonMain/kotlin/androidx/compose/material3/
 └── navigation/navigation-compose/src/commonMain/kotlin/androidx/navigation/compose/
 ```
+
+**JetBrains/compose-multiplatform** (KMP extensions — Desktop, Web, iOS entry points & platform integration):
+```
+compose/
+├── components/resources/       # Multiplatform resources (Res.drawable, Res.string, etc.)
+├── components/ui-tooling-preview/
+└── html/                       # Compose HTML (DOM-based, separate from Canvas-based Web)
+```
+Note: Compose Multiplatform reuses the `commonMain` source from `androidx/compose` for runtime,
+UI, foundation, and material3. JetBrains adds platform-specific entry points and integrations.
