@@ -85,7 +85,38 @@ Release Wizard is a Kotlin library release pipeline builder. Users construct pip
 
 ## Phase 2: Visual DAG Editor
 
-*(Not yet started)*
+**Goal**: Canvas-based drag-and-drop editor where users add blocks, connect them, and save as project templates.
+
+### 2a. Layout Model
+
+- [x] model/BlockPosition.kt — x, y coordinates (dp)
+- [x] Update DagGraph to include `positions: Map<BlockId, BlockPosition>`
+
+### 2b. DAG Validation (`shared/src/commonMain/`)
+
+- [x] dag/DagValidator.kt — no cycles, duplicate IDs, self-loops, invalid edges, recursive container validation
+- [x] dag/DagTopologicalSort.kt — Kahn's algorithm
+
+### 2c. Canvas Components (`composeApp/src/commonMain/`)
+
+- [x] editor/DagCanvas.kt — Canvas rendering (blocks, edges, ports, grid) + pointer handling (select, drag, pan, zoom, connect)
+- [x] editor/EditorToolbar.kt — Block palette (all block types + container), undo/redo, delete
+- [x] editor/BlockPropertiesPanel.kt — Edit name, type, params, timeout for selected block
+- [x] editor/DagEditorScreen.kt — Scaffold with toolbar, canvas, properties, keyboard shortcuts (Delete, Ctrl+Z/Y, Ctrl+S)
+- [x] editor/DagEditorViewModel.kt — State management, undo/redo stack, API save, validation
+
+### 2d. Integration
+
+- [x] api/ProjectApiClient.kt — add updateProject method
+- [x] AppNavigation.kt — route to DagEditorScreen
+- [x] App.kt — pass API client to navigation
+
+### 2e. Tests & Verification
+
+- [x] DagValidatorTest — 8 tests (empty, linear, diamond, self-loop, cycle, duplicate ID, invalid edge, container children)
+- [x] DagTopologicalSortTest — 7 tests (empty, single, linear, diamond, cycle, disconnected, partial cycle)
+- [x] Updated serialization test for DagGraph with positions
+- [x] All 25 shared tests pass, all 10 server tests pass, all targets compile (JVM, JS, WasmJS)
 
 ## Phase 3: Connections & Authentication
 

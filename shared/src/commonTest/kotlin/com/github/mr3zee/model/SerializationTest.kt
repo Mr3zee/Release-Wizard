@@ -47,6 +47,11 @@ class SerializationTest {
                 Edge(fromBlockId = BlockId("b1"), toBlockId = BlockId("c1")),
                 Edge(fromBlockId = BlockId("c1"), toBlockId = BlockId("b2")),
             ),
+            positions = mapOf(
+                BlockId("b1") to BlockPosition(100f, 50f),
+                BlockId("b2") to BlockPosition(400f, 200f),
+                BlockId("c1") to BlockPosition(250f, 100f),
+            ),
         )
         val encoded = json.encodeToString(DagGraph.serializer(), graph)
         val decoded = json.decodeFromString(DagGraph.serializer(), encoded)

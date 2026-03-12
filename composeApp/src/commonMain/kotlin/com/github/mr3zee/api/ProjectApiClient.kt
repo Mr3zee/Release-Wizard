@@ -27,6 +27,14 @@ class ProjectApiClient(private val client: HttpClient) {
         return response.body<ProjectResponse>().project
     }
 
+    suspend fun updateProject(id: ProjectId, request: UpdateProjectRequest): ProjectTemplate {
+        val response = client.put(serverUrl(ApiRoutes.Projects.byId(id.value))) {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }
+        return response.body<ProjectResponse>().project
+    }
+
     suspend fun deleteProject(id: ProjectId) {
         client.delete(serverUrl(ApiRoutes.Projects.byId(id.value)))
     }

@@ -31,6 +31,7 @@ fun App() {
                 currentScreen = currentScreen,
                 onNavigate = { currentScreen = it },
                 projectListViewModel = projectListViewModel,
+                projectApiClient = projectApiClient,
             )
         }
     }

@@ -76,9 +76,10 @@ Reusable across projects. Types: Slack, TeamCity, GitHub (token), Maven Central 
 
 All domain models live in `shared/src/commonMain/.../model/` and use `@Serializable`. Key types:
 - `Block` (sealed: `ContainerBlock`, `ActionBlock`) — uses `@JsonClassDiscriminator("kind")` to avoid conflict with `type` property
-- `DagGraph` (blocks + edges), `ProjectTemplate`, `Release`, `Connection`
+- `DagGraph` (blocks + edges + positions), `BlockPosition` (x, y in dp), `ProjectTemplate`, `Release`, `Connection`
 - Typesafe IDs: `ProjectId`, `ReleaseId`, `BlockId`, `ConnectionId` (value classes)
 - Shared `AppJson` instance in `JsonConfig.kt` — reuse everywhere, do not create separate `Json` configs
+- DAG validation in `shared/.../dag/`: `DagValidator` (cycles, self-loops, duplicate IDs, invalid edges) and `DagTopologicalSort` (Kahn's algorithm)
 
 ## Server Conventions
 
@@ -87,6 +88,15 @@ All domain models live in `shared/src/commonMain/.../model/` and use `@Serializa
 - **Repositories**: Accept `Database` via constructor injection. Wire via Koin: `single<Repo> { ExposedRepo(get()) }`.
 - **Routes**: Validate UUID path parameters before passing to service. Use `ApiRoutes` constants from shared module.
 - **Tests**: Use `testApplication` + real Koin modules + H2 in PostgreSQL mode. Pass `DatabaseConfig` directly to `appModule(testDbConfig())` — no YAML or Koin overrides needed. Use unique DB URLs per test (`System.nanoTime()` in JDBC URL).
+
+## Canvas Editor Conventions
+
+The DAG editor (`composeApp/.../editor/`) uses a pure Canvas approach for rendering blocks, edges, and ports:
+- **Coordinate system**: Block positions stored as dp values in `DagGraph.positions`. Canvas converts to screen pixels via `CanvasTransform(zoom, panOffset, density)`.
+- **Pointer handling**: All interactions (select, drag, pan, zoom, connect) handled in `pointerInput` on the Canvas. Never use `remember`ed derived values inside `pointerInput` lambdas — create `CanvasTransform` inline from state reads to avoid stale captures.
+- **Undo/redo**: Structural changes (add/remove block/edge, move) push to undo stack. Property changes (name, params, timeout) use `updateGraphSilent` to avoid flooding undo with per-keystroke entries. Type changes are discrete and do push undo.
+- **Color mapping**: `blockTypeColor()` in `DagCanvas.kt` is the single source of truth for block type colors, shared with `EditorToolbar.kt`.
+- **Keyboard shortcuts**: Use `isCtrlPressed || isMetaPressed` for cross-platform Ctrl/Cmd support.
 
 ## Key Constraints
 
