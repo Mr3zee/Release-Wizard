@@ -21,7 +21,7 @@ Dependencies flow: `composeApp` → `shared`, `server` → `shared`. No dependen
 | Layer | Technology | Version |
 |-------|-----------|---------|
 | Server | Ktor | 3.3.3 |
-| Database | Exposed (JDBC, not R2DBC) | 0.61.0 |
+| Database | Exposed (JDBC) | 1.1.1 |
 | DI | Koin | 4.1.1 |
 | UI | Compose Multiplatform | 1.10.0 |
 | Language | Kotlin | 2.3.0 |

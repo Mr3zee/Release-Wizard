@@ -4,10 +4,7 @@ import com.github.mr3zee.model.*
 import com.github.mr3zee.persistence.ProjectTemplateTable
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.v1.core.*
-import org.jetbrains.exposed.v1.core.ResultRow
-import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.jdbc.*
-import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.transactions.experimental.newSuspendedTransaction
 import java.util.UUID
 import kotlin.time.Clock
