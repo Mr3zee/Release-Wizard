@@ -1,0 +1,14 @@
+ktor:
+  deployment:
+    port: 8080
+    host: 0.0.0.0
+  application:
+    modules:
+      - com.github.mr3zee.ApplicationKt.module
+
+app:
+  database:
+    url: "jdbc:postgresql://localhost:5432/release_wizard"
+    user: "postgres"
+    password: "postgres"
+    driver: "org.postgresql.Driver"

@@ -7,7 +7,7 @@ Use layered architecture with Koin dependency injection in the server module.
 The server package (`server/src/main/kotlin/com/github/mr3zee/`) contains:
 
 - `Application.kt`: entrypoint, Ktor plugin setup, and Koin installation
-- `Config.kt`: plain data classes + `loadConfig()` function for env vars with defaults
+- `Config.kt`: plain data classes + `ApplicationConfig.databaseConfig()` extension for reading from YAML
 - `<Feature>Module.kt`: Koin module definitions per feature
 - `Routes.kt`: HTTP route definitions
 - `Service.kt`: business logic layer
@@ -22,22 +22,24 @@ Routes -> Service -> Repository -> Exposed
 
 ## App bootstrap pattern
 
-Install Koin via `install(Koin)` in the Ktor application:
+The server uses **`EngineMain`** as the entry point (configured in `build.gradle.kts`). Ktor reads `application.yaml` automatically and calls the module function specified in `ktor.application.modules`.
+
+Install Koin via `install(Koin)` inside the module function:
 
 ```kotlin
-fun main() {
-    val config = loadConfig()
-    embeddedServer(Netty, port = config.server.port, host = config.server.host) {
-        install(Koin) {
-            slf4jLogger()
-            modules(appModule, projectsModule /*, releasesModule, connectionsModule */)
-        }
-        configureRouting()
-    }.start(wait = true)
+// Application.kt — no main(), EngineMain handles startup
+fun Application.module() {
+    val dbConfig = environment.config.databaseConfig()
+
+    install(Koin) {
+        slf4jLogger()
+        modules(appModule(dbConfig), projectsModule /*, releasesModule, connectionsModule */)
+    }
+    configureRouting()
 }
 ```
 
-Routes inject services using `val service by inject<ReleasesService>()` from the Ktor `Route`/`Application` scope.
+Routes inject services using `val service by inject<ProjectsService>()` from the Ktor `Route`/`Application` scope.
 
 **Koin version requirement**: Use **Koin 4.1.1+** for Ktor 3.x compatibility. Koin 4.0.x targets Ktor 2.x and will fail at runtime with `NoClassDefFoundError: io/ktor/server/routing/RoutingKt`.
 
@@ -48,10 +50,10 @@ Organize Koin modules by feature. Each feature defines its own `org.koin.dsl.mod
 **Shared infrastructure module** — database, HTTP client, config:
 
 ```kotlin
-val appModule = module {
-    single { loadConfig() }
-    single<DataSource> { dataSource(get<Config>().database) }
-    single<Database> { initDatabase(get<DataSource>()) }
+fun appModule(dbConfig: DatabaseConfig) = module {
+    single { dbConfig }
+    single<DataSource> { dataSource(get()) }
+    single<Database> { initDatabase(get()) }
 }
 ```
 
@@ -102,25 +104,53 @@ fun Route.releaseRoutes() {
 
 ## Configuration pattern
 
-- Model config as **plain data classes** (not `@Serializable` — they have no serialization use case).
-- Read environment variables in a dedicated `loadConfig()` function, not in default parameter values.
-- Provide config as a Koin singleton so features can inject and read their subsection.
+- Server uses **`application.yaml`** + **`EngineMain`** (Ktor handles host/port from `ktor.deployment.*`).
+- Custom config (e.g. database) lives under `app.*` in the YAML and is read via `environment.config` extension functions.
+- Config data classes are **plain** (not `@Serializable`). Extension functions on `ApplicationConfig` extract them.
+- The extracted config is passed to `appModule(dbConfig)` which registers it as a Koin singleton.
+
+```yaml
+# application.yaml
+ktor:
+  deployment:
+    port: 8080
+    host: 0.0.0.0
+  application:
+    modules:
+      - com.github.mr3zee.ApplicationKt.module
+
+app:
+  database:
+    url: "jdbc:postgresql://localhost:5432/release_wizard"
+    user: "postgres"
+    password: "postgres"
+    driver: "org.postgresql.Driver"
+```
 
 ```kotlin
-data class Config(
-    val database: DatabaseConfig = DatabaseConfig(),
-    val server: ServerConfig = ServerConfig(),
-)
+// Config.kt
+data class DatabaseConfig(val url: String, val user: String, val password: String, val driver: String)
 
-fun loadConfig(): Config {
-    return Config(
-        database = DatabaseConfig(
-            url = System.getenv("DB_URL") ?: "jdbc:postgresql://localhost:5432/release_wizard",
-            ...
-        ),
+fun ApplicationConfig.databaseConfig(): DatabaseConfig {
+    return DatabaseConfig(
+        url = property("app.database.url").getString(),
+        user = property("app.database.user").getString(),
+        password = property("app.database.password").getString(),
+        driver = property("app.database.driver").getString(),
     )
 }
+
+// Application.kt
+fun Application.module() {
+    val dbConfig = environment.config.databaseConfig()
+    install(Koin) {
+        modules(appModule(dbConfig), projectsModule)
+    }
+    ...
+}
 ```
+
+For tests, pass `DatabaseConfig` directly to `appModule()` — no YAML needed.
 
 ## Persistence
 

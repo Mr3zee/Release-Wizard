@@ -1,14 +1,13 @@
 package com.github.mr3zee.projects
 
 import com.github.mr3zee.AppJson
-import com.github.mr3zee.Config
 import com.github.mr3zee.DatabaseConfig
+import com.github.mr3zee.appModule
+import com.github.mr3zee.configureRouting
 import com.github.mr3zee.api.CreateProjectRequest
 import com.github.mr3zee.api.ProjectListResponse
 import com.github.mr3zee.api.ProjectResponse
 import com.github.mr3zee.api.UpdateProjectRequest
-import com.github.mr3zee.appModule
-import com.github.mr3zee.configureRouting
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 import io.ktor.client.request.*
@@ -19,35 +18,27 @@ import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import io.ktor.server.testing.*
-import org.koin.dsl.module
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class ProjectsRoutesTest {
 
-    private fun testDbConfig() = Config(
-        database = DatabaseConfig(
-            url = "jdbc:h2:mem:test_${System.nanoTime()};DB_CLOSE_DELAY=-1;MODE=PostgreSQL",
-            user = "sa",
-            password = "",
-            driver = "org.h2.Driver",
-        ),
+    private fun testDbConfig() = DatabaseConfig(
+        url = "jdbc:h2:mem:test_${System.nanoTime()};DB_CLOSE_DELAY=-1;MODE=PostgreSQL",
+        user = "sa",
+        password = "",
+        driver = "org.h2.Driver",
     )
 
     private fun Application.testModule() {
         install(Koin) {
             slf4jLogger()
-            allowOverride(true)
             modules(
-                appModule,
+                appModule(testDbConfig()),
                 projectsModule,
-                module {
-                    single<Config> { testDbConfig() }
-                },
             )
         }
         install(ContentNegotiation) {

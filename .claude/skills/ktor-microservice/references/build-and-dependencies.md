@@ -16,12 +16,13 @@ plugins {
     application
 }
 
-application { mainClass.set("com.github.mr3zee.ApplicationKt") }
+application { mainClass.set("io.ktor.server.netty.EngineMain") }
 
 dependencies {
     implementation(projects.shared)
     implementation(libs.ktor.serverCore)
     implementation(libs.ktor.serverNetty)
+    implementation(libs.ktor.serverConfigYaml)
     implementation(libs.ktor.serverContentNegotiation)
     implementation(libs.ktor.serverStatusPages)
     implementation(libs.ktor.serializationKotlinxJson)

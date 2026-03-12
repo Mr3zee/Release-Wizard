@@ -82,11 +82,11 @@ All domain models live in `shared/src/commonMain/.../model/` and use `@Serializa
 
 ## Server Conventions
 
-- **Config**: `loadConfig()` in `Config.kt` reads env vars with defaults. No `@Serializable` on config classes.
+- **Config**: Server uses `application.yaml` + `EngineMain`. Ktor handles host/port from `ktor.deployment.*`. Custom config (database) is read via `environment.config.databaseConfig()` in `Application.module()` and passed to `appModule(dbConfig)`. No `loadConfig()` function — all config comes from the YAML file.
 - **Database**: Use `newSuspendedTransaction(Dispatchers.IO, db)` for all Exposed queries — never block coroutine threads with bare `transaction {}`.
 - **Repositories**: Accept `Database` via constructor injection. Wire via Koin: `single<Repo> { ExposedRepo(get()) }`.
 - **Routes**: Validate UUID path parameters before passing to service. Use `ApiRoutes` constants from shared module.
-- **Tests**: Use `testApplication` + real Koin modules + H2 in PostgreSQL mode. Override `Config` via Koin module override with `allowOverride(true)`. Use unique DB URLs per test (`System.nanoTime()` in JDBC URL).
+- **Tests**: Use `testApplication` + real Koin modules + H2 in PostgreSQL mode. Pass `DatabaseConfig` directly to `appModule(testDbConfig())` — no YAML or Koin overrides needed. Use unique DB URLs per test (`System.nanoTime()` in JDBC URL).
 
 ## Key Constraints
 

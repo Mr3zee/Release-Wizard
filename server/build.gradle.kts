@@ -8,7 +8,7 @@ plugins {
 group = "com.github.mr3zee"
 version = "1.0.0"
 application {
-    mainClass.set("com.github.mr3zee.ApplicationKt")
+    mainClass.set("io.ktor.server.netty.EngineMain")
 
     val isDevelopment: Boolean = project.ext.has("development")
     applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")
@@ -21,6 +21,7 @@ dependencies {
     // Ktor server
     implementation(libs.ktor.serverCore)
     implementation(libs.ktor.serverNetty)
+    implementation(libs.ktor.serverConfigYaml)
     implementation(libs.ktor.serverContentNegotiation)
     implementation(libs.ktor.serverStatusPages)
     implementation(libs.ktor.serializationKotlinxJson)

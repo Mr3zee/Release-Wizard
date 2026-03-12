@@ -5,25 +5,23 @@ import com.github.mr3zee.projects.projectsModule
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
-import io.ktor.server.engine.*
-import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import org.koin.dsl.module
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
 
-fun main() {
-    val config = loadConfig()
-    embeddedServer(Netty, port = config.server.port, host = config.server.host, module = Application::module)
-        .start(wait = true)
-}
-
 fun Application.module() {
+    val dbConfig = environment.config.databaseConfig()
+
     install(Koin) {
         slf4jLogger()
-        modules(appModule, projectsModule)
+        modules(
+            appModule(dbConfig),
+            projectsModule,
+        )
     }
 
     install(ContentNegotiation) {

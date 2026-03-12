@@ -6,8 +6,8 @@ import org.jetbrains.exposed.sql.Database
 import org.koin.dsl.module
 import javax.sql.DataSource
 
-val appModule = module {
-    single { loadConfig() }
-    single<DataSource> { dataSource(get<Config>().database) }
-    single<Database> { initDatabase(get<DataSource>()) }
+fun appModule(dbConfig: DatabaseConfig) = module {
+    single { dbConfig }
+    single<DataSource> { dataSource(get()) }
+    single<Database> { initDatabase(get()) }
 }

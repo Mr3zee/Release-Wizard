@@ -18,16 +18,17 @@ Follow these testing rules for server code:
 
 ```kotlin
 class ProjectsRoutesTest {
+    private fun testDbConfig() = DatabaseConfig(
+        url = "jdbc:h2:mem:test_${System.nanoTime()};DB_CLOSE_DELAY=-1;MODE=PostgreSQL",
+        user = "sa", password = "", driver = "org.h2.Driver",
+    )
+
     private fun Application.testModule() {
         install(Koin) {
             slf4jLogger()
-            allowOverride(true)  // required in Koin 4.x for test overrides
             modules(
-                appModule,
+                appModule(testDbConfig()),  // pass test DB config directly
                 projectsModule,
-                module {
-                    single<Config> { testDbConfig() }  // override Config
-                },
             )
         }
         install(ContentNegotiation) { json(AppJson) }
@@ -50,13 +51,11 @@ class ProjectsRoutesTest {
 Use H2 in-memory with PostgreSQL compatibility mode. **Use unique DB URLs per test** to ensure isolation:
 
 ```kotlin
-private fun testDbConfig() = Config(
-    database = DatabaseConfig(
-        url = "jdbc:h2:mem:test_${System.nanoTime()};DB_CLOSE_DELAY=-1;MODE=PostgreSQL",
-        user = "sa",
-        password = "",
-        driver = "org.h2.Driver",
-    ),
+private fun testDbConfig() = DatabaseConfig(
+    url = "jdbc:h2:mem:test_${System.nanoTime()};DB_CLOSE_DELAY=-1;MODE=PostgreSQL",
+    user = "sa",
+    password = "",
+    driver = "org.h2.Driver",
 )
 ```
 
