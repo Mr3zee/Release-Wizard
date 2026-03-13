@@ -7,6 +7,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.PointerEvent
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -69,6 +71,23 @@ internal class CanvasTransform(
         screenDelta.x / (density * zoom),
         screenDelta.y / (density * zoom),
     )
+}
+
+/**
+ * Process a pointer event for scroll-to-zoom. Consumes the scroll change
+ * and returns the new (zoom, panOffset) pair, or null if the event is not a scroll.
+ */
+internal fun applyScrollZoom(
+    event: PointerEvent,
+    zoom: Float,
+    panOffset: Offset,
+    density: Float,
+): Pair<Float, Offset>? {
+    if (event.type != PointerEventType.Scroll) return null
+    val change = event.changes.firstOrNull() ?: return null
+    val result = handleScrollZoom(change.scrollDelta.y, change.position, zoom, panOffset, density) ?: return null
+    change.consume()
+    return result
 }
 
 /**

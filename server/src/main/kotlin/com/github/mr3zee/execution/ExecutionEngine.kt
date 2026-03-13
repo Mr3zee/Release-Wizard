@@ -141,7 +141,7 @@ class ExecutionEngine(
     }
 
     private suspend fun executeRecovery(release: Release, persistedExecutions: List<BlockExecution>) {
-        try {
+        executeWithReleaseErrorHandling(release) {
             // If recovering a PENDING release, transition it to RUNNING first
             if (release.status == ReleaseStatus.PENDING) {
                 repository.setStarted(release.id)
@@ -157,107 +157,26 @@ class ExecutionEngine(
 
             // Rebuild status/outputs from persisted executions
             val execMap = persistedExecutions.associateBy { it.blockId }
-            // todo claude: duplicate 7 lines
-            for (block in graph.blocks) {
-                val exec = execMap[block.id]
-                statusMap[block.id] = exec?.status ?: BlockStatus.WAITING
-                if (exec != null && exec.status == BlockStatus.SUCCEEDED) {
-                    outputsMap[block.id] = exec.outputs
-                }
-            }
+            initStatusFromPersisted(graph.blocks, execMap, statusMap, outputsMap)
 
             val startedAt = release.startedAt ?: Clock.System.now()
 
             // Re-emit current state so WebSocket subscribers see the recovered state
             emitEvent(ReleaseEvent.ReleaseStatusChanged(release.id, ReleaseStatus.RUNNING, startedAt = startedAt))
 
+            // Skip already SUCCEEDED blocks
+            val remaining = sorted.filter { statusMap[it] != BlockStatus.SUCCEEDED }.toMutableList()
+
             coroutineScope {
-                executeRecoveryWaves(this, release, graph, sorted, predecessors, statusMap, outputsMap, execMap)
+                runWaveLoop(this, release, graph, remaining, predecessors, statusMap) { block ->
+                    recoverBlock(release, block, statusMap, outputsMap, execMap)
+                }
             }
 
             val allSucceeded = statusMap.values.all { it == BlockStatus.SUCCEEDED }
             val finalStatus = if (allSucceeded) ReleaseStatus.SUCCEEDED else ReleaseStatus.FAILED
             repository.setFinished(release.id, finalStatus)
             emitCompletionOnce(release.id, finalStatus, Clock.System.now())
-
-            // todo claude: duplicate 16 lines
-        } catch (_: CancellationException) {
-            if (restartingReleases.contains(release.id)) return
-            val executions = repository.findBlockExecutions(release.id)
-            for (exec in executions) {
-                if (exec.status == BlockStatus.RUNNING || exec.status == BlockStatus.WAITING) {
-                    val updated = exec.copy(
-                        status = BlockStatus.FAILED,
-                        error = "Release cancelled",
-                        finishedAt = Clock.System.now(),
-                    )
-                    persistAndEmit(release.id, updated)
-                }
-            }
-            repository.setFinished(release.id, ReleaseStatus.CANCELLED)
-            emitCompletionOnce(release.id, ReleaseStatus.CANCELLED, Clock.System.now())
-        } catch (_: Exception) {
-            repository.setFinished(release.id, ReleaseStatus.FAILED)
-            emitCompletionOnce(release.id, ReleaseStatus.FAILED, Clock.System.now())
-        }
-    }
-
-    private suspend fun executeRecoveryWaves(
-        scope: CoroutineScope,
-        release: Release,
-        graph: DagGraph,
-        sorted: List<BlockId>,
-        predecessors: Map<BlockId, Set<BlockId>>,
-        statusMap: MutableMap<BlockId, BlockStatus>,
-        outputsMap: MutableMap<BlockId, Map<String, String>>,
-        execMap: Map<BlockId, BlockExecution>,
-    ) {
-        // Skip already SUCCEEDED blocks
-        val remaining = sorted.filter { statusMap[it] != BlockStatus.SUCCEEDED }.toMutableList()
-
-        while (remaining.isNotEmpty()) {
-            // todo claude: duplicate 19 lines
-            currentCoroutineContext().ensureActive()
-
-            val ready = remaining.filter { blockId ->
-                val preds = predecessors[blockId] ?: emptySet()
-                preds.all { statusMap[it] == BlockStatus.SUCCEEDED }
-            }
-
-            if (ready.isEmpty()) {
-                val anyRunning = statusMap.values.any {
-                    it == BlockStatus.RUNNING || it == BlockStatus.WAITING_FOR_INPUT
-                }
-                if (anyRunning) {
-                    delay(50.milliseconds)
-                    continue
-                }
-                break
-            }
-
-            ready.forEach { remaining.remove(it) }
-
-            val jobs = ready.map { blockId ->
-                val block = graph.blocks.find { it.id == blockId }!!
-                val persistedExec = execMap[blockId]
-                scope.async {
-                    recoverBlock(release, block, statusMap, outputsMap, persistedExec)
-                }
-            }
-
-            jobs.forEach { it.await() }
-        }
-
-        // Mark any remaining blocks as FAILED
-        for (blockId in remaining) {
-            statusMap[blockId] = BlockStatus.FAILED
-            val execution = BlockExecution(
-                blockId = blockId,
-                releaseId = release.id,
-                status = BlockStatus.FAILED,
-                error = "Skipped: predecessor failed",
-            )
-            persistAndEmit(release.id, execution)
         }
     }
 
@@ -266,11 +185,11 @@ class ExecutionEngine(
         block: Block,
         statusMap: MutableMap<BlockId, BlockStatus>,
         outputsMap: MutableMap<BlockId, Map<String, String>>,
-        persistedExec: BlockExecution?,
+        execMap: Map<BlockId, BlockExecution>,
     ) {
         when (block) {
             is Block.ContainerBlock -> recoverContainer(release, block, statusMap, outputsMap)
-            is Block.ActionBlock -> recoverAction(release, block, statusMap, outputsMap, persistedExec)
+            is Block.ActionBlock -> recoverAction(release, block, statusMap, outputsMap, execMap[block.id])
         }
     }
 
@@ -290,17 +209,13 @@ class ExecutionEngine(
             statusMap = statusMap,
             outputsMap = outputsMap,
             initChildren = { childGraph, childStatusMap, childOutputsMap ->
-                // todo claude: duplicate 7 lines
-                for (child in childGraph.blocks) {
-                    val childExec = childExecMap[child.id]
-                    childStatusMap[child.id] = childExec?.status ?: BlockStatus.WAITING
-                    if (childExec != null && childExec.status == BlockStatus.SUCCEEDED) {
-                        childOutputsMap[child.id] = childExec.outputs
-                    }
-                }
+                initStatusFromPersisted(childGraph.blocks, childExecMap, childStatusMap, childOutputsMap)
             },
             runWaves = { wavesScope, childGraph, sorted, childPredecessors, childStatusMap, childOutputsMap ->
-                executeRecoveryWaves(wavesScope, release, childGraph, sorted, childPredecessors, childStatusMap, childOutputsMap, childExecMap)
+                val remaining = sorted.filter { childStatusMap[it] != BlockStatus.SUCCEEDED }.toMutableList()
+                runWaveLoop(wavesScope, release, childGraph, remaining, childPredecessors, childStatusMap) { block ->
+                    recoverBlock(release, block, childStatusMap, childOutputsMap, childExecMap)
+                }
             },
         )
     }
@@ -334,18 +249,7 @@ class ExecutionEngine(
                 val outputs = deferred.await()
                 pendingApprovals[release.id]?.remove(block.id)
 
-                // todo claude: duplicate 11 lines
-                outputsMap[block.id] = outputs
-                statusMap[block.id] = BlockStatus.SUCCEEDED
-                val succeededExec = BlockExecution(
-                    blockId = block.id,
-                    releaseId = release.id,
-                    status = BlockStatus.SUCCEEDED,
-                    outputs = outputs,
-                    startedAt = startTime,
-                    finishedAt = Clock.System.now(),
-                )
-                persistAndEmit(release.id, succeededExec)
+                completeBlockSuccess(release.id, block.id, outputs, startTime, statusMap, outputsMap)
             }
             BlockStatus.FAILED -> {
                 // Already failed -- keep it
@@ -366,85 +270,15 @@ class ExecutionEngine(
     ) {
         val startTime = Clock.System.now()
         statusMap[block.id] = BlockStatus.RUNNING
-        val runningExec = BlockExecution(
+        persistAndEmit(release.id, BlockExecution(
             blockId = block.id,
             releaseId = release.id,
             status = BlockStatus.RUNNING,
             startedAt = startTime,
-        )
-        persistAndEmit(release.id, runningExec)
+        ))
 
-        try {
-            // todo claude: duplicate 22 lines
-            val resolvedParams = TemplateEngine.resolveParameters(
-                block.parameters,
-                release.parameters,
-                outputsMap,
-            )
-
-            val connections = mutableMapOf<ConnectionId, ConnectionConfig>()
-            block.connectionId?.let { connId ->
-                val connection = connectionsRepository.findById(connId)
-                if (connection != null) {
-                    connections[connId] = connection.config
-                }
-            }
-
-            val context = ExecutionContext(
-                releaseId = release.id,
-                parameters = release.parameters,
-                blockOutputs = outputsMap,
-                connections = connections,
-            )
-
-            val timeoutSec = block.timeoutSeconds
-            val outputs = if (timeoutSec != null) {
-                withTimeoutOrNull(timeoutSec.seconds) {
-                    blockExecutor.resume(block, resolvedParams, context)
-                } ?: throw RuntimeException("Block '${block.name}' timed out after ${timeoutSec}s")
-            } else {
-                blockExecutor.resume(block, resolvedParams, context)
-            }
-
-            // todo claude: duplicate 11 lines
-            outputsMap[block.id] = outputs
-            statusMap[block.id] = BlockStatus.SUCCEEDED
-            val succeededExec = BlockExecution(
-                blockId = block.id,
-                releaseId = release.id,
-                status = BlockStatus.SUCCEEDED,
-                outputs = outputs,
-                startedAt = startTime,
-                finishedAt = Clock.System.now(),
-            )
-            persistAndEmit(release.id, succeededExec)
-            // todo claude: duplicate 15 lines
-        } catch (e: CancellationException) {
-            if (!restartingReleases.contains(release.id)) {
-                statusMap[block.id] = BlockStatus.FAILED
-                val cancelledExec = BlockExecution(
-                    blockId = block.id,
-                    releaseId = release.id,
-                    status = BlockStatus.FAILED,
-                    error = "Cancelled",
-                    startedAt = startTime,
-                    finishedAt = Clock.System.now(),
-                )
-                persistAndEmit(release.id, cancelledExec)
-            }
-            throw e
-            // todo claude: duplicate 12 lines
-        } catch (e: Exception) {
-            statusMap[block.id] = BlockStatus.FAILED
-            val failedExec = BlockExecution(
-                blockId = block.id,
-                releaseId = release.id,
-                status = BlockStatus.FAILED,
-                error = e.message ?: "Unknown error",
-                startedAt = startTime,
-                finishedAt = Clock.System.now(),
-            )
-            persistAndEmit(release.id, failedExec)
+        executeWithBlockErrorHandling(release.id, block.id, startTime, statusMap, outputsMap) {
+            resolveAndExecute(release, block, outputsMap, BlockExecutor::resume)
         }
     }
 
@@ -534,14 +368,14 @@ class ExecutionEngine(
     }
 
     private suspend fun executeRelease(release: Release) {
-        try {
+        executeWithReleaseErrorHandling(release) {
             // Validate the DAG before execution
             val graph = release.dagSnapshot
             val errors = DagValidator.validate(graph)
             if (errors.isNotEmpty()) {
                 repository.setFinished(release.id, ReleaseStatus.FAILED)
                 emitCompletionOnce(release.id, ReleaseStatus.FAILED, Clock.System.now())
-                return
+                return@executeWithReleaseErrorHandling
             }
 
             repository.setStarted(release.id)
@@ -560,8 +394,11 @@ class ExecutionEngine(
             }
 
             // Use coroutineScope for structured concurrency -- cancellation propagates to all children
+            val remaining = sorted.toMutableList()
             coroutineScope {
-                executeWaves(this, release, graph, sorted, predecessors, statusMap, outputsMap)
+                runWaveLoop(this, release, graph, remaining, predecessors, statusMap) { block ->
+                    executeBlock(release, block, statusMap, outputsMap)
+                }
             }
 
             val allSucceeded = statusMap.values.all { it == BlockStatus.SUCCEEDED }
@@ -569,84 +406,6 @@ class ExecutionEngine(
             repository.setFinished(release.id, finalStatus)
             log.info("Release {} completed with status {}", release.id.value, finalStatus)
             emitCompletionOnce(release.id, finalStatus, Clock.System.now())
-
-            // todo claude: duplicate 16 lines
-        } catch (_: CancellationException) {
-            if (restartingReleases.contains(release.id)) return
-            val executions = repository.findBlockExecutions(release.id)
-            for (exec in executions) {
-                if (exec.status == BlockStatus.RUNNING || exec.status == BlockStatus.WAITING) {
-                    val updated = exec.copy(
-                        status = BlockStatus.FAILED,
-                        error = "Release cancelled",
-                        finishedAt = Clock.System.now(),
-                    )
-                    persistAndEmit(release.id, updated)
-                }
-            }
-            repository.setFinished(release.id, ReleaseStatus.CANCELLED)
-            emitCompletionOnce(release.id, ReleaseStatus.CANCELLED, Clock.System.now())
-        } catch (_: Exception) {
-            repository.setFinished(release.id, ReleaseStatus.FAILED)
-            emitCompletionOnce(release.id, ReleaseStatus.FAILED, Clock.System.now())
-        }
-    }
-
-    private suspend fun executeWaves(
-        scope: CoroutineScope,
-        release: Release,
-        graph: DagGraph,
-        sorted: List<BlockId>,
-        predecessors: Map<BlockId, Set<BlockId>>,
-        statusMap: MutableMap<BlockId, BlockStatus>,
-        outputsMap: MutableMap<BlockId, Map<String, String>>,
-    ) {
-        val remaining = sorted.toMutableList()
-        while (remaining.isNotEmpty()) {
-            // todo claude: duplicate 20 lines
-            currentCoroutineContext().ensureActive()
-
-            val ready = remaining.filter { blockId ->
-                val preds = predecessors[blockId] ?: emptySet()
-                preds.all { statusMap[it] == BlockStatus.SUCCEEDED }
-            }
-
-            if (ready.isEmpty()) {
-                val anyRunning = statusMap.values.any {
-                    it == BlockStatus.RUNNING || it == BlockStatus.WAITING_FOR_INPUT
-                }
-                if (anyRunning) {
-                    delay(50.milliseconds)
-                    continue
-                }
-                break
-            }
-
-            // Remove ready blocks from remaining before launching
-            ready.forEach { remaining.remove(it) }
-
-            // Launch ready blocks concurrently within the structured scope
-            val jobs = ready.map { blockId ->
-                val block = graph.blocks.find { it.id == blockId }!!
-                scope.async {
-                    executeBlock(release, block, statusMap, outputsMap)
-                }
-            }
-
-            // Wait for this wave to complete
-            jobs.forEach { it.await() }
-        }
-
-        // Mark any remaining blocks (whose predecessors failed) as FAILED
-        for (blockId in remaining) {
-            statusMap[blockId] = BlockStatus.FAILED
-            val execution = BlockExecution(
-                blockId = blockId,
-                releaseId = release.id,
-                status = BlockStatus.FAILED,
-                error = "Skipped: predecessor failed",
-            )
-            persistAndEmit(release.id, execution)
         }
     }
 
@@ -667,7 +426,7 @@ class ExecutionEngine(
      *
      * @param initChildren populates child status and output maps from either fresh WAITING
      *                      state or persisted DB records.
-     * @param runWaves executes child waves using either [executeWaves] or [executeRecoveryWaves].
+     * @param runWaves executes child waves using either fresh or recovery logic.
      */
     private suspend fun runContainer(
         release: Release,
@@ -679,26 +438,24 @@ class ExecutionEngine(
     ) {
         val startTime = Clock.System.now()
         statusMap[container.id] = BlockStatus.RUNNING
-        val runningExec = BlockExecution(
+        persistAndEmit(release.id, BlockExecution(
             blockId = container.id,
             releaseId = release.id,
             status = BlockStatus.RUNNING,
             startedAt = startTime,
-        )
-        persistAndEmit(release.id, runningExec)
+        ))
 
         try {
             val childGraph = container.children
             if (childGraph.blocks.isEmpty()) {
                 statusMap[container.id] = BlockStatus.SUCCEEDED
-                val succeededExec = BlockExecution(
+                persistAndEmit(release.id, BlockExecution(
                     blockId = container.id,
                     releaseId = release.id,
                     status = BlockStatus.SUCCEEDED,
                     startedAt = startTime,
                     finishedAt = Clock.System.now(),
-                )
-                persistAndEmit(release.id, succeededExec)
+                ))
                 return
             }
 
@@ -723,27 +480,25 @@ class ExecutionEngine(
             val containerStatus = if (allChildrenSucceeded) BlockStatus.SUCCEEDED else BlockStatus.FAILED
 
             statusMap[container.id] = containerStatus
-            val containerExec = BlockExecution(
+            persistAndEmit(release.id, BlockExecution(
                 blockId = container.id,
                 releaseId = release.id,
                 status = containerStatus,
                 startedAt = startTime,
                 finishedAt = Clock.System.now(),
-            )
-            persistAndEmit(release.id, containerExec)
+            ))
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             statusMap[container.id] = BlockStatus.FAILED
-            val failedExec = BlockExecution(
+            persistAndEmit(release.id, BlockExecution(
                 blockId = container.id,
                 releaseId = release.id,
                 status = BlockStatus.FAILED,
                 error = e.message,
                 startedAt = startTime,
                 finishedAt = Clock.System.now(),
-            )
-            persistAndEmit(release.id, failedExec)
+            ))
         }
     }
 
@@ -771,7 +526,10 @@ class ExecutionEngine(
                 }
             },
             runWaves = { wavesScope, childGraph, sorted, childPredecessors, childStatusMap, childOutputsMap ->
-                executeWaves(wavesScope, release, childGraph, sorted, childPredecessors, childStatusMap, childOutputsMap)
+                val remaining = sorted.toMutableList()
+                runWaveLoop(wavesScope, release, childGraph, remaining, childPredecessors, childStatusMap) { block ->
+                    executeBlock(release, block, childStatusMap, childOutputsMap)
+                }
             },
         )
     }
@@ -784,105 +542,234 @@ class ExecutionEngine(
     ) {
         val startTime = Clock.System.now()
         statusMap[block.id] = BlockStatus.RUNNING
-        val runningExec = BlockExecution(
+        persistAndEmit(release.id, BlockExecution(
             blockId = block.id,
             releaseId = release.id,
             status = BlockStatus.RUNNING,
             startedAt = startTime,
-        )
-        persistAndEmit(release.id, runningExec)
+        ))
 
-        try {
-            val outputs: Map<String, String>
-
+        executeWithBlockErrorHandling(release.id, block.id, startTime, statusMap, outputsMap) {
             if (block.type == BlockType.USER_ACTION) {
                 statusMap[block.id] = BlockStatus.WAITING_FOR_INPUT
-                val waitingExec = BlockExecution(
+                persistAndEmit(release.id, BlockExecution(
                     blockId = block.id,
                     releaseId = release.id,
                     status = BlockStatus.WAITING_FOR_INPUT,
                     startedAt = startTime,
-                )
-                persistAndEmit(release.id, waitingExec)
+                ))
 
                 val deferred = CompletableDeferred<Map<String, String>>()
                 pendingApprovals
                     .getOrPut(release.id) { ConcurrentHashMap() }[block.id] = deferred
 
-                outputs = deferred.await()
+                val outputs = deferred.await()
                 pendingApprovals[release.id]?.remove(block.id)
+                outputs
             } else {
-                // todo claude: duplicate 22 lines
-                val resolvedParams = TemplateEngine.resolveParameters(
-                    block.parameters,
-                    release.parameters,
-                    outputsMap,
-                )
+                resolveAndExecute(release, block, outputsMap, BlockExecutor::execute)
+            }
+        }
+    }
 
-                val connections = mutableMapOf<ConnectionId, ConnectionConfig>()
-                block.connectionId?.let { connId ->
-                    val connection = connectionsRepository.findById(connId)
-                    if (connection != null) {
-                        connections[connId] = connection.config
-                    }
-                }
+    // ── Shared helpers ──────────────────────────────────────────────────
 
-                val context = ExecutionContext(
-                    releaseId = release.id,
-                    parameters = release.parameters,
-                    blockOutputs = outputsMap,
-                    connections = connections,
-                )
+    private fun initStatusFromPersisted(
+        blocks: List<Block>,
+        execMap: Map<BlockId, BlockExecution>,
+        statusMap: MutableMap<BlockId, BlockStatus>,
+        outputsMap: MutableMap<BlockId, Map<String, String>>,
+    ) {
+        for (block in blocks) {
+            val exec = execMap[block.id]
+            statusMap[block.id] = exec?.status ?: BlockStatus.WAITING
+            if (exec != null && exec.status == BlockStatus.SUCCEEDED) {
+                outputsMap[block.id] = exec.outputs
+            }
+        }
+    }
 
-                val timeoutSec = block.timeoutSeconds
-                outputs = if (timeoutSec != null) {
-                    withTimeoutOrNull(timeoutSec.seconds) {
-                        blockExecutor.execute(block, resolvedParams, context)
-                    } ?: throw RuntimeException("Block '${block.name}' timed out after ${timeoutSec}s")
-                } else {
-                    blockExecutor.execute(block, resolvedParams, context)
+    /**
+     * Release-level error handling: marks active blocks as FAILED on cancellation,
+     * sets the release to CANCELLED or FAILED.
+     */
+    private suspend fun executeWithReleaseErrorHandling(
+        release: Release,
+        action: suspend () -> Unit,
+    ) {
+        try {
+            action()
+        } catch (_: CancellationException) {
+            if (restartingReleases.contains(release.id)) return
+            val executions = repository.findBlockExecutions(release.id)
+            for (exec in executions) {
+                if (exec.status == BlockStatus.RUNNING || exec.status == BlockStatus.WAITING) {
+                    persistAndEmit(release.id, exec.copy(
+                        status = BlockStatus.FAILED,
+                        error = "Release cancelled",
+                        finishedAt = Clock.System.now(),
+                    ))
                 }
             }
+            repository.setFinished(release.id, ReleaseStatus.CANCELLED)
+            emitCompletionOnce(release.id, ReleaseStatus.CANCELLED, Clock.System.now())
+        } catch (_: Exception) {
+            repository.setFinished(release.id, ReleaseStatus.FAILED)
+            emitCompletionOnce(release.id, ReleaseStatus.FAILED, Clock.System.now())
+        }
+    }
 
-            // todo claude: duplicate 11 lines
-            outputsMap[block.id] = outputs
-            statusMap[block.id] = BlockStatus.SUCCEEDED
-            val succeededExec = BlockExecution(
-                blockId = block.id,
+    /**
+     * Shared wave execution loop: picks ready blocks, launches them concurrently,
+     * marks remaining blocks as FAILED when predecessors fail.
+     */
+    private suspend fun runWaveLoop(
+        scope: CoroutineScope,
+        release: Release,
+        graph: DagGraph,
+        remaining: MutableList<BlockId>,
+        predecessors: Map<BlockId, Set<BlockId>>,
+        statusMap: MutableMap<BlockId, BlockStatus>,
+        executeBlock: suspend (Block) -> Unit,
+    ) {
+        while (remaining.isNotEmpty()) {
+            currentCoroutineContext().ensureActive()
+
+            val ready = remaining.filter { blockId ->
+                val preds = predecessors[blockId] ?: emptySet()
+                preds.all { statusMap[it] == BlockStatus.SUCCEEDED }
+            }
+
+            if (ready.isEmpty()) {
+                val anyRunning = statusMap.values.any {
+                    it == BlockStatus.RUNNING || it == BlockStatus.WAITING_FOR_INPUT
+                }
+                if (anyRunning) {
+                    delay(50.milliseconds)
+                    continue
+                }
+                break
+            }
+
+            ready.forEach { remaining.remove(it) }
+
+            val jobs = ready.map { blockId ->
+                val block = graph.blocks.find { it.id == blockId }!!
+                scope.async { executeBlock(block) }
+            }
+
+            jobs.forEach { it.await() }
+        }
+
+        // Mark any remaining blocks (whose predecessors failed) as FAILED
+        for (blockId in remaining) {
+            statusMap[blockId] = BlockStatus.FAILED
+            persistAndEmit(release.id, BlockExecution(
+                blockId = blockId,
                 releaseId = release.id,
-                status = BlockStatus.SUCCEEDED,
-                outputs = outputs,
-                startedAt = startTime,
-                finishedAt = Clock.System.now(),
-            )
-            persistAndEmit(release.id, succeededExec)
-            // todo claude: duplicate 15 lines
+                status = BlockStatus.FAILED,
+                error = "Skipped: predecessor failed",
+            ))
+        }
+    }
+
+    /**
+     * Resolve template parameters, load connections, and call the executor.
+     */
+    private suspend fun resolveAndExecute(
+        release: Release,
+        block: Block.ActionBlock,
+        outputsMap: Map<BlockId, Map<String, String>>,
+        run: suspend BlockExecutor.(Block.ActionBlock, List<Parameter>, ExecutionContext) -> Map<String, String>,
+    ): Map<String, String> {
+        val resolvedParams = TemplateEngine.resolveParameters(
+            block.parameters,
+            release.parameters,
+            outputsMap,
+        )
+
+        val connections = mutableMapOf<ConnectionId, ConnectionConfig>()
+        block.connectionId?.let { connId ->
+            val connection = connectionsRepository.findById(connId)
+            if (connection != null) {
+                connections[connId] = connection.config
+            }
+        }
+
+        val context = ExecutionContext(
+            releaseId = release.id,
+            parameters = release.parameters,
+            blockOutputs = outputsMap,
+            connections = connections,
+        )
+
+        val timeoutSec = block.timeoutSeconds
+        return if (timeoutSec != null) {
+            withTimeoutOrNull(timeoutSec.seconds) {
+                blockExecutor.run(block, resolvedParams, context)
+            } ?: throw RuntimeException("Block '${block.name}' timed out after ${timeoutSec}s")
+        } else {
+            blockExecutor.run(block, resolvedParams, context)
+        }
+    }
+
+    private suspend fun completeBlockSuccess(
+        releaseId: ReleaseId,
+        blockId: BlockId,
+        outputs: Map<String, String>,
+        startTime: Instant,
+        statusMap: MutableMap<BlockId, BlockStatus>,
+        outputsMap: MutableMap<BlockId, Map<String, String>>,
+    ) {
+        outputsMap[blockId] = outputs
+        statusMap[blockId] = BlockStatus.SUCCEEDED
+        persistAndEmit(releaseId, BlockExecution(
+            blockId = blockId,
+            releaseId = releaseId,
+            status = BlockStatus.SUCCEEDED,
+            outputs = outputs,
+            startedAt = startTime,
+            finishedAt = Clock.System.now(),
+        ))
+    }
+
+    /**
+     * Block-level error handling: records success, cancellation, or failure.
+     */
+    private suspend fun executeWithBlockErrorHandling(
+        releaseId: ReleaseId,
+        blockId: BlockId,
+        startTime: Instant,
+        statusMap: MutableMap<BlockId, BlockStatus>,
+        outputsMap: MutableMap<BlockId, Map<String, String>>,
+        action: suspend () -> Map<String, String>,
+    ) {
+        try {
+            val outputs = action()
+            completeBlockSuccess(releaseId, blockId, outputs, startTime, statusMap, outputsMap)
         } catch (e: CancellationException) {
-            if (!restartingReleases.contains(release.id)) {
-                statusMap[block.id] = BlockStatus.FAILED
-                val cancelledExec = BlockExecution(
-                    blockId = block.id,
-                    releaseId = release.id,
+            if (!restartingReleases.contains(releaseId)) {
+                statusMap[blockId] = BlockStatus.FAILED
+                persistAndEmit(releaseId, BlockExecution(
+                    blockId = blockId,
+                    releaseId = releaseId,
                     status = BlockStatus.FAILED,
                     error = "Cancelled",
                     startedAt = startTime,
                     finishedAt = Clock.System.now(),
-                )
-                persistAndEmit(release.id, cancelledExec)
+                ))
             }
             throw e
-            // todo claude: duplicate 12 lines
         } catch (e: Exception) {
-            statusMap[block.id] = BlockStatus.FAILED
-            val failedExec = BlockExecution(
-                blockId = block.id,
-                releaseId = release.id,
+            statusMap[blockId] = BlockStatus.FAILED
+            persistAndEmit(releaseId, BlockExecution(
+                blockId = blockId,
+                releaseId = releaseId,
                 status = BlockStatus.FAILED,
                 error = e.message ?: "Unknown error",
                 startedAt = startTime,
                 finishedAt = Clock.System.now(),
-            )
-            persistAndEmit(release.id, failedExec)
+            ))
         }
     }
 

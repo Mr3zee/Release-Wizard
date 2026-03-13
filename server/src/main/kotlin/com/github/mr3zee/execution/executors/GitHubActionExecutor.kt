@@ -4,6 +4,7 @@ import com.github.mr3zee.execution.BlockExecutor
 import com.github.mr3zee.execution.ExecutionContext
 import com.github.mr3zee.model.Block
 import com.github.mr3zee.model.ConnectionConfig
+import com.github.mr3zee.model.ConnectionId
 import com.github.mr3zee.model.Parameter
 import com.github.mr3zee.webhooks.*
 import io.ktor.client.*
@@ -11,6 +12,7 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -40,15 +42,36 @@ class GitHubActionExecutor(
 
     private val log = LoggerFactory.getLogger(GitHubActionExecutor::class.java)
 
+    private fun resolveGitHubConfig(
+        block: Block.ActionBlock,
+        context: ExecutionContext,
+    ): Pair<ConnectionId, ConnectionConfig.GitHubConfig> {
+        val connectionId = block.connectionId
+            ?: throw IllegalStateException("GitHub Action block requires a connection")
+        val config = context.connections[connectionId] as? ConnectionConfig.GitHubConfig
+            ?: throw IllegalStateException("GitHub connection config not found for $connectionId")
+        return connectionId to config
+    }
+
+    private suspend fun CoroutineScope.awaitWebhookCompletion(
+        block: Block.ActionBlock,
+        context: ExecutionContext,
+    ): WebhookCompletion {
+        val completionDeferred = async(start = CoroutineStart.UNDISPATCHED) {
+            withTimeoutOrNull(WEBHOOK_TIMEOUT_MS.milliseconds) {
+                webhookService.completions.first { it.blockId == block.id && it.releaseId == context.releaseId }
+            }
+        }
+        return completionDeferred.await()
+            ?: throw RuntimeException("GitHub Actions webhook timed out after ${WEBHOOK_TIMEOUT_MS / 60_000}min")
+    }
+
     override suspend fun resume(
         block: Block.ActionBlock,
         parameters: List<Parameter>,
         context: ExecutionContext,
     ): Map<String, String> {
-        val connectionId = block.connectionId
-            ?: throw IllegalStateException("GitHub Action block requires a connection")
-        val config = context.connections[connectionId] as? ConnectionConfig.GitHubConfig
-            ?: throw IllegalStateException("GitHub connection config not found for $connectionId")
+        val (_, config) = resolveGitHubConfig(block, context)
 
         // Check PendingWebhook state
         val webhook = webhookRepository.findByReleaseIdAndBlockId(context.releaseId, block.id)
@@ -61,14 +84,7 @@ class GitHubActionExecutor(
             webhook != null && webhook.status == WebhookStatus.PENDING && webhook.externalId.isNotEmpty() -> {
                 // Webhook registered with run ID — subscribe and wait
                 coroutineScope {
-                    // todo claude: duplicate 7 lines
-                    val completionDeferred = async(start = CoroutineStart.UNDISPATCHED) {
-                        withTimeoutOrNull(WEBHOOK_TIMEOUT_MS.milliseconds) {
-                            webhookService.completions.first { it.blockId == block.id && it.releaseId == context.releaseId }
-                        }
-                    }
-                    val completion = completionDeferred.await()
-                        ?: throw RuntimeException("GitHub Actions webhook timed out after ${WEBHOOK_TIMEOUT_MS / 60_000}min")
+                    val completion = awaitWebhookCompletion(block, context)
                     parseCompletionPayload(completion.payload, webhook.externalId, config.owner, config.repo)
                 }
             }
@@ -81,14 +97,7 @@ class GitHubActionExecutor(
                     webhookRepository.updateExternalId(webhook.id, runId)
                 }
                 coroutineScope {
-                    // todo claude: duplicate 7 lines
-                    val completionDeferred = async(start = CoroutineStart.UNDISPATCHED) {
-                        withTimeoutOrNull(WEBHOOK_TIMEOUT_MS.milliseconds) {
-                            webhookService.completions.first { it.blockId == block.id && it.releaseId == context.releaseId }
-                        }
-                    }
-                    val completion = completionDeferred.await()
-                        ?: throw RuntimeException("GitHub Actions webhook timed out after ${WEBHOOK_TIMEOUT_MS / 60_000}min")
+                    val completion = awaitWebhookCompletion(block, context)
                     parseCompletionPayload(completion.payload, runId ?: "", config.owner, config.repo)
                 }
             }
@@ -104,10 +113,7 @@ class GitHubActionExecutor(
         parameters: List<Parameter>,
         context: ExecutionContext,
     ): Map<String, String> {
-        val connectionId = block.connectionId
-            ?: throw IllegalStateException("GitHub Action block requires a connection")
-        val config = context.connections[connectionId] as? ConnectionConfig.GitHubConfig
-            ?: throw IllegalStateException("GitHub connection config not found for $connectionId")
+        val (connectionId, config) = resolveGitHubConfig(block, context)
 
         val workflowFile = parameters.find { it.key == "workflowFile" }?.value
             ?: throw IllegalArgumentException("GitHub Action requires 'workflowFile' parameter")

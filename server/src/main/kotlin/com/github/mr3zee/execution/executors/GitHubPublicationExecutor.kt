@@ -28,16 +28,22 @@ class GitHubPublicationExecutor(
 
     private val log = LoggerFactory.getLogger(GitHubPublicationExecutor::class.java)
 
+    private fun resolveGitHubConfig(
+        block: Block.ActionBlock,
+        context: ExecutionContext,
+    ): ConnectionConfig.GitHubConfig {
+        val connectionId = block.connectionId
+            ?: throw IllegalStateException("GitHub Publication block requires a connection")
+        return context.connections[connectionId] as? ConnectionConfig.GitHubConfig
+            ?: throw IllegalStateException("GitHub connection config not found for $connectionId")
+    }
+
     override suspend fun resume(
         block: Block.ActionBlock,
         parameters: List<Parameter>,
         context: ExecutionContext,
     ): Map<String, String> {
-        // todo claude: duplicate 7 lines
-        val connectionId = block.connectionId
-            ?: throw IllegalStateException("GitHub Publication block requires a connection")
-        val config = context.connections[connectionId] as? ConnectionConfig.GitHubConfig
-            ?: throw IllegalStateException("GitHub connection config not found for $connectionId")
+        val config = resolveGitHubConfig(block, context)
 
         val tagName = parameters.find { it.key == "tagName" }?.value
             ?: throw IllegalArgumentException("GitHub Publication requires 'tagName' parameter")
@@ -65,11 +71,7 @@ class GitHubPublicationExecutor(
         parameters: List<Parameter>,
         context: ExecutionContext,
     ): Map<String, String> {
-        // todo claude: duplicate 7 lines
-        val connectionId = block.connectionId
-            ?: throw IllegalStateException("GitHub Publication block requires a connection")
-        val config = context.connections[connectionId] as? ConnectionConfig.GitHubConfig
-            ?: throw IllegalStateException("GitHub connection config not found for $connectionId")
+        val config = resolveGitHubConfig(block, context)
 
         val tagName = parameters.find { it.key == "tagName" }?.value
             ?: throw IllegalArgumentException("GitHub Publication requires 'tagName' parameter")

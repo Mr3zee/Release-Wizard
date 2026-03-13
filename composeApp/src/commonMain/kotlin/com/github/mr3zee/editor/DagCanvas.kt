@@ -117,16 +117,10 @@ fun DagCanvas(
             .pointerInput(graph) {
                 awaitPointerEventScope {
                     while (true) {
-                        // todo claude: duplicate 10 lines
                         val event = awaitPointerEvent()
-                        if (event.type == PointerEventType.Scroll) {
-                            val change = event.changes.firstOrNull() ?: continue
-                            val result = handleScrollZoom(change.scrollDelta.y, change.position, zoom, panOffset, density)
-                            if (result != null) {
-                                zoom = result.first
-                                panOffset = result.second
-                                change.consume()
-                            }
+                        applyScrollZoom(event, zoom, panOffset, density)?.let { (z, p) ->
+                            zoom = z
+                            panOffset = p
                         }
                         if (event.type == PointerEventType.Move) {
                             val pos = event.changes.firstOrNull()?.position ?: continue
