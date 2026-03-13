@@ -19,6 +19,7 @@ import io.ktor.server.sessions.*
 import io.ktor.server.testing.*
 import io.ktor.server.websocket.*
 import io.ktor.util.*
+import org.koin.dsl.module
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
 import kotlin.time.Duration.Companion.seconds
@@ -44,10 +45,22 @@ fun testWebhookConfig() = WebhookConfig(
     baseUrl = "http://localhost:8080",
 )
 
+/**
+ * Test override module that replaces real executors with stubs.
+ * Existing release integration tests create blocks without connections,
+ * so they need the StubBlockExecutor which doesn't require connections.
+ */
+val testOverrideModule = module {
+    single<com.github.mr3zee.execution.BlockExecutor> {
+        com.github.mr3zee.execution.StubBlockExecutor()
+    }
+}
+
 fun Application.testModule() {
     val authConfig = testAuthConfig()
     install(Koin) {
         slf4jLogger()
+        allowOverride(true)
         modules(
             appModule(testDbConfig(), testEncryptionConfig(), authConfig, testWebhookConfig()),
             authModule,
@@ -55,6 +68,7 @@ fun Application.testModule() {
             connectionsModule,
             webhooksModule,
             releasesModule,
+            testOverrideModule,
         )
     }
     install(Sessions) {

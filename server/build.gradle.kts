@@ -54,5 +54,6 @@ dependencies {
     testImplementation(libs.kotlin.testJunit)
     testImplementation(libs.koin.test)
     testImplementation(libs.ktor.clientWebsockets)
+    testImplementation(libs.ktor.clientMock)
     testImplementation(libs.h2)
 }
