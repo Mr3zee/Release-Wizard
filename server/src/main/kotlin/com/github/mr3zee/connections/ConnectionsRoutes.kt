@@ -69,13 +69,12 @@ fun Route.connectionRoutes() {
 
             post("/test") {
                 val id = call.requireConnectionId() ?: return@post
-                val connection = service.getConnection(id)
-                if (connection == null) {
+                val result = service.testConnection(id)
+                if (result == null) {
                     call.respond(HttpStatusCode.NotFound, "Connection not found")
                     return@post
                 }
-                // Stub: real testing will be implemented in Phase 6 (integrations)
-                call.respond(ConnectionTestResult(success = true, message = "Connection exists (test not yet implemented)"))
+                call.respond(result)
             }
         }
     }

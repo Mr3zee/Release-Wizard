@@ -46,13 +46,16 @@ fun testWebhookConfig() = WebhookConfig(
 )
 
 /**
- * Test override module that replaces real executors with stubs.
- * Existing release integration tests create blocks without connections,
- * so they need the StubBlockExecutor which doesn't require connections.
+ * Test override module:
+ * - Replaces real executors with stubs (existing tests create blocks without connections)
+ * - Replaces CIO HttpClient with MockEngine (connection tests and executors don't hit real APIs)
  */
 val testOverrideModule = module {
     single<com.github.mr3zee.execution.BlockExecutor> {
         com.github.mr3zee.execution.StubBlockExecutor()
+    }
+    single<io.ktor.client.HttpClient> {
+        createTestHttpClient()
     }
 }
 

@@ -1,5 +1,6 @@
 package com.github.mr3zee.connections
 
+import com.github.mr3zee.api.ConnectionTestResult
 import com.github.mr3zee.api.CreateConnectionRequest
 import com.github.mr3zee.api.UpdateConnectionRequest
 import com.github.mr3zee.model.Connection
@@ -12,10 +13,12 @@ interface ConnectionsService {
     suspend fun createConnection(request: CreateConnectionRequest): Connection
     suspend fun updateConnection(id: ConnectionId, request: UpdateConnectionRequest): Connection?
     suspend fun deleteConnection(id: ConnectionId): Boolean
+    suspend fun testConnection(id: ConnectionId): ConnectionTestResult?
 }
 
 class DefaultConnectionsService(
     private val repository: ConnectionsRepository,
+    private val connectionTester: ConnectionTester,
 ) : ConnectionsService {
 
     override suspend fun listConnections(): List<Connection> {
@@ -44,6 +47,11 @@ class DefaultConnectionsService(
 
     override suspend fun deleteConnection(id: ConnectionId): Boolean {
         return repository.delete(id)
+    }
+
+    override suspend fun testConnection(id: ConnectionId): ConnectionTestResult? {
+        val connection = repository.findById(id) ?: return null
+        return connectionTester.test(connection.config)
     }
 }
 
