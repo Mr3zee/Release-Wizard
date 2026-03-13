@@ -41,14 +41,11 @@ Dependencies flow: `composeApp` → `shared`, `server` → `shared`. No dependen
 
 ## Domain Model
 
-Blocks form a DAG. Each node is either a **Container** (holds a sub-graph) or an **Action block** (Slack Message, TeamCity Build, Maven Central Publication, GitHub Action, GitHub Publication, User Action). All domain models live in `shared/src/commonMain/.../model/` and use `@Serializable`.
-
-Key types: `Block` (sealed, uses `@JsonClassDiscriminator("kind")`), `DagGraph`, `ProjectTemplate`, `Release`, `BlockExecution`, `Connection`. Typesafe IDs: `ProjectId`, `ReleaseId`, `BlockId`, `ConnectionId` (value classes). Shared `AppJson` instance in `JsonConfig.kt` — reuse everywhere.
+Blocks form a DAG. Each node is either a **Container** (holds a sub-graph) or an **Action block** (Slack Message, TeamCity Build, Maven Central Publication, GitHub Action, GitHub Publication, User Action). All domain models live in `shared/src/commonMain/.../model/`
 
 ## Key Constraints
 
 - Compose code only in `commonMain` source sets
-- Auth at Ktor level, credentials stored securely
 - Add new dependencies through `gradle/libs.versions.toml`, never hardcode versions
 - Never use `delay()` in tests — use `waitUntil` or `awaitExecution` patterns
 - WebSocket SharedFlow: always subscribe before querying snapshot to prevent race conditions
@@ -57,14 +54,9 @@ Key types: `Block` (sealed, uses `@JsonClassDiscriminator("kind")`), `DagGraph`,
 - Compose UI patterns, canvas testing, and gotchas → see **jetpack-compose-expert** skill
 - Manual UI verification → see **compose-ui-test-server** skill
 
-## Development Plan Tracking
+## Development Cycle
 
-Implementation plans are maintained as `PLAN.md` at the project root. When starting a significant feature:
-1. Write/update `PLAN.md` with the approach, phases, and current progress
-2. Check off completed items as work progresses
-3. Remove the plan when the feature is fully implemented
-
-After completing each phase, follow this workflow in order:
+To make any changes, follow this workflow in order:
 1. **Implement** — build the phase
 2. **Review** — run a review agent on all changes
 3. **Fix** — address issues from the review
@@ -75,7 +67,6 @@ After completing each phase, follow this workflow in order:
 8. **Update findings** — update memory, CLAUDE.md, and relevant skills with learnings
 9. **Review findings** — review the documentation updates for accuracy
 10. **Commit** — commit all changes
-11. **Complete** — phase is done, move to next
 
 ## Updating Knowledge
 
