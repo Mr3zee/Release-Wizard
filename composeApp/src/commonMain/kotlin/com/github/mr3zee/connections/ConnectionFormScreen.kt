@@ -71,6 +71,16 @@ fun ConnectionFormScreen(
         }
     }
 
+    val currentConfig by remember {
+        derivedStateOf {
+            buildConfig(
+                selectedType, slackWebhookUrl, teamCityServerUrl, teamCityToken,
+                teamCityWebhookSecret, githubToken, githubOwner, githubRepo,
+                githubWebhookSecret, mavenUsername, mavenPassword, mavenBaseUrl,
+            )
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -83,23 +93,14 @@ fun ConnectionFormScreen(
                 actions = {
                     Button(
                         onClick = {
-                            val config = buildConfig(
-                                selectedType, slackWebhookUrl, teamCityServerUrl, teamCityToken,
-                                teamCityWebhookSecret, githubToken, githubOwner, githubRepo,
-                                githubWebhookSecret, mavenUsername, mavenPassword, mavenBaseUrl,
-                            )
                             if (isEditMode) {
-                                viewModel.updateConnection(connectionId!!, name, config)
+                                viewModel.updateConnection(connectionId!!, name, currentConfig)
                             } else {
-                                viewModel.createConnection(name, selectedType, config)
+                                viewModel.createConnection(name, selectedType, currentConfig)
                             }
                             onBack()
                         },
-                        enabled = name.isNotBlank() && isConfigValid(
-                            selectedType, slackWebhookUrl, teamCityServerUrl, teamCityToken,
-                            githubToken, githubOwner, githubRepo, mavenUsername, mavenPassword,
-                            mavenBaseUrl,
-                        ),
+                        enabled = name.isNotBlank() && currentConfig.isValid(),
                         modifier = Modifier.testTag("save_connection_button"),
                     ) {
                         Text("Save")
@@ -291,20 +292,9 @@ private fun buildConfig(
     )
 }
 
-private fun isConfigValid(
-    type: ConnectionType,
-    slackWebhookUrl: String,
-    teamCityServerUrl: String,
-    teamCityToken: String,
-    githubToken: String,
-    githubOwner: String,
-    githubRepo: String,
-    mavenUsername: String,
-    mavenPassword: String,
-    mavenBaseUrl: String,
-): Boolean = when (type) {
-    ConnectionType.SLACK -> slackWebhookUrl.isNotBlank()
-    ConnectionType.TEAMCITY -> teamCityServerUrl.isNotBlank() && teamCityToken.isNotBlank()
-    ConnectionType.GITHUB -> githubToken.isNotBlank() && githubOwner.isNotBlank() && githubRepo.isNotBlank()
-    ConnectionType.MAVEN_CENTRAL -> mavenUsername.isNotBlank() && mavenPassword.isNotBlank() && mavenBaseUrl.isNotBlank()
+private fun ConnectionConfig.isValid(): Boolean = when (this) {
+    is ConnectionConfig.SlackConfig -> webhookUrl.isNotBlank()
+    is ConnectionConfig.TeamCityConfig -> serverUrl.isNotBlank() && token.isNotBlank()
+    is ConnectionConfig.GitHubConfig -> token.isNotBlank() && owner.isNotBlank() && repo.isNotBlank()
+    is ConnectionConfig.MavenCentralConfig -> username.isNotBlank() && password.isNotBlank() && baseUrl.isNotBlank()
 }
