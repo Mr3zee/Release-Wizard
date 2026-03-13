@@ -32,6 +32,9 @@ class ExecutionEngine(
     // Active release jobs, keyed by release ID
     private val activeJobs = ConcurrentHashMap<ReleaseId, Job>()
 
+    // Tracks whether completion events have been emitted for a release (prevents duplicates)
+    private val completionEmitted = ConcurrentHashMap<ReleaseId, java.util.concurrent.atomic.AtomicBoolean>()
+
     // Pending user action approvals: releaseId -> blockId -> CompletableDeferred
     private val pendingApprovals = ConcurrentHashMap<ReleaseId, ConcurrentHashMap<BlockId, CompletableDeferred<Map<String, String>>>>()
 
@@ -47,7 +50,21 @@ class ExecutionEngine(
         _events.tryEmit(event)
     }
 
+    /**
+     * Emit release completion events exactly once per release.
+     * Both [cancelExecution] and [executeRelease]'s catch block can trigger completion;
+     * the AtomicBoolean ensures only the first caller emits events.
+     */
+    private fun emitCompletionOnce(releaseId: ReleaseId, status: ReleaseStatus, finishedAt: kotlin.time.Instant) {
+        val flag = completionEmitted.getOrPut(releaseId) { java.util.concurrent.atomic.AtomicBoolean(false) }
+        if (flag.compareAndSet(false, true)) {
+            emitEvent(ReleaseEvent.ReleaseStatusChanged(releaseId, status, finishedAt = finishedAt))
+            emitEvent(ReleaseEvent.ReleaseCompleted(releaseId, status, finishedAt = finishedAt))
+        }
+    }
+
     fun startExecution(release: Release): Job {
+        completionEmitted[release.id] = java.util.concurrent.atomic.AtomicBoolean(false)
         val job = scope.launch {
             executeRelease(release)
         }
@@ -55,6 +72,7 @@ class ExecutionEngine(
         job.invokeOnCompletion {
             activeJobs.remove(release.id)
             pendingApprovals.remove(release.id)
+            completionEmitted.remove(release.id)
         }
         return job
     }
@@ -74,9 +92,7 @@ class ExecutionEngine(
         val release = repository.findById(releaseId)
         if (release != null && release.status != ReleaseStatus.CANCELLED) {
             repository.setFinished(releaseId, ReleaseStatus.CANCELLED)
-            val now = Clock.System.now()
-            emitEvent(ReleaseEvent.ReleaseStatusChanged(releaseId, ReleaseStatus.CANCELLED, finishedAt = now))
-            emitEvent(ReleaseEvent.ReleaseCompleted(releaseId, ReleaseStatus.CANCELLED, finishedAt = now))
+            emitCompletionOnce(releaseId, ReleaseStatus.CANCELLED, Clock.System.now())
         }
     }
 
@@ -105,9 +121,7 @@ class ExecutionEngine(
             val errors = DagValidator.validate(graph)
             if (errors.isNotEmpty()) {
                 repository.setFinished(release.id, ReleaseStatus.FAILED)
-                val now = Clock.System.now()
-                emitEvent(ReleaseEvent.ReleaseStatusChanged(release.id, ReleaseStatus.FAILED, finishedAt = now))
-                emitEvent(ReleaseEvent.ReleaseCompleted(release.id, ReleaseStatus.FAILED, finishedAt = now))
+                emitCompletionOnce(release.id, ReleaseStatus.FAILED, Clock.System.now())
                 return
             }
 
@@ -134,9 +148,7 @@ class ExecutionEngine(
             val allSucceeded = statusMap.values.all { it == BlockStatus.SUCCEEDED }
             val finalStatus = if (allSucceeded) ReleaseStatus.SUCCEEDED else ReleaseStatus.FAILED
             repository.setFinished(release.id, finalStatus)
-            val finishedAt = Clock.System.now()
-            emitEvent(ReleaseEvent.ReleaseStatusChanged(release.id, finalStatus, finishedAt = finishedAt))
-            emitEvent(ReleaseEvent.ReleaseCompleted(release.id, finalStatus, finishedAt = finishedAt))
+            emitCompletionOnce(release.id, finalStatus, Clock.System.now())
 
         } catch (e: CancellationException) {
             val executions = repository.findBlockExecutions(release.id)
@@ -152,14 +164,10 @@ class ExecutionEngine(
                 }
             }
             repository.setFinished(release.id, ReleaseStatus.CANCELLED)
-            val now = Clock.System.now()
-            emitEvent(ReleaseEvent.ReleaseStatusChanged(release.id, ReleaseStatus.CANCELLED, finishedAt = now))
-            emitEvent(ReleaseEvent.ReleaseCompleted(release.id, ReleaseStatus.CANCELLED, finishedAt = now))
+            emitCompletionOnce(release.id, ReleaseStatus.CANCELLED, Clock.System.now())
         } catch (e: Exception) {
             repository.setFinished(release.id, ReleaseStatus.FAILED)
-            val now = Clock.System.now()
-            emitEvent(ReleaseEvent.ReleaseStatusChanged(release.id, ReleaseStatus.FAILED, finishedAt = now))
-            emitEvent(ReleaseEvent.ReleaseCompleted(release.id, ReleaseStatus.FAILED, finishedAt = now))
+            emitCompletionOnce(release.id, ReleaseStatus.FAILED, Clock.System.now())
         }
     }
 
