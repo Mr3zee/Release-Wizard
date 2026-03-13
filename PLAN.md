@@ -286,12 +286,85 @@ Key test tags available:
 
 ## Phase 5: Real-Time Updates via WebSockets
 
-*(Not yet started)*
+**Goal**: Stream release execution updates to the client via WebSockets.
+
+- [x] `api/WebSocketEvents.kt` — ReleaseEvent sealed class (Snapshot, ReleaseStatusChanged, BlockExecutionUpdated, ReleaseCompleted)
+- [x] `releases/ReleaseWebSocketRoutes.kt` — WebSocket endpoint at /api/v1/releases/{id}/ws with snapshot + event streaming
+- [x] ExecutionEngine SharedFlow event broadcasting
+- [x] Client WebSocket subscription and real-time UI updates
+- [x] Release management UI (start, cancel, status display)
+- [x] `releases/ReleaseWebSocketTest.kt` — 5 tests (snapshot, events, completion, nonexistent, disconnect)
+- [x] Compose UI tests — 97 tests covering all screens
+
+---
 
 ## Phase 6: External Service Integrations
 
-*(Not yet started)*
+**Goal**: Replace stubs with real API integrations for all 5 block types + webhook infrastructure.
+
+### 6a. Foundation
+
+- [x] Shared model changes: `webhookSecret` on TeamCityConfig/GitHubConfig, `baseUrl` on MavenCentralConfig
+- [x] `webhookUrl` on ConnectionResponse, `webhookUrls` on ConnectionListResponse
+- [x] WebhookConfig (`webhookBaseUrl`) in server config + application.yaml
+- [x] Ktor HttpClient(CIO) registered in Koin for outbound API calls
+- [x] `DispatchingBlockExecutor` — routes to type-specific executors by BlockType
+- [x] `PendingWebhookTable` + `PendingWebhook` model + `PendingWebhookRepository`
+- [x] `ExecutionEngine` populates `ExecutionContext.connections` from DB via `ConnectionsRepository`
+- [x] `WebhooksModule` — Koin module for webhook infrastructure
+- [x] UI: webhookSecret fields for TC/GH, baseUrl for Maven Central, webhook URL display in connection list
+- [x] `ApiRoutes.Webhooks` — route constants for webhook receiver endpoints
+
+### 6b. Webhook Infrastructure
+
+- [x] `WebhookService` — validates secrets, updates PendingWebhook records, emits SharedFlow completions
+- [x] HMAC-SHA256 validation for GitHub webhooks (`X-Hub-Signature-256`), secret validation for TeamCity (`X-Webhook-Secret`)
+- [x] Timing-safe comparison via `MessageDigest.isEqual`
+- [x] `WebhookRoutes` — POST endpoints outside auth block at `/api/v1/webhooks/{type}/{connectionId}`
+- [x] `WebhookRoutesTest` — 12 integration tests (valid/invalid secrets, error cases, auth bypass)
+
+### 6c. Synchronous Executors
+
+- [x] `SlackMessageExecutor` — POST to incoming webhook URL with text/channel
+- [x] `GitHubPublicationExecutor` — POST to GitHub releases API with Bearer auth
+- [x] `ExecutorsTest` — 9 unit tests with MockEngine
+- [x] Test infrastructure: `StubBlockExecutor` override in tests, mock HttpClient
+
+### 6d. Connection Testing
+
+- [x] `ConnectionTester` — real API validation per connection type (TC server, GH repo, Maven Central status, Slack URL format)
+- [x] Wired into `ConnectionsService.testConnection()` and routes
+- [x] `TestMockClient` — separate file for mock HttpClient to avoid import conflicts
+
+### 6e. Async Executors (Webhook-based)
+
+- [x] `TeamCityBuildExecutor` — triggers build via `/app/rest/buildQueue`, registers PendingWebhook, awaits completion via SharedFlow
+- [x] `GitHubActionExecutor` — triggers workflow dispatch, discovers run ID via polling, registers PendingWebhook, awaits completion
+- [x] `CoroutineStart.UNDISPATCHED` ensures SharedFlow subscriber is active before webhook registration (prevents race condition)
+- [x] XML escaping for TeamCity parameters
+- [x] `AsyncExecutorsTest` — 4 tests with in-memory webhook repository, yield-based `waitUntil` polling
+
+### 6f. Maven Central Executor
+
+- [x] `MavenCentralExecutor` — two modes: by deploymentId or by groupId+artifactId+version
+- [x] All 5 block types now use real executors (StubBlockExecutor only in tests)
+
+### Review Fixes
+
+- [x] `emitCompletionOnce` with AtomicBoolean prevents duplicate ReleaseCompleted events from cancelExecution + catch block race
+- [x] `tryEmit` → `emit` in WebhookService prevents silent event drops
+- [x] Default status "UNKNOWN"/"unknown" on parse failure with logging (not false "SUCCESS")
+- [x] No credential leaking in connection test error messages
+- [x] `yield()`-based `waitUntil` in tests (no `delay()`)
+
+---
 
 ## Phase 7: Polish & Production Readiness
 
 *(Not yet started)*
+
+### Notes for Further Development
+
+**Backend restartability audit**: On restart, all RUNNING releases are lost (in-memory `activeJobs`/`pendingApprovals`). Need: scan DB for RUNNING releases on startup, reconstruct state from BlockExecution records, resume.
+
+**Client reconnectability**: WebSocket disconnect → show status indicator, auto-retry with backoff, request fresh snapshot on reconnect. HTTP errors → show error state with retry. Auth expiry → redirect to login.
