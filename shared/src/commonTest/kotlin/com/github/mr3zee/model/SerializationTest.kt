@@ -200,4 +200,79 @@ class SerializationTest {
         val decoded = json.decodeFromString(Release.serializer(), encoded)
         assertEquals(release, decoded)
     }
+
+    @Test
+    fun blockExecutionRoundTrip() {
+        val now = Clock.System.now()
+        val execution = BlockExecution(
+            blockId = BlockId("b1"),
+            releaseId = ReleaseId("r1"),
+            status = BlockStatus.SUCCEEDED,
+            outputs = mapOf("buildNumber" to "42", "buildUrl" to "https://example.com"),
+            startedAt = now,
+            finishedAt = now,
+        )
+        val encoded = json.encodeToString(BlockExecution.serializer(), execution)
+        val decoded = json.decodeFromString(BlockExecution.serializer(), encoded)
+        assertEquals(execution, decoded)
+    }
+
+    @Test
+    fun blockExecutionWithErrorRoundTrip() {
+        val execution = BlockExecution(
+            blockId = BlockId("b1"),
+            releaseId = ReleaseId("r1"),
+            status = BlockStatus.FAILED,
+            error = "Connection timeout",
+        )
+        val encoded = json.encodeToString(BlockExecution.serializer(), execution)
+        val decoded = json.decodeFromString(BlockExecution.serializer(), encoded)
+        assertEquals(execution, decoded)
+    }
+
+    @Test
+    fun releaseDtosRoundTrip() {
+        val createRequest = CreateReleaseRequest(
+            projectTemplateId = ProjectId("p1"),
+            parameters = listOf(Parameter("version", "1.0.0")),
+        )
+        val encoded1 = json.encodeToString(CreateReleaseRequest.serializer(), createRequest)
+        val decoded1 = json.decodeFromString(CreateReleaseRequest.serializer(), encoded1)
+        assertEquals(createRequest, decoded1)
+
+        val approveRequest = ApproveBlockRequest(
+            input = mapOf("approved" to "true", "comment" to "LGTM"),
+        )
+        val encoded2 = json.encodeToString(ApproveBlockRequest.serializer(), approveRequest)
+        val decoded2 = json.decodeFromString(ApproveBlockRequest.serializer(), encoded2)
+        assertEquals(approveRequest, decoded2)
+    }
+
+    @Test
+    fun releaseResponseRoundTrip() {
+        val now = Clock.System.now()
+        val response = ReleaseResponse(
+            release = Release(
+                id = ReleaseId("r1"),
+                projectTemplateId = ProjectId("p1"),
+                status = ReleaseStatus.SUCCEEDED,
+                dagSnapshot = DagGraph(),
+                startedAt = now,
+                finishedAt = now,
+            ),
+            blockExecutions = listOf(
+                BlockExecution(
+                    blockId = BlockId("b1"),
+                    releaseId = ReleaseId("r1"),
+                    status = BlockStatus.SUCCEEDED,
+                    outputs = mapOf("key" to "value"),
+                    startedAt = now,
+                    finishedAt = now,
+                ),
+            ),
+        )
+        val encoded = json.encodeToString(ReleaseResponse.serializer(), response)
+        val decoded = json.decodeFromString(ReleaseResponse.serializer(), encoded)
+        assertEquals(response, decoded)
+    }
 }

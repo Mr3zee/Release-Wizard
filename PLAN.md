@@ -220,7 +220,54 @@ Key test tags available:
 
 ## Phase 4: DAG Execution Engine
 
-*(Not yet started)*
+**Goal**: Coroutine-based engine that traverses the DAG, executes blocks, manages lifecycle.
+
+### 4a. Shared: Models & DTOs
+
+- [x] `model/BlockExecution.kt` — block-level execution state (blockId, releaseId, status, outputs, error, timestamps)
+- [x] `api/ReleaseDtos.kt` — CreateReleaseRequest, ReleaseResponse, ReleaseListResponse, ApproveBlockRequest
+- [x] Update `ApiRoutes.kt` — cancel, restartBlock, approveBlock, blockExecution routes
+- [x] `template/TemplateEngine.kt` — resolves `${param.key}` and `${block.blockId.outputName}` in parameter values
+
+### 4b. Server: Persistence
+
+- [x] `persistence/ReleaseTables.kt` — ReleaseTable (projectTemplateId, status, dagSnapshot jsonb, parameters jsonb, timestamps) + BlockExecutionTable (releaseId, blockId, status, outputs jsonb, error, timestamps)
+- [x] `persistence/DatabaseFactory.kt` — add ReleaseTable, BlockExecutionTable to SchemaUtils.create()
+
+### 4c. Server: Releases CRUD
+
+- [x] `releases/ReleasesRepository.kt` — interface (CRUD + block execution upsert/query)
+- [x] `releases/ExposedReleasesRepository.kt` — Exposed implementation with varchar FK columns
+- [x] `releases/ReleasesService.kt` — interface + DefaultReleasesService (start, cancel, restart block, approve block, param merging)
+- [x] `releases/ReleasesRoutes.kt` — GET/POST releases, POST /:id/cancel, POST /:id/blocks/:blockId/restart, POST /:id/blocks/:blockId/approve
+- [x] `releases/ReleasesModule.kt` — Koin module (repository, service, block executor, execution engine)
+
+### 4d. Server: Execution Engine
+
+- [x] `execution/BlockExecutor.kt` — interface for executing a single action block
+- [x] `execution/ExecutionContext.kt` — release state, params, block outputs, connections
+- [x] `execution/StubBlockExecutor.kt` — returns simulated outputs per block type (real executors in Phase 6)
+- [x] `execution/ExecutionEngine.kt` — coroutine-based DAG execution:
+  - Topological sort → wave-based parallel execution
+  - Predecessor tracking: blocks launch when all predecessors SUCCEEDED
+  - Container blocks: recursive sub-DAG execution
+  - User Action blocks: suspend on CompletableDeferred, resume on approve endpoint
+  - Timeout support via `withTimeout`
+  - Template parameter resolution via TemplateEngine
+  - Cancellation via structured concurrency
+  - Block status persisted to DB immediately on state changes
+
+### 4e. Wiring
+
+- [x] `Application.kt` — add releasesModule + releaseRoutes inside authenticate block
+- [x] `TestUtils.kt` — add releasesModule to test Koin modules
+
+### 4f. Tests & Verification
+
+- [x] `releases/ReleasesRoutesTest.kt` — 12 tests (list, start+get, nonexistent project, empty DAG, sequential DAG execution, diamond DAG execution, user action approval, cancel, nonexistent release, unauthenticated, parameter merging, block outputs)
+- [x] `template/TemplateEngineTest.kt` — 7 tests (param resolution, block output, unresolved kept, multiple expressions, resolveParameters, no-template unchanged, multi-part block output)
+- [x] Updated `SerializationTest.kt` — 4 new tests (BlockExecution, BlockExecution with error, ReleaseDtos, ReleaseResponse)
+- [x] All 39 server tests pass, all 39 shared tests pass (78 total), all targets compile (JVM, JS, WasmJS)
 
 ## Phase 5: Real-Time Updates via WebSockets
 

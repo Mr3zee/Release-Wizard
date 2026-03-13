@@ -5,8 +5,12 @@ import com.github.mr3zee.auth.authModule
 import com.github.mr3zee.auth.authRoutes
 import com.github.mr3zee.connections.connectionRoutes
 import com.github.mr3zee.connections.connectionsModule
+import com.github.mr3zee.execution.ExecutionEngine
 import com.github.mr3zee.projects.projectRoutes
 import com.github.mr3zee.projects.projectsModule
+import com.github.mr3zee.releases.releaseRoutes
+import com.github.mr3zee.releases.releasesModule
+import io.ktor.events.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
@@ -32,6 +36,7 @@ fun Application.module() {
             authModule,
             projectsModule,
             connectionsModule,
+            releasesModule,
         )
     }
 
@@ -68,6 +73,11 @@ fun Application.module() {
     }
 
     configureRouting()
+
+    monitor.subscribe(ApplicationStopped) {
+        val engine = org.koin.java.KoinJavaComponent.getKoin().getOrNull<ExecutionEngine>()
+        engine?.shutdown()
+    }
 }
 
 fun Application.configureRouting() {
@@ -79,6 +89,7 @@ fun Application.configureRouting() {
         authenticate("session-auth") {
             projectRoutes()
             connectionRoutes()
+            releaseRoutes()
         }
     }
 }

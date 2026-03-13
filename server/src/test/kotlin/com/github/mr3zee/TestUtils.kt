@@ -4,6 +4,7 @@ import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.auth.authModule
 import com.github.mr3zee.connections.connectionsModule
 import com.github.mr3zee.projects.projectsModule
+import com.github.mr3zee.releases.releasesModule
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 import io.ktor.client.plugins.cookies.*
 import io.ktor.http.*
@@ -45,6 +46,7 @@ fun Application.testModule() {
             authModule,
             projectsModule,
             connectionsModule,
+            releasesModule,
         )
     }
     install(Sessions) {

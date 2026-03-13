@@ -11,6 +11,11 @@ object ApiRoutes {
     object Releases {
         const val BASE = "$API_V1/releases"
         fun byId(id: String) = "$BASE/$id"
+        fun cancel(id: String) = "$BASE/$id/cancel"
+        fun await(id: String) = "$BASE/$id/await"
+        fun blockExecution(releaseId: String, blockId: String) = "$BASE/$releaseId/blocks/$blockId"
+        fun restartBlock(releaseId: String, blockId: String) = "$BASE/$releaseId/blocks/$blockId/restart"
+        fun approveBlock(releaseId: String, blockId: String) = "$BASE/$releaseId/blocks/$blockId/approve"
     }
 
     object Auth {
