@@ -84,7 +84,7 @@ class AuthRoutesTest {
         application { testModule() }
         val client = jsonClient()
 
-        val response = client.get("/api/v1/projects")
+        val response = client.get(ApiRoutes.Projects.BASE)
         assertEquals(HttpStatusCode.Unauthorized, response.status)
     }
 
@@ -98,7 +98,7 @@ class AuthRoutesTest {
             setBody(LoginRequest(username = "admin", password = "admin"))
         }
 
-        val response = client.get("/api/v1/projects")
+        val response = client.get(ApiRoutes.Projects.BASE)
         assertEquals(HttpStatusCode.OK, response.status)
     }
 }

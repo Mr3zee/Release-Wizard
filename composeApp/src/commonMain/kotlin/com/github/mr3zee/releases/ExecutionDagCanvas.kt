@@ -56,20 +56,10 @@ fun ExecutionDagCanvas(
                         val event = awaitPointerEvent()
                         if (event.type == PointerEventType.Scroll) {
                             val change = event.changes.firstOrNull() ?: continue
-                            val scrollY = change.scrollDelta.y
-                            if (scrollY != 0f) {
-                                val factor = if (scrollY < 0) 1.08f else 1f / 1.08f
-                                val newZoom = (zoom * factor).coerceIn(MIN_ZOOM, MAX_ZOOM)
-                                val pointerPos = change.position
-                                val logicalBefore = Offset(
-                                    (pointerPos.x - panOffset.x) / (density * zoom),
-                                    (pointerPos.y - panOffset.y) / (density * zoom),
-                                )
-                                panOffset = Offset(
-                                    pointerPos.x - logicalBefore.x * density * newZoom,
-                                    pointerPos.y - logicalBefore.y * density * newZoom,
-                                )
-                                zoom = newZoom
+                            val result = handleScrollZoom(change.scrollDelta.y, change.position, zoom, panOffset, density)
+                            if (result != null) {
+                                zoom = result.first
+                                panOffset = result.second
                                 change.consume()
                             }
                         }

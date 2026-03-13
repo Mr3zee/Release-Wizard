@@ -1,6 +1,7 @@
 package com.github.mr3zee.releases
 
 import com.github.mr3zee.AppJson
+import com.github.mr3zee.api.ApiRoutes
 import com.github.mr3zee.api.ReleaseEvent
 import com.github.mr3zee.execution.ExecutionEngine
 import com.github.mr3zee.model.ReleaseId
@@ -18,9 +19,7 @@ fun Route.releaseWebSocketRoutes() {
     val service by inject<ReleasesService>()
     val engine by inject<ExecutionEngine>()
 
-    // todo claude: not API route from shared ApiRoutes
-    route("/api/v1/releases/{id}") {
-        // todo claude: not API route from shared ApiRoutes
+    route("${ApiRoutes.Releases.BASE}/{id}") {
         webSocket("/ws") {
             val idParam = call.parameters["id"]
             if (idParam == null) {

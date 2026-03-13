@@ -31,7 +31,6 @@ class ReleaseDetailViewModel(
     val error: StateFlow<String?> = _error
 
     private val _reconnectAttempt = MutableStateFlow(0)
-    // todo claude: unused
     val reconnectAttempt: StateFlow<Int> = _reconnectAttempt
 
     private var wsJob: Job? = null

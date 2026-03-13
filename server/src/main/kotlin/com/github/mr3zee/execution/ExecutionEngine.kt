@@ -11,11 +11,16 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Clock
-import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Instant
 
 /**
  * Coroutine-based DAG execution engine.
@@ -24,7 +29,6 @@ import kotlin.time.Duration.Companion.milliseconds
  * whose predecessors have all SUCCEEDED. Container blocks recursively execute
  * their sub-DAG. User Action blocks suspend on CompletableDeferred until approved.
  */
-// todo claude: a lot of code duplication in this file, extract functions
 class ExecutionEngine(
     private val repository: ReleasesRepository,
     private val blockExecutor: BlockExecutor,
@@ -37,13 +41,13 @@ class ExecutionEngine(
     private val activeJobs = ConcurrentHashMap<ReleaseId, Job>()
 
     // Tracks whether completion events have been emitted for a release (prevents duplicates)
-    private val completionEmitted = ConcurrentHashMap<ReleaseId, java.util.concurrent.atomic.AtomicBoolean>()
+    private val completionEmitted = ConcurrentHashMap<ReleaseId, AtomicBoolean>()
 
     // Releases currently being restarted (cancel-and-recover in progress)
     private val restartingReleases = ConcurrentHashMap.newKeySet<ReleaseId>()
 
     // Per-release mutex to prevent concurrent restarts
-    private val restartMutexes = ConcurrentHashMap<ReleaseId, kotlinx.coroutines.sync.Mutex>()
+    private val restartMutexes = ConcurrentHashMap<ReleaseId, Mutex>()
 
     // Pending user action approvals: releaseId -> blockId -> CompletableDeferred
     private val pendingApprovals = ConcurrentHashMap<ReleaseId, ConcurrentHashMap<BlockId, CompletableDeferred<Map<String, String>>>>()
@@ -52,7 +56,7 @@ class ExecutionEngine(
     private val _events = MutableSharedFlow<ReleaseEvent>(
         replay = 0,
         extraBufferCapacity = 256,
-        onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
     )
     val events: SharedFlow<ReleaseEvent> = _events.asSharedFlow()
 
@@ -65,8 +69,8 @@ class ExecutionEngine(
      * Both [cancelExecution] and [executeRelease]'s catch block can trigger completion;
      * the AtomicBoolean ensures only the first caller emits events.
      */
-    private fun emitCompletionOnce(releaseId: ReleaseId, status: ReleaseStatus, finishedAt: kotlin.time.Instant) {
-        val flag = completionEmitted.getOrPut(releaseId) { java.util.concurrent.atomic.AtomicBoolean(false) }
+    private fun emitCompletionOnce(releaseId: ReleaseId, status: ReleaseStatus, finishedAt: Instant) {
+        val flag = completionEmitted.getOrPut(releaseId) { AtomicBoolean(false) }
         if (flag.compareAndSet(false, true)) {
             emitEvent(ReleaseEvent.ReleaseStatusChanged(releaseId, status, finishedAt = finishedAt))
             emitEvent(ReleaseEvent.ReleaseCompleted(releaseId, status, finishedAt = finishedAt))
@@ -75,7 +79,7 @@ class ExecutionEngine(
 
     fun startExecution(release: Release): Job {
         log.info("Starting execution for release {}", release.id.value)
-        completionEmitted[release.id] = java.util.concurrent.atomic.AtomicBoolean(false)
+        completionEmitted[release.id] = AtomicBoolean(false)
         val job = scope.launch {
             executeRelease(release)
         }
@@ -122,7 +126,7 @@ class ExecutionEngine(
      * based on their persisted status.
      */
     fun recoverRelease(release: Release, persistedExecutions: List<BlockExecution>) {
-        completionEmitted[release.id] = java.util.concurrent.atomic.AtomicBoolean(false)
+        completionEmitted[release.id] = AtomicBoolean(false)
         val job = scope.launch {
             executeRecovery(release, persistedExecutions)
         }
@@ -185,8 +189,7 @@ class ExecutionEngine(
                         error = "Release cancelled",
                         finishedAt = Clock.System.now(),
                     )
-                    repository.upsertBlockExecution(updated)
-                    emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, updated))
+                    persistAndEmit(release.id, updated)
                 }
             }
             repository.setFinished(release.id, ReleaseStatus.CANCELLED)
@@ -251,8 +254,7 @@ class ExecutionEngine(
                 status = BlockStatus.FAILED,
                 error = "Skipped: predecessor failed",
             )
-            repository.upsertBlockExecution(execution)
-            emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, execution))
+            persistAndEmit(release.id, execution)
         }
     }
 
@@ -275,88 +277,28 @@ class ExecutionEngine(
         statusMap: MutableMap<BlockId, BlockStatus>,
         outputsMap: MutableMap<BlockId, Map<String, String>>,
     ) {
-        val startTime = Clock.System.now()
-        statusMap[container.id] = BlockStatus.RUNNING
-        val runningExec = BlockExecution(
-            blockId = container.id,
-            releaseId = release.id,
-            status = BlockStatus.RUNNING,
-            startedAt = startTime,
-        )
-        repository.upsertBlockExecution(runningExec)
-        emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, runningExec))
+        // Load persisted child executions once, shared between init and wave execution
+        val persistedChildExecs = repository.findBlockExecutions(release.id)
+        val childExecMap = persistedChildExecs.associateBy { it.blockId }
 
-        try {
-            val childGraph = container.children
-            if (childGraph.blocks.isEmpty()) {
-                statusMap[container.id] = BlockStatus.SUCCEEDED
-                val succeededExec = BlockExecution(
-                    blockId = container.id,
-                    releaseId = release.id,
-                    status = BlockStatus.SUCCEEDED,
-                    startedAt = startTime,
-                    finishedAt = Clock.System.now(),
-                )
-                repository.upsertBlockExecution(succeededExec)
-                emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, succeededExec))
-                return
-            }
-
-            val sorted = DagTopologicalSort.sort(childGraph)
-                ?: throw IllegalStateException("Container sub-DAG contains a cycle")
-
-            val childPredecessors = buildPredecessorMap(childGraph)
-            val childStatusMap = ConcurrentHashMap<BlockId, BlockStatus>()
-            val childOutputsMap = ConcurrentHashMap<BlockId, Map<String, String>>()
-
-            // Load persisted child execution statuses instead of resetting to WAITING
-            val persistedChildExecs = repository.findBlockExecutions(release.id)
-            val childExecMap = persistedChildExecs.associateBy { it.blockId }
-
-            for (child in childGraph.blocks) {
-                val childExec = childExecMap[child.id]
-                childStatusMap[child.id] = childExec?.status ?: BlockStatus.WAITING
-                if (childExec != null && childExec.status == BlockStatus.SUCCEEDED) {
-                    childOutputsMap[child.id] = childExec.outputs
+        runContainer(
+            release = release,
+            container = container,
+            statusMap = statusMap,
+            outputsMap = outputsMap,
+            initChildren = { childGraph, childStatusMap, childOutputsMap ->
+                for (child in childGraph.blocks) {
+                    val childExec = childExecMap[child.id]
+                    childStatusMap[child.id] = childExec?.status ?: BlockStatus.WAITING
+                    if (childExec != null && childExec.status == BlockStatus.SUCCEEDED) {
+                        childOutputsMap[child.id] = childExec.outputs
+                    }
                 }
-            }
-
-            // Use recovery waves for children too
-            coroutineScope {
-                executeRecoveryWaves(this, release, childGraph, sorted, childPredecessors, childStatusMap, childOutputsMap, childExecMap)
-            }
-
-            outputsMap.putAll(childOutputsMap)
-            statusMap.putAll(childStatusMap)
-
-            val allChildrenSucceeded = childStatusMap.values.all { it == BlockStatus.SUCCEEDED }
-            val containerStatus = if (allChildrenSucceeded) BlockStatus.SUCCEEDED else BlockStatus.FAILED
-
-            statusMap[container.id] = containerStatus
-            val containerExec = BlockExecution(
-                blockId = container.id,
-                releaseId = release.id,
-                status = containerStatus,
-                startedAt = startTime,
-                finishedAt = Clock.System.now(),
-            )
-            repository.upsertBlockExecution(containerExec)
-            emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, containerExec))
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            statusMap[container.id] = BlockStatus.FAILED
-            val failedExec = BlockExecution(
-                blockId = container.id,
-                releaseId = release.id,
-                status = BlockStatus.FAILED,
-                error = e.message,
-                startedAt = startTime,
-                finishedAt = Clock.System.now(),
-            )
-            repository.upsertBlockExecution(failedExec)
-            emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, failedExec))
-        }
+            },
+            runWaves = { wavesScope, childGraph, sorted, childPredecessors, childStatusMap, childOutputsMap ->
+                executeRecoveryWaves(wavesScope, release, childGraph, sorted, childPredecessors, childStatusMap, childOutputsMap, childExecMap)
+            },
+        )
     }
 
     private suspend fun recoverAction(
@@ -368,16 +310,16 @@ class ExecutionEngine(
     ) {
         when (persistedExec?.status) {
             BlockStatus.SUCCEEDED -> {
-                // Already done — use stored outputs
+                // Already done -- use stored outputs
                 outputsMap[block.id] = persistedExec.outputs
                 statusMap[block.id] = BlockStatus.SUCCEEDED
             }
             BlockStatus.RUNNING -> {
-                // Was running when server died — call resume()
+                // Was running when server died -- call resume()
                 resumeAction(release, block, statusMap, outputsMap)
             }
             BlockStatus.WAITING_FOR_INPUT -> {
-                // User action — re-register CompletableDeferred and wait
+                // User action -- re-register CompletableDeferred and wait
                 val startTime = persistedExec.startedAt ?: Clock.System.now()
                 statusMap[block.id] = BlockStatus.WAITING_FOR_INPUT
                 emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, persistedExec))
@@ -398,15 +340,14 @@ class ExecutionEngine(
                     startedAt = startTime,
                     finishedAt = Clock.System.now(),
                 )
-                repository.upsertBlockExecution(succeededExec)
-                emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, succeededExec))
+                persistAndEmit(release.id, succeededExec)
             }
             BlockStatus.FAILED -> {
-                // Already failed — keep it
+                // Already failed -- keep it
                 statusMap[block.id] = BlockStatus.FAILED
             }
             else -> {
-                // WAITING or null — execute normally
+                // WAITING or null -- execute normally
                 executeAction(release, block, statusMap, outputsMap)
             }
         }
@@ -426,8 +367,7 @@ class ExecutionEngine(
             status = BlockStatus.RUNNING,
             startedAt = startTime,
         )
-        repository.upsertBlockExecution(runningExec)
-        emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, runningExec))
+        persistAndEmit(release.id, runningExec)
 
         try {
             val resolvedParams = TemplateEngine.resolveParameters(
@@ -451,12 +391,11 @@ class ExecutionEngine(
                 connections = connections,
             )
 
-            val timeoutMs = block.timeoutSeconds?.let { it * 1000 }
-            val outputs = if (timeoutMs != null) {
-                // todo claude: use withTimeoutOrNull
-                withTimeout(timeoutMs.milliseconds) {
+            val timeoutSec = block.timeoutSeconds
+            val outputs = if (timeoutSec != null) {
+                withTimeoutOrNull(timeoutSec.seconds) {
                     blockExecutor.resume(block, resolvedParams, context)
-                }
+                } ?: throw RuntimeException("Block '${block.name}' timed out after ${timeoutSec}s")
             } else {
                 blockExecutor.resume(block, resolvedParams, context)
             }
@@ -471,8 +410,7 @@ class ExecutionEngine(
                 startedAt = startTime,
                 finishedAt = Clock.System.now(),
             )
-            repository.upsertBlockExecution(succeededExec)
-            emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, succeededExec))
+            persistAndEmit(release.id, succeededExec)
         } catch (e: CancellationException) {
             if (!restartingReleases.contains(release.id)) {
                 statusMap[block.id] = BlockStatus.FAILED
@@ -484,8 +422,7 @@ class ExecutionEngine(
                     startedAt = startTime,
                     finishedAt = Clock.System.now(),
                 )
-                repository.upsertBlockExecution(cancelledExec)
-                emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, cancelledExec))
+                persistAndEmit(release.id, cancelledExec)
             }
             throw e
         } catch (e: Exception) {
@@ -498,8 +435,7 @@ class ExecutionEngine(
                 startedAt = startTime,
                 finishedAt = Clock.System.now(),
             )
-            repository.upsertBlockExecution(failedExec)
-            emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, failedExec))
+            persistAndEmit(release.id, failedExec)
         }
     }
 
@@ -511,7 +447,7 @@ class ExecutionEngine(
      * A per-release mutex prevents concurrent restart calls from racing.
      */
     suspend fun restartBlock(releaseId: ReleaseId, blockId: BlockId): Boolean {
-        val mutex = restartMutexes.getOrPut(releaseId) { kotlinx.coroutines.sync.Mutex() }
+        val mutex = restartMutexes.getOrPut(releaseId) { Mutex() }
         return mutex.withLock {
             val release = repository.findById(releaseId) ?: return@withLock false
 
@@ -539,8 +475,7 @@ class ExecutionEngine(
                 releaseId = releaseId,
                 status = BlockStatus.WAITING,
             )
-            repository.upsertBlockExecution(resetExec)
-            emitEvent(ReleaseEvent.BlockExecutionUpdated(releaseId, resetExec))
+            persistAndEmit(releaseId, resetExec)
 
             // Reset transitive dependents that were skipped due to the failure
             val dependents = findTransitiveDependents(release.dagSnapshot, blockId)
@@ -553,8 +488,7 @@ class ExecutionEngine(
                         startedAt = null,
                         finishedAt = null,
                     )
-                    repository.upsertBlockExecution(depReset)
-                    emitEvent(ReleaseEvent.BlockExecutionUpdated(releaseId, depReset))
+                    persistAndEmit(releaseId, depReset)
                 }
             }
 
@@ -620,7 +554,7 @@ class ExecutionEngine(
                 statusMap[block.id] = BlockStatus.WAITING
             }
 
-            // Use coroutineScope for structured concurrency — cancellation propagates to all children
+            // Use coroutineScope for structured concurrency -- cancellation propagates to all children
             coroutineScope {
                 executeWaves(this, release, graph, sorted, predecessors, statusMap, outputsMap)
             }
@@ -641,8 +575,7 @@ class ExecutionEngine(
                         error = "Release cancelled",
                         finishedAt = Clock.System.now(),
                     )
-                    repository.upsertBlockExecution(updated)
-                    emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, updated))
+                    persistAndEmit(release.id, updated)
                 }
             }
             repository.setFinished(release.id, ReleaseStatus.CANCELLED)
@@ -676,7 +609,6 @@ class ExecutionEngine(
                     it == BlockStatus.RUNNING || it == BlockStatus.WAITING_FOR_INPUT
                 }
                 if (anyRunning) {
-                    // todo claude: delays are bad for the application, find another way
                     delay(50.milliseconds)
                     continue
                 }
@@ -707,8 +639,7 @@ class ExecutionEngine(
                 status = BlockStatus.FAILED,
                 error = "Skipped: predecessor failed",
             )
-            repository.upsertBlockExecution(execution)
-            emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, execution))
+            persistAndEmit(release.id, execution)
         }
     }
 
@@ -724,11 +655,20 @@ class ExecutionEngine(
         }
     }
 
-    private suspend fun executeContainer(
+    /**
+     * Shared container execution logic used by both [executeContainer] and [recoverContainer].
+     *
+     * @param initChildren populates child status and output maps from either fresh WAITING
+     *                      state or persisted DB records.
+     * @param runWaves executes child waves using either [executeWaves] or [executeRecoveryWaves].
+     */
+    private suspend fun runContainer(
         release: Release,
         container: Block.ContainerBlock,
         statusMap: MutableMap<BlockId, BlockStatus>,
         outputsMap: MutableMap<BlockId, Map<String, String>>,
+        initChildren: suspend (DagGraph, MutableMap<BlockId, BlockStatus>, MutableMap<BlockId, Map<String, String>>) -> Unit,
+        runWaves: suspend (CoroutineScope, DagGraph, List<BlockId>, Map<BlockId, Set<BlockId>>, MutableMap<BlockId, BlockStatus>, MutableMap<BlockId, Map<String, String>>) -> Unit,
     ) {
         val startTime = Clock.System.now()
         statusMap[container.id] = BlockStatus.RUNNING
@@ -738,8 +678,7 @@ class ExecutionEngine(
             status = BlockStatus.RUNNING,
             startedAt = startTime,
         )
-        repository.upsertBlockExecution(runningExec)
-        emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, runningExec))
+        persistAndEmit(release.id, runningExec)
 
         try {
             val childGraph = container.children
@@ -752,8 +691,7 @@ class ExecutionEngine(
                     startedAt = startTime,
                     finishedAt = Clock.System.now(),
                 )
-                repository.upsertBlockExecution(succeededExec)
-                emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, succeededExec))
+                persistAndEmit(release.id, succeededExec)
                 return
             }
 
@@ -764,20 +702,10 @@ class ExecutionEngine(
             val childStatusMap = ConcurrentHashMap<BlockId, BlockStatus>()
             val childOutputsMap = ConcurrentHashMap<BlockId, Map<String, String>>()
 
-            for (child in childGraph.blocks) {
-                childStatusMap[child.id] = BlockStatus.WAITING
-                repository.upsertBlockExecution(
-                    BlockExecution(
-                        blockId = child.id,
-                        releaseId = release.id,
-                        status = BlockStatus.WAITING,
-                    )
-                )
-            }
+            initChildren(childGraph, childStatusMap, childOutputsMap)
 
-            // Use coroutineScope for structured concurrency within the container
             coroutineScope {
-                executeWaves(this, release, childGraph, sorted, childPredecessors, childStatusMap, childOutputsMap)
+                runWaves(this, childGraph, sorted, childPredecessors, childStatusMap, childOutputsMap)
             }
 
             // Propagate child outputs to parent scope
@@ -795,8 +723,7 @@ class ExecutionEngine(
                 startedAt = startTime,
                 finishedAt = Clock.System.now(),
             )
-            repository.upsertBlockExecution(containerExec)
-            emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, containerExec))
+            persistAndEmit(release.id, containerExec)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -809,9 +736,37 @@ class ExecutionEngine(
                 startedAt = startTime,
                 finishedAt = Clock.System.now(),
             )
-            repository.upsertBlockExecution(failedExec)
-            emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, failedExec))
+            persistAndEmit(release.id, failedExec)
         }
+    }
+
+    private suspend fun executeContainer(
+        release: Release,
+        container: Block.ContainerBlock,
+        statusMap: MutableMap<BlockId, BlockStatus>,
+        outputsMap: MutableMap<BlockId, Map<String, String>>,
+    ) {
+        runContainer(
+            release = release,
+            container = container,
+            statusMap = statusMap,
+            outputsMap = outputsMap,
+            initChildren = { childGraph, childStatusMap, _ ->
+                for (child in childGraph.blocks) {
+                    childStatusMap[child.id] = BlockStatus.WAITING
+                    repository.upsertBlockExecution(
+                        BlockExecution(
+                            blockId = child.id,
+                            releaseId = release.id,
+                            status = BlockStatus.WAITING,
+                        )
+                    )
+                }
+            },
+            runWaves = { wavesScope, childGraph, sorted, childPredecessors, childStatusMap, childOutputsMap ->
+                executeWaves(wavesScope, release, childGraph, sorted, childPredecessors, childStatusMap, childOutputsMap)
+            },
+        )
     }
 
     private suspend fun executeAction(
@@ -828,8 +783,7 @@ class ExecutionEngine(
             status = BlockStatus.RUNNING,
             startedAt = startTime,
         )
-        repository.upsertBlockExecution(runningExec)
-        emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, runningExec))
+        persistAndEmit(release.id, runningExec)
 
         try {
             val outputs: Map<String, String>
@@ -842,8 +796,7 @@ class ExecutionEngine(
                     status = BlockStatus.WAITING_FOR_INPUT,
                     startedAt = startTime,
                 )
-                repository.upsertBlockExecution(waitingExec)
-                emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, waitingExec))
+                persistAndEmit(release.id, waitingExec)
 
                 val deferred = CompletableDeferred<Map<String, String>>()
                 pendingApprovals
@@ -873,12 +826,11 @@ class ExecutionEngine(
                     connections = connections,
                 )
 
-                val timeoutMs = block.timeoutSeconds?.let { it * 1000 }
-                outputs = if (timeoutMs != null) {
-                    // todo claude: use withTimeoutOrNull
-                    withTimeout(timeoutMs.milliseconds) {
+                val timeoutSec = block.timeoutSeconds
+                outputs = if (timeoutSec != null) {
+                    withTimeoutOrNull(timeoutSec.seconds) {
                         blockExecutor.execute(block, resolvedParams, context)
-                    }
+                    } ?: throw RuntimeException("Block '${block.name}' timed out after ${timeoutSec}s")
                 } else {
                     blockExecutor.execute(block, resolvedParams, context)
                 }
@@ -894,8 +846,7 @@ class ExecutionEngine(
                 startedAt = startTime,
                 finishedAt = Clock.System.now(),
             )
-            repository.upsertBlockExecution(succeededExec)
-            emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, succeededExec))
+            persistAndEmit(release.id, succeededExec)
         } catch (e: CancellationException) {
             if (!restartingReleases.contains(release.id)) {
                 statusMap[block.id] = BlockStatus.FAILED
@@ -907,8 +858,7 @@ class ExecutionEngine(
                     startedAt = startTime,
                     finishedAt = Clock.System.now(),
                 )
-                repository.upsertBlockExecution(cancelledExec)
-                emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, cancelledExec))
+                persistAndEmit(release.id, cancelledExec)
             }
             throw e
         } catch (e: Exception) {
@@ -921,9 +871,13 @@ class ExecutionEngine(
                 startedAt = startTime,
                 finishedAt = Clock.System.now(),
             )
-            repository.upsertBlockExecution(failedExec)
-            emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, failedExec))
+            persistAndEmit(release.id, failedExec)
         }
+    }
+
+    private suspend fun persistAndEmit(releaseId: ReleaseId, execution: BlockExecution) {
+        repository.upsertBlockExecution(execution)
+        emitEvent(ReleaseEvent.BlockExecutionUpdated(releaseId, execution))
     }
 
     private fun buildPredecessorMap(graph: DagGraph): Map<BlockId, Set<BlockId>> {

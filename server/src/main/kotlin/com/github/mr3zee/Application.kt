@@ -23,7 +23,9 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import com.github.mr3zee.plugins.RequestSizeLimit
+import io.ktor.client.HttpClient
 import io.ktor.server.auth.*
+import io.ktor.server.plugins.ContentTransformationException
 import io.ktor.server.plugins.calllogging.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.defaultheaders.*
@@ -35,7 +37,9 @@ import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import io.ktor.server.websocket.*
 import io.ktor.util.*
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.SerializationException
+import org.koin.java.KoinJavaComponent.getKoin
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
 import kotlin.time.Duration.Companion.seconds
@@ -140,8 +144,7 @@ fun Application.module() {
                 ),
             )
         }
-        // todo claude: avoid fq names when not necessary
-        exception<io.ktor.server.plugins.ContentTransformationException> { call, cause ->
+        exception<ContentTransformationException> { call, cause ->
             call.application.environment.log.debug("Content transformation error", cause)
             val correlationId = call.attributes.getOrNull(CorrelationIdKey)
             call.respond(
@@ -182,11 +185,10 @@ fun Application.module() {
 
     monitor.subscribe(ApplicationStarted) {
         try {
-            // todo claude: avoid fq names when not necessary
-            val koin = org.koin.java.KoinJavaComponent.getKoin()
+            val koin = getKoin()
             val recoveryService = koin.getOrNull<RecoveryService>()
             if (recoveryService != null) {
-                kotlinx.coroutines.runBlocking {
+                runBlocking {
                     recoveryService.recover()
                 }
             }
@@ -197,10 +199,9 @@ fun Application.module() {
 
     monitor.subscribe(ApplicationStopped) {
         try {
-            // todo claude: avoid fq names when not necessary
-            val koin = org.koin.java.KoinJavaComponent.getKoin()
+            val koin = getKoin()
             koin.getOrNull<ExecutionEngine>()?.shutdown()
-            koin.getOrNull<io.ktor.client.HttpClient>()?.close()
+            koin.getOrNull<HttpClient>()?.close()
         } catch (_: IllegalStateException) {
             // Koin may already be stopped
         }
@@ -209,9 +210,11 @@ fun Application.module() {
 
 fun Application.configureRouting() {
     routing {
-        // todo claude: add service versioning info, deployment info. serve it here
         get("/") {
-            call.respondText("Release Wizard API")
+            call.respond(mapOf(
+                "service" to "Release Wizard API",
+                "version" to (System.getenv("APP_VERSION") ?: "dev"),
+            ))
         }
         healthRoute()
         authRoutes()

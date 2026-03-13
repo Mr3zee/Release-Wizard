@@ -6,7 +6,12 @@ import com.github.mr3zee.api.ProjectApiClient
 import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.projects.ProjectListScreen
 import com.github.mr3zee.projects.ProjectListViewModel
+import io.ktor.client.*
+import io.ktor.client.engine.mock.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.cookies.*
 import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -30,7 +35,7 @@ class ProjectListScreenTest {
         val vm = ProjectListViewModel(ProjectApiClient(projectClient()))
         setContent {
             MaterialTheme {
-                ProjectListScreen(viewModel = vm, onCreateProject = {}, onEditProject = {}, onConnections = {}, onLogout = {})
+                ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = {}, onLogout = {})
             }
         }
 
@@ -47,7 +52,7 @@ class ProjectListScreenTest {
         val vm = ProjectListViewModel(ProjectApiClient(projectClient("""{"projects":[]}""")))
         setContent {
             MaterialTheme {
-                ProjectListScreen(viewModel = vm, onCreateProject = {}, onEditProject = {}, onConnections = {}, onLogout = {})
+                ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = {}, onLogout = {})
             }
         }
 
@@ -60,7 +65,7 @@ class ProjectListScreenTest {
         val vm = ProjectListViewModel(ProjectApiClient(projectClient("Internal server error", HttpStatusCode.InternalServerError)))
         setContent {
             MaterialTheme {
-                ProjectListScreen(viewModel = vm, onCreateProject = {}, onEditProject = {}, onConnections = {}, onLogout = {})
+                ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = {}, onLogout = {})
             }
         }
 
@@ -73,7 +78,7 @@ class ProjectListScreenTest {
         val vm = ProjectListViewModel(ProjectApiClient(projectClient("""{"projects":[]}""")))
         setContent {
             MaterialTheme {
-                ProjectListScreen(viewModel = vm, onCreateProject = {}, onEditProject = {}, onConnections = {}, onLogout = {})
+                ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = {}, onLogout = {})
             }
         }
 
@@ -88,7 +93,7 @@ class ProjectListScreenTest {
         var clicked = false
         setContent {
             MaterialTheme {
-                ProjectListScreen(viewModel = vm, onCreateProject = {}, onEditProject = {}, onConnections = { clicked = true }, onLogout = {})
+                ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = { clicked = true }, onLogout = {})
             }
         }
 
@@ -101,7 +106,7 @@ class ProjectListScreenTest {
         val vm = ProjectListViewModel(ProjectApiClient(projectClient("""{"projects":[]}""")))
         setContent {
             MaterialTheme {
-                ProjectListScreen(viewModel = vm, onCreateProject = {}, onEditProject = {}, onConnections = {}, onLogout = {})
+                ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = {}, onLogout = {})
             }
         }
 
@@ -117,7 +122,7 @@ class ProjectListScreenTest {
         var editedId: ProjectId? = null
         setContent {
             MaterialTheme {
-                ProjectListScreen(viewModel = vm, onCreateProject = {}, onEditProject = { editedId = it }, onConnections = {}, onLogout = {})
+                ProjectListScreen(viewModel = vm, onEditProject = { editedId = it }, onConnections = {}, onLogout = {})
             }
         }
 
@@ -131,7 +136,7 @@ class ProjectListScreenTest {
         val vm = ProjectListViewModel(ProjectApiClient(projectClient()))
         setContent {
             MaterialTheme {
-                ProjectListScreen(viewModel = vm, onCreateProject = {}, onEditProject = {}, onConnections = {}, onLogout = {})
+                ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = {}, onLogout = {})
             }
         }
 
@@ -146,7 +151,7 @@ class ProjectListScreenTest {
         val vm = ProjectListViewModel(ProjectApiClient(projectClient()))
         setContent {
             MaterialTheme {
-                ProjectListScreen(viewModel = vm, onCreateProject = {}, onEditProject = {}, onConnections = {}, onLogout = {})
+                ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = {}, onLogout = {})
             }
         }
 
@@ -163,11 +168,67 @@ class ProjectListScreenTest {
         var clicked = false
         setContent {
             MaterialTheme {
-                ProjectListScreen(viewModel = vm, onCreateProject = {}, onEditProject = {}, onConnections = {}, onReleases = { clicked = true }, onLogout = {})
+                ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = {}, onReleases = { clicked = true }, onLogout = {})
             }
         }
 
         onNodeWithTag("releases_button").performClick()
         assertTrue(clicked)
+    }
+
+    @Test
+    fun `create project then navigates to edit`() = runComposeUiTest {
+        val createdProjectJson = """{"project":{"id":"new-p1","name":"New Project","description":"","dagGraph":{"blocks":[],"edges":[],"positions":{}},"parameters":[],"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}}"""
+        val createdListJson = """{"projects":[{"id":"new-p1","name":"New Project","description":"","dagGraph":{"blocks":[],"edges":[],"positions":{}},"parameters":[],"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}]}"""
+
+        val client = HttpClient(MockEngine { request ->
+            val path = request.url.encodedPath
+            val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            when {
+                request.method == HttpMethod.Get && path.endsWith("/projects") ->
+                    respond(createdListJson, status = HttpStatusCode.OK, headers = jsonHeaders)
+                request.method == HttpMethod.Post && path.endsWith("/projects") ->
+                    respond(createdProjectJson, status = HttpStatusCode.Created, headers = jsonHeaders)
+                else ->
+                    respond("{}", status = HttpStatusCode.OK, headers = jsonHeaders)
+            }
+        }) {
+            install(ContentNegotiation) { json(AppJson) }
+            install(HttpCookies)
+            expectSuccess = true
+        }
+
+        val vm = ProjectListViewModel(ProjectApiClient(client))
+        var editedId: ProjectId? = null
+
+        setContent {
+            MaterialTheme {
+                ProjectListScreen(
+                    viewModel = vm,
+                    onEditProject = { editedId = it },
+                    onConnections = {},
+                    onLogout = {},
+                )
+            }
+        }
+
+        // Wait for initial load (empty list or populated list)
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("create_project_fab").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Open create dialog
+        onNodeWithTag("create_project_fab").performClick()
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("project_name_input").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Type project name and click Create
+        onNodeWithTag("project_name_input").performTextInput("New Project")
+        onNodeWithText("Create").performClick()
+
+        // Wait for the onEditProject callback to fire
+        waitUntil(timeoutMillis = 5000L) { editedId != null }
+        assertEquals(ProjectId("new-p1"), editedId)
     }
 }

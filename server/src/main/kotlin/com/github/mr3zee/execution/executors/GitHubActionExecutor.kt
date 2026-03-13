@@ -16,8 +16,9 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
@@ -61,12 +62,12 @@ class GitHubActionExecutor(
                 // Webhook registered with run ID — subscribe and wait
                 coroutineScope {
                     val completionDeferred = async(start = CoroutineStart.UNDISPATCHED) {
-                        // todo claude: use withTimeoutOrNull
-                        withTimeout(WEBHOOK_TIMEOUT_MS.milliseconds) {
+                        withTimeoutOrNull(WEBHOOK_TIMEOUT_MS.milliseconds) {
                             webhookService.completions.first { it.blockId == block.id && it.releaseId == context.releaseId }
                         }
                     }
                     val completion = completionDeferred.await()
+                        ?: throw RuntimeException("GitHub Actions webhook timed out after ${WEBHOOK_TIMEOUT_MS / 60_000}min")
                     parseCompletionPayload(completion.payload, webhook.externalId, config.owner, config.repo)
                 }
             }
@@ -80,12 +81,12 @@ class GitHubActionExecutor(
                 }
                 coroutineScope {
                     val completionDeferred = async(start = CoroutineStart.UNDISPATCHED) {
-                        // todo claude: use withTimeoutOrNull
-                        withTimeout(WEBHOOK_TIMEOUT_MS.milliseconds) {
+                        withTimeoutOrNull(WEBHOOK_TIMEOUT_MS.milliseconds) {
                             webhookService.completions.first { it.blockId == block.id && it.releaseId == context.releaseId }
                         }
                     }
                     val completion = completionDeferred.await()
+                        ?: throw RuntimeException("GitHub Actions webhook timed out after ${WEBHOOK_TIMEOUT_MS / 60_000}min")
                     parseCompletionPayload(completion.payload, runId ?: "", config.owner, config.repo)
                 }
             }
@@ -135,8 +136,7 @@ class GitHubActionExecutor(
         // Use UNDISPATCHED start to ensure the collector begins immediately.
         return coroutineScope {
             val completionDeferred = async(start = CoroutineStart.UNDISPATCHED) {
-                // todo claude: use withTimeoutOrNull
-                withTimeout(WEBHOOK_TIMEOUT_MS.milliseconds) {
+                withTimeoutOrNull(WEBHOOK_TIMEOUT_MS.milliseconds) {
                     webhookService.completions.first { it.blockId == block.id && it.releaseId == context.releaseId }
                 }
             }
@@ -150,6 +150,7 @@ class GitHubActionExecutor(
             )
 
             val completion = completionDeferred.await()
+                ?: throw RuntimeException("GitHub Actions webhook timed out after ${WEBHOOK_TIMEOUT_MS / 60_000}min")
             parseCompletionPayload(completion.payload, runId, config.owner, config.repo)
         }
     }
@@ -161,7 +162,7 @@ class GitHubActionExecutor(
         repo: String,
     ): Map<String, String> {
         return try {
-            val json = kotlinx.serialization.json.Json.decodeFromString<JsonObject>(payload)
+            val json = Json.decodeFromString<JsonObject>(payload)
             val workflowRun = json["workflow_run"]?.jsonObject
             mapOf(
                 "runId" to (workflowRun?.get("id")?.jsonPrimitive?.content ?: runId),

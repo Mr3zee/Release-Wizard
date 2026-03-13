@@ -7,6 +7,7 @@ import com.github.mr3zee.persistence.PendingWebhookTable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.time.Clock
+import kotlin.time.Instant
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
@@ -28,7 +29,7 @@ interface PendingWebhookRepository {
     suspend fun findByReleaseIdAndBlockId(releaseId: ReleaseId, blockId: BlockId): PendingWebhook?
     suspend fun updateStatus(id: String, status: WebhookStatus, payload: String? = null): Boolean
     suspend fun updateExternalId(id: String, externalId: String): Boolean
-    suspend fun deleteCompletedOlderThan(cutoff: kotlin.time.Instant): Int
+    suspend fun deleteCompletedOlderThan(cutoff: Instant): Int
 }
 
 class ExposedPendingWebhookRepository(
@@ -162,7 +163,7 @@ class ExposedPendingWebhookRepository(
         updated > 0
     }
 
-    override suspend fun deleteCompletedOlderThan(cutoff: kotlin.time.Instant): Int = dbQuery {
+    override suspend fun deleteCompletedOlderThan(cutoff: Instant): Int = dbQuery {
         PendingWebhookTable.deleteWhere {
             (PendingWebhookTable.status eq WebhookStatus.COMPLETED.name) and
                 (PendingWebhookTable.updatedAt less cutoff)

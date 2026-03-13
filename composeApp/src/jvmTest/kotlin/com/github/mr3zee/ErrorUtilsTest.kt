@@ -1,5 +1,6 @@
 package com.github.mr3zee
 
+import com.github.mr3zee.api.ApiRoutes
 import com.github.mr3zee.api.ErrorResponse
 import com.github.mr3zee.api.toUserMessage
 import com.github.mr3zee.auth.AuthEvent
@@ -15,7 +16,7 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -41,7 +42,7 @@ class ErrorUtilsTest {
         }
 
         try {
-            client.get("http://localhost/api/v1/releases/abc")
+            client.get("http://localhost${ApiRoutes.Releases.byId("abc")}")
             assertTrue(false, "Should have thrown")
         } catch (e: ClientRequestException) {
             val message = e.toUserMessage()
@@ -96,14 +97,13 @@ class ErrorUtilsTest {
         }
 
         val eventDeferred = async {
-            // todo claude: use withTimeoutOrNull
-            withTimeout(1000.milliseconds) {
+            withTimeoutOrNull(1000.milliseconds) {
                 AuthEventBus.events.first()
             }
         }
 
         try {
-            client.get("http://localhost/api/v1/releases")
+            client.get("http://localhost${ApiRoutes.Releases.BASE}")
         } catch (_: Exception) {
             // Expected
         }
@@ -140,7 +140,7 @@ class ErrorUtilsTest {
         }
 
         try {
-            client.post("http://localhost/api/v1/auth/login")
+            client.post("http://localhost${ApiRoutes.Auth.LOGIN}")
         } catch (_: Exception) {
             // Expected
         }

@@ -1,8 +1,10 @@
 package com.github.mr3zee.webhooks
 
 import com.github.mr3zee.connections.ConnectionsRepository
+import com.github.mr3zee.model.BlockId
 import com.github.mr3zee.model.ConnectionConfig
 import com.github.mr3zee.model.ConnectionId
+import com.github.mr3zee.model.ReleaseId
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -180,8 +182,8 @@ class WebhookService(
 
 data class WebhookCompletion(
     val webhookId: String,
-    val blockId: com.github.mr3zee.model.BlockId,
-    val releaseId: com.github.mr3zee.model.ReleaseId,
+    val blockId: BlockId,
+    val releaseId: ReleaseId,
     val type: WebhookType,
     val payload: String,
 )

@@ -7,11 +7,8 @@ import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * Stub executor for all non-user-action block types.
- * Returns simulated outputs based on block type.
- * Real implementations will be added in Phase 6 (Integrations).
+ * Stub executor for tests. Returns simulated outputs based on block type.
  */
-// todo claude: move to tests
 class StubBlockExecutor : BlockExecutor {
     override suspend fun execute(
         block: Block.ActionBlock,

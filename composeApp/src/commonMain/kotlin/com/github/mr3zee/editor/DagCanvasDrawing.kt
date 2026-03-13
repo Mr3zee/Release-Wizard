@@ -71,6 +71,31 @@ internal class CanvasTransform(
     )
 }
 
+/**
+ * Shared scroll-to-zoom logic for canvas pointer input.
+ * Returns the new (zoom, panOffset) pair, or null if no scroll occurred.
+ */
+internal fun handleScrollZoom(
+    scrollY: Float,
+    pointerPos: Offset,
+    zoom: Float,
+    panOffset: Offset,
+    density: Float,
+): Pair<Float, Offset>? {
+    if (scrollY == 0f) return null
+    val factor = if (scrollY < 0) 1.08f else 1f / 1.08f
+    val newZoom = (zoom * factor).coerceIn(MIN_ZOOM, MAX_ZOOM)
+    val logicalBefore = Offset(
+        (pointerPos.x - panOffset.x) / (density * zoom),
+        (pointerPos.y - panOffset.y) / (density * zoom),
+    )
+    val newPanOffset = Offset(
+        pointerPos.x - logicalBefore.x * density * newZoom,
+        pointerPos.y - logicalBefore.y * density * newZoom,
+    )
+    return newZoom to newPanOffset
+}
+
 internal fun DrawScope.drawGrid(transform: CanvasTransform) {
     val gridScreenSize = transform.toScreen(GRID_SIZE)
     if (gridScreenSize < 4f) return

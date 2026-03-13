@@ -15,6 +15,7 @@ fun ReleaseDetailScreen(
     release: Release?,
     blockExecutions: List<BlockExecution>,
     isConnected: Boolean,
+    reconnectAttempt: Int = 0,
     onBack: () -> Unit,
     onCancel: () -> Unit,
     onApproveBlock: (BlockId) -> Unit,
@@ -43,8 +44,13 @@ fun ReleaseDetailScreen(
                 },
                 actions = {
                     if (!isConnected) {
+                        val disconnectedText = if (reconnectAttempt > 0) {
+                            "Reconnecting (attempt $reconnectAttempt)..."
+                        } else {
+                            "Disconnected"
+                        }
                         Text(
-                            text = "Disconnected",
+                            text = disconnectedText,
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.labelSmall,
                             modifier = Modifier

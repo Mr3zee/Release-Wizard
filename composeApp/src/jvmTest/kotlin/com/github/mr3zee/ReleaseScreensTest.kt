@@ -282,6 +282,34 @@ class ReleaseScreensTest {
     }
 
     @Test
+    fun `release detail reconnect indicator shows attempt number`() = runComposeUiTest {
+        val release = Release(
+            id = ReleaseId("r1"),
+            projectTemplateId = ProjectId("p1"),
+            status = ReleaseStatus.RUNNING,
+            dagSnapshot = DagGraph(),
+        )
+
+        setContent {
+            MaterialTheme {
+                ReleaseDetailScreen(
+                    release = release,
+                    blockExecutions = emptyList(),
+                    isConnected = false,
+                    reconnectAttempt = 3,
+                    onBack = {},
+                    onCancel = {},
+                    onApproveBlock = {},
+                    onBlockClick = {},
+                )
+            }
+        }
+
+        onNodeWithTag("disconnected_indicator").assertExists()
+        onNodeWithText("Reconnecting (attempt 3)...").assertExists()
+    }
+
+    @Test
     fun `release detail loading state when no release data`() = runComposeUiTest {
         setContent {
             MaterialTheme {

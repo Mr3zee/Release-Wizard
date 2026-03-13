@@ -6,12 +6,13 @@ import com.github.mr3zee.execution.ExecutionEngine
 import com.github.mr3zee.execution.RecoveryService
 import com.github.mr3zee.execution.executors.*
 import com.github.mr3zee.model.BlockType
+import io.ktor.client.HttpClient
 import org.koin.dsl.module
 
 val releasesModule = module {
     single<ReleasesRepository> { ExposedReleasesRepository(get()) }
     single<BlockExecutor> {
-        val httpClient = get<io.ktor.client.HttpClient>()
+        val httpClient = get<HttpClient>()
         DispatchingBlockExecutor(
             mapOf(
                 BlockType.TEAMCITY_BUILD to TeamCityBuildExecutor(httpClient, get(), get()),

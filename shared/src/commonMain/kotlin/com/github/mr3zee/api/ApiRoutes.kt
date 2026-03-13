@@ -13,11 +13,9 @@ object ApiRoutes {
         fun byId(id: String) = "$BASE/$id"
         fun cancel(id: String) = "$BASE/$id/cancel"
         fun await(id: String) = "$BASE/$id/await"
-        // todo claude: unused
         fun blockExecution(releaseId: String, blockId: String) = "$BASE/$releaseId/blocks/$blockId"
-        // todo claude: unused
-        fun restartBlock(releaseId: String, blockId: String) = "$BASE/$releaseId/blocks/$blockId/restart"
-        fun approveBlock(releaseId: String, blockId: String) = "$BASE/$releaseId/blocks/$blockId/approve"
+        fun restartBlock(releaseId: String, blockId: String) = "${blockExecution(releaseId, blockId)}/restart"
+        fun approveBlock(releaseId: String, blockId: String) = "${blockExecution(releaseId, blockId)}/approve"
         fun ws(id: String) = "$BASE/$id/ws"
     }
 
@@ -35,8 +33,6 @@ object ApiRoutes {
 
     object Webhooks {
         const val BASE = "$API_V1/webhooks"
-        // todo claude: unused
-        fun byTypeAndConnection(type: String, connectionId: String) = "$BASE/$type/$connectionId"
         fun teamcity(connectionId: String) = "$BASE/teamcity/$connectionId"
         fun github(connectionId: String) = "$BASE/github/$connectionId"
     }

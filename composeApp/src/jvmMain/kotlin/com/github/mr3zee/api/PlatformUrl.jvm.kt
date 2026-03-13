@@ -1,7 +1,12 @@
 package com.github.mr3zee.api
 
-import com.github.mr3zee.SERVER_PORT
+private val httpBaseUrl: String by lazy {
+    System.getProperty("release.wizard.server.url", "http://localhost:8080")
+}
 
-// todo claude: make configurable
-actual fun platformHttpBaseUrl(): String = "http://localhost:$SERVER_PORT"
-actual fun platformWsBaseUrl(): String = "ws://localhost:$SERVER_PORT"
+private val wsBaseUrl: String by lazy {
+    System.getProperty("release.wizard.server.ws.url", "ws://localhost:8080")
+}
+
+actual fun platformHttpBaseUrl(): String = httpBaseUrl
+actual fun platformWsBaseUrl(): String = wsBaseUrl

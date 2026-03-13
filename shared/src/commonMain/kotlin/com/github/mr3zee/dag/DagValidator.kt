@@ -43,9 +43,9 @@ object DagValidator {
         // Check for cycles using topological sort (exclude self-loops already reported)
         val nonSelfLoopEdges = graph.edges.filter { it.fromBlockId != it.toBlockId }
         val graphForCycleCheck = graph.copy(edges = nonSelfLoopEdges)
-        val cycleNodes = findCycleNodes(graphForCycleCheck)
-        if (cycleNodes.isNotEmpty()) {
-            errors.add(ValidationError.CycleDetected(cycleNodes))
+        val result = DagTopologicalSort.sortWithCycleInfo(graphForCycleCheck)
+        if (result.cycleNodes.isNotEmpty()) {
+            errors.add(ValidationError.CycleDetected(result.cycleNodes))
         }
 
         // Validate container sub-graphs recursively
@@ -57,38 +57,5 @@ object DagValidator {
         }
 
         return errors
-    }
-
-    private fun findCycleNodes(graph: DagGraph): Set<BlockId> {
-        val sorted = DagTopologicalSort.sort(graph)
-        return if (sorted == null) {
-            // Topological sort failed — find nodes involved in cycles
-            val blockIds = graph.blocks.map { it.id }.toSet()
-            val adjacency = graph.edges.groupBy({ it.fromBlockId }, { it.toBlockId })
-            val inDegree = mutableMapOf<BlockId, Int>()
-            for (id in blockIds) inDegree[id] = 0
-            for (edge in graph.edges) {
-                if (edge.toBlockId in blockIds) {
-                    inDegree[edge.toBlockId] = (inDegree[edge.toBlockId] ?: 0) + 1
-                }
-            }
-            val queue = ArrayDeque<BlockId>()
-            for ((id, degree) in inDegree) {
-                if (degree == 0) queue.add(id)
-            }
-            val processed = mutableSetOf<BlockId>()
-            while (queue.isNotEmpty()) {
-                val node = queue.removeFirst()
-                processed.add(node)
-                for (neighbor in adjacency[node].orEmpty()) {
-                    val newDegree = (inDegree[neighbor] ?: 1) - 1
-                    inDegree[neighbor] = newDegree
-                    if (newDegree == 0) queue.add(neighbor)
-                }
-            }
-            blockIds - processed
-        } else {
-            emptySet()
-        }
     }
 }

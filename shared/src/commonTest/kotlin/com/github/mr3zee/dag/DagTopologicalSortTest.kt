@@ -97,4 +97,68 @@ class DagTopologicalSortTest {
         )
         assertNull(DagTopologicalSort.sort(graph))
     }
+
+    // ---- sortWithCycleInfo ----
+
+    @Test
+    fun sortWithCycleInfoAcyclicGraphHasNoCycleNodes() {
+        val graph = DagGraph(
+            blocks = listOf(actionBlock("a"), actionBlock("b"), actionBlock("c")),
+            edges = listOf(edge("a", "b"), edge("b", "c")),
+        )
+
+        val result = DagTopologicalSort.sortWithCycleInfo(graph)
+
+        assertTrue(result.cycleNodes.isEmpty(), "Acyclic graph should have no cycle nodes")
+        assertEquals(3, result.sorted.size)
+        assertEquals(3, result.totalBlocks)
+        assertTrue(result.sorted.indexOf(BlockId("a")) < result.sorted.indexOf(BlockId("b")))
+        assertTrue(result.sorted.indexOf(BlockId("b")) < result.sorted.indexOf(BlockId("c")))
+    }
+
+    @Test
+    fun sortWithCycleInfoFullCycleReturnsCycleParticipants() {
+        val graph = DagGraph(
+            blocks = listOf(actionBlock("a"), actionBlock("b"), actionBlock("c")),
+            edges = listOf(edge("a", "b"), edge("b", "c"), edge("c", "a")),
+        )
+
+        val result = DagTopologicalSort.sortWithCycleInfo(graph)
+
+        assertEquals(
+            setOf(BlockId("a"), BlockId("b"), BlockId("c")),
+            result.cycleNodes,
+        )
+        assertTrue(result.sorted.isEmpty(), "No nodes should be sortable in a full cycle")
+    }
+
+    @Test
+    fun sortWithCycleInfoPartialCycleIdentifiesOnlyCycleNodes() {
+        // d -> a -> b -> c -> a (cycle among a, b, c; d is not in the cycle)
+        val graph = DagGraph(
+            blocks = listOf(
+                actionBlock("d"), actionBlock("a"), actionBlock("b"), actionBlock("c"),
+            ),
+            edges = listOf(
+                edge("d", "a"), edge("a", "b"), edge("b", "c"), edge("c", "a"),
+            ),
+        )
+
+        val result = DagTopologicalSort.sortWithCycleInfo(graph)
+
+        assertTrue(result.sorted.contains(BlockId("d")), "D should be in sorted output")
+        assertEquals(
+            setOf(BlockId("a"), BlockId("b"), BlockId("c")),
+            result.cycleNodes,
+        )
+    }
+
+    @Test
+    fun sortWithCycleInfoEmptyGraphReturnsEmptyResults() {
+        val result = DagTopologicalSort.sortWithCycleInfo(DagGraph())
+
+        assertTrue(result.cycleNodes.isEmpty())
+        assertTrue(result.sorted.isEmpty())
+        assertEquals(0, result.totalBlocks)
+    }
 }

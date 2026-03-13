@@ -15,7 +15,8 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.slf4j.LoggerFactory
@@ -57,12 +58,12 @@ class TeamCityBuildExecutor(
                 // Webhook registered but not yet received — subscribe and wait
                 coroutineScope {
                     val completionDeferred = async(start = CoroutineStart.UNDISPATCHED) {
-                        // todo claude: use withTimeoutOrNull
-                        withTimeout(WEBHOOK_TIMEOUT_MS.milliseconds) {
+                        withTimeoutOrNull(WEBHOOK_TIMEOUT_MS.milliseconds) {
                             webhookService.completions.first { it.blockId == block.id && it.releaseId == context.releaseId }
                         }
                     }
                     val completion = completionDeferred.await()
+                        ?: throw RuntimeException("TeamCity webhook timed out after ${WEBHOOK_TIMEOUT_MS / 60_000}min")
                     parseCompletionPayload(completion.payload, webhook.externalId, config.serverUrl)
                 }
             }
@@ -119,8 +120,7 @@ class TeamCityBuildExecutor(
         // thread, guaranteeing subscription is active before we register the webhook.
         return coroutineScope {
             val completionDeferred = async(start = CoroutineStart.UNDISPATCHED) {
-                // todo claude: use withTimeoutOrNull
-                withTimeout(WEBHOOK_TIMEOUT_MS.milliseconds) {
+                withTimeoutOrNull(WEBHOOK_TIMEOUT_MS.milliseconds) {
                     webhookService.completions.first { it.blockId == block.id && it.releaseId == context.releaseId }
                 }
             }
@@ -134,13 +134,14 @@ class TeamCityBuildExecutor(
             )
 
             val completion = completionDeferred.await()
+                ?: throw RuntimeException("TeamCity webhook timed out after ${WEBHOOK_TIMEOUT_MS / 60_000}min")
             parseCompletionPayload(completion.payload, buildId, config.serverUrl)
         }
     }
 
     private fun parseCompletionPayload(payload: String, buildId: String, serverUrl: String): Map<String, String> {
         return try {
-            val json = kotlinx.serialization.json.Json.decodeFromString<JsonObject>(payload)
+            val json = Json.decodeFromString<JsonObject>(payload)
             mapOf(
                 "buildNumber" to (json["buildNumber"]?.jsonPrimitive?.content ?: buildId),
                 "buildUrl" to "$serverUrl/viewLog.html?buildId=$buildId",

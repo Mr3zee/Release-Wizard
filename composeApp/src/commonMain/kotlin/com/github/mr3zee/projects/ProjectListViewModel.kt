@@ -38,12 +38,13 @@ class ProjectListViewModel(
         }
     }
 
-    fun createProject(name: String) {
+    fun createProject(name: String, onCreated: ((ProjectId) -> Unit)? = null) {
         viewModelScope.launch {
             _error.value = null
             try {
-                apiClient.createProject(CreateProjectRequest(name = name))
+                val project = apiClient.createProject(CreateProjectRequest(name = name))
                 loadProjects()
+                onCreated?.invoke(project.id)
             } catch (e: Exception) {
                 _error.value = e.toUserMessage()
             }

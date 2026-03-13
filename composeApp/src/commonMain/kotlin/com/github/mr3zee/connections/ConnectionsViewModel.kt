@@ -58,7 +58,6 @@ class ConnectionsViewModel(
         }
     }
 
-    // todo claude: unused
     fun updateConnection(id: ConnectionId, name: String?, config: ConnectionConfig?) {
         viewModelScope.launch {
             _error.value = null

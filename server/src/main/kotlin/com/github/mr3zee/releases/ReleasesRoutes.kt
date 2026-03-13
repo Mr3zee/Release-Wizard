@@ -36,7 +36,6 @@ fun Route.releaseRoutes() {
                 call.respond(ReleaseResponse(release, executions))
             }
 
-            // todo claude: not API route from shared ApiRoutes
             post("/await") {
                 val id = call.requireReleaseId()
                 service.awaitRelease(id)
@@ -46,7 +45,6 @@ fun Route.releaseRoutes() {
                 call.respond(ReleaseResponse(release, executions))
             }
 
-            // todo claude: not API route from shared ApiRoutes
             post("/cancel") {
                 val id = call.requireReleaseId()
                 val cancelled = service.cancelRelease(id)
@@ -58,9 +56,7 @@ fun Route.releaseRoutes() {
                 call.respond(ReleaseResponse(release, executions))
             }
 
-            // todo claude: not API route from shared ApiRoutes
             route("/blocks/{blockId}") {
-                // todo claude: not API route from shared ApiRoutes
                 post("/restart") {
                     val releaseId = call.requireReleaseId()
                     val blockId = call.requireBlockId()
@@ -71,7 +67,6 @@ fun Route.releaseRoutes() {
                     call.respond(HttpStatusCode.OK, mapOf("status" to "restarted"))
                 }
 
-                // todo claude: not API route from shared ApiRoutes
                 post("/approve") {
                     val releaseId = call.requireReleaseId()
                     val blockId = call.requireBlockId()

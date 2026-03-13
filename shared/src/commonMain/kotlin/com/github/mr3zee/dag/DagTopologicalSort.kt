@@ -10,6 +10,34 @@ object DagTopologicalSort {
      * or null if the graph contains a cycle.
      */
     fun sort(graph: DagGraph): List<BlockId>? {
+        val result = kahnSort(graph)
+        return if (result.sorted.size == result.totalBlocks) result.sorted else null
+    }
+
+    /**
+     * Returns both the sorted nodes and the set of nodes involved in cycles (unprocessed).
+     * Used by DagValidator to identify cycle participants without re-running the algorithm.
+     */
+    fun sortWithCycleInfo(graph: DagGraph): KahnResult {
+        val result = kahnSort(graph)
+        val blockIds = graph.blocks.map { it.id }.toSet()
+        val cycleNodes = if (result.sorted.size == result.totalBlocks) {
+            emptySet()
+        } else {
+            blockIds - result.sorted.toSet()
+        }
+        return KahnResult(result.sorted, result.totalBlocks, cycleNodes)
+    }
+
+    data class KahnResult(
+        val sorted: List<BlockId>,
+        val totalBlocks: Int,
+        val cycleNodes: Set<BlockId>,
+    )
+
+    private data class InternalResult(val sorted: List<BlockId>, val totalBlocks: Int)
+
+    private fun kahnSort(graph: DagGraph): InternalResult {
         val blockIds = graph.blocks.map { it.id }.toSet()
         val adjacency = mutableMapOf<BlockId, MutableList<BlockId>>()
         val inDegree = mutableMapOf<BlockId, Int>()
@@ -32,7 +60,6 @@ object DagTopologicalSort {
         }
 
         val sorted = mutableListOf<BlockId>()
-        // todo claude: duplicated with DagValidator.kt:80
         while (queue.isNotEmpty()) {
             val node = queue.removeFirst()
             sorted.add(node)
@@ -43,6 +70,6 @@ object DagTopologicalSort {
             }
         }
 
-        return if (sorted.size == blockIds.size) sorted else null
+        return InternalResult(sorted, blockIds.size)
     }
 }

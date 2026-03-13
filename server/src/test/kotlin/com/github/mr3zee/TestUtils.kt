@@ -11,12 +11,16 @@ import com.github.mr3zee.plugins.healthRoute
 import com.github.mr3zee.projects.projectsModule
 import com.github.mr3zee.releases.releasesModule
 import com.github.mr3zee.webhooks.webhooksModule
+import com.github.mr3zee.execution.BlockExecutor
+import com.github.mr3zee.execution.StubBlockExecutor
+import io.ktor.client.HttpClient
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 import io.ktor.client.plugins.cookies.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
+import io.ktor.server.plugins.ContentTransformationException
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.defaultheaders.*
 import io.ktor.server.plugins.ratelimit.*
@@ -59,12 +63,10 @@ fun testWebhookConfig() = WebhookConfig(
  * - Replaces CIO HttpClient with MockEngine (connection tests and executors don't hit real APIs)
  */
 val testOverrideModule = module {
-    // todo claude: avoid fq names when not necessary
-    single<com.github.mr3zee.execution.BlockExecutor> {
-        com.github.mr3zee.execution.StubBlockExecutor()
+    single<BlockExecutor> {
+        StubBlockExecutor()
     }
-    // todo claude: avoid fq names when not necessary
-    single<io.ktor.client.HttpClient> {
+    single<HttpClient> {
         createTestHttpClient()
     }
 }
@@ -157,7 +159,7 @@ fun Application.testModule() {
                 ),
             )
         }
-        exception<io.ktor.server.plugins.ContentTransformationException> { call, cause ->
+        exception<ContentTransformationException> { call, cause ->
             call.application.environment.log.debug("Content transformation error", cause)
             val correlationId = call.attributes.getOrNull(CorrelationIdKey)
             call.respond(

@@ -26,7 +26,6 @@ fun AppNavigation(
     when (currentScreen) {
         is Screen.ProjectList -> ProjectListScreen(
             viewModel = projectListViewModel,
-            onCreateProject = { onNavigate(Screen.ProjectEditor(projectId = null)) },
             onEditProject = { onNavigate(Screen.ProjectEditor(projectId = it)) },
             onConnections = { onNavigate(Screen.ConnectionList) },
             onReleases = { onNavigate(Screen.ReleaseList) },
@@ -82,11 +81,13 @@ fun AppNavigation(
             val release by viewModel.release.collectAsState()
             val blockExecutions by viewModel.blockExecutions.collectAsState()
             val isConnected by viewModel.isConnected.collectAsState()
+            val reconnectAttempt by viewModel.reconnectAttempt.collectAsState()
 
             ReleaseDetailScreen(
                 release = release,
                 blockExecutions = blockExecutions,
                 isConnected = isConnected,
+                reconnectAttempt = reconnectAttempt,
                 onBack = { onNavigate(Screen.ReleaseList) },
                 onCancel = { viewModel.cancelRelease() },
                 onApproveBlock = { viewModel.approveBlock(it) },
