@@ -124,4 +124,49 @@ class ProjectListScreenTest {
         onNodeWithTag("project_item_p1").performClick()
         assertTrue(editedId?.value == "p1")
     }
+
+    @Test
+    fun `delete button opens confirmation dialog`() = runComposeUiTest {
+        val vm = ProjectListViewModel(ProjectApiClient(projectClient()))
+        setContent {
+            MaterialTheme {
+                ProjectListScreen(viewModel = vm, onCreateProject = {}, onEditProject = {}, onConnections = {}, onLogout = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("My Pipeline").fetchSemanticsNodes().isNotEmpty() }
+        onAllNodesWithText("Delete").onFirst().performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Delete Project").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithText("Delete Project").assertExists()
+    }
+
+    @Test
+    fun `delete confirmation dialog cancel dismisses`() = runComposeUiTest {
+        val vm = ProjectListViewModel(ProjectApiClient(projectClient()))
+        setContent {
+            MaterialTheme {
+                ProjectListScreen(viewModel = vm, onCreateProject = {}, onEditProject = {}, onConnections = {}, onLogout = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("My Pipeline").fetchSemanticsNodes().isNotEmpty() }
+        onAllNodesWithText("Delete").onFirst().performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Delete Project").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithText("Cancel").performClick()
+        onNodeWithText("Delete Project").assertDoesNotExist()
+    }
+
+    @Test
+    fun `releases button triggers callback`() = runComposeUiTest {
+        val vm = ProjectListViewModel(ProjectApiClient(projectClient("""{"projects":[]}""")))
+        var clicked = false
+        setContent {
+            MaterialTheme {
+                ProjectListScreen(viewModel = vm, onCreateProject = {}, onEditProject = {}, onConnections = {}, onReleases = { clicked = true }, onLogout = {})
+            }
+        }
+
+        onNodeWithTag("releases_button").performClick()
+        assertTrue(clicked)
+    }
 }

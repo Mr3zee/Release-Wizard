@@ -124,4 +124,87 @@ class ConnectionScreensTest {
         onNodeWithText("Back").performClick()
         assertTrue(backClicked)
     }
+
+    @Test
+    fun `connection list delete opens confirmation dialog`() = runComposeUiTest {
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient()))
+        setContent {
+            MaterialTheme { ConnectionListScreen(viewModel = vm, onCreateConnection = {}, onEditConnection = {}, onBack = {}) }
+        }
+
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("My GitHub").fetchSemanticsNodes().isNotEmpty() }
+        onAllNodesWithText("Delete").onFirst().performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Delete Connection").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithText("Delete Connection").assertExists()
+    }
+
+    @Test
+    fun `connection list delete confirmation cancel dismisses`() = runComposeUiTest {
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient()))
+        setContent {
+            MaterialTheme { ConnectionListScreen(viewModel = vm, onCreateConnection = {}, onEditConnection = {}, onBack = {}) }
+        }
+
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("My GitHub").fetchSemanticsNodes().isNotEmpty() }
+        onAllNodesWithText("Delete").onFirst().performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Delete Connection").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithText("Cancel").performClick()
+        onNodeWithText("Delete Connection").assertDoesNotExist()
+    }
+
+    @Test
+    fun `connection form Slack type shows webhook field`() = runComposeUiTest {
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")))
+        setContent {
+            MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = {}) }
+        }
+
+        onNodeWithTag("connection_type_selector").performClick()
+        onNodeWithText("SLACK").performClick()
+        onNodeWithTag("slack_webhook_url").assertExists()
+        onNodeWithTag("github_token").assertDoesNotExist()
+    }
+
+    @Test
+    fun `connection form TeamCity type shows server and token fields`() = runComposeUiTest {
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")))
+        setContent {
+            MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = {}) }
+        }
+
+        onNodeWithTag("connection_type_selector").performClick()
+        onNodeWithText("TEAMCITY").performClick()
+        onNodeWithTag("teamcity_server_url").assertExists()
+        onNodeWithTag("teamcity_token").assertExists()
+    }
+
+    @Test
+    fun `connection form Maven Central type shows username and password`() = runComposeUiTest {
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")))
+        setContent {
+            MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = {}) }
+        }
+
+        onNodeWithTag("connection_type_selector").performClick()
+        onNodeWithText("MAVEN_CENTRAL").performClick()
+        onNodeWithTag("maven_username").assertExists()
+        onNodeWithTag("maven_password").assertExists()
+    }
+
+    @Test
+    fun `connection form Slack validation requires webhook URL`() = runComposeUiTest {
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")))
+        setContent {
+            MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = {}) }
+        }
+
+        onNodeWithTag("connection_type_selector").performClick()
+        onNodeWithText("SLACK").performClick()
+
+        onNodeWithTag("connection_name_field").performTextInput("My Slack")
+        onNodeWithTag("save_connection_button").assertIsNotEnabled()
+
+        onNodeWithTag("slack_webhook_url").performTextInput("https://hooks.slack.com/test")
+        onNodeWithTag("save_connection_button").assertIsEnabled()
+    }
 }

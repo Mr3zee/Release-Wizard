@@ -2,6 +2,7 @@ package com.github.mr3zee
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.*
 import com.github.mr3zee.api.ProjectApiClient
 import com.github.mr3zee.api.ReleaseApiClient
@@ -9,6 +10,7 @@ import com.github.mr3zee.model.*
 import com.github.mr3zee.releases.*
 import io.ktor.http.*
 import kotlin.test.Test
+import kotlin.test.assertTrue
 
 @OptIn(ExperimentalTestApi::class)
 class ReleaseScreensTest {
@@ -298,5 +300,103 @@ class ReleaseScreensTest {
         onNodeWithTag("release_detail_screen").assertExists()
         // No cancel button when release is null
         onNodeWithTag("cancel_release_button").assertDoesNotExist()
+    }
+
+    @Test
+    fun `release detail approve button visible for WAITING_FOR_INPUT block`() = runComposeUiTest {
+        val release = Release(
+            id = ReleaseId("r1"),
+            projectTemplateId = ProjectId("p1"),
+            status = ReleaseStatus.RUNNING,
+            dagSnapshot = DagGraph(
+                blocks = listOf(
+                    Block.ActionBlock(id = BlockId("b1"), name = "Approve Step", type = BlockType.USER_ACTION),
+                ),
+                positions = mapOf(BlockId("b1") to BlockPosition(100f, 100f)),
+            ),
+        )
+        val executions = listOf(
+            BlockExecution(
+                blockId = BlockId("b1"),
+                releaseId = ReleaseId("r1"),
+                status = BlockStatus.WAITING_FOR_INPUT,
+            ),
+        )
+
+        setContent {
+            MaterialTheme {
+                ReleaseDetailScreen(
+                    release = release,
+                    blockExecutions = executions,
+                    isConnected = true,
+                    onBack = {},
+                    onCancel = {},
+                    onApproveBlock = {},
+                    onBlockClick = {},
+                )
+            }
+        }
+
+        onNodeWithTag("execution_dag_canvas").performTouchInput {
+            click(Offset(190f, 135f))
+        }
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("block_detail_panel").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("approve_block_button").assertExists()
+    }
+
+    @Test
+    fun `release detail cancel button triggers callback`() = runComposeUiTest {
+        val release = Release(
+            id = ReleaseId("r1"),
+            projectTemplateId = ProjectId("p1"),
+            status = ReleaseStatus.RUNNING,
+            dagSnapshot = DagGraph(),
+        )
+        var cancelClicked = false
+
+        setContent {
+            MaterialTheme {
+                ReleaseDetailScreen(
+                    release = release,
+                    blockExecutions = emptyList(),
+                    isConnected = true,
+                    onBack = {},
+                    onCancel = { cancelClicked = true },
+                    onApproveBlock = {},
+                    onBlockClick = {},
+                )
+            }
+        }
+
+        onNodeWithTag("cancel_release_button").performClick()
+        assertTrue(cancelClicked)
+    }
+
+    @Test
+    fun `release detail back button triggers callback`() = runComposeUiTest {
+        val release = Release(
+            id = ReleaseId("r1"),
+            projectTemplateId = ProjectId("p1"),
+            status = ReleaseStatus.RUNNING,
+            dagSnapshot = DagGraph(),
+        )
+        var backClicked = false
+
+        setContent {
+            MaterialTheme {
+                ReleaseDetailScreen(
+                    release = release,
+                    blockExecutions = emptyList(),
+                    isConnected = true,
+                    onBack = { backClicked = true },
+                    onCancel = {},
+                    onApproveBlock = {},
+                    onBlockClick = {},
+                )
+            }
+        }
+
+        onNodeWithText("Back").performClick()
+        assertTrue(backClicked)
     }
 }
