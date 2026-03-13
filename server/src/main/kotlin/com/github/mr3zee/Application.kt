@@ -1,11 +1,16 @@
 package com.github.mr3zee
 
+import com.github.mr3zee.api.ErrorResponse
 import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.auth.authModule
 import com.github.mr3zee.auth.authRoutes
 import com.github.mr3zee.connections.connectionRoutes
 import com.github.mr3zee.connections.connectionsModule
 import com.github.mr3zee.execution.ExecutionEngine
+import com.github.mr3zee.execution.RecoveryService
+import com.github.mr3zee.plugins.CorrelationId
+import com.github.mr3zee.plugins.CorrelationIdKey
+import com.github.mr3zee.plugins.healthRoute
 import com.github.mr3zee.projects.projectRoutes
 import com.github.mr3zee.projects.projectsModule
 import com.github.mr3zee.releases.releaseRoutes
@@ -18,6 +23,8 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
+import io.ktor.server.plugins.calllogging.*
+import io.ktor.server.request.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
@@ -25,6 +32,7 @@ import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import io.ktor.server.websocket.*
 import io.ktor.util.*
+import kotlinx.serialization.SerializationException
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
 import kotlin.time.Duration.Companion.seconds
@@ -47,6 +55,14 @@ fun Application.module() {
         )
     }
 
+    // Install CorrelationId BEFORE CallLogging so MDC is available
+    install(CorrelationId)
+
+    install(CallLogging) {
+        filter { call -> call.request.uri.startsWith("/api/") }
+        mdc("correlationId") { it.attributes.getOrNull(CorrelationIdKey) }
+    }
+
     install(Sessions) {
         cookie<UserSession>("SESSION") {
             cookie.path = "/"
@@ -60,7 +76,15 @@ fun Application.module() {
         session<UserSession>("session-auth") {
             validate { it }
             challenge {
-                call.respond(HttpStatusCode.Unauthorized, "Not authenticated")
+                val correlationId = call.attributes.getOrNull(CorrelationIdKey)
+                call.respond(
+                    HttpStatusCode.Unauthorized,
+                    ErrorResponse(
+                        error = "Not authenticated",
+                        code = "UNAUTHORIZED",
+                        correlationId = correlationId,
+                    ),
+                )
             }
         }
     }
@@ -76,15 +100,78 @@ fun Application.module() {
 
     install(StatusPages) {
         exception<IllegalArgumentException> { call, cause ->
-            call.respondText(cause.message ?: "Bad request", status = HttpStatusCode.BadRequest)
+            val correlationId = call.attributes.getOrNull(CorrelationIdKey)
+            call.respond(
+                HttpStatusCode.BadRequest,
+                ErrorResponse(
+                    error = cause.message ?: "Bad request",
+                    code = "BAD_REQUEST",
+                    correlationId = correlationId,
+                ),
+            )
+        }
+        exception<SerializationException> { call, cause ->
+            val correlationId = call.attributes.getOrNull(CorrelationIdKey)
+            call.respond(
+                HttpStatusCode.BadRequest,
+                ErrorResponse(
+                    error = cause.message ?: "Invalid request body",
+                    code = "INVALID_BODY",
+                    correlationId = correlationId,
+                ),
+            )
+        }
+        exception<io.ktor.server.plugins.ContentTransformationException> { call, cause ->
+            val correlationId = call.attributes.getOrNull(CorrelationIdKey)
+            call.respond(
+                HttpStatusCode.BadRequest,
+                ErrorResponse(
+                    error = cause.message ?: "Invalid request body",
+                    code = "INVALID_BODY",
+                    correlationId = correlationId,
+                ),
+            )
+        }
+        exception<NotFoundException> { call, cause ->
+            val correlationId = call.attributes.getOrNull(CorrelationIdKey)
+            call.respond(
+                HttpStatusCode.NotFound,
+                ErrorResponse(
+                    error = cause.message ?: "Not found",
+                    code = "NOT_FOUND",
+                    correlationId = correlationId,
+                ),
+            )
         }
         exception<Throwable> { call, cause ->
             call.application.environment.log.error("Unhandled exception", cause)
-            call.respondText("Internal server error", status = HttpStatusCode.InternalServerError)
+            val correlationId = call.attributes.getOrNull(CorrelationIdKey)
+            call.respond(
+                HttpStatusCode.InternalServerError,
+                ErrorResponse(
+                    error = "Internal server error",
+                    code = "INTERNAL_ERROR",
+                    correlationId = correlationId,
+                ),
+            )
         }
     }
 
     configureRouting()
+
+    monitor.subscribe(ApplicationStarted) {
+        try {
+            val koin = org.koin.java.KoinJavaComponent.getKoin()
+            val recoveryService = koin.getOrNull<RecoveryService>()
+            if (recoveryService != null) {
+                kotlinx.coroutines.runBlocking {
+                    recoveryService.recover()
+                }
+            }
+        } catch (e: Exception) {
+            environment.log.error("Release recovery failed", e)
+        }
+    }
 
     monitor.subscribe(ApplicationStopped) {
         try {
@@ -102,6 +189,7 @@ fun Application.configureRouting() {
         get("/") {
             call.respondText("Release Wizard API")
         }
+        healthRoute()
         authRoutes()
         webhookRoutes()
         authenticate("session-auth") {

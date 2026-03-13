@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.mr3zee.api.ProjectApiClient
 import com.github.mr3zee.api.UpdateProjectRequest
+import com.github.mr3zee.api.toUserMessage
 import com.github.mr3zee.dag.DagValidator
 import com.github.mr3zee.dag.ValidationError
 import com.github.mr3zee.model.*
@@ -69,7 +70,7 @@ class DagEditorViewModel(
                 pushUndoState(p.dagGraph)
                 _isDirty.value = false
             } catch (e: Exception) {
-                _error.value = e.message ?: "Failed to load project"
+                _error.value = e.toUserMessage()
             } finally {
                 _isLoading.value = false
             }
@@ -89,7 +90,7 @@ class DagEditorViewModel(
                 _project.value = updated
                 _isDirty.value = false
             } catch (e: Exception) {
-                _error.value = e.message ?: "Failed to save"
+                _error.value = e.toUserMessage()
             } finally {
                 _isSaving.value = false
             }

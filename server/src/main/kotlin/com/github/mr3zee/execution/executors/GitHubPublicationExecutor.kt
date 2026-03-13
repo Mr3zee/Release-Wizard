@@ -25,6 +25,37 @@ class GitHubPublicationExecutor(
     private val httpClient: HttpClient,
 ) : BlockExecutor {
 
+    override suspend fun resume(
+        block: Block.ActionBlock,
+        parameters: List<Parameter>,
+        context: ExecutionContext,
+    ): Map<String, String> {
+        val connectionId = block.connectionId
+            ?: throw IllegalStateException("GitHub Publication block requires a connection")
+        val config = context.connections[connectionId] as? ConnectionConfig.GitHubConfig
+            ?: throw IllegalStateException("GitHub connection config not found for $connectionId")
+
+        val tagName = parameters.find { it.key == "tagName" }?.value
+            ?: throw IllegalArgumentException("GitHub Publication requires 'tagName' parameter")
+
+        // Check if release already exists by tag
+        val checkResponse = httpClient.get("https://api.github.com/repos/${config.owner}/${config.repo}/releases/tags/$tagName") {
+            header("Authorization", "Bearer ${config.token}")
+            header("Accept", "application/vnd.github+json")
+        }
+
+        return if (checkResponse.status.isSuccess()) {
+            // Release already exists — extract outputs
+            val responseBody = checkResponse.body<JsonObject>()
+            val releaseUrl = responseBody["html_url"]?.jsonPrimitive?.content ?: ""
+            val actualTag = responseBody["tag_name"]?.jsonPrimitive?.content ?: tagName
+            mapOf("releaseUrl" to releaseUrl, "tagName" to actualTag)
+        } else {
+            // Release doesn't exist — create it
+            execute(block, parameters, context)
+        }
+    }
+
     override suspend fun execute(
         block: Block.ActionBlock,
         parameters: List<Parameter>,

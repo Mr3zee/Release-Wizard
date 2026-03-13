@@ -1,8 +1,12 @@
 package com.github.mr3zee
 
+import com.github.mr3zee.api.ErrorResponse
 import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.auth.authModule
 import com.github.mr3zee.connections.connectionsModule
+import com.github.mr3zee.plugins.CorrelationId
+import com.github.mr3zee.plugins.CorrelationIdKey
+import com.github.mr3zee.plugins.healthRoute
 import com.github.mr3zee.projects.projectsModule
 import com.github.mr3zee.releases.releasesModule
 import com.github.mr3zee.webhooks.webhooksModule
@@ -19,6 +23,7 @@ import io.ktor.server.sessions.*
 import io.ktor.server.testing.*
 import io.ktor.server.websocket.*
 import io.ktor.util.*
+import kotlinx.serialization.SerializationException
 import org.koin.dsl.module
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
@@ -74,6 +79,9 @@ fun Application.testModule() {
             testOverrideModule,
         )
     }
+
+    install(CorrelationId)
+
     install(Sessions) {
         cookie<UserSession>("SESSION") {
             cookie.path = "/"
@@ -85,7 +93,17 @@ fun Application.testModule() {
     install(Authentication) {
         session<UserSession>("session-auth") {
             validate { it }
-            challenge { call.respond(HttpStatusCode.Unauthorized, "Not authenticated") }
+            challenge {
+                val correlationId = call.attributes.getOrNull(CorrelationIdKey)
+                call.respond(
+                    HttpStatusCode.Unauthorized,
+                    ErrorResponse(
+                        error = "Not authenticated",
+                        code = "UNAUTHORIZED",
+                        correlationId = correlationId,
+                    ),
+                )
+            }
         }
     }
     install(WebSockets) {
@@ -97,7 +115,60 @@ fun Application.testModule() {
     }
     install(StatusPages) {
         exception<IllegalArgumentException> { call, cause ->
-            call.respondText(cause.message ?: "Bad request", status = HttpStatusCode.BadRequest)
+            val correlationId = call.attributes.getOrNull(CorrelationIdKey)
+            call.respond(
+                HttpStatusCode.BadRequest,
+                ErrorResponse(
+                    error = cause.message ?: "Bad request",
+                    code = "BAD_REQUEST",
+                    correlationId = correlationId,
+                ),
+            )
+        }
+        exception<SerializationException> { call, cause ->
+            val correlationId = call.attributes.getOrNull(CorrelationIdKey)
+            call.respond(
+                HttpStatusCode.BadRequest,
+                ErrorResponse(
+                    error = cause.message ?: "Invalid request body",
+                    code = "INVALID_BODY",
+                    correlationId = correlationId,
+                ),
+            )
+        }
+        exception<io.ktor.server.plugins.ContentTransformationException> { call, cause ->
+            val correlationId = call.attributes.getOrNull(CorrelationIdKey)
+            call.respond(
+                HttpStatusCode.BadRequest,
+                ErrorResponse(
+                    error = cause.message ?: "Invalid request body",
+                    code = "INVALID_BODY",
+                    correlationId = correlationId,
+                ),
+            )
+        }
+        exception<NotFoundException> { call, cause ->
+            val correlationId = call.attributes.getOrNull(CorrelationIdKey)
+            call.respond(
+                HttpStatusCode.NotFound,
+                ErrorResponse(
+                    error = cause.message ?: "Not found",
+                    code = "NOT_FOUND",
+                    correlationId = correlationId,
+                ),
+            )
+        }
+        exception<Throwable> { call, cause ->
+            call.application.environment.log.error("Unhandled exception", cause)
+            val correlationId = call.attributes.getOrNull(CorrelationIdKey)
+            call.respond(
+                HttpStatusCode.InternalServerError,
+                ErrorResponse(
+                    error = "Internal server error",
+                    code = "INTERNAL_ERROR",
+                    correlationId = correlationId,
+                ),
+            )
         }
     }
     configureRouting()

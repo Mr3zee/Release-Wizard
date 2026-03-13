@@ -23,7 +23,10 @@ interface PendingWebhookRepository {
     suspend fun findByExternalIdAndType(externalId: String, type: WebhookType): PendingWebhook?
     suspend fun findByConnectionIdAndType(connectionId: ConnectionId, type: WebhookType): List<PendingWebhook>
     suspend fun findPendingByReleaseId(releaseId: ReleaseId): List<PendingWebhook>
+    suspend fun findByReleaseIdAndBlockId(releaseId: ReleaseId, blockId: BlockId): PendingWebhook?
     suspend fun updateStatus(id: String, status: WebhookStatus, payload: String? = null): Boolean
+    suspend fun updateExternalId(id: String, externalId: String): Boolean
+    suspend fun deleteCompletedOlderThan(cutoff: kotlin.time.Instant): Int
 }
 
 class ExposedPendingWebhookRepository(
@@ -113,6 +116,17 @@ class ExposedPendingWebhookRepository(
             .map { it.toWebhook() }
     }
 
+    override suspend fun findByReleaseIdAndBlockId(releaseId: ReleaseId, blockId: BlockId): PendingWebhook? = dbQuery {
+        PendingWebhookTable.selectAll()
+            .where {
+                (PendingWebhookTable.releaseId eq releaseId.value) and
+                    (PendingWebhookTable.blockId eq blockId.value)
+            }
+            .orderBy(PendingWebhookTable.createdAt, SortOrder.DESC)
+            .firstOrNull()
+            ?.toWebhook()
+    }
+
     override suspend fun updateStatus(id: String, status: WebhookStatus, payload: String?): Boolean = dbQuery {
         val now = Clock.System.now()
         val updated = PendingWebhookTable.update({ PendingWebhookTable.id eq UUID.fromString(id) }) {
@@ -123,5 +137,21 @@ class ExposedPendingWebhookRepository(
             }
         }
         updated > 0
+    }
+
+    override suspend fun updateExternalId(id: String, externalId: String): Boolean = dbQuery {
+        val now = Clock.System.now()
+        val updated = PendingWebhookTable.update({ PendingWebhookTable.id eq UUID.fromString(id) }) {
+            it[PendingWebhookTable.externalId] = externalId
+            it[PendingWebhookTable.updatedAt] = now
+        }
+        updated > 0
+    }
+
+    override suspend fun deleteCompletedOlderThan(cutoff: kotlin.time.Instant): Int = dbQuery {
+        PendingWebhookTable.deleteWhere {
+            (PendingWebhookTable.status eq WebhookStatus.COMPLETED.name) and
+                (PendingWebhookTable.updatedAt less cutoff)
+        }
     }
 }

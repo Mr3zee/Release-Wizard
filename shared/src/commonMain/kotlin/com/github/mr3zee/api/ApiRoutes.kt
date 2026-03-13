@@ -37,4 +37,6 @@ object ApiRoutes {
         fun teamcity(connectionId: String) = "$BASE/teamcity/$connectionId"
         fun github(connectionId: String) = "$BASE/github/$connectionId"
     }
+
+    const val HEALTH = "/health"
 }

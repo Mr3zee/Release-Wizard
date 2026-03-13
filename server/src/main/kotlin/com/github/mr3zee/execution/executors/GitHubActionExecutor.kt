@@ -38,6 +38,61 @@ class GitHubActionExecutor(
 
     private val log = LoggerFactory.getLogger(GitHubActionExecutor::class.java)
 
+    override suspend fun resume(
+        block: Block.ActionBlock,
+        parameters: List<Parameter>,
+        context: ExecutionContext,
+    ): Map<String, String> {
+        val connectionId = block.connectionId
+            ?: throw IllegalStateException("GitHub Action block requires a connection")
+        val config = context.connections[connectionId] as? ConnectionConfig.GitHubConfig
+            ?: throw IllegalStateException("GitHub connection config not found for $connectionId")
+
+        // Check PendingWebhook state
+        val webhook = webhookRepository.findByReleaseIdAndBlockId(context.releaseId, block.id)
+
+        return when {
+            webhook != null && webhook.status == WebhookStatus.COMPLETED && webhook.payload != null -> {
+                // Webhook already arrived — parse and return outputs
+                parseCompletionPayload(webhook.payload, webhook.externalId, config.owner, config.repo)
+            }
+            webhook != null && webhook.status == WebhookStatus.PENDING && webhook.externalId.isNotEmpty() -> {
+                // Webhook registered with run ID — subscribe and wait
+                coroutineScope {
+                    val completionDeferred = async(start = CoroutineStart.UNDISPATCHED) {
+                        withTimeout(WEBHOOK_TIMEOUT_MS) {
+                            webhookService.completions.first { it.blockId == block.id && it.releaseId == context.releaseId }
+                        }
+                    }
+                    val completion = completionDeferred.await()
+                    parseCompletionPayload(completion.payload, webhook.externalId, config.owner, config.repo)
+                }
+            }
+            webhook != null && webhook.status == WebhookStatus.PENDING -> {
+                // PENDING without externalId — re-poll for run ID, then wait
+                val baseUrl = "https://api.github.com/repos/${config.owner}/${config.repo}"
+                val workflowFile = parameters.find { it.key == "workflowFile" }?.value ?: ""
+                val runId = discoverRunId(baseUrl, workflowFile, config.token)
+                if (runId != null) {
+                    webhookRepository.updateExternalId(webhook.id, runId)
+                }
+                coroutineScope {
+                    val completionDeferred = async(start = CoroutineStart.UNDISPATCHED) {
+                        withTimeout(WEBHOOK_TIMEOUT_MS) {
+                            webhookService.completions.first { it.blockId == block.id && it.releaseId == context.releaseId }
+                        }
+                    }
+                    val completion = completionDeferred.await()
+                    parseCompletionPayload(completion.payload, runId ?: "", config.owner, config.repo)
+                }
+            }
+            else -> {
+                // No webhook record — trigger never happened, re-execute
+                execute(block, parameters, context)
+            }
+        }
+    }
+
     override suspend fun execute(
         block: Block.ActionBlock,
         parameters: List<Parameter>,

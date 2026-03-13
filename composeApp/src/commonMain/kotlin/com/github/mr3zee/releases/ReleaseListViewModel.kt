@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.github.mr3zee.api.CreateReleaseRequest
 import com.github.mr3zee.api.ProjectApiClient
 import com.github.mr3zee.api.ReleaseApiClient
+import com.github.mr3zee.api.toUserMessage
 import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.model.ProjectTemplate
 import com.github.mr3zee.model.Release
@@ -36,7 +37,7 @@ class ReleaseListViewModel(
             try {
                 _releases.value = releaseApiClient.listReleases().releases
             } catch (e: Exception) {
-                _error.value = e.message ?: "Failed to load releases"
+                _error.value = e.toUserMessage()
             } finally {
                 _isLoading.value = false
             }
@@ -59,7 +60,7 @@ class ReleaseListViewModel(
                 releaseApiClient.startRelease(CreateReleaseRequest(projectTemplateId = projectId))
                 loadReleases()
             } catch (e: Exception) {
-                _error.value = e.message ?: "Failed to start release"
+                _error.value = e.toUserMessage()
             }
         }
     }

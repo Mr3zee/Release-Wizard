@@ -26,6 +26,7 @@ dependencies {
     implementation(libs.ktor.serverStatusPages)
     implementation(libs.ktor.serverAuth)
     implementation(libs.ktor.serverSessions)
+    implementation(libs.ktor.serverCallLogging)
     implementation(libs.ktor.serverWebsockets)
     implementation(libs.ktor.serializationKotlinxJson)
 

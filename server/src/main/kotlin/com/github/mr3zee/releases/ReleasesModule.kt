@@ -3,6 +3,7 @@ package com.github.mr3zee.releases
 import com.github.mr3zee.execution.BlockExecutor
 import com.github.mr3zee.execution.DispatchingBlockExecutor
 import com.github.mr3zee.execution.ExecutionEngine
+import com.github.mr3zee.execution.RecoveryService
 import com.github.mr3zee.execution.executors.*
 import com.github.mr3zee.model.BlockType
 import org.koin.dsl.module
@@ -22,5 +23,6 @@ val releasesModule = module {
         )
     }
     single { ExecutionEngine(get(), get(), get()) }
+    single { RecoveryService(get(), get(), get()) }
     single<ReleasesService> { DefaultReleasesService(get(), get(), get()) }
 }

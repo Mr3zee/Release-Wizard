@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.mr3zee.api.CreateProjectRequest
 import com.github.mr3zee.api.ProjectApiClient
+import com.github.mr3zee.api.toUserMessage
 import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.model.ProjectTemplate
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,7 +31,7 @@ class ProjectListViewModel(
             try {
                 _projects.value = apiClient.listProjects()
             } catch (e: Exception) {
-                _error.value = e.message ?: "Failed to load projects"
+                _error.value = e.toUserMessage()
             } finally {
                 _isLoading.value = false
             }
@@ -44,7 +45,7 @@ class ProjectListViewModel(
                 apiClient.createProject(CreateProjectRequest(name = name))
                 loadProjects()
             } catch (e: Exception) {
-                _error.value = e.message ?: "Failed to create project"
+                _error.value = e.toUserMessage()
             }
         }
     }
@@ -56,7 +57,7 @@ class ProjectListViewModel(
                 apiClient.deleteProject(id)
                 loadProjects()
             } catch (e: Exception) {
-                _error.value = e.message ?: "Failed to delete project"
+                _error.value = e.toUserMessage()
             }
         }
     }

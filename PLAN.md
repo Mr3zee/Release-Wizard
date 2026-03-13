@@ -361,10 +361,10 @@ Key test tags available:
 
 ## Phase 7: Polish & Production Readiness
 
-*(Not yet started)*
-
-### Notes for Further Development
-
-**Backend restartability audit**: On restart, all RUNNING releases are lost (in-memory `activeJobs`/`pendingApprovals`). Need: scan DB for RUNNING releases on startup, reconstruct state from BlockExecution records, resume.
-
-**Client reconnectability**: WebSocket disconnect → show status indicator, auto-retry with backoff, request fresh snapshot on reconnect. HTTP errors → show error state with retry. Auth expiry → redirect to login.
+- [x] **7a: Server Error Handling & Health Check** — `ErrorResponse` contract in shared module, `CorrelationId` plugin, `StatusPages` overhaul (all errors return JSON), `NotFoundException`, `GET /health`, route cleanup
+- [x] **7b: Backend Release Recovery** — `BlockExecutor.resume()` interface, per-executor resume strategies (Slack=FAIL, GitHub Publication=check-by-tag, TeamCity/GitHub Action=check PendingWebhook state, Maven Central=re-execute), `RecoveryService`, `ExecutionEngine.recoverRelease()`, startup hook via `ApplicationStarted`, stale webhook cleanup
+- [x] **7c: Config Externalization** — Env var override via `propertyOrEnv()` helper for all sensitive config values (DB_URL, DB_USER, DB_PASSWORD, AUTH_USERNAME, AUTH_PASSWORD, AUTH_SESSION_SIGN_KEY, ENCRYPTION_KEY, WEBHOOK_BASE_URL)
+- [x] **7f: Logging Improvements** — logback.xml updated (root=INFO, com.github.mr3zee=DEBUG, correlationId in pattern), `CallLogging` plugin for /api/ paths, structured logging in ExecutionEngine, RecoveryService, WebhookService, AuthService
+- [x] **7d: Client Auth Resilience** — `AuthEventBus` singleton with `SessionExpired` event, `HttpClient` 401 interception (excludes login), `AuthViewModel.onSessionExpired()`, App.kt subscription
+- [x] **7e: Client Error Polish** — `ErrorResponse` parsing utility, `Exception.toUserMessage()` extension, all ViewModel catch blocks updated, reconnect attempt counter in `ReleaseDetailViewModel`
+- [x] **7g: Tests** — Health check (UP without auth), error format tests (400/401/404 return JSON ErrorResponse with correlationId), recovery tests (RUNNING resumes, SUCCEEDED skipped, FAILED skipped, user action re-registered, stale webhook cleanup), client tests (error parsing, auth event bus, login 401 exclusion)

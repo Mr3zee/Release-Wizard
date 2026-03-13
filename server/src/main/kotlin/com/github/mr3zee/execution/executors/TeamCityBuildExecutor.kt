@@ -34,6 +34,43 @@ class TeamCityBuildExecutor(
 
     private val log = LoggerFactory.getLogger(TeamCityBuildExecutor::class.java)
 
+    override suspend fun resume(
+        block: Block.ActionBlock,
+        parameters: List<Parameter>,
+        context: ExecutionContext,
+    ): Map<String, String> {
+        val connectionId = block.connectionId
+            ?: throw IllegalStateException("TeamCity Build block requires a connection")
+        val config = context.connections[connectionId] as? ConnectionConfig.TeamCityConfig
+            ?: throw IllegalStateException("TeamCity connection config not found for $connectionId")
+
+        // Check PendingWebhook state
+        val webhook = webhookRepository.findByReleaseIdAndBlockId(context.releaseId, block.id)
+
+        return when {
+            webhook != null && webhook.status == WebhookStatus.COMPLETED && webhook.payload != null -> {
+                // Webhook already arrived — parse and return outputs
+                parseCompletionPayload(webhook.payload, webhook.externalId, config.serverUrl)
+            }
+            webhook != null && webhook.status == WebhookStatus.PENDING -> {
+                // Webhook registered but not yet received — subscribe and wait
+                coroutineScope {
+                    val completionDeferred = async(start = CoroutineStart.UNDISPATCHED) {
+                        withTimeout(WEBHOOK_TIMEOUT_MS) {
+                            webhookService.completions.first { it.blockId == block.id && it.releaseId == context.releaseId }
+                        }
+                    }
+                    val completion = completionDeferred.await()
+                    parseCompletionPayload(completion.payload, webhook.externalId, config.serverUrl)
+                }
+            }
+            else -> {
+                // No webhook record — trigger never happened, re-execute
+                execute(block, parameters, context)
+            }
+        }
+    }
+
     override suspend fun execute(
         block: Block.ActionBlock,
         parameters: List<Parameter>,

@@ -5,7 +5,6 @@ import com.github.mr3zee.model.Parameter
 
 /**
  * Interface for executing a single action block.
- * Implementations will be provided for each block type in Phase 6 (Integrations).
  */
 interface BlockExecutor {
     /**
@@ -17,4 +16,15 @@ interface BlockExecutor {
         parameters: List<Parameter>,
         context: ExecutionContext,
     ): Map<String, String>
+
+    /**
+     * Resume a block after server restart.
+     * Default implementation calls execute() (safe for idempotent executors).
+     * Non-idempotent executors should override with type-specific recovery logic.
+     */
+    suspend fun resume(
+        block: Block.ActionBlock,
+        parameters: List<Parameter>,
+        context: ExecutionContext,
+    ): Map<String, String> = execute(block, parameters, context)
 }

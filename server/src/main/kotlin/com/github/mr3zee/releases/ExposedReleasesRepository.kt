@@ -52,6 +52,12 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
             ?.toRelease()
     }
 
+    override suspend fun findByStatuses(statuses: Set<ReleaseStatus>): List<Release> = dbQuery {
+        ReleaseTable.selectAll()
+            .where { ReleaseTable.status inList statuses.map { it.name } }
+            .map { it.toRelease() }
+    }
+
     override suspend fun findByProjectId(projectId: ProjectId): List<Release> = dbQuery {
         ReleaseTable.selectAll()
             .where { ReleaseTable.projectTemplateId eq projectId.value }

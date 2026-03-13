@@ -13,6 +13,8 @@ import com.github.mr3zee.api.ConnectionApiClient
 import com.github.mr3zee.api.ProjectApiClient
 import com.github.mr3zee.api.ReleaseApiClient
 import com.github.mr3zee.api.createHttpClient
+import com.github.mr3zee.auth.AuthEventBus
+import com.github.mr3zee.auth.AuthEvent
 import com.github.mr3zee.auth.AuthViewModel
 import com.github.mr3zee.auth.LoginScreen
 import com.github.mr3zee.connections.ConnectionsViewModel
@@ -45,6 +47,17 @@ fun App() {
     }
 
     var currentScreen by remember { mutableStateOf<Screen>(Screen.ProjectList) }
+
+    LaunchedEffect(Unit) {
+        AuthEventBus.events.collect { event ->
+            when (event) {
+                is AuthEvent.SessionExpired -> {
+                    authViewModel.onSessionExpired()
+                    currentScreen = Screen.ProjectList
+                }
+            }
+        }
+    }
 
     MaterialTheme {
         Surface(

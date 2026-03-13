@@ -23,31 +23,40 @@ data class WebhookConfig(
     val baseUrl: String,
 )
 
+/**
+ * Read a config property with optional env var override.
+ * Env var takes precedence if set; otherwise falls back to YAML value.
+ */
+private fun ApplicationConfig.propertyOrEnv(path: String, envVar: String): String {
+    return System.getenv(envVar)?.takeIf { it.isNotEmpty() }
+        ?: property(path).getString()
+}
+
 fun ApplicationConfig.databaseConfig(): DatabaseConfig {
     return DatabaseConfig(
-        url = property("app.database.url").getString(),
-        user = property("app.database.user").getString(),
-        password = property("app.database.password").getString(),
+        url = propertyOrEnv("app.database.url", "DB_URL"),
+        user = propertyOrEnv("app.database.user", "DB_USER"),
+        password = propertyOrEnv("app.database.password", "DB_PASSWORD"),
         driver = property("app.database.driver").getString(),
     )
 }
 
 fun ApplicationConfig.authConfig(): AuthConfig {
     return AuthConfig(
-        username = property("app.auth.username").getString(),
-        password = property("app.auth.password").getString(),
-        sessionSignKey = property("app.auth.sessionSignKey").getString(),
+        username = propertyOrEnv("app.auth.username", "AUTH_USERNAME"),
+        password = propertyOrEnv("app.auth.password", "AUTH_PASSWORD"),
+        sessionSignKey = propertyOrEnv("app.auth.sessionSignKey", "AUTH_SESSION_SIGN_KEY"),
     )
 }
 
 fun ApplicationConfig.encryptionConfig(): EncryptionConfig {
     return EncryptionConfig(
-        key = property("app.encryption.key").getString(),
+        key = propertyOrEnv("app.encryption.key", "ENCRYPTION_KEY"),
     )
 }
 
 fun ApplicationConfig.webhookConfig(): WebhookConfig {
     return WebhookConfig(
-        baseUrl = property("app.webhook.baseUrl").getString(),
+        baseUrl = propertyOrEnv("app.webhook.baseUrl", "WEBHOOK_BASE_URL"),
     )
 }

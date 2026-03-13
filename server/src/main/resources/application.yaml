@@ -6,6 +6,10 @@ ktor:
     modules:
       - com.github.mr3zee.ApplicationKt.module
 
+# All values below can be overridden via system properties (e.g., -Dapp.database.url=...)
+# or environment variables at deployment time.
+# Env var mapping: DB_URL, DB_USER, DB_PASSWORD, AUTH_USERNAME, AUTH_PASSWORD,
+#                  AUTH_SESSION_SIGN_KEY, ENCRYPTION_KEY, WEBHOOK_BASE_URL
 app:
   database:
     url: "jdbc:postgresql://localhost:5432/release_wizard"

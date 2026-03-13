@@ -6,6 +6,7 @@ import com.github.mr3zee.model.ConnectionId
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import org.slf4j.LoggerFactory
 import java.security.MessageDigest
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
@@ -18,6 +19,7 @@ class WebhookService(
     private val webhookRepository: PendingWebhookRepository,
     private val connectionsRepository: ConnectionsRepository,
 ) {
+    private val log = LoggerFactory.getLogger(WebhookService::class.java)
     private val _completions = MutableSharedFlow<WebhookCompletion>(
         extraBufferCapacity = 64,
     )
@@ -32,6 +34,7 @@ class WebhookService(
         webhookSecret: String?,
         payload: String,
     ): WebhookResult {
+        log.debug("Processing TeamCity webhook for connection {}", connectionId.value)
         val connection = connectionsRepository.findById(connectionId)
             ?: return WebhookResult.ConnectionNotFound
 
@@ -40,6 +43,7 @@ class WebhookService(
 
         if (config.webhookSecret.isNotEmpty()) {
             if (webhookSecret != config.webhookSecret) {
+                log.warn("Invalid webhook secret for TeamCity connection {}", connectionId.value)
                 return WebhookResult.InvalidSecret
             }
         }
@@ -56,6 +60,7 @@ class WebhookService(
         signatureHeader: String?,
         payload: String,
     ): WebhookResult {
+        log.debug("Processing GitHub webhook for connection {}", connectionId.value)
         val connection = connectionsRepository.findById(connectionId)
             ?: return WebhookResult.ConnectionNotFound
 
@@ -64,9 +69,11 @@ class WebhookService(
 
         if (config.webhookSecret.isNotEmpty()) {
             if (signatureHeader == null) {
+                log.warn("Missing signature for GitHub webhook on connection {}", connectionId.value)
                 return WebhookResult.InvalidSecret
             }
             if (!verifyGitHubSignature(payload, signatureHeader, config.webhookSecret)) {
+                log.warn("Invalid signature for GitHub webhook on connection {}", connectionId.value)
                 return WebhookResult.InvalidSecret
             }
         }
@@ -85,6 +92,7 @@ class WebhookService(
         }
 
         for (webhook in pendingWebhooks) {
+            log.info("Webhook matched: block={} release={} type={}", webhook.blockId.value, webhook.releaseId.value, type)
             webhookRepository.updateStatus(webhook.id, WebhookStatus.COMPLETED, payload)
             _completions.emit(
                 WebhookCompletion(

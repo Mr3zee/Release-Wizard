@@ -292,11 +292,28 @@ class InMemoryPendingWebhookRepository : PendingWebhookRepository {
         return webhooks.filter { it.releaseId == releaseId && it.status == WebhookStatus.PENDING }
     }
 
+    override suspend fun findByReleaseIdAndBlockId(releaseId: ReleaseId, blockId: BlockId): PendingWebhook? {
+        return webhooks.find { it.releaseId == releaseId && it.blockId == blockId }
+    }
+
     override suspend fun updateStatus(id: String, status: WebhookStatus, payload: String?): Boolean {
         val idx = webhooks.indexOfFirst { it.id == id }
         if (idx < 0) return false
         webhooks[idx] = webhooks[idx].copy(status = status, payload = payload)
         return true
+    }
+
+    override suspend fun updateExternalId(id: String, externalId: String): Boolean {
+        val idx = webhooks.indexOfFirst { it.id == id }
+        if (idx < 0) return false
+        webhooks[idx] = webhooks[idx].copy(externalId = externalId)
+        return true
+    }
+
+    override suspend fun deleteCompletedOlderThan(cutoff: kotlin.time.Instant): Int {
+        val before = webhooks.size
+        webhooks.removeAll { it.status == WebhookStatus.COMPLETED && it.updatedAt < cutoff }
+        return before - webhooks.size
     }
 }
 

@@ -44,6 +44,7 @@ ktor-serializationKotlinxJson = { module = "io.ktor:ktor-serialization-kotlinx-j
 ktor-serverAuth = { module = "io.ktor:ktor-server-auth-jvm", version.ref = "ktor" }
 ktor-serverSessions = { module = "io.ktor:ktor-server-sessions-jvm", version.ref = "ktor" }
 ktor-serverConfigYaml = { module = "io.ktor:ktor-server-config-yaml-jvm", version.ref = "ktor" }
+ktor-serverCallLogging = { module = "io.ktor:ktor-server-call-logging-jvm", version.ref = "ktor" }
 ktor-serverWebsockets = { module = "io.ktor:ktor-server-websockets-jvm", version.ref = "ktor" }
 ktor-serverTestHost = { module = "io.ktor:ktor-server-test-host-jvm", version.ref = "ktor" }
 

@@ -20,6 +20,16 @@ class SlackMessageExecutor(
     private val httpClient: HttpClient,
 ) : BlockExecutor {
 
+    override suspend fun resume(
+        block: Block.ActionBlock,
+        parameters: List<Parameter>,
+        context: ExecutionContext,
+    ): Map<String, String> {
+        // Slack webhook is once-only and we can't verify if it was sent.
+        // Mark FAILED so user can inspect and re-trigger manually.
+        throw RuntimeException("Server restarted — Slack message may have been sent. Please verify and re-trigger if needed.")
+    }
+
     override suspend fun execute(
         block: Block.ActionBlock,
         parameters: List<Parameter>,

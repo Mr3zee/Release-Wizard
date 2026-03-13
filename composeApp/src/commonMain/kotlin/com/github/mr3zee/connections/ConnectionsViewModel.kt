@@ -3,6 +3,7 @@ package com.github.mr3zee.connections
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.mr3zee.api.ConnectionApiClient
+import com.github.mr3zee.api.toUserMessage
 import com.github.mr3zee.api.CreateConnectionRequest
 import com.github.mr3zee.api.UpdateConnectionRequest
 import com.github.mr3zee.model.Connection
@@ -38,7 +39,7 @@ class ConnectionsViewModel(
                 _connections.value = response.connections
                 _webhookUrls.value = response.webhookUrls
             } catch (e: Exception) {
-                _error.value = e.message ?: "Failed to load connections"
+                _error.value = e.toUserMessage()
             } finally {
                 _isLoading.value = false
             }
@@ -52,7 +53,7 @@ class ConnectionsViewModel(
                 apiClient.createConnection(CreateConnectionRequest(name = name, type = type, config = config))
                 loadConnections()
             } catch (e: Exception) {
-                _error.value = e.message ?: "Failed to create connection"
+                _error.value = e.toUserMessage()
             }
         }
     }
@@ -64,7 +65,7 @@ class ConnectionsViewModel(
                 apiClient.updateConnection(id, UpdateConnectionRequest(name = name, config = config))
                 loadConnections()
             } catch (e: Exception) {
-                _error.value = e.message ?: "Failed to update connection"
+                _error.value = e.toUserMessage()
             }
         }
     }
@@ -76,7 +77,7 @@ class ConnectionsViewModel(
                 apiClient.deleteConnection(id)
                 loadConnections()
             } catch (e: Exception) {
-                _error.value = e.message ?: "Failed to delete connection"
+                _error.value = e.toUserMessage()
             }
         }
     }
@@ -90,7 +91,7 @@ class ConnectionsViewModel(
                     _error.value = "Test failed: ${result.message}"
                 }
             } catch (e: Exception) {
-                _error.value = e.message ?: "Test failed"
+                _error.value = e.toUserMessage()
             }
         }
     }

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.mr3zee.api.ReleaseApiClient
 import com.github.mr3zee.api.ReleaseEvent
+import com.github.mr3zee.api.toUserMessage
 import com.github.mr3zee.model.*
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -28,8 +29,10 @@ class ReleaseDetailViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
+    private val _reconnectAttempt = MutableStateFlow(0)
+    val reconnectAttempt: StateFlow<Int> = _reconnectAttempt
+
     private var wsJob: Job? = null
-    private var reconnectAttempt = 0
 
     fun connect() {
         wsJob?.cancel()
@@ -42,12 +45,13 @@ class ReleaseDetailViewModel(
         wsJob?.cancel()
         wsJob = null
         _isConnected.value = false
+        _reconnectAttempt.value = 0
     }
 
     private suspend fun connectWithRetry() {
         while (true) {
             try {
-                reconnectAttempt = 0
+                _reconnectAttempt.value = 0
 
                 releaseApiClient.watchRelease(releaseId).collect { event ->
                     // Mark connected on first event (the Snapshot)
@@ -70,9 +74,9 @@ class ReleaseDetailViewModel(
                     return
                 }
 
-                reconnectAttempt++
+                _reconnectAttempt.value++
                 // Exponential backoff: 1s, 2s, 4s, 8s, 16s, 30s cap
-                val delayMs = (1000L * (1L shl minOf(reconnectAttempt - 1, 4))).coerceAtMost(30_000L)
+                val delayMs = (1000L * (1L shl minOf(_reconnectAttempt.value - 1, 4))).coerceAtMost(30_000L)
                 delay(delayMs)
             }
         }
@@ -115,7 +119,7 @@ class ReleaseDetailViewModel(
             try {
                 releaseApiClient.cancelRelease(releaseId)
             } catch (e: Exception) {
-                _error.value = e.message ?: "Failed to cancel release"
+                _error.value = e.toUserMessage()
             }
         }
     }
@@ -125,7 +129,7 @@ class ReleaseDetailViewModel(
             try {
                 releaseApiClient.approveBlock(releaseId, blockId, input)
             } catch (e: Exception) {
-                _error.value = e.message ?: "Failed to approve block"
+                _error.value = e.toUserMessage()
             }
         }
     }

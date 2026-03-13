@@ -1,5 +1,6 @@
 package com.github.mr3zee.releases
 
+import com.github.mr3zee.NotFoundException
 import com.github.mr3zee.api.*
 import com.github.mr3zee.model.BlockId
 import com.github.mr3zee.model.ReleaseId
@@ -21,99 +22,79 @@ fun Route.releaseRoutes() {
 
         post {
             val request = call.receive<CreateReleaseRequest>()
-            try {
-                val release = service.startRelease(request)
-                val executions = service.getBlockExecutions(release.id)
-                call.respond(HttpStatusCode.Created, ReleaseResponse(release, executions))
-            } catch (e: IllegalArgumentException) {
-                call.respond(HttpStatusCode.BadRequest, e.message ?: "Invalid request")
-            }
+            val release = service.startRelease(request)
+            val executions = service.getBlockExecutions(release.id)
+            call.respond(HttpStatusCode.Created, ReleaseResponse(release, executions))
         }
 
         route("/{id}") {
             get {
-                val id = call.requireReleaseId() ?: return@get
+                val id = call.requireReleaseId()
                 val release = service.getRelease(id)
-                if (release != null) {
-                    val executions = service.getBlockExecutions(id)
-                    call.respond(ReleaseResponse(release, executions))
-                } else {
-                    call.respond(HttpStatusCode.NotFound, "Release not found")
-                }
+                    ?: throw NotFoundException("Release not found: ${id.value}")
+                val executions = service.getBlockExecutions(id)
+                call.respond(ReleaseResponse(release, executions))
             }
 
             post("/await") {
-                val id = call.requireReleaseId() ?: return@post
+                val id = call.requireReleaseId()
                 service.awaitRelease(id)
                 val release = service.getRelease(id)
-                if (release != null) {
-                    val executions = service.getBlockExecutions(id)
-                    call.respond(ReleaseResponse(release, executions))
-                } else {
-                    call.respond(HttpStatusCode.NotFound, "Release not found")
-                }
+                    ?: throw NotFoundException("Release not found: ${id.value}")
+                val executions = service.getBlockExecutions(id)
+                call.respond(ReleaseResponse(release, executions))
             }
 
             post("/cancel") {
-                val id = call.requireReleaseId() ?: return@post
+                val id = call.requireReleaseId()
                 val cancelled = service.cancelRelease(id)
-                if (cancelled) {
-                    val release = service.getRelease(id)!!
-                    val executions = service.getBlockExecutions(id)
-                    call.respond(ReleaseResponse(release, executions))
-                } else {
-                    call.respond(HttpStatusCode.BadRequest, "Cannot cancel release")
+                if (!cancelled) {
+                    throw IllegalArgumentException("Cannot cancel release: ${id.value}")
                 }
+                val release = service.getRelease(id)!!
+                val executions = service.getBlockExecutions(id)
+                call.respond(ReleaseResponse(release, executions))
             }
 
             route("/blocks/{blockId}") {
                 post("/restart") {
-                    val releaseId = call.requireReleaseId() ?: return@post
-                    val blockId = call.requireBlockId() ?: return@post
+                    val releaseId = call.requireReleaseId()
+                    val blockId = call.requireBlockId()
                     val restarted = service.restartBlock(releaseId, blockId)
-                    if (restarted) {
-                        call.respond(HttpStatusCode.OK, "Block restarted")
-                    } else {
-                        call.respond(HttpStatusCode.BadRequest, "Cannot restart block")
+                    if (!restarted) {
+                        throw IllegalArgumentException("Cannot restart block: ${blockId.value}")
                     }
+                    call.respond(HttpStatusCode.OK, mapOf("status" to "restarted"))
                 }
 
                 post("/approve") {
-                    val releaseId = call.requireReleaseId() ?: return@post
-                    val blockId = call.requireBlockId() ?: return@post
+                    val releaseId = call.requireReleaseId()
+                    val blockId = call.requireBlockId()
                     val request = call.receive<ApproveBlockRequest>()
                     val approved = service.approveBlock(releaseId, blockId, request)
-                    if (approved) {
-                        call.respond(HttpStatusCode.OK, "Block approved")
-                    } else {
-                        call.respond(HttpStatusCode.BadRequest, "Cannot approve block")
+                    if (!approved) {
+                        throw IllegalArgumentException("Cannot approve block: ${blockId.value}")
                     }
+                    call.respond(HttpStatusCode.OK, mapOf("status" to "approved"))
                 }
             }
         }
     }
 }
 
-private suspend fun io.ktor.server.application.ApplicationCall.requireReleaseId(): ReleaseId? {
+private fun io.ktor.server.application.ApplicationCall.requireReleaseId(): ReleaseId {
     val raw = parameters["id"]
-    if (raw == null) {
-        respond(HttpStatusCode.BadRequest, "Missing id")
-        return null
-    }
-    return try {
+        ?: throw IllegalArgumentException("Missing id")
+    try {
         UUID.fromString(raw)
-        ReleaseId(raw)
     } catch (_: IllegalArgumentException) {
-        respond(HttpStatusCode.BadRequest, "Invalid release ID format")
-        null
+        throw IllegalArgumentException("Invalid release ID format")
     }
+    return ReleaseId(raw)
 }
 
-private suspend fun io.ktor.server.application.ApplicationCall.requireBlockId(): BlockId? {
+private fun io.ktor.server.application.ApplicationCall.requireBlockId(): BlockId {
     val raw = parameters["blockId"]
-    if (raw == null) {
-        respond(HttpStatusCode.BadRequest, "Missing blockId")
-        return null
-    }
+        ?: throw IllegalArgumentException("Missing blockId")
     return BlockId(raw)
 }

@@ -6,6 +6,7 @@ interface ReleasesRepository {
     suspend fun findAll(): List<Release>
     suspend fun findById(id: ReleaseId): Release?
     suspend fun findByProjectId(projectId: ProjectId): List<Release>
+    suspend fun findByStatuses(statuses: Set<ReleaseStatus>): List<Release>
     suspend fun create(
         projectTemplateId: ProjectId,
         dagSnapshot: DagGraph,

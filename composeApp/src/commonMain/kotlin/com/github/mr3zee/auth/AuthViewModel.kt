@@ -64,6 +64,11 @@ class AuthViewModel(
         }
     }
 
+    fun onSessionExpired() {
+        _user.value = null
+        _error.value = "Session expired. Please log in again."
+    }
+
     fun dismissError() {
         _error.value = null
     }

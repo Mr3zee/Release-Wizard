@@ -1,8 +1,10 @@
 package com.github.mr3zee.auth
 
 import com.github.mr3zee.api.ApiRoutes
+import com.github.mr3zee.api.ErrorResponse
 import com.github.mr3zee.api.LoginRequest
 import com.github.mr3zee.api.UserInfo
+import com.github.mr3zee.plugins.CorrelationIdKey
 import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -19,7 +21,15 @@ fun Route.authRoutes() {
             call.sessions.set(UserSession(username = request.username))
             call.respond(UserInfo(username = request.username))
         } else {
-            call.respond(HttpStatusCode.Unauthorized, "Invalid credentials")
+            val correlationId = call.attributes.getOrNull(CorrelationIdKey)
+            call.respond(
+                HttpStatusCode.Unauthorized,
+                ErrorResponse(
+                    error = "Invalid credentials",
+                    code = "INVALID_CREDENTIALS",
+                    correlationId = correlationId,
+                ),
+            )
         }
     }
 
@@ -33,7 +43,15 @@ fun Route.authRoutes() {
         if (session != null) {
             call.respond(UserInfo(username = session.username))
         } else {
-            call.respond(HttpStatusCode.Unauthorized, "Not authenticated")
+            val correlationId = call.attributes.getOrNull(CorrelationIdKey)
+            call.respond(
+                HttpStatusCode.Unauthorized,
+                ErrorResponse(
+                    error = "Not authenticated",
+                    code = "UNAUTHORIZED",
+                    correlationId = correlationId,
+                ),
+            )
         }
     }
 }
