@@ -5,10 +5,11 @@ import com.github.mr3zee.model.ConnectionId
 import com.github.mr3zee.model.ReleaseId
 import com.github.mr3zee.persistence.PendingWebhookTable
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlin.time.Clock
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.*
-import org.jetbrains.exposed.v1.jdbc.transactions.experimental.newSuspendedTransaction
+import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 import java.util.UUID
 
 interface PendingWebhookRepository {
@@ -35,7 +36,7 @@ class ExposedPendingWebhookRepository(
 ) : PendingWebhookRepository {
 
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
-        newSuspendedTransaction(Dispatchers.IO, db) { block() }
+        withContext(Dispatchers.IO) { suspendTransaction(db) { block() } }
 
     private fun ResultRow.toWebhook(): PendingWebhook = PendingWebhook(
         id = this[PendingWebhookTable.id].value.toString(),

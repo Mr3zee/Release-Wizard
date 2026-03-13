@@ -4,16 +4,17 @@ import com.github.mr3zee.model.*
 import com.github.mr3zee.persistence.BlockExecutionTable
 import com.github.mr3zee.persistence.ReleaseTable
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.*
-import org.jetbrains.exposed.v1.jdbc.transactions.experimental.newSuspendedTransaction
+import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 import java.util.UUID
 import kotlin.time.Clock
 
 class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
 
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
-        newSuspendedTransaction(Dispatchers.IO, db) { block() }
+        withContext(Dispatchers.IO) { suspendTransaction(db) { block() } }
 
     private fun ResultRow.toRelease(): Release {
         return Release(

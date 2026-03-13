@@ -32,7 +32,7 @@ suspend fun Exception.toUserMessage(): String {
                 404 -> "Not found"
                 in 400..499 -> "Invalid request"
                 in 500..599 -> "Server error"
-                else -> message ?: "Unknown error"
+                else -> message
             }
         }
         is ServerResponseException -> "Server error"

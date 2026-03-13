@@ -3,16 +3,17 @@ package com.github.mr3zee.projects
 import com.github.mr3zee.model.*
 import com.github.mr3zee.persistence.ProjectTemplateTable
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.*
-import org.jetbrains.exposed.v1.jdbc.transactions.experimental.newSuspendedTransaction
+import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 import java.util.UUID
 import kotlin.time.Clock
 
 class ExposedProjectsRepository(private val db: Database) : ProjectsRepository {
 
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
-        newSuspendedTransaction(Dispatchers.IO, db) { block() }
+        withContext(Dispatchers.IO) { suspendTransaction(db) { block() } }
 
     private fun ResultRow.toProjectTemplate(): ProjectTemplate {
         return ProjectTemplate(

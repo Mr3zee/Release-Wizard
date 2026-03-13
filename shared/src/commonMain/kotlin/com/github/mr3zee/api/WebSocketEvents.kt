@@ -1,7 +1,7 @@
 package com.github.mr3zee.api
 
 import com.github.mr3zee.model.*
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
