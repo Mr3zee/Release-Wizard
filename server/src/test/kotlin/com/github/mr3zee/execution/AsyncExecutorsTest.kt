@@ -34,19 +34,20 @@ class AsyncExecutorsTest {
     )
 
     /**
-     * Poll until condition is true, avoiding flaky delay()-based waits.
+     * Poll until condition is true.
+     * Uses yield() to give other coroutines a chance to run on the same thread.
+     * With UNDISPATCHED async in executors, the webhook is registered synchronously
+     * before the executor suspends, so this typically succeeds after a single yield.
      */
     private suspend fun waitUntil(
-        timeoutMs: Long = 5000,
-        intervalMs: Long = 10,
+        maxAttempts: Int = 1000,
         condition: suspend () -> Boolean,
     ) {
-        val deadline = System.currentTimeMillis() + timeoutMs
-        while (System.currentTimeMillis() < deadline) {
+        repeat(maxAttempts) {
             if (condition()) return
-            delay(intervalMs)
+            yield()
         }
-        throw AssertionError("waitUntil timed out after ${timeoutMs}ms")
+        throw AssertionError("waitUntil timed out after $maxAttempts attempts")
     }
 
     // --- TeamCity Build Executor ---
