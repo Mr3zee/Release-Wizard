@@ -2,6 +2,7 @@ package com.github.mr3zee
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.*
 import com.github.mr3zee.api.ProjectApiClient
 import com.github.mr3zee.editor.DagEditorScreen
@@ -349,5 +350,195 @@ class DagEditorScreenTest {
 
         // Now delete should be enabled
         onNodeWithTag("delete_button").assertIsEnabled()
+    }
+
+    // ---- Keyboard shortcuts ----
+
+    @Test
+    fun `Ctrl+Z triggers undo`() = runComposeUiTest {
+        val vm = editorViewModel()
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Add a block so we have something to undo
+        onNodeWithTag("add_block_GITHUB_ACTION").performClick()
+        waitForIdle()
+        onNodeWithTag("undo_button").assertIsEnabled()
+
+        // Press Ctrl+Z on the editor screen
+        onNodeWithTag("dag_editor_screen").performKeyInput {
+            keyDown(Key.CtrlLeft)
+            pressKey(Key.Z)
+            keyUp(Key.CtrlLeft)
+        }
+        waitForIdle()
+
+        // Undo should now be disabled (back to initial state)
+        onNodeWithTag("undo_button").assertIsNotEnabled()
+    }
+
+    @Test
+    fun `redo via button after undo restores block`() = runComposeUiTest {
+        val vm = editorViewModel()
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        onNodeWithTag("redo_button").assertIsNotEnabled()
+
+        // Add a block, then undo
+        onNodeWithTag("add_block_GITHUB_ACTION").performClick()
+        waitForIdle()
+        onNodeWithTag("undo_button").performClick()
+        waitForIdle()
+        onNodeWithTag("redo_button").assertIsEnabled()
+
+        // Click redo
+        onNodeWithTag("redo_button").performClick()
+        waitForIdle()
+
+        // Redo should now be disabled (re-applied)
+        onNodeWithTag("redo_button").assertIsNotEnabled()
+        // Save should be enabled
+        onNodeWithTag("save_button").assertIsEnabled()
+    }
+
+    @Test
+    fun `delete button removes selected block`() = runComposeUiTest {
+        val vm = editorViewModel()
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Select block by clicking on canvas
+        onNodeWithTag("dag_canvas").performTouchInput {
+            click(Offset(190f, 135f))
+        }
+        waitForIdle()
+        onNodeWithTag("delete_button").assertIsEnabled()
+
+        // Click delete button
+        onNodeWithTag("delete_button").performClick()
+        waitForIdle()
+
+        // Block deleted → delete button disabled (nothing selected)
+        onNodeWithTag("delete_button").assertIsNotEnabled()
+        // Properties should show hint again
+        onNodeWithText("Select a block to edit its properties").assertExists()
+    }
+
+    // ---- Properties panel editing ----
+
+    @Test
+    fun `editing block name in properties panel`() = runComposeUiTest {
+        val vm = editorViewModel()
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Select block
+        onNodeWithTag("dag_canvas").performTouchInput {
+            click(Offset(190f, 135f))
+        }
+        waitForIdle()
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("block_name_field").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Clear and type new name
+        onNodeWithTag("block_name_field").performTextClearance()
+        onNodeWithTag("block_name_field").performTextInput("New Name")
+        waitForIdle()
+
+        // Graph should be dirty now
+        onNodeWithTag("save_button").assertIsEnabled()
+    }
+
+    @Test
+    fun `add parameter button adds parameter row`() = runComposeUiTest {
+        val vm = editorViewModel()
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Select block
+        onNodeWithTag("dag_canvas").performTouchInput {
+            click(Offset(190f, 135f))
+        }
+        waitForIdle()
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("add_parameter_button").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Initially no parameter rows (the block has empty parameters)
+        // Click add parameter
+        onNodeWithTag("add_parameter_button").performClick()
+        waitForIdle()
+
+        // Should now have Key/Value fields visible
+        onNodeWithText("Key").assertExists()
+        onNodeWithText("Value").assertExists()
+    }
+
+    @Test
+    fun `container block shows child count in properties`() = runComposeUiTest {
+        val containerProjectJson = """{"project":{"id":"p1","name":"Test Project","description":"","dagGraph":{"blocks":[
+            {"kind":"container","id":"c1","name":"Container","children":{"blocks":[],"edges":[],"positions":{}}}
+        ],"edges":[],"positions":{"c1":{"x":100,"y":100}}},"parameters":[],"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}}"""
+        val vm = editorViewModel(getJson = containerProjectJson)
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Select container
+        onNodeWithTag("dag_canvas").performTouchInput {
+            click(Offset(190f, 135f))
+        }
+        waitForIdle()
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Container block").fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithText("Container block").assertExists()
+        onNodeWithText("0 child blocks").assertExists()
     }
 }

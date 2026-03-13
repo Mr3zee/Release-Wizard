@@ -29,6 +29,7 @@ class AppNavigationTest {
         "/projects" to json("""{"projects":[
             {"id":"p1","name":"Pipeline A","description":"","dagGraph":{"blocks":[],"edges":[],"positions":{}},"parameters":[],"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}
         ]}"""),
+        "/projects/p1" to json("""{"project":{"id":"p1","name":"Pipeline A","description":"","dagGraph":{"blocks":[],"edges":[],"positions":{}},"parameters":[],"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}}"""),
         "/connections" to json("""{"connections":[]}"""),
         "/releases" to json("""{"releases":[]}"""),
     ))
@@ -118,6 +119,45 @@ class AppNavigationTest {
         onNodeWithText("Back").performClick()
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("project_list_screen").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("project_list_screen").assertExists()
+    }
+
+    @Test
+    fun `navigate to editor and back`() = runComposeUiTest {
+        setContent { TestApp(appClient()) }
+
+        waitUntil(timeoutMillis = 5000L) { onAllNodesWithTag("project_list_screen").fetchSemanticsNodes().isNotEmpty() }
+
+        // Click project to navigate to editor
+        onNodeWithTag("project_item_p1").performClick()
+        waitUntil(timeoutMillis = 5000L) { onAllNodesWithTag("dag_editor_screen").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("dag_editor_screen").assertExists()
+        onNodeWithText("Pipeline A").assertExists()
+
+        // Click Back to return
+        onNodeWithText("Back").performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("project_list_screen").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("project_list_screen").assertExists()
+    }
+
+    @Test
+    fun `navigate to connection form and back`() = runComposeUiTest {
+        setContent { TestApp(appClient()) }
+
+        waitUntil(timeoutMillis = 5000L) { onAllNodesWithTag("project_list_screen").fetchSemanticsNodes().isNotEmpty() }
+
+        // Navigate to connections
+        onNodeWithTag("connections_button").performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("connection_list_screen").fetchSemanticsNodes().isNotEmpty() }
+
+        // Click FAB to go to form
+        onNodeWithTag("create_connection_fab").performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("connection_form_screen").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("connection_form_screen").assertExists()
+
+        // Back to connection list
+        onNodeWithText("Back").performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("connection_list_screen").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("connection_list_screen").assertExists()
     }
 
     @Test

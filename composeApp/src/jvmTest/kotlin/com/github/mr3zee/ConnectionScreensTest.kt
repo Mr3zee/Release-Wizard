@@ -207,4 +207,84 @@ class ConnectionScreensTest {
         onNodeWithTag("slack_webhook_url").performTextInput("https://hooks.slack.com/test")
         onNodeWithTag("save_connection_button").assertIsEnabled()
     }
+
+    @Test
+    fun `connection form TeamCity validation requires both fields`() = runComposeUiTest {
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")))
+        setContent {
+            MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = {}) }
+        }
+
+        onNodeWithTag("connection_type_selector").performClick()
+        onNodeWithText("TEAMCITY").performClick()
+
+        onNodeWithTag("connection_name_field").performTextInput("My TC")
+        onNodeWithTag("teamcity_server_url").performTextInput("https://tc.example.com")
+        // Only server URL — save still disabled
+        onNodeWithTag("save_connection_button").assertIsNotEnabled()
+
+        onNodeWithTag("teamcity_token").performTextInput("token123")
+        onNodeWithTag("save_connection_button").assertIsEnabled()
+    }
+
+    @Test
+    fun `connection form Maven Central validation requires both fields`() = runComposeUiTest {
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")))
+        setContent {
+            MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = {}) }
+        }
+
+        onNodeWithTag("connection_type_selector").performClick()
+        onNodeWithText("MAVEN_CENTRAL").performClick()
+
+        onNodeWithTag("connection_name_field").performTextInput("Maven")
+        onNodeWithTag("maven_username").performTextInput("user")
+        onNodeWithTag("save_connection_button").assertIsNotEnabled()
+
+        onNodeWithTag("maven_password").performTextInput("pass")
+        onNodeWithTag("save_connection_button").assertIsEnabled()
+    }
+
+    @Test
+    fun `connection form back button triggers callback`() = runComposeUiTest {
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")))
+        var backClicked = false
+        setContent {
+            MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = { backClicked = true }) }
+        }
+
+        onNodeWithText("Back").performClick()
+        assertTrue(backClicked)
+    }
+
+    @Test
+    fun `connection list error state shows snackbar`() = runComposeUiTest {
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("error", HttpStatusCode.InternalServerError)))
+        setContent {
+            MaterialTheme { ConnectionListScreen(viewModel = vm, onCreateConnection = {}, onEditConnection = {}, onBack = {}) }
+        }
+
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Retry").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithText("Retry").assertExists()
+    }
+
+    @Test
+    fun `connection form GitHub requires all three fields`() = runComposeUiTest {
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")))
+        setContent {
+            MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = {}) }
+        }
+
+        onNodeWithTag("connection_name_field").performTextInput("My GH")
+        onNodeWithTag("github_token").performTextInput("ghp_test")
+        // Only token — save still disabled (owner and repo missing)
+        onNodeWithTag("save_connection_button").assertIsNotEnabled()
+
+        onNodeWithTag("github_owner").performTextInput("owner")
+        // Still missing repo
+        onNodeWithTag("save_connection_button").assertIsNotEnabled()
+
+        onNodeWithTag("github_repo").performTextInput("repo")
+        onNodeWithTag("save_connection_button").assertIsEnabled()
+    }
 }

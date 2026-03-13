@@ -72,4 +72,35 @@ class LoginScreenTest {
         }
         onNodeWithText("Invalid credentials").assertExists()
     }
+
+    @Test
+    fun `sign in button disabled with only password`() = runComposeUiTest {
+        val viewModel = AuthViewModel(AuthApiClient(loginClient()))
+        setContent { MaterialTheme { LoginScreen(viewModel = viewModel) } }
+
+        onNodeWithTag("login_password").performTextInput("pass")
+        onNodeWithTag("login_button").assertIsNotEnabled()
+    }
+
+    @Test
+    fun `error clears when user types in username`() = runComposeUiTest {
+        val client = mockHttpClient(
+            mapOf("/auth/login" to json("""{"error":"bad"}""", HttpStatusCode.Unauthorized))
+        )
+        val viewModel = AuthViewModel(AuthApiClient(client))
+        setContent { MaterialTheme { LoginScreen(viewModel = viewModel) } }
+
+        onNodeWithTag("login_username").performTextInput("admin")
+        onNodeWithTag("login_password").performTextInput("wrong")
+        onNodeWithTag("login_button").performClick()
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Invalid credentials").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Typing in username should dismiss error (LoginScreen calls viewModel.dismissError on value change)
+        onNodeWithTag("login_username").performTextInput("x")
+        waitForIdle()
+        onNodeWithText("Invalid credentials").assertDoesNotExist()
+    }
 }
