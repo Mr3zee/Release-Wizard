@@ -2,6 +2,7 @@ package com.github.mr3zee.execution
 
 import com.github.mr3zee.AppJson
 import com.github.mr3zee.execution.executors.GitHubPublicationExecutor
+import com.github.mr3zee.execution.executors.MavenCentralExecutor
 import com.github.mr3zee.execution.executors.SlackMessageExecutor
 import com.github.mr3zee.model.*
 import io.ktor.client.*
@@ -241,6 +242,92 @@ class ExecutorsTest {
 
         val body = Json.decodeFromString<JsonObject>(capturedBody!!)
         assertEquals("v2.0", body["name"]?.jsonPrimitive?.content)
+    }
+
+    // --- Maven Central Executor ---
+
+    private fun mavenBlock(connectionId: String = "conn-1") = Block.ActionBlock(
+        id = BlockId("maven-1"),
+        name = "Check Maven",
+        type = BlockType.MAVEN_CENTRAL_PUBLICATION,
+        connectionId = ConnectionId(connectionId),
+    )
+
+    private val mavenConfig = ConnectionConfig.MavenCentralConfig(
+        username = "user",
+        password = "pass",
+        baseUrl = "https://central.sonatype.com",
+    )
+
+    @Test
+    fun `maven executor checks deployment by ID`() = runBlocking {
+        var capturedUrl: String? = null
+
+        val client = mockClient { request ->
+            capturedUrl = request.url.toString()
+            respond(
+                """{"deploymentState":"PUBLISHED","deploymentId":"deploy-123"}""",
+                HttpStatusCode.OK,
+                headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+            )
+        }
+
+        val executor = MavenCentralExecutor(client)
+        val outputs = executor.execute(
+            block = mavenBlock(),
+            parameters = listOf(Parameter(key = "deploymentId", value = "deploy-123")),
+            context = context(config = mavenConfig),
+        )
+
+        assertTrue(capturedUrl!!.contains("/api/v1/publisher/deployment/deploy-123"))
+        assertEquals("deploy-123", outputs["repositoryId"])
+        assertEquals("PUBLISHED", outputs["status"])
+    }
+
+    @Test
+    fun `maven executor checks published by coordinates`() = runBlocking {
+        var capturedUrl: String? = null
+
+        val client = mockClient { request ->
+            capturedUrl = request.url.toString()
+            respond(
+                """{"published":"true"}""",
+                HttpStatusCode.OK,
+                headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+            )
+        }
+
+        val executor = MavenCentralExecutor(client)
+        val outputs = executor.execute(
+            block = mavenBlock(),
+            parameters = listOf(
+                Parameter(key = "groupId", value = "com.example"),
+                Parameter(key = "artifactId", value = "mylib"),
+                Parameter(key = "version", value = "1.0.0"),
+            ),
+            context = context(config = mavenConfig),
+        )
+
+        assertTrue(capturedUrl!!.contains("/api/v1/publisher/published"))
+        assertEquals("com.example:mylib:1.0.0", outputs["repositoryId"])
+        assertEquals("PUBLISHED", outputs["status"])
+    }
+
+    @Test
+    fun `maven executor throws on missing parameters`() = runBlocking {
+        val client = mockClient { respond("", HttpStatusCode.OK) }
+        val executor = MavenCentralExecutor(client)
+
+        try {
+            executor.execute(
+                block = mavenBlock(),
+                parameters = emptyList(),
+                context = context(config = mavenConfig),
+            )
+            assertTrue(false, "Should have thrown")
+        } catch (e: IllegalArgumentException) {
+            assertTrue(e.message!!.contains("deploymentId"))
+        }
     }
 
     // --- Missing connection tests ---
