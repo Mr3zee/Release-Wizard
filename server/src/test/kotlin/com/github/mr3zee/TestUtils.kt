@@ -59,9 +59,11 @@ fun testWebhookConfig() = WebhookConfig(
  * - Replaces CIO HttpClient with MockEngine (connection tests and executors don't hit real APIs)
  */
 val testOverrideModule = module {
+    // todo claude: avoid fq names when not necessary
     single<com.github.mr3zee.execution.BlockExecutor> {
         com.github.mr3zee.execution.StubBlockExecutor()
     }
+    // todo claude: avoid fq names when not necessary
     single<io.ktor.client.HttpClient> {
         createTestHttpClient()
     }

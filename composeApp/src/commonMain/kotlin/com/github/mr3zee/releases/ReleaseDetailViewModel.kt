@@ -11,6 +11,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 class ReleaseDetailViewModel(
     private val releaseId: ReleaseId,
@@ -30,6 +31,7 @@ class ReleaseDetailViewModel(
     val error: StateFlow<String?> = _error
 
     private val _reconnectAttempt = MutableStateFlow(0)
+    // todo claude: unused
     val reconnectAttempt: StateFlow<Int> = _reconnectAttempt
 
     private var wsJob: Job? = null
@@ -66,7 +68,7 @@ class ReleaseDetailViewModel(
                 return
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 _isConnected.value = false
                 // Don't reconnect if release is in terminal state
                 val currentRelease = _release.value
@@ -77,7 +79,7 @@ class ReleaseDetailViewModel(
                 _reconnectAttempt.value++
                 // Exponential backoff: 1s, 2s, 4s, 8s, 16s, 30s cap
                 val delayMs = (1000L * (1L shl minOf(_reconnectAttempt.value - 1, 4))).coerceAtMost(30_000L)
-                delay(delayMs)
+                delay(delayMs.milliseconds)
             }
         }
     }

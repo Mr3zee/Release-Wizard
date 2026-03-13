@@ -6,7 +6,6 @@ import com.github.mr3zee.persistence.ConnectionTable
 import com.github.mr3zee.security.EncryptionService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.encodeToString
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction

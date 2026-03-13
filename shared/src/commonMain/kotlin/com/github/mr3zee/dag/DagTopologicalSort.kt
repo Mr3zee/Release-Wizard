@@ -32,6 +32,7 @@ object DagTopologicalSort {
         }
 
         val sorted = mutableListOf<BlockId>()
+        // todo claude: duplicated with DagValidator.kt:80
         while (queue.isNotEmpty()) {
             val node = queue.removeFirst()
             sorted.add(node)

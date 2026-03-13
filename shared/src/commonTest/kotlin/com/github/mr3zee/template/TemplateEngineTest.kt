@@ -10,7 +10,7 @@ class TemplateEngineTest {
     @Test
     fun resolveProjectParameter() {
         val result = TemplateEngine.resolve(
-            "Release version \${param.version}",
+            $$"Release version ${param.version}",
             listOf(Parameter("version", "1.0.0")),
         )
         assertEquals("Release version 1.0.0", result)
@@ -19,7 +19,7 @@ class TemplateEngineTest {
     @Test
     fun resolveBlockOutput() {
         val result = TemplateEngine.resolve(
-            "Build #\${block.build1.buildNumber}",
+            $$"Build #${block.build1.buildNumber}",
             emptyList(),
             mapOf(BlockId("build1") to mapOf("buildNumber" to "42")),
         )
@@ -29,16 +29,16 @@ class TemplateEngineTest {
     @Test
     fun unresolvedExpressionKeptAsIs() {
         val result = TemplateEngine.resolve(
-            "Unknown \${param.missing}",
+            $$"Unknown ${param.missing}",
             emptyList(),
         )
-        assertEquals("Unknown \${param.missing}", result)
+        assertEquals($$"Unknown ${param.missing}", result)
     }
 
     @Test
     fun multipleExpressions() {
         val result = TemplateEngine.resolve(
-            "\${param.name} v\${param.version}",
+            $$"${param.name} v${param.version}",
             listOf(Parameter("name", "MyLib"), Parameter("version", "2.0")),
         )
         assertEquals("MyLib v2.0", result)
@@ -47,7 +47,7 @@ class TemplateEngineTest {
     @Test
     fun resolveParametersList() {
         val blockParams = listOf(
-            Parameter("message", "Release \${param.version} is ready"),
+            Parameter("message", $$"Release ${param.version} is ready"),
             Parameter("channel", "#releases"),
         )
         val projectParams = listOf(Parameter("version", "3.0.0"))
@@ -66,7 +66,7 @@ class TemplateEngineTest {
     @Test
     fun blockOutputWithMultipleParts() {
         val result = TemplateEngine.resolve(
-            "URL: \${block.gh-action.runUrl}",
+            $$"URL: ${block.gh-action.runUrl}",
             emptyList(),
             mapOf(BlockId("gh-action") to mapOf("runUrl" to "https://github.com/run/123")),
         )

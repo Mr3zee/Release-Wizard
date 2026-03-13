@@ -14,8 +14,8 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.coroutines.coroutineContext
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Coroutine-based DAG execution engine.
@@ -24,6 +24,7 @@ import kotlin.time.Clock
  * whose predecessors have all SUCCEEDED. Container blocks recursively execute
  * their sub-DAG. User Action blocks suspend on CompletableDeferred until approved.
  */
+// todo claude: a lot of code duplication in this file, extract functions
 class ExecutionEngine(
     private val repository: ReleasesRepository,
     private val blockExecutor: BlockExecutor,
@@ -108,7 +109,7 @@ class ExecutionEngine(
         }
     }
 
-    suspend fun approveBlock(releaseId: ReleaseId, blockId: BlockId, input: Map<String, String>): Boolean {
+    fun approveBlock(releaseId: ReleaseId, blockId: BlockId, input: Map<String, String>): Boolean {
         val approvalMap = pendingApprovals[releaseId] ?: return false
         val deferred = approvalMap[blockId] ?: return false
         deferred.complete(input)
@@ -174,7 +175,7 @@ class ExecutionEngine(
             repository.setFinished(release.id, finalStatus)
             emitCompletionOnce(release.id, finalStatus, Clock.System.now())
 
-        } catch (e: CancellationException) {
+        } catch (_: CancellationException) {
             if (restartingReleases.contains(release.id)) return
             val executions = repository.findBlockExecutions(release.id)
             for (exec in executions) {
@@ -190,7 +191,7 @@ class ExecutionEngine(
             }
             repository.setFinished(release.id, ReleaseStatus.CANCELLED)
             emitCompletionOnce(release.id, ReleaseStatus.CANCELLED, Clock.System.now())
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             repository.setFinished(release.id, ReleaseStatus.FAILED)
             emitCompletionOnce(release.id, ReleaseStatus.FAILED, Clock.System.now())
         }
@@ -210,7 +211,7 @@ class ExecutionEngine(
         val remaining = sorted.filter { statusMap[it] != BlockStatus.SUCCEEDED }.toMutableList()
 
         while (remaining.isNotEmpty()) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
 
             val ready = remaining.filter { blockId ->
                 val preds = predecessors[blockId] ?: emptySet()
@@ -222,7 +223,7 @@ class ExecutionEngine(
                     it == BlockStatus.RUNNING || it == BlockStatus.WAITING_FOR_INPUT
                 }
                 if (anyRunning) {
-                    delay(50)
+                    delay(50.milliseconds)
                     continue
                 }
                 break
@@ -452,7 +453,8 @@ class ExecutionEngine(
 
             val timeoutMs = block.timeoutSeconds?.let { it * 1000 }
             val outputs = if (timeoutMs != null) {
-                withTimeout(timeoutMs) {
+                // todo claude: use withTimeoutOrNull
+                withTimeout(timeoutMs.milliseconds) {
                     blockExecutor.resume(block, resolvedParams, context)
                 }
             } else {
@@ -629,7 +631,7 @@ class ExecutionEngine(
             log.info("Release {} completed with status {}", release.id.value, finalStatus)
             emitCompletionOnce(release.id, finalStatus, Clock.System.now())
 
-        } catch (e: CancellationException) {
+        } catch (_: CancellationException) {
             if (restartingReleases.contains(release.id)) return
             val executions = repository.findBlockExecutions(release.id)
             for (exec in executions) {
@@ -645,7 +647,7 @@ class ExecutionEngine(
             }
             repository.setFinished(release.id, ReleaseStatus.CANCELLED)
             emitCompletionOnce(release.id, ReleaseStatus.CANCELLED, Clock.System.now())
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             repository.setFinished(release.id, ReleaseStatus.FAILED)
             emitCompletionOnce(release.id, ReleaseStatus.FAILED, Clock.System.now())
         }
@@ -662,7 +664,7 @@ class ExecutionEngine(
     ) {
         val remaining = sorted.toMutableList()
         while (remaining.isNotEmpty()) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
 
             val ready = remaining.filter { blockId ->
                 val preds = predecessors[blockId] ?: emptySet()
@@ -674,7 +676,8 @@ class ExecutionEngine(
                     it == BlockStatus.RUNNING || it == BlockStatus.WAITING_FOR_INPUT
                 }
                 if (anyRunning) {
-                    delay(50)
+                    // todo claude: delays are bad for the application, find another way
+                    delay(50.milliseconds)
                     continue
                 }
                 break
@@ -872,7 +875,8 @@ class ExecutionEngine(
 
                 val timeoutMs = block.timeoutSeconds?.let { it * 1000 }
                 outputs = if (timeoutMs != null) {
-                    withTimeout(timeoutMs) {
+                    // todo claude: use withTimeoutOrNull
+                    withTimeout(timeoutMs.milliseconds) {
                         blockExecutor.execute(block, resolvedParams, context)
                     }
                 } else {

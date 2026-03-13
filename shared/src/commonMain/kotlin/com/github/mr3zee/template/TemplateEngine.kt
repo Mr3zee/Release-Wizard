@@ -11,7 +11,7 @@ import com.github.mr3zee.model.Parameter
  */
 object TemplateEngine {
 
-    private val TEMPLATE_PATTERN = Regex("""\${"$"}\{([^}]+)\}""")
+    private val TEMPLATE_PATTERN = Regex("""\$\{([^}]+)\}""")
 
     fun resolve(
         value: String,

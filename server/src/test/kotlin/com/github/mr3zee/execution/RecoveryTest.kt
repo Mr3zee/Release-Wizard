@@ -1,6 +1,5 @@
 package com.github.mr3zee.execution
 
-import com.github.mr3zee.connections.ConnectionsRepository
 import com.github.mr3zee.model.*
 import com.github.mr3zee.releases.ReleasesRepository
 import com.github.mr3zee.webhooks.*
@@ -270,13 +269,13 @@ class InMemoryReleasesRepository : ReleasesRepository {
 
     override suspend fun setStarted(id: ReleaseId): Boolean {
         val r = releases[id] ?: return false
-        releases[id] = r.copy(status = ReleaseStatus.RUNNING, startedAt = kotlin.time.Clock.System.now())
+        releases[id] = r.copy(status = ReleaseStatus.RUNNING, startedAt = Clock.System.now())
         return true
     }
 
     override suspend fun setFinished(id: ReleaseId, status: ReleaseStatus): Boolean {
         val r = releases[id] ?: return false
-        releases[id] = r.copy(status = status, finishedAt = kotlin.time.Clock.System.now())
+        releases[id] = r.copy(status = status, finishedAt = Clock.System.now())
         return true
     }
 
@@ -340,7 +339,7 @@ class InMemoryWebhookRepo : PendingWebhookRepository {
         externalId: String, blockId: BlockId, releaseId: ReleaseId,
         connectionId: ConnectionId, type: WebhookType,
     ): PendingWebhook {
-        val now = kotlin.time.Clock.System.now()
+        val now = Clock.System.now()
         val wh = PendingWebhook(
             id = "wh-${webhooks.size}", externalId = externalId,
             blockId = blockId, releaseId = releaseId,

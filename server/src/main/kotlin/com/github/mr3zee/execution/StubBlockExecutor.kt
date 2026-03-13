@@ -4,12 +4,14 @@ import com.github.mr3zee.model.Block
 import com.github.mr3zee.model.BlockType
 import com.github.mr3zee.model.Parameter
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Stub executor for all non-user-action block types.
  * Returns simulated outputs based on block type.
  * Real implementations will be added in Phase 6 (Integrations).
  */
+// todo claude: move to tests
 class StubBlockExecutor : BlockExecutor {
     override suspend fun execute(
         block: Block.ActionBlock,
@@ -17,7 +19,7 @@ class StubBlockExecutor : BlockExecutor {
         context: ExecutionContext,
     ): Map<String, String> {
         // Simulate some work
-        delay(100)
+        delay(100.milliseconds)
 
         return when (block.type) {
             BlockType.TEAMCITY_BUILD -> mapOf(

@@ -140,6 +140,7 @@ fun Application.module() {
                 ),
             )
         }
+        // todo claude: avoid fq names when not necessary
         exception<io.ktor.server.plugins.ContentTransformationException> { call, cause ->
             call.application.environment.log.debug("Content transformation error", cause)
             val correlationId = call.attributes.getOrNull(CorrelationIdKey)
@@ -181,6 +182,7 @@ fun Application.module() {
 
     monitor.subscribe(ApplicationStarted) {
         try {
+            // todo claude: avoid fq names when not necessary
             val koin = org.koin.java.KoinJavaComponent.getKoin()
             val recoveryService = koin.getOrNull<RecoveryService>()
             if (recoveryService != null) {
@@ -195,6 +197,7 @@ fun Application.module() {
 
     monitor.subscribe(ApplicationStopped) {
         try {
+            // todo claude: avoid fq names when not necessary
             val koin = org.koin.java.KoinJavaComponent.getKoin()
             koin.getOrNull<ExecutionEngine>()?.shutdown()
             koin.getOrNull<io.ktor.client.HttpClient>()?.close()
@@ -206,6 +209,7 @@ fun Application.module() {
 
 fun Application.configureRouting() {
     routing {
+        // todo claude: add service versioning info, deployment info. serve it here
         get("/") {
             call.respondText("Release Wizard API")
         }

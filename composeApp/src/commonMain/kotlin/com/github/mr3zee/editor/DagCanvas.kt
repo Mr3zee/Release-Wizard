@@ -117,6 +117,7 @@ fun DagCanvas(
             .pointerInput(graph) {
                 awaitPointerEventScope {
                     while (true) {
+                        // todo claude: duplicate with ExecutionDagCanvas.kt:56
                         val event = awaitPointerEvent()
                         if (event.type == PointerEventType.Scroll) {
                             val change = event.changes.firstOrNull() ?: continue

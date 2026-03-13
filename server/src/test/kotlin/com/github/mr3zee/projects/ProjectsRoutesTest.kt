@@ -26,6 +26,7 @@ class ProjectsRoutesTest {
         application { testModule() }
         val client = jsonClient()
         client.login()
+        // todo claude: not ApiRoute
         val response = client.get("/api/v1/projects")
         assertEquals(HttpStatusCode.OK, response.status)
         val body = response.body<ProjectListResponse>()
@@ -38,6 +39,7 @@ class ProjectsRoutesTest {
         val client = jsonClient()
         client.login()
 
+        // todo claude: not ApiRoute
         val createResponse = client.post("/api/v1/projects") {
             contentType(ContentType.Application.Json)
             setBody(CreateProjectRequest(name = "Test Project", description = "A test"))
@@ -60,6 +62,7 @@ class ProjectsRoutesTest {
         val client = jsonClient()
         client.login()
 
+        // todo claude: not ApiRoute
         val response = client.post("/api/v1/projects") {
             contentType(ContentType.Application.Json)
             setBody(CreateProjectRequest(name = ""))
@@ -73,12 +76,14 @@ class ProjectsRoutesTest {
         val client = jsonClient()
         client.login()
 
+        // todo claude: not ApiRoute
         val createResponse = client.post("/api/v1/projects") {
             contentType(ContentType.Application.Json)
             setBody(CreateProjectRequest(name = "Original"))
         }
         val created = createResponse.body<ProjectResponse>()
 
+        // todo claude: not ApiRoute
         val updateResponse = client.put("/api/v1/projects/${created.project.id.value}") {
             contentType(ContentType.Application.Json)
             setBody(UpdateProjectRequest(name = "Updated"))
@@ -96,6 +101,7 @@ class ProjectsRoutesTest {
         val client = jsonClient()
         client.login()
 
+        // todo claude: not ApiRoute
         val response = client.put("/api/v1/projects/00000000-0000-0000-0000-000000000000") {
             contentType(ContentType.Application.Json)
             setBody(UpdateProjectRequest(name = "Nope"))
@@ -109,15 +115,18 @@ class ProjectsRoutesTest {
         val client = jsonClient()
         client.login()
 
+        // todo claude: not ApiRoute
         val createResponse = client.post("/api/v1/projects") {
             contentType(ContentType.Application.Json)
             setBody(CreateProjectRequest(name = "To Delete"))
         }
         val created = createResponse.body<ProjectResponse>()
 
+        // todo claude: not ApiRoute
         val deleteResponse = client.delete("/api/v1/projects/${created.project.id.value}")
         assertEquals(HttpStatusCode.NoContent, deleteResponse.status)
 
+        // todo claude: not ApiRoute
         val getResponse = client.get("/api/v1/projects/${created.project.id.value}")
         assertEquals(HttpStatusCode.NotFound, getResponse.status)
     }
@@ -128,6 +137,7 @@ class ProjectsRoutesTest {
         val client = jsonClient()
         client.login()
 
+        // todo claude: not ApiRoute
         val response = client.delete("/api/v1/projects/00000000-0000-0000-0000-000000000000")
         assertEquals(HttpStatusCode.NotFound, response.status)
     }
@@ -138,6 +148,7 @@ class ProjectsRoutesTest {
         val client = jsonClient()
         client.login()
 
+        // todo claude: not ApiRoute
         val response = client.get("/api/v1/projects/00000000-0000-0000-0000-000000000000")
         assertEquals(HttpStatusCode.NotFound, response.status)
     }
@@ -148,6 +159,7 @@ class ProjectsRoutesTest {
         val client = jsonClient()
         client.login()
 
+        // todo claude: not ApiRoute
         val response = client.get("/api/v1/projects/not-a-uuid")
         assertEquals(HttpStatusCode.BadRequest, response.status)
     }
@@ -158,15 +170,18 @@ class ProjectsRoutesTest {
         val client = jsonClient()
         client.login()
 
+        // todo claude: not ApiRoute
         client.post("/api/v1/projects") {
             contentType(ContentType.Application.Json)
             setBody(CreateProjectRequest(name = "Project A"))
         }
+        // todo claude: not ApiRoute
         client.post("/api/v1/projects") {
             contentType(ContentType.Application.Json)
             setBody(CreateProjectRequest(name = "Project B"))
         }
 
+        // todo claude: not ApiRoute
         val listResponse = client.get("/api/v1/projects")
         val body = listResponse.body<ProjectListResponse>()
         assertEquals(2, body.projects.size)
@@ -176,6 +191,7 @@ class ProjectsRoutesTest {
     fun `unauthenticated request returns 401`() = testApplication {
         application { testModule() }
         val client = jsonClient()
+        // todo claude: not ApiRoute
         val response = client.get("/api/v1/projects")
         assertEquals(HttpStatusCode.Unauthorized, response.status)
     }

@@ -17,6 +17,7 @@ fun Route.webhookRoutes() {
     val webhookService by inject<WebhookService>()
 
     route(ApiRoutes.Webhooks.BASE) {
+        // todo claude: not API route from shared ApiRoutes
         post("/teamcity/{connectionId}") {
             val connectionId = call.requireWebhookConnectionId() ?: return@post
             val secret = call.request.header("X-Webhook-Secret")
@@ -31,6 +32,7 @@ fun Route.webhookRoutes() {
             }
         }
 
+        // todo claude: not API route from shared ApiRoutes
         post("/github/{connectionId}") {
             val connectionId = call.requireWebhookConnectionId() ?: return@post
             val signature = call.request.header("X-Hub-Signature-256")

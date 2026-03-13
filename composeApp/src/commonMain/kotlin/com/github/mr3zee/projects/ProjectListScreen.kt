@@ -17,6 +17,7 @@ import com.github.mr3zee.model.ProjectTemplate
 @Composable
 fun ProjectListScreen(
     viewModel: ProjectListViewModel,
+    // todo claude: unused
     onCreateProject: () -> Unit,
     onEditProject: (ProjectId) -> Unit,
     onConnections: (() -> Unit)? = null,

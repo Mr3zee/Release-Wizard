@@ -4,7 +4,6 @@ import com.github.mr3zee.api.ConnectionTestResult
 import com.github.mr3zee.model.ConnectionConfig
 import io.ktor.client.*
 import io.ktor.client.request.*
-import io.ktor.client.statement.*
 import io.ktor.http.*
 
 /**

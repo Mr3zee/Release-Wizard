@@ -23,6 +23,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.slf4j.LoggerFactory
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Triggers a GitHub Actions workflow and waits for webhook completion.
@@ -60,7 +61,8 @@ class GitHubActionExecutor(
                 // Webhook registered with run ID — subscribe and wait
                 coroutineScope {
                     val completionDeferred = async(start = CoroutineStart.UNDISPATCHED) {
-                        withTimeout(WEBHOOK_TIMEOUT_MS) {
+                        // todo claude: use withTimeoutOrNull
+                        withTimeout(WEBHOOK_TIMEOUT_MS.milliseconds) {
                             webhookService.completions.first { it.blockId == block.id && it.releaseId == context.releaseId }
                         }
                     }
@@ -78,7 +80,8 @@ class GitHubActionExecutor(
                 }
                 coroutineScope {
                     val completionDeferred = async(start = CoroutineStart.UNDISPATCHED) {
-                        withTimeout(WEBHOOK_TIMEOUT_MS) {
+                        // todo claude: use withTimeoutOrNull
+                        withTimeout(WEBHOOK_TIMEOUT_MS.milliseconds) {
                             webhookService.completions.first { it.blockId == block.id && it.releaseId == context.releaseId }
                         }
                     }
@@ -132,7 +135,8 @@ class GitHubActionExecutor(
         // Use UNDISPATCHED start to ensure the collector begins immediately.
         return coroutineScope {
             val completionDeferred = async(start = CoroutineStart.UNDISPATCHED) {
-                withTimeout(WEBHOOK_TIMEOUT_MS) {
+                // todo claude: use withTimeoutOrNull
+                withTimeout(WEBHOOK_TIMEOUT_MS.milliseconds) {
                     webhookService.completions.first { it.blockId == block.id && it.releaseId == context.releaseId }
                 }
             }
@@ -181,7 +185,9 @@ class GitHubActionExecutor(
      */
     private suspend fun discoverRunId(baseUrl: String, workflowFile: String, token: String): String? {
         repeat(RUN_DISCOVERY_RETRIES) { attempt ->
-            if (attempt > 0) delay(RUN_DISCOVERY_DELAY_MS)
+            if (attempt > 0) {
+                delay(RUN_DISCOVERY_DELAY_MS.milliseconds)
+            }
 
             try {
                 val response = httpClient.get("$baseUrl/actions/workflows/$workflowFile/runs?per_page=1") {

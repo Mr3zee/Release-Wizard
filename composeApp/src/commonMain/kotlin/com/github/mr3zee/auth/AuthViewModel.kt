@@ -45,7 +45,7 @@ class AuthViewModel(
             try {
                 val userInfo = apiClient.login(username, password)
                 _user.value = userInfo
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 _error.value = "Invalid credentials"
             } finally {
                 _isLoading.value = false

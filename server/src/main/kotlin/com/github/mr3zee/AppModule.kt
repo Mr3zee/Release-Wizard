@@ -16,6 +16,7 @@ fun appModule(
     dbConfig: DatabaseConfig,
     encryptionConfig: EncryptionConfig,
     authConfig: AuthConfig,
+    // todo claude: base url is hardcoded
     webhookConfig: WebhookConfig = WebhookConfig("http://localhost:8080"),
 ) = module {
     single { dbConfig }

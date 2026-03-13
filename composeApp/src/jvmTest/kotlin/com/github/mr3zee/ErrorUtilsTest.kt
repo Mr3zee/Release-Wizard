@@ -19,6 +19,7 @@ import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.milliseconds
 
 class ErrorUtilsTest {
 
@@ -95,7 +96,8 @@ class ErrorUtilsTest {
         }
 
         val eventDeferred = async {
-            withTimeout(1000) {
+            // todo claude: use withTimeoutOrNull
+            withTimeout(1000.milliseconds) {
                 AuthEventBus.events.first()
             }
         }

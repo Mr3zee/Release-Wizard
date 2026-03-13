@@ -18,7 +18,9 @@ fun Route.releaseWebSocketRoutes() {
     val service by inject<ReleasesService>()
     val engine by inject<ExecutionEngine>()
 
+    // todo claude: not API route from shared ApiRoutes
     route("/api/v1/releases/{id}") {
+        // todo claude: not API route from shared ApiRoutes
         webSocket("/ws") {
             val idParam = call.parameters["id"]
             if (idParam == null) {

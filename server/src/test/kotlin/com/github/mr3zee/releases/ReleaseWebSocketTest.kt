@@ -171,6 +171,7 @@ class ReleaseWebSocketTest {
         val wsClient = wsClient()
         wsClient.login()
 
+        // todo claude: not ApiRoute
         wsClient.webSocket("/api/v1/releases/00000000-0000-0000-0000-000000000000/ws") {
             val reason = closeReason.await()
             assertEquals(CloseReason.Codes.VIOLATED_POLICY, reason?.knownReason)

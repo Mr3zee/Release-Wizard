@@ -19,6 +19,7 @@ import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.slf4j.LoggerFactory
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Triggers a TeamCity build and waits for webhook completion.
@@ -56,7 +57,8 @@ class TeamCityBuildExecutor(
                 // Webhook registered but not yet received — subscribe and wait
                 coroutineScope {
                     val completionDeferred = async(start = CoroutineStart.UNDISPATCHED) {
-                        withTimeout(WEBHOOK_TIMEOUT_MS) {
+                        // todo claude: use withTimeoutOrNull
+                        withTimeout(WEBHOOK_TIMEOUT_MS.milliseconds) {
                             webhookService.completions.first { it.blockId == block.id && it.releaseId == context.releaseId }
                         }
                     }
@@ -117,7 +119,8 @@ class TeamCityBuildExecutor(
         // thread, guaranteeing subscription is active before we register the webhook.
         return coroutineScope {
             val completionDeferred = async(start = CoroutineStart.UNDISPATCHED) {
-                withTimeout(WEBHOOK_TIMEOUT_MS) {
+                // todo claude: use withTimeoutOrNull
+                withTimeout(WEBHOOK_TIMEOUT_MS.milliseconds) {
                     webhookService.completions.first { it.blockId == block.id && it.releaseId == context.releaseId }
                 }
             }
