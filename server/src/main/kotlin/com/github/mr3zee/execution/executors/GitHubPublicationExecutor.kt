@@ -13,6 +13,7 @@ import io.ktor.http.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import org.slf4j.LoggerFactory
 
 /**
  * Creates a GitHub release via the GitHub API.
@@ -24,6 +25,8 @@ import kotlinx.serialization.json.jsonPrimitive
 class GitHubPublicationExecutor(
     private val httpClient: HttpClient,
 ) : BlockExecutor {
+
+    private val log = LoggerFactory.getLogger(GitHubPublicationExecutor::class.java)
 
     override suspend fun resume(
         block: Block.ActionBlock,
@@ -89,7 +92,9 @@ class GitHubPublicationExecutor(
         }
 
         if (!response.status.isSuccess()) {
-            throw RuntimeException("GitHub release creation failed: ${response.status} - ${response.bodyAsText()}")
+            val errorBody = response.bodyAsText()
+            log.warn("GitHub release creation failed: {} - {}", response.status, errorBody)
+            throw RuntimeException("GitHub release creation failed (HTTP ${response.status.value})")
         }
 
         val responseBody = response.body<JsonObject>()

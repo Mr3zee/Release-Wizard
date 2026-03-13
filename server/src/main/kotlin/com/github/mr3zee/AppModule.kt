@@ -5,6 +5,7 @@ import com.github.mr3zee.persistence.initDatabase
 import com.github.mr3zee.security.EncryptionService
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.serialization.kotlinx.json.*
 import org.jetbrains.exposed.v1.jdbc.Database
@@ -28,6 +29,11 @@ fun appModule(
         HttpClient(CIO) {
             install(ContentNegotiation) {
                 json(AppJson)
+            }
+            install(HttpTimeout) {
+                requestTimeoutMillis = 30_000
+                connectTimeoutMillis = 10_000
+                socketTimeoutMillis = 30_000
             }
         }
     }

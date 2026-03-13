@@ -12,6 +12,7 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import org.slf4j.LoggerFactory
 
 /**
  * Checks Maven Central publication status via the Central Portal API.
@@ -26,6 +27,8 @@ import kotlinx.serialization.json.jsonPrimitive
 class MavenCentralExecutor(
     private val httpClient: HttpClient,
 ) : BlockExecutor {
+
+    private val log = LoggerFactory.getLogger(MavenCentralExecutor::class.java)
 
     override suspend fun execute(
         block: Block.ActionBlock,
@@ -63,7 +66,9 @@ class MavenCentralExecutor(
         }
 
         if (!response.status.isSuccess()) {
-            throw RuntimeException("Maven Central deployment check failed: ${response.status} - ${response.bodyAsText()}")
+            val errorBody = response.bodyAsText()
+            log.warn("Maven Central deployment check failed: {} - {}", response.status, errorBody)
+            throw RuntimeException("Maven Central deployment check failed (HTTP ${response.status.value})")
         }
 
         val body = response.body<JsonObject>()
@@ -90,7 +95,9 @@ class MavenCentralExecutor(
         }
 
         if (!response.status.isSuccess()) {
-            throw RuntimeException("Maven Central published check failed: ${response.status} - ${response.bodyAsText()}")
+            val errorBody = response.bodyAsText()
+            log.warn("Maven Central published check failed: {} - {}", response.status, errorBody)
+            throw RuntimeException("Maven Central published check failed (HTTP ${response.status.value})")
         }
 
         val body = response.body<JsonObject>()

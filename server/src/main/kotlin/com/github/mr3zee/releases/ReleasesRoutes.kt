@@ -93,8 +93,16 @@ private fun io.ktor.server.application.ApplicationCall.requireReleaseId(): Relea
     return ReleaseId(raw)
 }
 
+private val BLOCK_ID_PATTERN = Regex("^[a-zA-Z0-9_.-]+$")
+
 private fun io.ktor.server.application.ApplicationCall.requireBlockId(): BlockId {
     val raw = parameters["blockId"]
         ?: throw IllegalArgumentException("Missing blockId")
+    if (raw.length > 100) {
+        throw IllegalArgumentException("Invalid block ID: too long")
+    }
+    if (!BLOCK_ID_PATTERN.matches(raw)) {
+        throw IllegalArgumentException("Invalid block ID format")
+    }
     return BlockId(raw)
 }

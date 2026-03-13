@@ -18,3 +18,11 @@ captures
 **/xcshareddata/WorkspaceSettings.xcsettings
 
 server/src/main/resources/static
+
+# Secrets and credentials
+.env*
+*.key
+*.pem
+*.jks
+*.p12
+secrets.properties

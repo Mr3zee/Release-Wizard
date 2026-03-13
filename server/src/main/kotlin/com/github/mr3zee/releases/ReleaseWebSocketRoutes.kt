@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import org.koin.ktor.ext.inject
+import java.util.UUID
 
 fun Route.releaseWebSocketRoutes() {
     val service by inject<ReleasesService>()
@@ -22,6 +23,13 @@ fun Route.releaseWebSocketRoutes() {
             val idParam = call.parameters["id"]
             if (idParam == null) {
                 close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Missing release id"))
+                return@webSocket
+            }
+
+            try {
+                UUID.fromString(idParam)
+            } catch (_: IllegalArgumentException) {
+                close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Invalid release ID format"))
                 return@webSocket
             }
 

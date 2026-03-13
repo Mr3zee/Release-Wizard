@@ -6,6 +6,7 @@ import com.github.mr3zee.auth.authModule
 import com.github.mr3zee.connections.connectionsModule
 import com.github.mr3zee.plugins.CorrelationId
 import com.github.mr3zee.plugins.CorrelationIdKey
+import com.github.mr3zee.plugins.RequestSizeLimit
 import com.github.mr3zee.plugins.healthRoute
 import com.github.mr3zee.projects.projectsModule
 import com.github.mr3zee.releases.releasesModule
@@ -17,6 +18,8 @@ import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.plugins.defaultheaders.*
+import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import io.ktor.server.sessions.*
@@ -80,6 +83,20 @@ fun Application.testModule() {
         )
     }
 
+    install(DefaultHeaders) {
+        header("X-Content-Type-Options", "nosniff")
+        header("X-Frame-Options", "DENY")
+        header("Referrer-Policy", "strict-origin-when-cross-origin")
+    }
+
+    install(RequestSizeLimit)
+
+    install(RateLimit) {
+        register(RateLimitName("login")) {
+            rateLimiter(limit = 10, refillPeriod = 60.seconds)
+        }
+    }
+
     install(CorrelationId)
 
     install(Sessions) {
@@ -87,6 +104,7 @@ fun Application.testModule() {
             cookie.path = "/"
             cookie.maxAgeInSeconds = 86400
             cookie.httpOnly = true
+            cookie.extensions["SameSite"] = "Lax"
             transform(SessionTransportTransformerMessageAuthentication(hex(authConfig.sessionSignKey)))
         }
     }
@@ -126,22 +144,24 @@ fun Application.testModule() {
             )
         }
         exception<SerializationException> { call, cause ->
+            call.application.environment.log.debug("Serialization error", cause)
             val correlationId = call.attributes.getOrNull(CorrelationIdKey)
             call.respond(
                 HttpStatusCode.BadRequest,
                 ErrorResponse(
-                    error = cause.message ?: "Invalid request body",
+                    error = "Invalid request body",
                     code = "INVALID_BODY",
                     correlationId = correlationId,
                 ),
             )
         }
         exception<io.ktor.server.plugins.ContentTransformationException> { call, cause ->
+            call.application.environment.log.debug("Content transformation error", cause)
             val correlationId = call.attributes.getOrNull(CorrelationIdKey)
             call.respond(
                 HttpStatusCode.BadRequest,
                 ErrorResponse(
-                    error = cause.message ?: "Invalid request body",
+                    error = "Invalid request body",
                     code = "INVALID_BODY",
                     correlationId = correlationId,
                 ),

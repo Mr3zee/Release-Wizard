@@ -9,6 +9,7 @@ import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import org.slf4j.LoggerFactory
 
 /**
  * Sends a message via Slack incoming webhook.
@@ -19,6 +20,8 @@ import io.ktor.http.*
 class SlackMessageExecutor(
     private val httpClient: HttpClient,
 ) : BlockExecutor {
+
+    private val log = LoggerFactory.getLogger(SlackMessageExecutor::class.java)
 
     override suspend fun resume(
         block: Block.ActionBlock,
@@ -55,7 +58,9 @@ class SlackMessageExecutor(
         }
 
         if (!response.status.isSuccess()) {
-            throw RuntimeException("Slack webhook failed: ${response.status} - ${response.bodyAsText()}")
+            val errorBody = response.bodyAsText()
+            log.warn("Slack webhook failed: {} - {}", response.status, errorBody)
+            throw RuntimeException("Slack webhook failed (HTTP ${response.status.value})")
         }
 
         return buildMap {

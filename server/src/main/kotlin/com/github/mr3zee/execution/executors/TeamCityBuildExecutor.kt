@@ -103,7 +103,9 @@ class TeamCityBuildExecutor(
         }
 
         if (!triggerResponse.status.isSuccess()) {
-            throw RuntimeException("TeamCity build trigger failed: ${triggerResponse.status} - ${triggerResponse.bodyAsText()}")
+            val errorBody = triggerResponse.bodyAsText()
+            log.warn("TeamCity build trigger failed: {} - {}", triggerResponse.status, errorBody)
+            throw RuntimeException("TeamCity build trigger failed (HTTP ${triggerResponse.status.value})")
         }
 
         val responseBody = triggerResponse.body<JsonObject>()

@@ -42,7 +42,10 @@ class WebhookService(
             ?: return WebhookResult.InvalidConnectionType
 
         if (config.webhookSecret.isNotEmpty()) {
-            if (webhookSecret != config.webhookSecret) {
+            if (webhookSecret == null || !MessageDigest.isEqual(
+                    webhookSecret.toByteArray(Charsets.UTF_8),
+                    config.webhookSecret.toByteArray(Charsets.UTF_8)
+                )) {
                 log.warn("Invalid webhook secret for TeamCity connection {}", connectionId.value)
                 return WebhookResult.InvalidSecret
             }

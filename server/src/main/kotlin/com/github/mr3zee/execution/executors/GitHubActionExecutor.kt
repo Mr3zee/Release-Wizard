@@ -119,7 +119,9 @@ class GitHubActionExecutor(
         }
 
         if (dispatchResponse.status != HttpStatusCode.NoContent && !dispatchResponse.status.isSuccess()) {
-            throw RuntimeException("GitHub workflow dispatch failed: ${dispatchResponse.status} - ${dispatchResponse.bodyAsText()}")
+            val errorBody = dispatchResponse.bodyAsText()
+            log.warn("GitHub workflow dispatch failed: {} - {}", dispatchResponse.status, errorBody)
+            throw RuntimeException("GitHub workflow dispatch failed (HTTP ${dispatchResponse.status.value})")
         }
 
         // Discover the run ID by polling the runs list

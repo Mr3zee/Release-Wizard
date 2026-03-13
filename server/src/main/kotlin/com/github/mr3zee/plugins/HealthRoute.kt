@@ -8,12 +8,15 @@ import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.koin.ktor.ext.inject
+import org.slf4j.LoggerFactory
 
 @Serializable
 data class HealthStatus(
     val status: String,
     val error: String? = null,
 )
+
+private val log = LoggerFactory.getLogger("com.github.mr3zee.plugins.HealthRoute")
 
 fun Route.healthRoute() {
     val db by inject<Database>()
@@ -25,7 +28,8 @@ fun Route.healthRoute() {
             }
             call.respond(HealthStatus(status = "UP"))
         } catch (e: Exception) {
-            call.respond(HttpStatusCode.ServiceUnavailable, HealthStatus(status = "DOWN", error = e.message))
+            log.warn("Health check failed", e)
+            call.respond(HttpStatusCode.ServiceUnavailable, HealthStatus(status = "DOWN", error = "Database unavailable"))
         }
     }
 }
