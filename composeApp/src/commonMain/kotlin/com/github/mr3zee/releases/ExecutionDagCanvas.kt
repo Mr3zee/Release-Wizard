@@ -53,6 +53,7 @@ fun ExecutionDagCanvas(
             .pointerInput(graph) {
                 awaitPointerEventScope {
                     while (true) {
+                        // todo claude: duplicate 10 lines
                         val event = awaitPointerEvent()
                         if (event.type == PointerEventType.Scroll) {
                             val change = event.changes.firstOrNull() ?: continue

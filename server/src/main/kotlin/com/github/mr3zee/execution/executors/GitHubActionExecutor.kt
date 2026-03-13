@@ -61,6 +61,7 @@ class GitHubActionExecutor(
             webhook != null && webhook.status == WebhookStatus.PENDING && webhook.externalId.isNotEmpty() -> {
                 // Webhook registered with run ID — subscribe and wait
                 coroutineScope {
+                    // todo claude: duplicate 7 lines
                     val completionDeferred = async(start = CoroutineStart.UNDISPATCHED) {
                         withTimeoutOrNull(WEBHOOK_TIMEOUT_MS.milliseconds) {
                             webhookService.completions.first { it.blockId == block.id && it.releaseId == context.releaseId }
@@ -80,6 +81,7 @@ class GitHubActionExecutor(
                     webhookRepository.updateExternalId(webhook.id, runId)
                 }
                 coroutineScope {
+                    // todo claude: duplicate 7 lines
                     val completionDeferred = async(start = CoroutineStart.UNDISPATCHED) {
                         withTimeoutOrNull(WEBHOOK_TIMEOUT_MS.milliseconds) {
                             webhookService.completions.first { it.blockId == block.id && it.releaseId == context.releaseId }

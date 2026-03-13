@@ -47,7 +47,7 @@ class SlackMessageExecutor(
             ?: throw IllegalArgumentException("Slack Message requires 'text' parameter")
         val channel = parameters.find { it.key == "channel" }?.value
 
-        val body = buildMap<String, String> {
+        val body = buildMap {
             put("text", text)
             if (channel != null) put("channel", channel)
         }

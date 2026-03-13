@@ -9,8 +9,11 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.yield
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -206,7 +209,7 @@ class ReleasesRoutesTest {
         }.body<ReleaseResponse>()
 
         // Launch await in background — it will block until the release completes
-        val awaitScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default)
+        val awaitScope = CoroutineScope(Dispatchers.Default)
         val awaitDeferred = awaitScope.async {
             client.post(ApiRoutes.Releases.await(created.release.id.value))
                 .body<ReleaseResponse>()
@@ -219,7 +222,7 @@ class ReleasesRoutesTest {
                 setBody(ApproveBlockRequest(input = mapOf("approved" to "true")))
             }
             if (resp.status == HttpStatusCode.OK) break
-            kotlinx.coroutines.yield()
+            yield()
         }
 
         val result = awaitDeferred.await()

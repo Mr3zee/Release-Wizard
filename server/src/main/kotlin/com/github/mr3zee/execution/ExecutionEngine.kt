@@ -157,6 +157,7 @@ class ExecutionEngine(
 
             // Rebuild status/outputs from persisted executions
             val execMap = persistedExecutions.associateBy { it.blockId }
+            // todo claude: duplicate 7 lines
             for (block in graph.blocks) {
                 val exec = execMap[block.id]
                 statusMap[block.id] = exec?.status ?: BlockStatus.WAITING
@@ -179,6 +180,7 @@ class ExecutionEngine(
             repository.setFinished(release.id, finalStatus)
             emitCompletionOnce(release.id, finalStatus, Clock.System.now())
 
+            // todo claude: duplicate 16 lines
         } catch (_: CancellationException) {
             if (restartingReleases.contains(release.id)) return
             val executions = repository.findBlockExecutions(release.id)
@@ -214,6 +216,7 @@ class ExecutionEngine(
         val remaining = sorted.filter { statusMap[it] != BlockStatus.SUCCEEDED }.toMutableList()
 
         while (remaining.isNotEmpty()) {
+            // todo claude: duplicate 19 lines
             currentCoroutineContext().ensureActive()
 
             val ready = remaining.filter { blockId ->
@@ -287,6 +290,7 @@ class ExecutionEngine(
             statusMap = statusMap,
             outputsMap = outputsMap,
             initChildren = { childGraph, childStatusMap, childOutputsMap ->
+                // todo claude: duplicate 7 lines
                 for (child in childGraph.blocks) {
                     val childExec = childExecMap[child.id]
                     childStatusMap[child.id] = childExec?.status ?: BlockStatus.WAITING
@@ -330,6 +334,7 @@ class ExecutionEngine(
                 val outputs = deferred.await()
                 pendingApprovals[release.id]?.remove(block.id)
 
+                // todo claude: duplicate 11 lines
                 outputsMap[block.id] = outputs
                 statusMap[block.id] = BlockStatus.SUCCEEDED
                 val succeededExec = BlockExecution(
@@ -370,6 +375,7 @@ class ExecutionEngine(
         persistAndEmit(release.id, runningExec)
 
         try {
+            // todo claude: duplicate 22 lines
             val resolvedParams = TemplateEngine.resolveParameters(
                 block.parameters,
                 release.parameters,
@@ -400,6 +406,7 @@ class ExecutionEngine(
                 blockExecutor.resume(block, resolvedParams, context)
             }
 
+            // todo claude: duplicate 11 lines
             outputsMap[block.id] = outputs
             statusMap[block.id] = BlockStatus.SUCCEEDED
             val succeededExec = BlockExecution(
@@ -411,6 +418,7 @@ class ExecutionEngine(
                 finishedAt = Clock.System.now(),
             )
             persistAndEmit(release.id, succeededExec)
+            // todo claude: duplicate 15 lines
         } catch (e: CancellationException) {
             if (!restartingReleases.contains(release.id)) {
                 statusMap[block.id] = BlockStatus.FAILED
@@ -425,6 +433,7 @@ class ExecutionEngine(
                 persistAndEmit(release.id, cancelledExec)
             }
             throw e
+            // todo claude: duplicate 12 lines
         } catch (e: Exception) {
             statusMap[block.id] = BlockStatus.FAILED
             val failedExec = BlockExecution(
@@ -561,6 +570,7 @@ class ExecutionEngine(
             log.info("Release {} completed with status {}", release.id.value, finalStatus)
             emitCompletionOnce(release.id, finalStatus, Clock.System.now())
 
+            // todo claude: duplicate 16 lines
         } catch (_: CancellationException) {
             if (restartingReleases.contains(release.id)) return
             val executions = repository.findBlockExecutions(release.id)
@@ -593,6 +603,7 @@ class ExecutionEngine(
     ) {
         val remaining = sorted.toMutableList()
         while (remaining.isNotEmpty()) {
+            // todo claude: duplicate 20 lines
             currentCoroutineContext().ensureActive()
 
             val ready = remaining.filter { blockId ->
@@ -801,6 +812,7 @@ class ExecutionEngine(
                 outputs = deferred.await()
                 pendingApprovals[release.id]?.remove(block.id)
             } else {
+                // todo claude: duplicate 22 lines
                 val resolvedParams = TemplateEngine.resolveParameters(
                     block.parameters,
                     release.parameters,
@@ -832,6 +844,7 @@ class ExecutionEngine(
                 }
             }
 
+            // todo claude: duplicate 11 lines
             outputsMap[block.id] = outputs
             statusMap[block.id] = BlockStatus.SUCCEEDED
             val succeededExec = BlockExecution(
@@ -843,6 +856,7 @@ class ExecutionEngine(
                 finishedAt = Clock.System.now(),
             )
             persistAndEmit(release.id, succeededExec)
+            // todo claude: duplicate 15 lines
         } catch (e: CancellationException) {
             if (!restartingReleases.contains(release.id)) {
                 statusMap[block.id] = BlockStatus.FAILED
@@ -857,6 +871,7 @@ class ExecutionEngine(
                 persistAndEmit(release.id, cancelledExec)
             }
             throw e
+            // todo claude: duplicate 12 lines
         } catch (e: Exception) {
             statusMap[block.id] = BlockStatus.FAILED
             val failedExec = BlockExecution(

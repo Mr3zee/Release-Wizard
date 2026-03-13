@@ -14,6 +14,7 @@ class ConnectionApiClient(private val client: HttpClient) {
         return response.body<ConnectionListResponse>()
     }
 
+    // todo claude: unused
     suspend fun getConnection(id: ConnectionId): Connection {
         val response = client.get(serverUrl(ApiRoutes.Connections.byId(id.value)))
         return response.body<ConnectionResponse>().connection

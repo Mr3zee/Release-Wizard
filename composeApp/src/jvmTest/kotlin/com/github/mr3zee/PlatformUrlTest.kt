@@ -3,6 +3,7 @@ package com.github.mr3zee
 import com.github.mr3zee.api.platformHttpBaseUrl
 import com.github.mr3zee.api.platformWsBaseUrl
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class PlatformUrlTest {
@@ -34,6 +35,6 @@ class PlatformUrlTest {
         // Strip protocol
         val httpHost = http.substringAfter("://")
         val wsHost = ws.substringAfter("://")
-        assertTrue(httpHost == wsHost, "HTTP ($httpHost) and WS ($wsHost) should target same host")
+        assertEquals(httpHost, wsHost, "HTTP ($httpHost) and WS ($wsHost) should target same host")
     }
 }

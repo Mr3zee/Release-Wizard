@@ -184,13 +184,14 @@ class ProjectListScreenTest {
         val client = HttpClient(MockEngine { request ->
             val path = request.url.encodedPath
             val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-            when {
-                request.method == HttpMethod.Get && path.endsWith("/projects") ->
+            when (request.method) {
+                HttpMethod.Get if path.endsWith("/projects") ->
                     respond(createdListJson, status = HttpStatusCode.OK, headers = jsonHeaders)
-                request.method == HttpMethod.Post && path.endsWith("/projects") ->
+
+                HttpMethod.Post if path.endsWith("/projects") ->
                     respond(createdProjectJson, status = HttpStatusCode.Created, headers = jsonHeaders)
-                else ->
-                    respond("{}", status = HttpStatusCode.OK, headers = jsonHeaders)
+
+                else -> respond("{}", status = HttpStatusCode.OK, headers = jsonHeaders)
             }
         }) {
             install(ContentNegotiation) { json(AppJson) }

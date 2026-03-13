@@ -9,6 +9,7 @@ import io.ktor.http.*
 /**
  * Tests connections by making lightweight API calls to verify credentials and reachability.
  */
+// todo claude: move to tests
 class ConnectionTester(
     private val httpClient: HttpClient,
 ) {

@@ -24,6 +24,7 @@ fun Route.healthRoute() {
     get(ApiRoutes.HEALTH) {
         try {
             transaction(db) {
+                @Suppress("SqlNoDataSourceInspection")
                 exec("SELECT 1")
             }
             call.respond(HealthStatus(status = "UP"))

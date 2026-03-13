@@ -17,7 +17,6 @@ import com.github.mr3zee.releases.releaseWebSocketRoutes
 import com.github.mr3zee.releases.releasesModule
 import com.github.mr3zee.webhooks.webhookRoutes
 import com.github.mr3zee.webhooks.webhooksModule
-import io.ktor.events.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*

@@ -33,6 +33,7 @@ class GitHubPublicationExecutor(
         parameters: List<Parameter>,
         context: ExecutionContext,
     ): Map<String, String> {
+        // todo claude: duplicate 7 lines
         val connectionId = block.connectionId
             ?: throw IllegalStateException("GitHub Publication block requires a connection")
         val config = context.connections[connectionId] as? ConnectionConfig.GitHubConfig
@@ -64,6 +65,7 @@ class GitHubPublicationExecutor(
         parameters: List<Parameter>,
         context: ExecutionContext,
     ): Map<String, String> {
+        // todo claude: duplicate 7 lines
         val connectionId = block.connectionId
             ?: throw IllegalStateException("GitHub Publication block requires a connection")
         val config = context.connections[connectionId] as? ConnectionConfig.GitHubConfig
@@ -109,6 +111,7 @@ class GitHubPublicationExecutor(
 
     @Serializable
     private data class CreateReleaseBody(
+        @Suppress("PropertyName")
         val tag_name: String,
         val name: String,
         val body: String,

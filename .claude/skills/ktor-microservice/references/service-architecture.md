@@ -233,15 +233,3 @@ fun fireAndForget() { GlobalScope.launch { /* ... */ } }
 // BAD: bare transaction {} in suspend function — blocks coroutine thread
 suspend fun findAll() = transaction { ... }
 ```
-
-### Application-level background tasks
-
-The only acceptable place for a standalone `CoroutineScope` is application-level background work (e.g., periodic cleanup). Tie it to the Ktor lifecycle:
-
-```kotlin
-fun Application.configureBackgroundTasks() {
-    val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    environment.monitor.subscribe(ApplicationStopped) { scope.cancel() }
-    scope.launch { periodicCleanup() }
-}
-```
