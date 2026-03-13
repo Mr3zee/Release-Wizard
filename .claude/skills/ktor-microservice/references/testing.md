@@ -93,6 +93,47 @@ private fun ApplicationTestBuilder.jsonClient() = createClient {
 - Update preserves `createdAt`, changes `updatedAt`
 - Blank/empty required fields → 400
 
+## WebSocket testing
+
+When the server uses `install(WebSockets)`, the test module must also install it:
+```kotlin
+fun Application.testModule() {
+    install(WebSockets) { pingPeriod = 15.seconds; timeout = 15.seconds }
+    // ... rest of setup
+}
+```
+
+Create a WS-capable test client alongside the JSON client:
+```kotlin
+private fun ApplicationTestBuilder.wsClient() = createClient {
+    install(io.ktor.client.plugins.websocket.WebSockets)
+    install(ClientContentNegotiation) { json(AppJson) }
+    install(HttpCookies)
+}
+```
+
+Test pattern — connect, receive events, assert:
+```kotlin
+@Test
+fun `connect and receive snapshot`() = testApplication {
+    application { testModule() }
+    val httpClient = jsonClient()
+    httpClient.login()
+    // ... create release via REST
+    val wsClient = wsClient()
+    wsClient.login()  // session cookie needed for auth
+
+    wsClient.webSocket("/api/v1/releases/${id}/ws") {
+        val frame = incoming.receive()
+        assertIs<Frame.Text>(frame)
+        val event = AppJson.decodeFromString(ReleaseEvent.serializer(), frame.readText())
+        assertIs<ReleaseEvent.Snapshot>(event)
+    }
+}
+```
+
+**Key gotcha — subscribe-before-snapshot race condition:** When a WebSocket handler sends a snapshot then subscribes to a SharedFlow, events emitted between the query and subscription are lost. Fix: subscribe to the flow first, buffer events via `Channel`, then query and send the snapshot.
+
 ## Commands
 
 - Run all tests: `./gradlew :server:test`

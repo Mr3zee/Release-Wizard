@@ -152,11 +152,35 @@ class MyScreenTest {
 - Test error states (API 500) alongside happy paths and empty states
 - Mock route keys are path suffixes like `"/projects"`, matched against full `/api/v1/projects`
 
+**Canvas / pointer input testing:**
+Canvas composables use raw `pointerInput` — no semantics nodes for drawn shapes. Test via coordinate-based gestures:
+```kotlin
+// Touch input on Canvas (coordinates relative to the node)
+onNodeWithTag("dag_canvas").performTouchInput {
+    click(Offset(190f, 135f))           // click at position
+    down(Offset(190f, 135f))            // press
+    moveTo(Offset(250f, 195f))          // drag (must exceed 2px threshold)
+    up()                                // release
+}
+```
+- Test density is 1.0 on JVM → dp == px. Block at `BlockPosition(100, 100)` is at screen pixel (100, 100).
+- Block center = `(pos.x + BLOCK_WIDTH/2, pos.y + BLOCK_HEIGHT/2)` = `(190, 135)` for a block at (100, 100).
+- Output port = `(pos.x + BLOCK_WIDTH, pos.y + BLOCK_HEIGHT/2)`, input port = `(pos.x, pos.y + BLOCK_HEIGHT/2)`.
+
+**Gotchas:**
+- **`useUnmergedTree = true`** — required when asserting testTags inside merged semantics containers (Card, Surface, Row in TopAppBar). Without it, the tag is invisible in the merged tree. Always use for badges/chips inside cards.
+- **`performKeyInput` + `onKeyEvent`** — keyboard events via `performKeyInput` don't reliably reach `Modifier.onKeyEvent` on Scaffold in Compose Desktop tests. `Ctrl+Z` works but `Ctrl+Shift+Z` and `Delete` may not. Test keyboard shortcuts via their button equivalents instead.
+- **`waitUntil` signature** — first positional param is `conditionDescription: String?`, NOT timeout. Always use named: `waitUntil(timeoutMillis = 3000L) { ... }`.
+- **Mock route method matching** — use `method = null` when same path handles GET + PUT (e.g., project endpoint). Map keys must be unique, so you can't have two entries for the same path with different methods unless one uses `method = null` (matches any).
+
 **Existing test files:**
-- `LoginScreenTest` — render, button enable/disable, error display
-- `ProjectListScreenTest` — data display, empty/error states, dialog, callbacks
-- `ConnectionScreensTest` — list, form fields, validation, callbacks
-- `AppNavigationTest` — session auto-login, navigation, logout, login flow
+- `DagCanvasTest` — block click/select, drag move, edge creation (port-to-port drag), edge selection, pan, z-order
+- `DagEditorScreenTest` — load, save dirty/clean, add block/container, undo/redo, delete, properties panel, name editing
+- `LoginScreenTest` — render, button enable/disable, error display, error clears on typing
+- `ProjectListScreenTest` — data display, empty/error states, dialog, delete confirmation, callbacks
+- `ConnectionScreensTest` — list, form fields per type (Slack/TeamCity/GitHub/Maven), validation per type, delete dialog, callbacks
+- `ReleaseScreensTest` — list with status badges, detail with DAG, block detail panel (status/error/outputs/approve), callbacks
+- `AppNavigationTest` — session auto-login, navigation (connections, releases, editor round-trips), logout, login flow
 
 ## Source Code Receipts
 

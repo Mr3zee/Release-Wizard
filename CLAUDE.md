@@ -51,8 +51,10 @@ Key types: `Block` (sealed, uses `@JsonClassDiscriminator("kind")`), `DagGraph`,
 - Auth at Ktor level, credentials stored securely
 - Add new dependencies through `gradle/libs.versions.toml`, never hardcode versions
 - Never use `delay()` in tests — use `waitUntil` or `awaitExecution` patterns
-- Server conventions (Exposed 1.x packages, Koin wiring, testing) → see **ktor-microservice** skill
-- Compose UI patterns and testing → see **jetpack-compose-expert** skill
+- WebSocket SharedFlow: always subscribe before querying snapshot to prevent race conditions
+- `useUnmergedTree = true` when asserting testTags inside Card/Surface/merged containers
+- Server conventions (Exposed 1.x packages, Koin wiring, WebSocket testing) → see **ktor-microservice** skill
+- Compose UI patterns, canvas testing, and gotchas → see **jetpack-compose-expert** skill
 - Manual UI verification → see **compose-ui-test-server** skill
 
 ## Development Plan Tracking
