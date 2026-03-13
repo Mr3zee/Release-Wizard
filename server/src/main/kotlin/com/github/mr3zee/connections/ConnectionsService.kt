@@ -1,19 +1,22 @@
 package com.github.mr3zee.connections
 
+import com.github.mr3zee.ForbiddenException
 import com.github.mr3zee.api.ConnectionTestResult
 import com.github.mr3zee.api.CreateConnectionRequest
 import com.github.mr3zee.api.UpdateConnectionRequest
+import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.model.Connection
 import com.github.mr3zee.model.ConnectionConfig
 import com.github.mr3zee.model.ConnectionId
+import com.github.mr3zee.model.UserRole
 
 interface ConnectionsService {
-    suspend fun listConnections(): List<Connection>
-    suspend fun getConnection(id: ConnectionId): Connection?
-    suspend fun createConnection(request: CreateConnectionRequest): Connection
-    suspend fun updateConnection(id: ConnectionId, request: UpdateConnectionRequest): Connection?
-    suspend fun deleteConnection(id: ConnectionId): Boolean
-    suspend fun testConnection(id: ConnectionId): ConnectionTestResult?
+    suspend fun listConnections(session: UserSession): List<Connection>
+    suspend fun getConnection(id: ConnectionId, session: UserSession): Connection?
+    suspend fun createConnection(request: CreateConnectionRequest, session: UserSession): Connection
+    suspend fun updateConnection(id: ConnectionId, request: UpdateConnectionRequest, session: UserSession): Connection?
+    suspend fun deleteConnection(id: ConnectionId, session: UserSession): Boolean
+    suspend fun testConnection(id: ConnectionId, session: UserSession): ConnectionTestResult?
 }
 
 class DefaultConnectionsService(
@@ -21,23 +24,27 @@ class DefaultConnectionsService(
     private val connectionTester: ConnectionTester,
 ) : ConnectionsService {
 
-    override suspend fun listConnections(): List<Connection> {
-        return repository.findAll().map { it.masked() }
+    override suspend fun listConnections(session: UserSession): List<Connection> {
+        val ownerId = if (session.role == UserRole.ADMIN) null else session.userId
+        return repository.findAll(ownerId = ownerId).map { it.masked() }
     }
 
-    override suspend fun getConnection(id: ConnectionId): Connection? {
+    override suspend fun getConnection(id: ConnectionId, session: UserSession): Connection? {
+        checkAccess(id, session)
         return repository.findById(id)?.masked()
     }
 
-    override suspend fun createConnection(request: CreateConnectionRequest): Connection {
+    override suspend fun createConnection(request: CreateConnectionRequest, session: UserSession): Connection {
         return repository.create(
             name = request.name,
             type = request.type,
             config = request.config,
+            ownerId = session.userId,
         ).masked()
     }
 
-    override suspend fun updateConnection(id: ConnectionId, request: UpdateConnectionRequest): Connection? {
+    override suspend fun updateConnection(id: ConnectionId, request: UpdateConnectionRequest, session: UserSession): Connection? {
+        checkAccess(id, session)
         return repository.update(
             id = id,
             name = request.name,
@@ -45,13 +52,23 @@ class DefaultConnectionsService(
         )?.masked()
     }
 
-    override suspend fun deleteConnection(id: ConnectionId): Boolean {
+    override suspend fun deleteConnection(id: ConnectionId, session: UserSession): Boolean {
+        checkAccess(id, session)
         return repository.delete(id)
     }
 
-    override suspend fun testConnection(id: ConnectionId): ConnectionTestResult? {
+    override suspend fun testConnection(id: ConnectionId, session: UserSession): ConnectionTestResult? {
+        checkAccess(id, session)
         val connection = repository.findById(id) ?: return null
         return connectionTester.test(connection.config)
+    }
+
+    private suspend fun checkAccess(id: ConnectionId, session: UserSession) {
+        if (session.role == UserRole.ADMIN) return
+        val ownerId = repository.findOwner(id)
+        if (ownerId != null && ownerId != session.userId) {
+            throw ForbiddenException("Access denied")
+        }
     }
 }
 

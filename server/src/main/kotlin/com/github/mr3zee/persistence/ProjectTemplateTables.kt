@@ -13,6 +13,7 @@ object ProjectTemplateTable : UUIDTable("project_templates") {
     val description = text("description").default("")
     val dagGraph = jsonb<DagGraph>("dag_graph", AppJson)
     val parameters = jsonb("parameters", AppJson, ListSerializer(Parameter.serializer()))
+    val ownerId = varchar("owner_id", 36)
     val createdAt = timestamp("created_at")
     val updatedAt = timestamp("updated_at")
 }

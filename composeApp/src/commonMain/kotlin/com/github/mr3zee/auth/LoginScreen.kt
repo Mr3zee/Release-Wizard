@@ -18,6 +18,7 @@ fun LoginScreen(
 
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var isRegisterMode by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -40,7 +41,7 @@ fun LoginScreen(
                     style = MaterialTheme.typography.headlineMedium,
                 )
                 Text(
-                    text = "Sign in to continue",
+                    text = if (isRegisterMode) "Create an account" else "Sign in to continue",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -75,11 +76,17 @@ fun LoginScreen(
                 }
 
                 Button(
-                    onClick = { viewModel.login(username, password) },
+                    onClick = {
+                        if (isRegisterMode) {
+                            viewModel.register(username, password)
+                        } else {
+                            viewModel.login(username, password)
+                        }
+                    },
                     enabled = username.isNotBlank() && password.isNotBlank() && !isLoading,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .testTag("login_button"),
+                        .testTag(if (isRegisterMode) "register_button" else "login_button"),
                 ) {
                     if (isLoading) {
                         CircularProgressIndicator(
@@ -87,8 +94,21 @@ fun LoginScreen(
                             strokeWidth = 2.dp,
                         )
                     } else {
-                        Text("Sign In")
+                        Text(if (isRegisterMode) "Create Account" else "Sign In")
                     }
+                }
+
+                TextButton(
+                    onClick = {
+                        isRegisterMode = !isRegisterMode
+                        viewModel.dismissError()
+                    },
+                    modifier = Modifier.testTag("toggle_auth_mode"),
+                ) {
+                    Text(
+                        if (isRegisterMode) "Already have an account? Sign in"
+                        else "Don't have an account? Register",
+                    )
                 }
             }
         }

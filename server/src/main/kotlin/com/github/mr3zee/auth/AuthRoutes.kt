@@ -1,11 +1,11 @@
 package com.github.mr3zee.auth
 
-import com.github.mr3zee.api.ApiRoutes
-import com.github.mr3zee.api.ErrorResponse
-import com.github.mr3zee.api.LoginRequest
-import com.github.mr3zee.api.UserInfo
+import com.github.mr3zee.api.*
+import com.github.mr3zee.model.UserRole
+import com.github.mr3zee.model.UserId
 import com.github.mr3zee.plugins.CorrelationIdKey
 import io.ktor.http.*
+import io.ktor.server.auth.*
 import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -19,18 +19,32 @@ fun Route.authRoutes() {
     rateLimit(RateLimitName("login")) {
         post(ApiRoutes.Auth.LOGIN) {
             val request = call.receive<LoginRequest>()
-            if (authService.validate(request.username, request.password)) {
-                call.sessions.set(UserSession(username = request.username))
-                call.respond(UserInfo(username = request.username))
+            val user = authService.validate(request.username, request.password)
+            if (user != null) {
+                call.sessions.set(UserSession(username = user.username, userId = user.id.value, role = user.role))
+                call.respond(UserInfo(username = user.username, id = user.id.value, role = user.role))
             } else {
-                val correlationId = call.attributes.getOrNull(CorrelationIdKey)
+                respondUnauthorized(call, "Invalid credentials")
+            }
+        }
+
+        post(ApiRoutes.Auth.REGISTER) {
+            val request = call.receive<RegisterRequest>()
+            if (request.username.isBlank() || request.password.length < 8) {
                 call.respond(
-                    HttpStatusCode.Unauthorized,
-                    ErrorResponse(
-                        error = "Invalid credentials",
-                        code = "INVALID_CREDENTIALS",
-                        correlationId = correlationId,
-                    ),
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse(error = "Username must not be blank and password must be at least 8 characters", code = "VALIDATION_ERROR"),
+                )
+                return@post
+            }
+            val user = authService.register(request.username, request.password)
+            if (user != null) {
+                call.sessions.set(UserSession(username = user.username, userId = user.id.value, role = user.role))
+                call.respond(HttpStatusCode.Created, UserInfo(username = user.username, id = user.id.value, role = user.role))
+            } else {
+                call.respond(
+                    HttpStatusCode.Conflict,
+                    ErrorResponse(error = "Username already taken", code = "USERNAME_TAKEN"),
                 )
             }
         }
@@ -44,17 +58,60 @@ fun Route.authRoutes() {
     get(ApiRoutes.Auth.ME) {
         val session = call.sessions.get<UserSession>()
         if (session != null) {
-            call.respond(UserInfo(username = session.username))
+            call.respond(UserInfo(username = session.username, id = session.userId, role = session.role))
         } else {
-            val correlationId = call.attributes.getOrNull(CorrelationIdKey)
-            call.respond(
-                HttpStatusCode.Unauthorized,
-                ErrorResponse(
-                    error = "Not authenticated",
-                    code = "UNAUTHORIZED",
-                    correlationId = correlationId,
-                ),
-            )
+            respondUnauthorized(call, "Not authenticated")
         }
     }
+
+    // Admin-only user management (requires auth)
+    authenticate("session-auth") {
+        get(ApiRoutes.Auth.USERS) {
+            val session = call.sessions.get<UserSession>()!!
+            if (session.role != UserRole.ADMIN) {
+                call.respond(HttpStatusCode.Forbidden, ErrorResponse(error = "Admin access required", code = "FORBIDDEN"))
+                return@get
+            }
+            val users = authService.listUsers()
+            call.respond(UserListResponse(users))
+        }
+
+        put(ApiRoutes.Auth.USERS + "/{userId}/role") {
+            val session = call.sessions.get<UserSession>()!!
+            if (session.role != UserRole.ADMIN) {
+                call.respond(HttpStatusCode.Forbidden, ErrorResponse(error = "Admin access required", code = "FORBIDDEN"))
+                return@put
+            }
+            val userId = call.parameters["userId"] ?: throw IllegalArgumentException("Missing userId")
+            val request = call.receive<UpdateUserRoleRequest>()
+            // Prevent demoting the last admin
+            if (request.role != UserRole.ADMIN) {
+                val users = authService.listUsers()
+                val adminCount = users.count { it.role == UserRole.ADMIN }
+                val isTargetCurrentlyAdmin = users.find { it.id.value == userId }?.role == UserRole.ADMIN
+                if (isTargetCurrentlyAdmin && adminCount <= 1) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Cannot demote the last admin", code = "LAST_ADMIN"))
+                    return@put
+                }
+            }
+            val updated = authService.updateUserRole(UserId(userId), request.role)
+            if (updated) {
+                call.respond(HttpStatusCode.OK, mapOf("status" to "updated"))
+            } else {
+                call.respond(HttpStatusCode.NotFound, ErrorResponse(error = "User not found", code = "NOT_FOUND"))
+            }
+        }
+    }
+}
+
+private suspend fun respondUnauthorized(call: io.ktor.server.application.ApplicationCall, message: String) {
+    val correlationId = call.attributes.getOrNull(CorrelationIdKey)
+    call.respond(
+        HttpStatusCode.Unauthorized,
+        ErrorResponse(
+            error = message,
+            code = "INVALID_CREDENTIALS",
+            correlationId = correlationId,
+        ),
+    )
 }

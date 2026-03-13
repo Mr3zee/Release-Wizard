@@ -325,9 +325,10 @@ class InMemoryPendingWebhookRepository : PendingWebhookRepository {
  * Fake ConnectionsRepository for unit tests (not used by executors directly).
  */
 class FakeConnectionsRepository : com.github.mr3zee.connections.ConnectionsRepository {
-    override suspend fun findAll() = emptyList<Connection>()
+    override suspend fun findAll(ownerId: String?) = emptyList<Connection>()
     override suspend fun findById(id: ConnectionId) = null
-    override suspend fun create(name: String, type: ConnectionType, config: ConnectionConfig) =
+    override suspend fun findOwner(id: ConnectionId): String? = null
+    override suspend fun create(name: String, type: ConnectionType, config: ConnectionConfig, ownerId: String) =
         throw UnsupportedOperationException()
     override suspend fun update(id: ConnectionId, name: String?, config: ConnectionConfig?) = null
     override suspend fun delete(id: ConnectionId) = false

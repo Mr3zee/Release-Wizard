@@ -2,6 +2,7 @@ package com.github.mr3zee.connections
 
 import com.github.mr3zee.api.*
 import com.github.mr3zee.jsonClient
+import com.github.mr3zee.login
 import com.github.mr3zee.testModule
 import com.github.mr3zee.model.ConnectionConfig
 import com.github.mr3zee.model.ConnectionType
@@ -15,13 +16,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class ConnectionsRoutesTest {
-
-    private suspend fun HttpClient.login() {
-        post(ApiRoutes.Auth.LOGIN) {
-            contentType(ContentType.Application.Json)
-            setBody(LoginRequest(username = "admin", password = "admin"))
-        }
-    }
 
     @Test
     fun `list connections returns empty list initially`() = testApplication {

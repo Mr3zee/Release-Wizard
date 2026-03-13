@@ -10,10 +10,14 @@ import com.github.mr3zee.plugins.RequestSizeLimit
 import com.github.mr3zee.plugins.healthRoute
 import com.github.mr3zee.projects.projectsModule
 import com.github.mr3zee.releases.releasesModule
+import com.github.mr3zee.notifications.notificationsModule
+import com.github.mr3zee.schedules.schedulesModule
+import com.github.mr3zee.triggers.triggersModule
 import com.github.mr3zee.webhooks.webhooksModule
 import com.github.mr3zee.execution.BlockExecutor
 import com.github.mr3zee.execution.StubBlockExecutor
 import io.ktor.client.HttpClient
+import io.ktor.client.request.*
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 import io.ktor.client.plugins.cookies.*
 import kotlinx.coroutines.CoroutineScope
@@ -46,8 +50,6 @@ fun testDbConfig() = DatabaseConfig(
 )
 
 fun testAuthConfig() = AuthConfig(
-    username = "admin",
-    password = "admin",
     sessionSignKey = "6162636465666768696a6b6c6d6e6f707172737475767778797a313233343536",
 )
 
@@ -74,18 +76,21 @@ val testOverrideModule = module {
     single { CoroutineScope(SupervisorJob()) }
 }
 
-fun Application.testModule() {
+fun Application.testModule(dbConfig: DatabaseConfig = testDbConfig()) {
     val authConfig = testAuthConfig()
     install(Koin) {
         slf4jLogger()
         allowOverride(true)
         modules(
-            appModule(testDbConfig(), testEncryptionConfig(), authConfig, testWebhookConfig()),
+            appModule(dbConfig, testEncryptionConfig(), authConfig, testWebhookConfig()),
             authModule,
             projectsModule,
             connectionsModule,
             webhooksModule,
             releasesModule,
+            notificationsModule,
+            schedulesModule,
+            triggersModule,
             testOverrideModule,
         )
     }
@@ -174,6 +179,17 @@ fun Application.testModule() {
                 ),
             )
         }
+        exception<ForbiddenException> { call, cause ->
+            val correlationId = call.attributes.getOrNull(CorrelationIdKey)
+            call.respond(
+                HttpStatusCode.Forbidden,
+                ErrorResponse(
+                    error = cause.message ?: "Forbidden",
+                    code = "FORBIDDEN",
+                    correlationId = correlationId,
+                ),
+            )
+        }
         exception<NotFoundException> { call, cause ->
             val correlationId = call.attributes.getOrNull(CorrelationIdKey)
             call.respond(
@@ -206,4 +222,23 @@ fun ApplicationTestBuilder.jsonClient() = createClient {
         json(AppJson)
     }
     install(HttpCookies)
+}
+
+/**
+ * Registers and logs in a test user. First user in a fresh DB is auto-promoted to ADMIN.
+ */
+suspend fun HttpClient.login(
+    username: String = "admin",
+    password: String = "adminpass",
+) {
+    // Register (idempotent — 409 on duplicate is fine)
+    post(com.github.mr3zee.api.ApiRoutes.Auth.REGISTER) {
+        contentType(io.ktor.http.ContentType.Application.Json)
+        setBody(com.github.mr3zee.api.RegisterRequest(username = username, password = password))
+    }
+    // Login to get a session cookie
+    post(com.github.mr3zee.api.ApiRoutes.Auth.LOGIN) {
+        contentType(io.ktor.http.ContentType.Application.Json)
+        setBody(com.github.mr3zee.api.LoginRequest(username = username, password = password))
+    }
 }

@@ -15,6 +15,7 @@ object ReleaseTable : UUIDTable("releases") {
     val status = varchar("status", 32)
     val dagSnapshot = jsonb<DagGraph>("dag_snapshot", AppJson)
     val parameters = jsonb("parameters", AppJson, ListSerializer(Parameter.serializer()))
+    val ownerId = varchar("owner_id", 36)
     val startedAt = timestamp("started_at").nullable()
     val finishedAt = timestamp("finished_at").nullable()
 }

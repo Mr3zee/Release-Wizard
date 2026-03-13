@@ -2,6 +2,7 @@ package com.github.mr3zee.connections
 
 import com.github.mr3zee.WebhookConfig
 import com.github.mr3zee.api.*
+import com.github.mr3zee.auth.userSession
 import com.github.mr3zee.model.Connection
 import com.github.mr3zee.model.ConnectionId
 import com.github.mr3zee.model.ConnectionType
@@ -18,7 +19,7 @@ fun Route.connectionRoutes() {
 
     route(ApiRoutes.Connections.BASE) {
         get {
-            val connections = service.listConnections()
+            val connections = service.listConnections(call.userSession())
             val webhookUrls = connections.mapNotNull { conn ->
                 webhookUrl(conn, webhookConfig)?.let { conn.id.value to it }
             }.toMap()
@@ -31,14 +32,14 @@ fun Route.connectionRoutes() {
                 call.respond(HttpStatusCode.BadRequest, "Connection name must not be blank")
                 return@post
             }
-            val connection = service.createConnection(request)
+            val connection = service.createConnection(request, call.userSession())
             call.respond(HttpStatusCode.Created, ConnectionResponse(connection, webhookUrl(connection, webhookConfig)))
         }
 
         route("/{id}") {
             get {
                 val id = call.requireConnectionId() ?: return@get
-                val connection = service.getConnection(id)
+                val connection = service.getConnection(id, call.userSession())
                 if (connection != null) {
                     call.respond(ConnectionResponse(connection, webhookUrl(connection, webhookConfig)))
                 } else {
@@ -49,7 +50,7 @@ fun Route.connectionRoutes() {
             put {
                 val id = call.requireConnectionId() ?: return@put
                 val request = call.receive<UpdateConnectionRequest>()
-                val connection = service.updateConnection(id, request)
+                val connection = service.updateConnection(id, request, call.userSession())
                 if (connection != null) {
                     call.respond(ConnectionResponse(connection, webhookUrl(connection, webhookConfig)))
                 } else {
@@ -59,7 +60,7 @@ fun Route.connectionRoutes() {
 
             delete {
                 val id = call.requireConnectionId() ?: return@delete
-                val deleted = service.deleteConnection(id)
+                val deleted = service.deleteConnection(id, call.userSession())
                 if (deleted) {
                     call.respond(HttpStatusCode.NoContent)
                 } else {
@@ -69,7 +70,7 @@ fun Route.connectionRoutes() {
 
             post("/test") {
                 val id = call.requireConnectionId() ?: return@post
-                val result = service.testConnection(id)
+                val result = service.testConnection(id, call.userSession())
                 if (result == null) {
                     call.respond(HttpStatusCode.NotFound, "Connection not found")
                     return@post

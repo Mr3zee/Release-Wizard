@@ -3,6 +3,7 @@ package com.github.mr3zee.releases
 import com.github.mr3zee.AppJson
 import com.github.mr3zee.api.*
 import com.github.mr3zee.jsonClient
+import com.github.mr3zee.login
 import com.github.mr3zee.model.*
 import com.github.mr3zee.testModule
 import io.ktor.client.*
@@ -21,13 +22,6 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class ReleaseWebSocketTest {
-
-    private suspend fun HttpClient.login() {
-        post(ApiRoutes.Auth.LOGIN) {
-            contentType(ContentType.Application.Json)
-            setBody(LoginRequest(username = "admin", password = "admin"))
-        }
-    }
 
     private suspend fun HttpClient.createTestProject(
         blocks: List<Block> = listOf(

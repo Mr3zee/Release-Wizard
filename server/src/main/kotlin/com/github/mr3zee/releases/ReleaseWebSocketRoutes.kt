@@ -1,11 +1,14 @@
 package com.github.mr3zee.releases
 
 import com.github.mr3zee.AppJson
+import com.github.mr3zee.ForbiddenException
 import com.github.mr3zee.api.ApiRoutes
 import com.github.mr3zee.api.ReleaseEvent
+import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.execution.ExecutionEngine
 import com.github.mr3zee.model.ReleaseId
 import io.ktor.server.routing.*
+import io.ktor.server.sessions.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.channels.Channel
@@ -38,6 +41,15 @@ fun Route.releaseWebSocketRoutes() {
             val release = service.getRelease(releaseId)
             if (release == null) {
                 close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Release not found"))
+                return@webSocket
+            }
+
+            // Check ownership — session is available since WS routes are inside authenticate("session-auth")
+            val session = call.sessions.get<UserSession>()!!
+            try {
+                service.checkAccess(releaseId, session)
+            } catch (_: ForbiddenException) {
+                close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Access denied"))
                 return@webSocket
             }
 

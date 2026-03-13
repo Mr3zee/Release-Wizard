@@ -27,10 +27,13 @@ class ExposedProjectsRepository(private val db: Database) : ProjectsRepository {
         )
     }
 
-    override suspend fun findAll(): List<ProjectTemplate> = dbQuery {
-        ProjectTemplateTable.selectAll()
-            .orderBy(ProjectTemplateTable.updatedAt, SortOrder.DESC)
-            .map { it.toProjectTemplate() }
+    override suspend fun findAll(ownerId: String?): List<ProjectTemplate> = dbQuery {
+        val query = if (ownerId != null) {
+            ProjectTemplateTable.selectAll().where { ProjectTemplateTable.ownerId eq ownerId }
+        } else {
+            ProjectTemplateTable.selectAll()
+        }
+        query.orderBy(ProjectTemplateTable.updatedAt, SortOrder.DESC).map { it.toProjectTemplate() }
     }
 
     override suspend fun findById(id: ProjectId): ProjectTemplate? = dbQuery {
@@ -40,11 +43,19 @@ class ExposedProjectsRepository(private val db: Database) : ProjectsRepository {
             ?.toProjectTemplate()
     }
 
+    override suspend fun findOwner(id: ProjectId): String? = dbQuery {
+        ProjectTemplateTable.select(ProjectTemplateTable.ownerId)
+            .where { ProjectTemplateTable.id eq UUID.fromString(id.value) }
+            .singleOrNull()
+            ?.get(ProjectTemplateTable.ownerId)
+    }
+
     override suspend fun create(
         name: String,
         description: String,
         dagGraph: DagGraph,
         parameters: List<Parameter>,
+        ownerId: String,
     ): ProjectTemplate = dbQuery {
         val now = Clock.System.now()
         val id = UUID.randomUUID()
@@ -54,6 +65,7 @@ class ExposedProjectsRepository(private val db: Database) : ProjectsRepository {
             it[ProjectTemplateTable.description] = description
             it[ProjectTemplateTable.dagGraph] = dagGraph
             it[ProjectTemplateTable.parameters] = parameters
+            it[ProjectTemplateTable.ownerId] = ownerId
             it[ProjectTemplateTable.createdAt] = now
             it[ProjectTemplateTable.updatedAt] = now
         }

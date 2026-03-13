@@ -2,6 +2,7 @@ package com.github.mr3zee.webhooks
 
 import com.github.mr3zee.api.*
 import com.github.mr3zee.jsonClient
+import com.github.mr3zee.login
 import com.github.mr3zee.model.ConnectionConfig
 import com.github.mr3zee.model.ConnectionType
 import com.github.mr3zee.testModule
@@ -17,13 +18,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class WebhookRoutesTest {
-
-    private suspend fun HttpClient.login() {
-        post(ApiRoutes.Auth.LOGIN) {
-            contentType(ContentType.Application.Json)
-            setBody(LoginRequest(username = "admin", password = "admin"))
-        }
-    }
 
     private suspend fun HttpClient.createConnection(
         name: String,

@@ -8,6 +8,7 @@ object ConnectionTable : UUIDTable("connections") {
     val name = varchar("name", 255)
     val type = enumerationByName<ConnectionType>("type", 32)
     val encryptedConfig = text("encrypted_config")
+    val ownerId = varchar("owner_id", 36)
     val createdAt = timestamp("created_at")
     val updatedAt = timestamp("updated_at")
 }

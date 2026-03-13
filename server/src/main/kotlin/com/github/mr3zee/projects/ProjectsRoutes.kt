@@ -1,6 +1,7 @@
 package com.github.mr3zee.projects
 
 import com.github.mr3zee.api.*
+import com.github.mr3zee.auth.userSession
 import com.github.mr3zee.model.ProjectId
 import io.ktor.http.*
 import io.ktor.server.request.*
@@ -14,7 +15,7 @@ fun Route.projectRoutes() {
 
     route(ApiRoutes.Projects.BASE) {
         get {
-            val projects = service.listProjects()
+            val projects = service.listProjects(call.userSession())
             call.respond(ProjectListResponse(projects))
         }
 
@@ -24,14 +25,14 @@ fun Route.projectRoutes() {
                 call.respond(HttpStatusCode.BadRequest, "Project name must not be blank")
                 return@post
             }
-            val project = service.createProject(request)
+            val project = service.createProject(request, call.userSession())
             call.respond(HttpStatusCode.Created, ProjectResponse(project))
         }
 
         route("/{id}") {
             get {
                 val id = call.requireProjectId() ?: return@get
-                val project = service.getProject(id)
+                val project = service.getProject(id, call.userSession())
                 if (project != null) {
                     call.respond(ProjectResponse(project))
                 } else {
@@ -42,7 +43,7 @@ fun Route.projectRoutes() {
             put {
                 val id = call.requireProjectId() ?: return@put
                 val request = call.receive<UpdateProjectRequest>()
-                val project = service.updateProject(id, request)
+                val project = service.updateProject(id, request, call.userSession())
                 if (project != null) {
                     call.respond(ProjectResponse(project))
                 } else {
@@ -52,7 +53,7 @@ fun Route.projectRoutes() {
 
             delete {
                 val id = call.requireProjectId() ?: return@delete
-                val deleted = service.deleteProject(id)
+                val deleted = service.deleteProject(id, call.userSession())
                 if (deleted) {
                     call.respond(HttpStatusCode.NoContent)
                 } else {

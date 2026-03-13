@@ -6,9 +6,10 @@ import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.model.ProjectTemplate
 
 interface ProjectsRepository {
-    suspend fun findAll(): List<ProjectTemplate>
+    suspend fun findAll(ownerId: String? = null): List<ProjectTemplate>
     suspend fun findById(id: ProjectId): ProjectTemplate?
-    suspend fun create(name: String, description: String, dagGraph: DagGraph, parameters: List<Parameter>): ProjectTemplate
+    suspend fun findOwner(id: ProjectId): String?
+    suspend fun create(name: String, description: String, dagGraph: DagGraph, parameters: List<Parameter>, ownerId: String): ProjectTemplate
     suspend fun update(id: ProjectId, name: String?, description: String?, dagGraph: DagGraph?, parameters: List<Parameter>?): ProjectTemplate?
     suspend fun delete(id: ProjectId): Boolean
 }

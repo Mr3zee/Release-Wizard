@@ -2,6 +2,7 @@ package com.github.mr3zee.releases
 
 import com.github.mr3zee.api.*
 import com.github.mr3zee.jsonClient
+import com.github.mr3zee.login
 import com.github.mr3zee.testModule
 import com.github.mr3zee.model.*
 import io.ktor.client.*
@@ -16,17 +17,11 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.yield
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class ReleasesRoutesTest {
-
-    private suspend fun HttpClient.login() {
-        post(ApiRoutes.Auth.LOGIN) {
-            contentType(ContentType.Application.Json)
-            setBody(LoginRequest(username = "admin", password = "admin"))
-        }
-    }
 
     private suspend fun HttpClient.createTestProject(
         name: String = "Test Project",
@@ -317,5 +312,168 @@ class ReleasesRoutesTest {
         assertEquals(BlockStatus.SUCCEEDED, buildExec.status)
         assertTrue(buildExec.outputs.containsKey("buildNumber"))
         assertTrue(buildExec.outputs.containsKey("buildUrl"))
+    }
+
+    // ---- Phase 1A: Release Re-run ----
+
+    @Test
+    fun `rerun release creates new release with same DAG`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        client.login()
+
+        val blocks = listOf(
+            Block.ActionBlock(id = BlockId("a"), name = "A", type = BlockType.TEAMCITY_BUILD),
+        )
+        val project = client.createTestProject(blocks = blocks)
+        val original = client.startAndAwaitRelease(project.id)
+        assertEquals(ReleaseStatus.SUCCEEDED, original.release.status)
+
+        // Rerun
+        val rerunResponse = client.post(ApiRoutes.Releases.rerun(original.release.id.value))
+        assertEquals(HttpStatusCode.Created, rerunResponse.status)
+        val rerun = rerunResponse.body<ReleaseResponse>()
+
+        assertNotEquals(original.release.id, rerun.release.id)
+        assertEquals(project.id, rerun.release.projectTemplateId)
+
+        // Await the new release
+        val awaitResponse = client.post(ApiRoutes.Releases.await(rerun.release.id.value))
+        assertEquals(HttpStatusCode.OK, awaitResponse.status)
+        val completed = awaitResponse.body<ReleaseResponse>()
+        assertEquals(ReleaseStatus.SUCCEEDED, completed.release.status)
+    }
+
+    @Test
+    fun `rerun running release returns 400`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        client.login()
+
+        val blocks = listOf(
+            Block.ActionBlock(id = BlockId("action"), name = "Wait", type = BlockType.USER_ACTION),
+        )
+        val project = client.createTestProject(blocks = blocks)
+
+        val created = client.post(ApiRoutes.Releases.BASE) {
+            contentType(ContentType.Application.Json)
+            setBody(CreateReleaseRequest(projectTemplateId = project.id))
+        }.body<ReleaseResponse>()
+
+        val rerunResponse = client.post(ApiRoutes.Releases.rerun(created.release.id.value))
+        assertEquals(HttpStatusCode.BadRequest, rerunResponse.status)
+
+        // Clean up: cancel the running release
+        client.post(ApiRoutes.Releases.cancel(created.release.id.value))
+    }
+
+    // ---- Phase 1B: Release Archive & Delete ----
+
+    @Test
+    fun `archive release sets status to ARCHIVED`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        client.login()
+
+        val project = client.createTestProject()
+        val result = client.startAndAwaitRelease(project.id)
+        assertEquals(ReleaseStatus.SUCCEEDED, result.release.status)
+
+        val archiveResponse = client.post(ApiRoutes.Releases.archive(result.release.id.value))
+        assertEquals(HttpStatusCode.OK, archiveResponse.status)
+        val archived = archiveResponse.body<ReleaseResponse>()
+        assertEquals(ReleaseStatus.ARCHIVED, archived.release.status)
+
+        // Verify GET also returns ARCHIVED
+        val fetched = client.get(ApiRoutes.Releases.byId(result.release.id.value))
+            .body<ReleaseResponse>()
+        assertEquals(ReleaseStatus.ARCHIVED, fetched.release.status)
+    }
+
+    @Test
+    fun `archive running release returns 400`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        client.login()
+
+        val blocks = listOf(
+            Block.ActionBlock(id = BlockId("action"), name = "Wait", type = BlockType.USER_ACTION),
+        )
+        val project = client.createTestProject(blocks = blocks)
+
+        val created = client.post(ApiRoutes.Releases.BASE) {
+            contentType(ContentType.Application.Json)
+            setBody(CreateReleaseRequest(projectTemplateId = project.id))
+        }.body<ReleaseResponse>()
+
+        val archiveResponse = client.post(ApiRoutes.Releases.archive(created.release.id.value))
+        assertEquals(HttpStatusCode.BadRequest, archiveResponse.status)
+
+        // Clean up: cancel the running release
+        client.post(ApiRoutes.Releases.cancel(created.release.id.value))
+    }
+
+    @Test
+    fun `delete release removes it`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        client.login()
+
+        val project = client.createTestProject()
+        val result = client.startAndAwaitRelease(project.id)
+        assertEquals(ReleaseStatus.SUCCEEDED, result.release.status)
+
+        val deleteResponse = client.delete(ApiRoutes.Releases.byId(result.release.id.value))
+        assertEquals(HttpStatusCode.NoContent, deleteResponse.status)
+
+        // Verify GET returns 404
+        val getResponse = client.get(ApiRoutes.Releases.byId(result.release.id.value))
+        assertEquals(HttpStatusCode.NotFound, getResponse.status)
+    }
+
+    @Test
+    fun `delete running release returns 400`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        client.login()
+
+        val blocks = listOf(
+            Block.ActionBlock(id = BlockId("action"), name = "Wait", type = BlockType.USER_ACTION),
+        )
+        val project = client.createTestProject(blocks = blocks)
+
+        val created = client.post(ApiRoutes.Releases.BASE) {
+            contentType(ContentType.Application.Json)
+            setBody(CreateReleaseRequest(projectTemplateId = project.id))
+        }.body<ReleaseResponse>()
+
+        val deleteResponse = client.delete(ApiRoutes.Releases.byId(created.release.id.value))
+        assertEquals(HttpStatusCode.BadRequest, deleteResponse.status)
+
+        // Clean up: cancel the running release
+        client.post(ApiRoutes.Releases.cancel(created.release.id.value))
+    }
+
+    @Test
+    fun `archived releases excluded from list`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        client.login()
+
+        val project = client.createTestProject()
+        val result = client.startAndAwaitRelease(project.id)
+        assertEquals(ReleaseStatus.SUCCEEDED, result.release.status)
+
+        // Verify the release is in the list before archiving
+        val listBefore = client.get(ApiRoutes.Releases.BASE).body<ReleaseListResponse>()
+        assertTrue(listBefore.releases.any { it.id == result.release.id })
+
+        // Archive it
+        val archiveResponse = client.post(ApiRoutes.Releases.archive(result.release.id.value))
+        assertEquals(HttpStatusCode.OK, archiveResponse.status)
+
+        // Verify the release is NOT in the list after archiving
+        val listAfter = client.get(ApiRoutes.Releases.BASE).body<ReleaseListResponse>()
+        assertTrue(listAfter.releases.none { it.id == result.release.id })
     }
 }

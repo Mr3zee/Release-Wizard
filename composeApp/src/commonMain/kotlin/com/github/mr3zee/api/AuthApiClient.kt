@@ -15,6 +15,14 @@ class AuthApiClient(private val client: HttpClient) {
         return response.body()
     }
 
+    suspend fun register(username: String, password: String): UserInfo {
+        val response = client.post(serverUrl(ApiRoutes.Auth.REGISTER)) {
+            contentType(ContentType.Application.Json)
+            setBody(RegisterRequest(username = username, password = password))
+        }
+        return response.body()
+    }
+
     suspend fun logout() {
         client.post(serverUrl(ApiRoutes.Auth.LOGOUT))
     }

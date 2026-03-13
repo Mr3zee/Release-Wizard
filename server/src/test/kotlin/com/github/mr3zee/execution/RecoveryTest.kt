@@ -244,14 +244,15 @@ class InMemoryReleasesRepository : ReleasesRepository {
         releases[release.id] = release
     }
 
-    override suspend fun findAll() = releases.values.toList()
+    override suspend fun findAll(includeArchived: Boolean, ownerId: String?) = releases.values.toList()
     override suspend fun findById(id: ReleaseId) = releases[id]
+    override suspend fun findOwner(id: ReleaseId): String? = null
     override suspend fun findByProjectId(projectId: ProjectId) =
         releases.values.filter { it.projectTemplateId == projectId }
     override suspend fun findByStatuses(statuses: Set<ReleaseStatus>) =
         releases.values.filter { it.status in statuses }
 
-    override suspend fun create(projectTemplateId: ProjectId, dagSnapshot: DagGraph, parameters: List<Parameter>): Release {
+    override suspend fun create(projectTemplateId: ProjectId, dagSnapshot: DagGraph, parameters: List<Parameter>, ownerId: String): Release {
         val release = Release(
             id = ReleaseId(java.util.UUID.randomUUID().toString()),
             projectTemplateId = projectTemplateId,

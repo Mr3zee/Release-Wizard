@@ -42,11 +42,7 @@ class HealthAndErrorTest {
     fun `400 returns JSON ErrorResponse with correlationId`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        // Login first
-        client.post(ApiRoutes.Auth.LOGIN) {
-            contentType(ContentType.Application.Json)
-            setBody(LoginRequest(username = "admin", password = "admin"))
-        }
+        client.login()
 
         val response = client.get(ApiRoutes.Releases.byId("not-a-uuid"))
         assertEquals(HttpStatusCode.BadRequest, response.status)
@@ -59,10 +55,7 @@ class HealthAndErrorTest {
     fun `404 returns JSON ErrorResponse`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.post(ApiRoutes.Auth.LOGIN) {
-            contentType(ContentType.Application.Json)
-            setBody(LoginRequest(username = "admin", password = "admin"))
-        }
+        client.login()
 
         val response = client.get(ApiRoutes.Releases.byId("00000000-0000-0000-0000-000000000000"))
         assertEquals(HttpStatusCode.NotFound, response.status)

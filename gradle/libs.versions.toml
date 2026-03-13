@@ -1,10 +1,12 @@
 [versions]
 androidx-lifecycle = "2.9.6"
+cronUtils = "9.2.1"
 composeHotReload = "1.0.0"
 composeMultiplatform = "1.10.0"
 composeUiTestServer = "0.2.0"
 exposed = "1.1.1"
 h2 = "2.3.232"
+argon2 = "2.11"
 hikaricp = "6.2.1"
 junit = "4.13.2"
 koin = "4.1.1"
@@ -16,6 +18,7 @@ ktor = "3.3.3"
 logback = "1.5.24"
 material3 = "1.10.0-alpha05"
 postgresql = "42.7.5"
+testcontainers = "1.20.4"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -67,6 +70,10 @@ exposed-kotlinDatetime = { module = "org.jetbrains.exposed:exposed-kotlin-dateti
 postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
 hikaricp = { module = "com.zaxxer:HikariCP", version.ref = "hikaricp" }
 h2 = { module = "com.h2database:h2", version.ref = "h2" }
+testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "testcontainers" }
+testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "testcontainers" }
+cronUtils = { module = "com.cronutils:cron-utils", version.ref = "cronUtils" }
+argon2 = { module = "de.mkammerer:argon2-jvm", version.ref = "argon2" }
 
 # Koin
 koin-ktor = { module = "io.insert-koin:koin-ktor", version.ref = "koin" }

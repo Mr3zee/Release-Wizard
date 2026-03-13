@@ -46,6 +46,12 @@ dependencies {
     implementation(libs.postgresql)
     implementation(libs.hikaricp)
 
+    // Security
+    implementation(libs.argon2)
+
+    // Scheduling
+    implementation(libs.cronUtils)
+
     // DI
     implementation(libs.koin.ktor)
     implementation(libs.koin.loggerSlf4j)
@@ -59,4 +65,24 @@ dependencies {
     testImplementation(libs.ktor.clientWebsockets)
     testImplementation(libs.ktor.clientMock)
     testImplementation(libs.h2)
+    testImplementation(libs.testcontainers)
+    testImplementation(libs.testcontainers.postgresql)
+}
+
+sourceSets {
+    create("integrationTest") {
+        kotlin.srcDir("src/integrationTest/kotlin")
+        resources.srcDir("src/integrationTest/resources")
+        compileClasspath += sourceSets["main"].output + sourceSets["test"].output
+        runtimeClasspath += sourceSets["main"].output + sourceSets["test"].output
+    }
+}
+
+configurations["integrationTestImplementation"].extendsFrom(configurations["testImplementation"])
+configurations["integrationTestRuntimeOnly"].extendsFrom(configurations["testRuntimeOnly"])
+
+tasks.register<Test>("integrationTest") {
+    testClassesDirs = sourceSets["integrationTest"].output.classesDirs
+    classpath = sourceSets["integrationTest"].runtimeClasspath
+    useJUnit()
 }

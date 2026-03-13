@@ -10,8 +10,6 @@ data class DatabaseConfig(
 )
 
 data class AuthConfig(
-    val username: String,
-    val password: String,
     val sessionSignKey: String,
 )
 
@@ -33,26 +31,14 @@ fun ApplicationConfig.databaseConfig(): DatabaseConfig {
 }
 
 fun ApplicationConfig.authConfig(): AuthConfig {
-    val username = property("app.auth.username").getString()
-    val password = property("app.auth.password").getString()
     val sessionSignKey = property("app.auth.sessionSignKey").getString()
 
-    require(username.isNotBlank()) {
-        "app.auth.username must not be blank. Set AUTH_USERNAME env var."
-    }
-    require(password.isNotBlank()) {
-        "app.auth.password must not be blank. Set AUTH_PASSWORD env var."
-    }
     require(sessionSignKey.length >= 64) {
         "app.auth.sessionSignKey must be at least 64 hex characters (32 bytes). " +
             "Set AUTH_SESSION_SIGN_KEY env var."
     }
 
-    return AuthConfig(
-        username = username,
-        password = password,
-        sessionSignKey = sessionSignKey,
-    )
+    return AuthConfig(sessionSignKey = sessionSignKey)
 }
 
 fun ApplicationConfig.encryptionConfig(): EncryptionConfig {

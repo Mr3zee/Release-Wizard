@@ -33,10 +33,13 @@ class ExposedConnectionsRepository(
         )
     }
 
-    override suspend fun findAll(): List<Connection> = dbQuery {
-        ConnectionTable.selectAll()
-            .orderBy(ConnectionTable.updatedAt, SortOrder.DESC)
-            .map { it.toConnection() }
+    override suspend fun findAll(ownerId: String?): List<Connection> = dbQuery {
+        val query = if (ownerId != null) {
+            ConnectionTable.selectAll().where { ConnectionTable.ownerId eq ownerId }
+        } else {
+            ConnectionTable.selectAll()
+        }
+        query.orderBy(ConnectionTable.updatedAt, SortOrder.DESC).map { it.toConnection() }
     }
 
     override suspend fun findById(id: ConnectionId): Connection? = dbQuery {
@@ -46,10 +49,18 @@ class ExposedConnectionsRepository(
             ?.toConnection()
     }
 
+    override suspend fun findOwner(id: ConnectionId): String? = dbQuery {
+        ConnectionTable.select(ConnectionTable.ownerId)
+            .where { ConnectionTable.id eq UUID.fromString(id.value) }
+            .singleOrNull()
+            ?.get(ConnectionTable.ownerId)
+    }
+
     override suspend fun create(
         name: String,
         type: ConnectionType,
         config: ConnectionConfig,
+        ownerId: String,
     ): Connection = dbQuery {
         val now = Clock.System.now()
         val id = UUID.randomUUID()
@@ -59,6 +70,7 @@ class ExposedConnectionsRepository(
             it[ConnectionTable.name] = name
             it[ConnectionTable.type] = type
             it[ConnectionTable.encryptedConfig] = encryptedConfig
+            it[ConnectionTable.ownerId] = ownerId
             it[ConnectionTable.createdAt] = now
             it[ConnectionTable.updatedAt] = now
         }

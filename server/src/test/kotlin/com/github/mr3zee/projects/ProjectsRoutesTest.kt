@@ -2,6 +2,7 @@ package com.github.mr3zee.projects
 
 import com.github.mr3zee.api.*
 import com.github.mr3zee.jsonClient
+import com.github.mr3zee.login
 import com.github.mr3zee.testModule
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -13,13 +14,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class ProjectsRoutesTest {
-
-    private suspend fun HttpClient.login() {
-        post(ApiRoutes.Auth.LOGIN) {
-            contentType(ContentType.Application.Json)
-            setBody(LoginRequest(username = "admin", password = "admin"))
-        }
-    }
 
     @Test
     fun `list projects returns empty list initially`() = testApplication {

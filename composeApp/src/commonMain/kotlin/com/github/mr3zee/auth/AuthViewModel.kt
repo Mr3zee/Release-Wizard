@@ -53,6 +53,21 @@ class AuthViewModel(
         }
     }
 
+    fun register(username: String, password: String) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            try {
+                val userInfo = apiClient.register(username, password)
+                _user.value = userInfo
+            } catch (_: Exception) {
+                _error.value = "Registration failed. Username may already be taken."
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
     fun logout() {
         viewModelScope.launch {
             try {
