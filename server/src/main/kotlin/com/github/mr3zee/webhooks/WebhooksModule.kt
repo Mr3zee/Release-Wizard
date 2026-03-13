@@ -4,4 +4,5 @@ import org.koin.dsl.module
 
 val webhooksModule = module {
     single<PendingWebhookRepository> { ExposedPendingWebhookRepository(get()) }
+    single { WebhookService(get(), get()) }
 }

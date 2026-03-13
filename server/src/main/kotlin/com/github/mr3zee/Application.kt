@@ -11,6 +11,7 @@ import com.github.mr3zee.projects.projectsModule
 import com.github.mr3zee.releases.releaseRoutes
 import com.github.mr3zee.releases.releaseWebSocketRoutes
 import com.github.mr3zee.releases.releasesModule
+import com.github.mr3zee.webhooks.webhookRoutes
 import com.github.mr3zee.webhooks.webhooksModule
 import io.ktor.events.*
 import io.ktor.http.*
@@ -102,6 +103,7 @@ fun Application.configureRouting() {
             call.respondText("Release Wizard API")
         }
         authRoutes()
+        webhookRoutes()
         authenticate("session-auth") {
             projectRoutes()
             connectionRoutes()
