@@ -14,6 +14,7 @@ import kotlinx.coroutines.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.time.Clock
 
 class AsyncExecutorsTest {
 
@@ -31,6 +32,22 @@ class AsyncExecutorsTest {
         blockOutputs = emptyMap(),
         connections = mapOf(ConnectionId(connectionId) to config),
     )
+
+    /**
+     * Poll until condition is true, avoiding flaky delay()-based waits.
+     */
+    private suspend fun waitUntil(
+        timeoutMs: Long = 5000,
+        intervalMs: Long = 10,
+        condition: suspend () -> Boolean,
+    ) {
+        val deadline = System.currentTimeMillis() + timeoutMs
+        while (System.currentTimeMillis() < deadline) {
+            if (condition()) return
+            delay(intervalMs)
+        }
+        throw AssertionError("waitUntil timed out after ${timeoutMs}ms")
+    }
 
     // --- TeamCity Build Executor ---
 
@@ -74,17 +91,25 @@ class AsyncExecutorsTest {
             )
         }
 
-        // Give time for the webhook to be registered
-        delay(100)
+        // Wait for the webhook to be registered
+        waitUntil {
+            webhookRepo.findByConnectionIdAndType(ConnectionId("conn-1"), WebhookType.TEAMCITY).isNotEmpty()
+        }
 
-        // Verify webhook was created
         val pendingWebhooks = webhookRepo.findByConnectionIdAndType(ConnectionId("conn-1"), WebhookType.TEAMCITY)
         assertEquals(1, pendingWebhooks.size)
         assertEquals("42", pendingWebhooks[0].externalId)
 
-        // Simulate webhook arrival
-        webhookRepo.updateStatus(pendingWebhooks[0].id, WebhookStatus.COMPLETED, """{"buildNumber":"42","buildStatus":"SUCCESS"}""")
-        webhookService.simulateCompletion(pendingWebhooks[0])
+        // Simulate webhook arrival via the public emitCompletion method
+        webhookService.emitCompletion(
+            WebhookCompletion(
+                webhookId = pendingWebhooks[0].id,
+                blockId = block.id,
+                releaseId = ReleaseId("release-1"),
+                type = WebhookType.TEAMCITY,
+                payload = """{"buildNumber":"42","buildStatus":"SUCCESS"}""",
+            )
+        )
 
         val outputs = outputsDeferred.await()
         assertEquals("42", outputs["buildNumber"])
@@ -122,10 +147,7 @@ class AsyncExecutorsTest {
 
     @Test
     fun `github action executor triggers dispatch and returns outputs on webhook completion`() = runBlocking {
-        var requestCount = 0
-
         val client = mockClient { request ->
-            requestCount++
             val url = request.url.toString()
             when {
                 url.contains("/dispatches") ->
@@ -171,7 +193,10 @@ class AsyncExecutorsTest {
             )
         }
 
-        delay(200)
+        // Wait for the webhook to be registered (poll instead of delay)
+        waitUntil {
+            webhookRepo.findByConnectionIdAndType(ConnectionId("conn-1"), WebhookType.GITHUB).isNotEmpty()
+        }
 
         val pendingWebhooks = webhookRepo.findByConnectionIdAndType(ConnectionId("conn-1"), WebhookType.GITHUB)
         assertEquals(1, pendingWebhooks.size)
@@ -180,7 +205,15 @@ class AsyncExecutorsTest {
         // Simulate webhook arrival
         val payload = """{"workflow_run":{"id":789,"html_url":"https://github.com/o/r/actions/runs/789","conclusion":"success"}}"""
         webhookRepo.updateStatus(pendingWebhooks[0].id, WebhookStatus.COMPLETED, payload)
-        webhookService.simulateCompletion(pendingWebhooks[0], payload)
+        webhookService.emitCompletion(
+            WebhookCompletion(
+                webhookId = pendingWebhooks[0].id,
+                blockId = block.id,
+                releaseId = ReleaseId("release-1"),
+                type = WebhookType.GITHUB,
+                payload = payload,
+            )
+        )
 
         val outputs = outputsDeferred.await()
         assertEquals("789", outputs["runId"])
@@ -230,7 +263,7 @@ class InMemoryPendingWebhookRepository : PendingWebhookRepository {
         connectionId: ConnectionId,
         type: WebhookType,
     ): PendingWebhook {
-        val now = kotlin.time.Clock.System.now()
+        val now = Clock.System.now()
         val webhook = PendingWebhook(
             id = "wh-${++idCounter}",
             externalId = externalId,
@@ -270,32 +303,10 @@ class InMemoryPendingWebhookRepository : PendingWebhookRepository {
  * Fake ConnectionsRepository for unit tests (not used by executors directly).
  */
 class FakeConnectionsRepository : com.github.mr3zee.connections.ConnectionsRepository {
-    override suspend fun findAll() = emptyList<com.github.mr3zee.model.Connection>()
+    override suspend fun findAll() = emptyList<Connection>()
     override suspend fun findById(id: ConnectionId) = null
     override suspend fun create(name: String, type: ConnectionType, config: ConnectionConfig) =
         throw UnsupportedOperationException()
     override suspend fun update(id: ConnectionId, name: String?, config: ConnectionConfig?) = null
     override suspend fun delete(id: ConnectionId) = false
-}
-
-/**
- * Extension to simulate a webhook completion notification on the SharedFlow.
- */
-suspend fun WebhookService.simulateCompletion(webhook: PendingWebhook, payload: String = "{}") {
-    // Access the private _completions field via the public completions flow trick:
-    // We emit via a small wrapper that uses the same mechanism as processTeamCityWebhook.
-    // For tests, we use reflection-free approach: directly create and emit.
-    val field = WebhookService::class.java.getDeclaredField("_completions")
-    field.isAccessible = true
-    @Suppress("UNCHECKED_CAST")
-    val flow = field.get(this) as kotlinx.coroutines.flow.MutableSharedFlow<WebhookCompletion>
-    flow.emit(
-        WebhookCompletion(
-            webhookId = webhook.id,
-            blockId = webhook.blockId,
-            releaseId = webhook.releaseId,
-            type = webhook.type,
-            payload = payload,
-        )
-    )
 }

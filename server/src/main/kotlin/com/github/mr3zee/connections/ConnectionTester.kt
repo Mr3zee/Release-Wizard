@@ -54,8 +54,7 @@ class ConnectionTester(
             if (response.status.isSuccess()) {
                 ConnectionTestResult(success = true, message = "Connected to GitHub repository ${config.owner}/${config.repo}")
             } else {
-                val body = response.bodyAsText()
-                ConnectionTestResult(success = false, message = "GitHub returned ${response.status}: $body")
+                ConnectionTestResult(success = false, message = "GitHub returned ${response.status}")
             }
         } catch (e: Exception) {
             ConnectionTestResult(success = false, message = "Failed to connect: ${e.message}")

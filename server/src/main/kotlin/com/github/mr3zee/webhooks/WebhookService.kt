@@ -6,6 +6,7 @@ import com.github.mr3zee.model.ConnectionId
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import java.security.MessageDigest
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
@@ -85,7 +86,7 @@ class WebhookService(
 
         for (webhook in pendingWebhooks) {
             webhookRepository.updateStatus(webhook.id, WebhookStatus.COMPLETED, payload)
-            _completions.tryEmit(
+            _completions.emit(
                 WebhookCompletion(
                     webhookId = webhook.id,
                     blockId = webhook.blockId,
@@ -99,6 +100,13 @@ class WebhookService(
         return WebhookResult.Accepted
     }
 
+    /**
+     * Emit a completion event directly. Intended for testing.
+     */
+    suspend fun emitCompletion(completion: WebhookCompletion) {
+        _completions.emit(completion)
+    }
+
     companion object {
         fun verifyGitHubSignature(payload: String, signatureHeader: String, secret: String): Boolean {
             if (!signatureHeader.startsWith("sha256=")) return false
@@ -107,16 +115,7 @@ class WebhookService(
             mac.init(SecretKeySpec(secret.toByteArray(), "HmacSHA256"))
             val computed = mac.doFinal(payload.toByteArray())
             val computedHex = computed.joinToString("") { "%02x".format(it) }
-            return timeSafeEquals(expectedHex, computedHex)
-        }
-
-        private fun timeSafeEquals(a: String, b: String): Boolean {
-            if (a.length != b.length) return false
-            var result = 0
-            for (i in a.indices) {
-                result = result or (a[i].code xor b[i].code)
-            }
-            return result == 0
+            return MessageDigest.isEqual(expectedHex.toByteArray(), computedHex.toByteArray())
         }
     }
 }

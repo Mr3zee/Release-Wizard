@@ -11,10 +11,14 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import org.slf4j.LoggerFactory
 
 /**
  * Triggers a TeamCity build and waits for webhook completion.
@@ -27,6 +31,8 @@ class TeamCityBuildExecutor(
     private val webhookRepository: PendingWebhookRepository,
     private val webhookService: WebhookService,
 ) : BlockExecutor {
+
+    private val log = LoggerFactory.getLogger(TeamCityBuildExecutor::class.java)
 
     override suspend fun execute(
         block: Block.ActionBlock,
@@ -42,12 +48,12 @@ class TeamCityBuildExecutor(
             ?: throw IllegalArgumentException("TeamCity Build requires 'buildTypeId' parameter")
         val branch = parameters.find { it.key == "branch" }?.value
 
-        // Trigger build
+        // Trigger build with XML-escaped parameters
         val xmlBody = buildString {
             append("""<build>""")
-            append("""<buildType id="$buildTypeId"/>""")
+            append("""<buildType id="${escapeXml(buildTypeId)}"/>""")
             if (branch != null) {
-                append("""<branchName>$branch</branchName>""")
+                append("""<branchName>${escapeXml(branch)}</branchName>""")
             }
             append("""</build>""")
         }
@@ -67,38 +73,55 @@ class TeamCityBuildExecutor(
         val buildId = responseBody["id"]?.jsonPrimitive?.content
             ?: throw RuntimeException("TeamCity response missing build id")
 
-        // Register pending webhook
-        val webhook = webhookRepository.create(
-            externalId = buildId,
-            blockId = block.id,
-            releaseId = context.releaseId,
-            connectionId = connectionId,
-            type = WebhookType.TEAMCITY,
-        )
+        // Subscribe to completions BEFORE registering webhook to prevent race condition.
+        // Use UNDISPATCHED start to ensure the collector begins immediately on the current
+        // thread, guaranteeing subscription is active before we register the webhook.
+        return coroutineScope {
+            val completionDeferred = async(start = CoroutineStart.UNDISPATCHED) {
+                withTimeout(WEBHOOK_TIMEOUT_MS) {
+                    webhookService.completions.first { it.blockId == block.id && it.releaseId == context.releaseId }
+                }
+            }
 
-        // Wait for webhook completion (or timeout)
-        val completion = withTimeout(WEBHOOK_TIMEOUT_MS) {
-            webhookService.completions.first { it.webhookId == webhook.id }
-        }
-
-        // Parse payload for build results
-        return try {
-            val payload = kotlinx.serialization.json.Json.decodeFromString<JsonObject>(completion.payload)
-            mapOf(
-                "buildNumber" to (payload["buildNumber"]?.jsonPrimitive?.content ?: buildId),
-                "buildUrl" to "${config.serverUrl}/viewLog.html?buildId=$buildId",
-                "buildStatus" to (payload["buildStatus"]?.jsonPrimitive?.content ?: "SUCCESS"),
+            webhookRepository.create(
+                externalId = buildId,
+                blockId = block.id,
+                releaseId = context.releaseId,
+                connectionId = connectionId,
+                type = WebhookType.TEAMCITY,
             )
-        } catch (_: Exception) {
+
+            val completion = completionDeferred.await()
+            parseCompletionPayload(completion.payload, buildId, config.serverUrl)
+        }
+    }
+
+    private fun parseCompletionPayload(payload: String, buildId: String, serverUrl: String): Map<String, String> {
+        return try {
+            val json = kotlinx.serialization.json.Json.decodeFromString<JsonObject>(payload)
+            mapOf(
+                "buildNumber" to (json["buildNumber"]?.jsonPrimitive?.content ?: buildId),
+                "buildUrl" to "$serverUrl/viewLog.html?buildId=$buildId",
+                "buildStatus" to (json["buildStatus"]?.jsonPrimitive?.content ?: "UNKNOWN"),
+            )
+        } catch (e: Exception) {
+            log.warn("Failed to parse TeamCity webhook payload for build $buildId", e)
             mapOf(
                 "buildNumber" to buildId,
-                "buildUrl" to "${config.serverUrl}/viewLog.html?buildId=$buildId",
-                "buildStatus" to "SUCCESS",
+                "buildUrl" to "$serverUrl/viewLog.html?buildId=$buildId",
+                "buildStatus" to "UNKNOWN",
             )
         }
     }
 
     companion object {
         const val WEBHOOK_TIMEOUT_MS = 30 * 60 * 1000L // 30 minutes
+
+        fun escapeXml(value: String): String = value
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("\"", "&quot;")
+            .replace("'", "&apos;")
     }
 }

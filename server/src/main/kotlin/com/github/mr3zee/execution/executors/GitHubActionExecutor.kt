@@ -11,6 +11,9 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeout
@@ -19,6 +22,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import org.slf4j.LoggerFactory
 
 /**
  * Triggers a GitHub Actions workflow and waits for webhook completion.
@@ -31,6 +35,8 @@ class GitHubActionExecutor(
     private val webhookRepository: PendingWebhookRepository,
     private val webhookService: WebhookService,
 ) : BlockExecutor {
+
+    private val log = LoggerFactory.getLogger(GitHubActionExecutor::class.java)
 
     override suspend fun execute(
         block: Block.ActionBlock,
@@ -65,35 +71,49 @@ class GitHubActionExecutor(
         val runId = discoverRunId(baseUrl, workflowFile, config.token)
             ?: throw RuntimeException("Could not discover GitHub Actions run ID after dispatch")
 
-        // Register pending webhook
-        val webhook = webhookRepository.create(
-            externalId = runId,
-            blockId = block.id,
-            releaseId = context.releaseId,
-            connectionId = connectionId,
-            type = WebhookType.GITHUB,
-        )
+        // Subscribe to completions BEFORE registering webhook to prevent race condition.
+        // Use UNDISPATCHED start to ensure the collector begins immediately.
+        return coroutineScope {
+            val completionDeferred = async(start = CoroutineStart.UNDISPATCHED) {
+                withTimeout(WEBHOOK_TIMEOUT_MS) {
+                    webhookService.completions.first { it.blockId == block.id && it.releaseId == context.releaseId }
+                }
+            }
 
-        // Wait for webhook completion
-        val completion = withTimeout(WEBHOOK_TIMEOUT_MS) {
-            webhookService.completions.first { it.webhookId == webhook.id }
+            webhookRepository.create(
+                externalId = runId,
+                blockId = block.id,
+                releaseId = context.releaseId,
+                connectionId = connectionId,
+                type = WebhookType.GITHUB,
+            )
+
+            val completion = completionDeferred.await()
+            parseCompletionPayload(completion.payload, runId, config.owner, config.repo)
         }
+    }
 
-        // Parse payload
+    private fun parseCompletionPayload(
+        payload: String,
+        runId: String,
+        owner: String,
+        repo: String,
+    ): Map<String, String> {
         return try {
-            val payload = kotlinx.serialization.json.Json.decodeFromString<JsonObject>(completion.payload)
-            val workflowRun = payload["workflow_run"]?.jsonObject
+            val json = kotlinx.serialization.json.Json.decodeFromString<JsonObject>(payload)
+            val workflowRun = json["workflow_run"]?.jsonObject
             mapOf(
                 "runId" to (workflowRun?.get("id")?.jsonPrimitive?.content ?: runId),
                 "runUrl" to (workflowRun?.get("html_url")?.jsonPrimitive?.content
-                    ?: "https://github.com/${config.owner}/${config.repo}/actions/runs/$runId"),
-                "runStatus" to (workflowRun?.get("conclusion")?.jsonPrimitive?.content ?: "success"),
+                    ?: "https://github.com/$owner/$repo/actions/runs/$runId"),
+                "runStatus" to (workflowRun?.get("conclusion")?.jsonPrimitive?.content ?: "unknown"),
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            log.warn("Failed to parse GitHub Actions webhook payload for run $runId", e)
             mapOf(
                 "runId" to runId,
-                "runUrl" to "https://github.com/${config.owner}/${config.repo}/actions/runs/$runId",
-                "runStatus" to "success",
+                "runUrl" to "https://github.com/$owner/$repo/actions/runs/$runId",
+                "runStatus" to "unknown",
             )
         }
     }
@@ -119,8 +139,8 @@ class GitHubActionExecutor(
                         return runs[0].jsonObject["id"]?.jsonPrimitive?.content
                     }
                 }
-            } catch (_: Exception) {
-                // Retry
+            } catch (e: Exception) {
+                log.debug("Run discovery attempt $attempt failed", e)
             }
         }
         return null
