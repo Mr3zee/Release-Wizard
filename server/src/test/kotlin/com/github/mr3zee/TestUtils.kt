@@ -16,9 +16,11 @@ import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import io.ktor.server.sessions.*
 import io.ktor.server.testing.*
+import io.ktor.server.websocket.*
 import io.ktor.util.*
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
+import kotlin.time.Duration.Companion.seconds
 
 fun testDbConfig() = DatabaseConfig(
     url = "jdbc:h2:mem:test_${System.nanoTime()};DB_CLOSE_DELAY=-1;MODE=PostgreSQL",
@@ -62,6 +64,10 @@ fun Application.testModule() {
             validate { it }
             challenge { call.respond(HttpStatusCode.Unauthorized, "Not authenticated") }
         }
+    }
+    install(WebSockets) {
+        pingPeriod = 15.seconds
+        timeout = 15.seconds
     }
     install(ContentNegotiation) {
         json(AppJson)

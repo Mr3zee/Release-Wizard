@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import com.github.mr3zee.api.AuthApiClient
 import com.github.mr3zee.api.ConnectionApiClient
 import com.github.mr3zee.api.ProjectApiClient
+import com.github.mr3zee.api.ReleaseApiClient
 import com.github.mr3zee.api.createHttpClient
 import com.github.mr3zee.auth.AuthViewModel
 import com.github.mr3zee.auth.LoginScreen
@@ -18,6 +19,7 @@ import com.github.mr3zee.connections.ConnectionsViewModel
 import com.github.mr3zee.navigation.AppNavigation
 import com.github.mr3zee.navigation.Screen
 import com.github.mr3zee.projects.ProjectListViewModel
+import com.github.mr3zee.releases.ReleaseListViewModel
 
 @Composable
 fun App() {
@@ -28,10 +30,12 @@ fun App() {
     val authApiClient = remember { AuthApiClient(httpClient) }
     val projectApiClient = remember { ProjectApiClient(httpClient) }
     val connectionApiClient = remember { ConnectionApiClient(httpClient) }
+    val releaseApiClient = remember { ReleaseApiClient(httpClient) }
 
     val authViewModel = remember { AuthViewModel(authApiClient) }
     val projectListViewModel = remember { ProjectListViewModel(projectApiClient) }
     val connectionsViewModel = remember { ConnectionsViewModel(connectionApiClient) }
+    val releaseListViewModel = remember { ReleaseListViewModel(releaseApiClient, projectApiClient) }
 
     val user by authViewModel.user.collectAsState()
     val isCheckingSession by authViewModel.isCheckingSession.collectAsState()
@@ -65,6 +69,8 @@ fun App() {
                         onNavigate = { currentScreen = it },
                         projectListViewModel = projectListViewModel,
                         projectApiClient = projectApiClient,
+                        releaseApiClient = releaseApiClient,
+                        releaseListViewModel = releaseListViewModel,
                         connectionsViewModel = connectionsViewModel,
                         onLogout = {
                             authViewModel.logout()

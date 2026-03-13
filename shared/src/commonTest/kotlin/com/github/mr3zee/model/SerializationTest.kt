@@ -5,6 +5,7 @@ import com.github.mr3zee.api.*
 import kotlin.time.Clock
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class SerializationTest {
     private val json = AppJson
@@ -246,6 +247,82 @@ class SerializationTest {
         val encoded2 = json.encodeToString(ApproveBlockRequest.serializer(), approveRequest)
         val decoded2 = json.decodeFromString(ApproveBlockRequest.serializer(), encoded2)
         assertEquals(approveRequest, decoded2)
+    }
+
+    @Test
+    fun releaseEventSnapshotRoundTrip() {
+        val now = Clock.System.now()
+        val event: ReleaseEvent = ReleaseEvent.Snapshot(
+            releaseId = ReleaseId("r1"),
+            release = Release(
+                id = ReleaseId("r1"),
+                projectTemplateId = ProjectId("p1"),
+                status = ReleaseStatus.RUNNING,
+                dagSnapshot = DagGraph(),
+                startedAt = now,
+            ),
+            blockExecutions = listOf(
+                BlockExecution(
+                    blockId = BlockId("b1"),
+                    releaseId = ReleaseId("r1"),
+                    status = BlockStatus.RUNNING,
+                    startedAt = now,
+                ),
+            ),
+        )
+        val encoded = json.encodeToString(ReleaseEvent.serializer(), event)
+        val decoded = json.decodeFromString(ReleaseEvent.serializer(), encoded)
+        assertEquals(event, decoded)
+        // Verify discriminator is present
+        assertTrue(encoded.contains("\"type\":\"snapshot\""))
+    }
+
+    @Test
+    fun releaseEventStatusChangedRoundTrip() {
+        val now = Clock.System.now()
+        val event: ReleaseEvent = ReleaseEvent.ReleaseStatusChanged(
+            releaseId = ReleaseId("r1"),
+            status = ReleaseStatus.RUNNING,
+            startedAt = now,
+        )
+        val encoded = json.encodeToString(ReleaseEvent.serializer(), event)
+        val decoded = json.decodeFromString(ReleaseEvent.serializer(), encoded)
+        assertEquals(event, decoded)
+        assertTrue(encoded.contains("\"type\":\"release_status_changed\""))
+    }
+
+    @Test
+    fun releaseEventBlockExecutionUpdatedRoundTrip() {
+        val now = Clock.System.now()
+        val event: ReleaseEvent = ReleaseEvent.BlockExecutionUpdated(
+            releaseId = ReleaseId("r1"),
+            blockExecution = BlockExecution(
+                blockId = BlockId("b1"),
+                releaseId = ReleaseId("r1"),
+                status = BlockStatus.SUCCEEDED,
+                outputs = mapOf("buildNumber" to "42"),
+                startedAt = now,
+                finishedAt = now,
+            ),
+        )
+        val encoded = json.encodeToString(ReleaseEvent.serializer(), event)
+        val decoded = json.decodeFromString(ReleaseEvent.serializer(), encoded)
+        assertEquals(event, decoded)
+        assertTrue(encoded.contains("\"type\":\"block_execution_updated\""))
+    }
+
+    @Test
+    fun releaseEventCompletedRoundTrip() {
+        val now = Clock.System.now()
+        val event: ReleaseEvent = ReleaseEvent.ReleaseCompleted(
+            releaseId = ReleaseId("r1"),
+            status = ReleaseStatus.SUCCEEDED,
+            finishedAt = now,
+        )
+        val encoded = json.encodeToString(ReleaseEvent.serializer(), event)
+        val decoded = json.decodeFromString(ReleaseEvent.serializer(), encoded)
+        assertEquals(event, decoded)
+        assertTrue(encoded.contains("\"type\":\"release_completed\""))
     }
 
     @Test

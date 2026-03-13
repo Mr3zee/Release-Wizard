@@ -16,6 +16,7 @@ object ApiRoutes {
         fun blockExecution(releaseId: String, blockId: String) = "$BASE/$releaseId/blocks/$blockId"
         fun restartBlock(releaseId: String, blockId: String) = "$BASE/$releaseId/blocks/$blockId/restart"
         fun approveBlock(releaseId: String, blockId: String) = "$BASE/$releaseId/blocks/$blockId/approve"
+        fun ws(id: String) = "$BASE/$id/ws"
     }
 
     object Auth {

@@ -1,11 +1,15 @@
 package com.github.mr3zee.execution
 
+import com.github.mr3zee.api.ReleaseEvent
 import com.github.mr3zee.dag.DagTopologicalSort
 import com.github.mr3zee.dag.DagValidator
 import com.github.mr3zee.model.*
 import com.github.mr3zee.releases.ReleasesRepository
 import com.github.mr3zee.template.TemplateEngine
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.coroutineContext
 import kotlin.time.Clock
@@ -28,6 +32,18 @@ class ExecutionEngine(
 
     // Pending user action approvals: releaseId -> blockId -> CompletableDeferred
     private val pendingApprovals = ConcurrentHashMap<ReleaseId, ConcurrentHashMap<BlockId, CompletableDeferred<Map<String, String>>>>()
+
+    // Event stream for WebSocket subscribers
+    private val _events = MutableSharedFlow<ReleaseEvent>(
+        replay = 0,
+        extraBufferCapacity = 256,
+        onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST,
+    )
+    val events: SharedFlow<ReleaseEvent> = _events.asSharedFlow()
+
+    private fun emitEvent(event: ReleaseEvent) {
+        _events.tryEmit(event)
+    }
 
     fun startExecution(release: Release): Job {
         val job = scope.launch {
@@ -56,6 +72,9 @@ class ExecutionEngine(
         val release = repository.findById(releaseId)
         if (release != null && release.status != ReleaseStatus.CANCELLED) {
             repository.setFinished(releaseId, ReleaseStatus.CANCELLED)
+            val now = Clock.System.now()
+            emitEvent(ReleaseEvent.ReleaseStatusChanged(releaseId, ReleaseStatus.CANCELLED, finishedAt = now))
+            emitEvent(ReleaseEvent.ReleaseCompleted(releaseId, ReleaseStatus.CANCELLED, finishedAt = now))
         }
     }
 
@@ -70,8 +89,7 @@ class ExecutionEngine(
         // Restart is handled by re-running the full execution loop.
         // The main loop reads block statuses from DB, so resetting to WAITING
         // in the service layer + re-executing is sufficient.
-        // For now, restart support requires the release to be re-evaluated.
-        // Full restart support will be improved in Phase 5 with WebSockets.
+        // TODO: Full restart support in a future phase.
     }
 
     fun shutdown() {
@@ -85,10 +103,15 @@ class ExecutionEngine(
             val errors = DagValidator.validate(graph)
             if (errors.isNotEmpty()) {
                 repository.setFinished(release.id, ReleaseStatus.FAILED)
+                val now = Clock.System.now()
+                emitEvent(ReleaseEvent.ReleaseStatusChanged(release.id, ReleaseStatus.FAILED, finishedAt = now))
+                emitEvent(ReleaseEvent.ReleaseCompleted(release.id, ReleaseStatus.FAILED, finishedAt = now))
                 return
             }
 
             repository.setStarted(release.id)
+            val startedAt = Clock.System.now()
+            emitEvent(ReleaseEvent.ReleaseStatusChanged(release.id, ReleaseStatus.RUNNING, startedAt = startedAt))
 
             val sorted = DagTopologicalSort.sort(graph)
                 ?: throw IllegalStateException("DAG contains a cycle")
@@ -109,23 +132,32 @@ class ExecutionEngine(
             val allSucceeded = statusMap.values.all { it == BlockStatus.SUCCEEDED }
             val finalStatus = if (allSucceeded) ReleaseStatus.SUCCEEDED else ReleaseStatus.FAILED
             repository.setFinished(release.id, finalStatus)
+            val finishedAt = Clock.System.now()
+            emitEvent(ReleaseEvent.ReleaseStatusChanged(release.id, finalStatus, finishedAt = finishedAt))
+            emitEvent(ReleaseEvent.ReleaseCompleted(release.id, finalStatus, finishedAt = finishedAt))
 
         } catch (e: CancellationException) {
             val executions = repository.findBlockExecutions(release.id)
             for (exec in executions) {
                 if (exec.status == BlockStatus.RUNNING || exec.status == BlockStatus.WAITING) {
-                    repository.upsertBlockExecution(
-                        exec.copy(
-                            status = BlockStatus.FAILED,
-                            error = "Release cancelled",
-                            finishedAt = Clock.System.now(),
-                        )
+                    val updated = exec.copy(
+                        status = BlockStatus.FAILED,
+                        error = "Release cancelled",
+                        finishedAt = Clock.System.now(),
                     )
+                    repository.upsertBlockExecution(updated)
+                    emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, updated))
                 }
             }
             repository.setFinished(release.id, ReleaseStatus.CANCELLED)
+            val now = Clock.System.now()
+            emitEvent(ReleaseEvent.ReleaseStatusChanged(release.id, ReleaseStatus.CANCELLED, finishedAt = now))
+            emitEvent(ReleaseEvent.ReleaseCompleted(release.id, ReleaseStatus.CANCELLED, finishedAt = now))
         } catch (e: Exception) {
             repository.setFinished(release.id, ReleaseStatus.FAILED)
+            val now = Clock.System.now()
+            emitEvent(ReleaseEvent.ReleaseStatusChanged(release.id, ReleaseStatus.FAILED, finishedAt = now))
+            emitEvent(ReleaseEvent.ReleaseCompleted(release.id, ReleaseStatus.FAILED, finishedAt = now))
         }
     }
 
@@ -176,14 +208,14 @@ class ExecutionEngine(
         // Mark any remaining blocks (whose predecessors failed) as FAILED
         for (blockId in remaining) {
             statusMap[blockId] = BlockStatus.FAILED
-            repository.upsertBlockExecution(
-                BlockExecution(
-                    blockId = blockId,
-                    releaseId = release.id,
-                    status = BlockStatus.FAILED,
-                    error = "Skipped: predecessor failed",
-                )
+            val execution = BlockExecution(
+                blockId = blockId,
+                releaseId = release.id,
+                status = BlockStatus.FAILED,
+                error = "Skipped: predecessor failed",
             )
+            repository.upsertBlockExecution(execution)
+            emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, execution))
         }
     }
 
@@ -207,28 +239,28 @@ class ExecutionEngine(
     ) {
         val startTime = Clock.System.now()
         statusMap[container.id] = BlockStatus.RUNNING
-        repository.upsertBlockExecution(
-            BlockExecution(
-                blockId = container.id,
-                releaseId = release.id,
-                status = BlockStatus.RUNNING,
-                startedAt = startTime,
-            )
+        val runningExec = BlockExecution(
+            blockId = container.id,
+            releaseId = release.id,
+            status = BlockStatus.RUNNING,
+            startedAt = startTime,
         )
+        repository.upsertBlockExecution(runningExec)
+        emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, runningExec))
 
         try {
             val childGraph = container.children
             if (childGraph.blocks.isEmpty()) {
                 statusMap[container.id] = BlockStatus.SUCCEEDED
-                repository.upsertBlockExecution(
-                    BlockExecution(
-                        blockId = container.id,
-                        releaseId = release.id,
-                        status = BlockStatus.SUCCEEDED,
-                        startedAt = startTime,
-                        finishedAt = Clock.System.now(),
-                    )
+                val succeededExec = BlockExecution(
+                    blockId = container.id,
+                    releaseId = release.id,
+                    status = BlockStatus.SUCCEEDED,
+                    startedAt = startTime,
+                    finishedAt = Clock.System.now(),
                 )
+                repository.upsertBlockExecution(succeededExec)
+                emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, succeededExec))
                 return
             }
 
@@ -263,29 +295,29 @@ class ExecutionEngine(
             val containerStatus = if (allChildrenSucceeded) BlockStatus.SUCCEEDED else BlockStatus.FAILED
 
             statusMap[container.id] = containerStatus
-            repository.upsertBlockExecution(
-                BlockExecution(
-                    blockId = container.id,
-                    releaseId = release.id,
-                    status = containerStatus,
-                    startedAt = startTime,
-                    finishedAt = Clock.System.now(),
-                )
+            val containerExec = BlockExecution(
+                blockId = container.id,
+                releaseId = release.id,
+                status = containerStatus,
+                startedAt = startTime,
+                finishedAt = Clock.System.now(),
             )
+            repository.upsertBlockExecution(containerExec)
+            emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, containerExec))
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             statusMap[container.id] = BlockStatus.FAILED
-            repository.upsertBlockExecution(
-                BlockExecution(
-                    blockId = container.id,
-                    releaseId = release.id,
-                    status = BlockStatus.FAILED,
-                    error = e.message,
-                    startedAt = startTime,
-                    finishedAt = Clock.System.now(),
-                )
+            val failedExec = BlockExecution(
+                blockId = container.id,
+                releaseId = release.id,
+                status = BlockStatus.FAILED,
+                error = e.message,
+                startedAt = startTime,
+                finishedAt = Clock.System.now(),
             )
+            repository.upsertBlockExecution(failedExec)
+            emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, failedExec))
         }
     }
 
@@ -297,28 +329,28 @@ class ExecutionEngine(
     ) {
         val startTime = Clock.System.now()
         statusMap[block.id] = BlockStatus.RUNNING
-        repository.upsertBlockExecution(
-            BlockExecution(
-                blockId = block.id,
-                releaseId = release.id,
-                status = BlockStatus.RUNNING,
-                startedAt = startTime,
-            )
+        val runningExec = BlockExecution(
+            blockId = block.id,
+            releaseId = release.id,
+            status = BlockStatus.RUNNING,
+            startedAt = startTime,
         )
+        repository.upsertBlockExecution(runningExec)
+        emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, runningExec))
 
         try {
             val outputs: Map<String, String>
 
             if (block.type == BlockType.USER_ACTION) {
                 statusMap[block.id] = BlockStatus.WAITING_FOR_INPUT
-                repository.upsertBlockExecution(
-                    BlockExecution(
-                        blockId = block.id,
-                        releaseId = release.id,
-                        status = BlockStatus.WAITING_FOR_INPUT,
-                        startedAt = startTime,
-                    )
+                val waitingExec = BlockExecution(
+                    blockId = block.id,
+                    releaseId = release.id,
+                    status = BlockStatus.WAITING_FOR_INPUT,
+                    startedAt = startTime,
                 )
+                repository.upsertBlockExecution(waitingExec)
+                emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, waitingExec))
 
                 val deferred = CompletableDeferred<Map<String, String>>()
                 pendingApprovals
@@ -352,41 +384,41 @@ class ExecutionEngine(
 
             outputsMap[block.id] = outputs
             statusMap[block.id] = BlockStatus.SUCCEEDED
-            repository.upsertBlockExecution(
-                BlockExecution(
-                    blockId = block.id,
-                    releaseId = release.id,
-                    status = BlockStatus.SUCCEEDED,
-                    outputs = outputs,
-                    startedAt = startTime,
-                    finishedAt = Clock.System.now(),
-                )
+            val succeededExec = BlockExecution(
+                blockId = block.id,
+                releaseId = release.id,
+                status = BlockStatus.SUCCEEDED,
+                outputs = outputs,
+                startedAt = startTime,
+                finishedAt = Clock.System.now(),
             )
+            repository.upsertBlockExecution(succeededExec)
+            emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, succeededExec))
         } catch (e: CancellationException) {
             statusMap[block.id] = BlockStatus.FAILED
-            repository.upsertBlockExecution(
-                BlockExecution(
-                    blockId = block.id,
-                    releaseId = release.id,
-                    status = BlockStatus.FAILED,
-                    error = "Cancelled",
-                    startedAt = startTime,
-                    finishedAt = Clock.System.now(),
-                )
+            val cancelledExec = BlockExecution(
+                blockId = block.id,
+                releaseId = release.id,
+                status = BlockStatus.FAILED,
+                error = "Cancelled",
+                startedAt = startTime,
+                finishedAt = Clock.System.now(),
             )
+            repository.upsertBlockExecution(cancelledExec)
+            emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, cancelledExec))
             throw e
         } catch (e: Exception) {
             statusMap[block.id] = BlockStatus.FAILED
-            repository.upsertBlockExecution(
-                BlockExecution(
-                    blockId = block.id,
-                    releaseId = release.id,
-                    status = BlockStatus.FAILED,
-                    error = e.message ?: "Unknown error",
-                    startedAt = startTime,
-                    finishedAt = Clock.System.now(),
-                )
+            val failedExec = BlockExecution(
+                blockId = block.id,
+                releaseId = release.id,
+                status = BlockStatus.FAILED,
+                error = e.message ?: "Unknown error",
+                startedAt = startTime,
+                finishedAt = Clock.System.now(),
             )
+            repository.upsertBlockExecution(failedExec)
+            emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, failedExec))
         }
     }
 

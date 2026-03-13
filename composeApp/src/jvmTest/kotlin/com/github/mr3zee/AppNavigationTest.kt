@@ -7,12 +7,14 @@ import androidx.compose.ui.test.*
 import com.github.mr3zee.api.AuthApiClient
 import com.github.mr3zee.api.ConnectionApiClient
 import com.github.mr3zee.api.ProjectApiClient
+import com.github.mr3zee.api.ReleaseApiClient
 import com.github.mr3zee.auth.AuthViewModel
 import com.github.mr3zee.auth.LoginScreen
 import com.github.mr3zee.connections.ConnectionsViewModel
 import com.github.mr3zee.navigation.AppNavigation
 import com.github.mr3zee.navigation.Screen
 import com.github.mr3zee.projects.ProjectListViewModel
+import com.github.mr3zee.releases.ReleaseListViewModel
 import io.ktor.client.*
 import io.ktor.http.*
 import kotlin.test.Test
@@ -28,6 +30,7 @@ class AppNavigationTest {
             {"id":"p1","name":"Pipeline A","description":"","dagGraph":{"blocks":[],"edges":[],"positions":{}},"parameters":[],"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}
         ]}"""),
         "/connections" to json("""{"connections":[]}"""),
+        "/releases" to json("""{"releases":[]}"""),
     ))
 
     @Composable
@@ -35,9 +38,11 @@ class AppNavigationTest {
         val authApiClient = remember { AuthApiClient(httpClient) }
         val projectApiClient = remember { ProjectApiClient(httpClient) }
         val connectionApiClient = remember { ConnectionApiClient(httpClient) }
+        val releaseApiClient = remember { ReleaseApiClient(httpClient) }
         val authViewModel = remember { AuthViewModel(authApiClient) }
         val projectListViewModel = remember { ProjectListViewModel(projectApiClient) }
         val connectionsViewModel = remember { ConnectionsViewModel(connectionApiClient) }
+        val releaseListViewModel = remember { ReleaseListViewModel(releaseApiClient, projectApiClient) }
         val user by authViewModel.user.collectAsState()
         val isCheckingSession by authViewModel.isCheckingSession.collectAsState()
 
@@ -55,6 +60,8 @@ class AppNavigationTest {
                         onNavigate = { currentScreen = it },
                         projectListViewModel = projectListViewModel,
                         projectApiClient = projectApiClient,
+                        releaseApiClient = releaseApiClient,
+                        releaseListViewModel = releaseListViewModel,
                         connectionsViewModel = connectionsViewModel,
                         onLogout = { authViewModel.logout(); currentScreen = Screen.ProjectList },
                     )
@@ -96,6 +103,21 @@ class AppNavigationTest {
         onNodeWithTag("logout_button").performClick()
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("login_screen").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("login_screen").assertExists()
+    }
+
+    @Test
+    fun `navigate to releases and back`() = runComposeUiTest {
+        setContent { TestApp(appClient()) }
+
+        waitUntil(timeoutMillis = 5000L) { onAllNodesWithTag("project_list_screen").fetchSemanticsNodes().isNotEmpty() }
+
+        onNodeWithTag("releases_button").performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("release_list_screen").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("release_list_screen").assertExists()
+
+        onNodeWithText("Back").performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("project_list_screen").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("project_list_screen").assertExists()
     }
 
     @Test

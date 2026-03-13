@@ -9,6 +9,7 @@ import com.github.mr3zee.execution.ExecutionEngine
 import com.github.mr3zee.projects.projectRoutes
 import com.github.mr3zee.projects.projectsModule
 import com.github.mr3zee.releases.releaseRoutes
+import com.github.mr3zee.releases.releaseWebSocketRoutes
 import com.github.mr3zee.releases.releasesModule
 import io.ktor.events.*
 import io.ktor.http.*
@@ -20,9 +21,11 @@ import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
+import io.ktor.server.websocket.*
 import io.ktor.util.*
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
+import kotlin.time.Duration.Companion.seconds
 
 fun Application.module() {
     val dbConfig = environment.config.databaseConfig()
@@ -62,6 +65,11 @@ fun Application.module() {
         json(AppJson)
     }
 
+    install(WebSockets) {
+        pingPeriod = 15.seconds
+        timeout = 15.seconds
+    }
+
     install(StatusPages) {
         exception<IllegalArgumentException> { call, cause ->
             call.respondText(cause.message ?: "Bad request", status = HttpStatusCode.BadRequest)
@@ -90,6 +98,7 @@ fun Application.configureRouting() {
             projectRoutes()
             connectionRoutes()
             releaseRoutes()
+            releaseWebSocketRoutes()
         }
     }
 }

@@ -40,6 +40,7 @@ kotlin {
             implementation(libs.ktor.clientCore)
             implementation(libs.ktor.clientContentNegotiation)
             implementation(libs.ktor.clientSerializationKotlinxJson)
+            implementation(libs.ktor.clientWebsockets)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

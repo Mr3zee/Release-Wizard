@@ -26,6 +26,7 @@ dependencies {
     implementation(libs.ktor.serverStatusPages)
     implementation(libs.ktor.serverAuth)
     implementation(libs.ktor.serverSessions)
+    implementation(libs.ktor.serverWebsockets)
     implementation(libs.ktor.serializationKotlinxJson)
 
     // Database
@@ -46,5 +47,6 @@ dependencies {
     testImplementation(libs.ktor.clientSerializationKotlinxJson)
     testImplementation(libs.kotlin.testJunit)
     testImplementation(libs.koin.test)
+    testImplementation(libs.ktor.clientWebsockets)
     testImplementation(libs.h2)
 }

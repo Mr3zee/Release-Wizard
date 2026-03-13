@@ -20,6 +20,7 @@ fun ProjectListScreen(
     onCreateProject: () -> Unit,
     onEditProject: (ProjectId) -> Unit,
     onConnections: (() -> Unit)? = null,
+    onReleases: (() -> Unit)? = null,
     onLogout: (() -> Unit)? = null,
 ) {
     val projects by viewModel.projects.collectAsState()
@@ -38,6 +39,14 @@ fun ProjectListScreen(
             TopAppBar(
                 title = { Text("Projects") },
                 actions = {
+                    if (onReleases != null) {
+                        TextButton(
+                            onClick = onReleases,
+                            modifier = Modifier.testTag("releases_button"),
+                        ) {
+                            Text("Releases")
+                        }
+                    }
                     if (onConnections != null) {
                         TextButton(
                             onClick = onConnections,
