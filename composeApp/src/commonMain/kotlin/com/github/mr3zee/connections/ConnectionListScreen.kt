@@ -22,6 +22,7 @@ fun ConnectionListScreen(
     onBack: () -> Unit,
 ) {
     val connections by viewModel.connections.collectAsState()
+    val webhookUrls by viewModel.webhookUrls.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
 
@@ -97,6 +98,7 @@ fun ConnectionListScreen(
                     items(connections, key = { it.id.value }) { connection ->
                         ConnectionListItem(
                             connection = connection,
+                            webhookUrl = webhookUrls[connection.id.value],
                             onClick = { onEditConnection(connection.id) },
                             onDelete = { connectionToDelete = connection },
                             onTest = { viewModel.testConnection(connection.id) },
@@ -132,6 +134,7 @@ fun ConnectionListScreen(
 @Composable
 private fun ConnectionListItem(
     connection: Connection,
+    webhookUrl: String?,
     onClick: () -> Unit,
     onDelete: () -> Unit,
     onTest: () -> Unit,
@@ -160,6 +163,14 @@ private fun ConnectionListItem(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (webhookUrl != null) {
+                    Text(
+                        text = "Webhook: $webhookUrl",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testTag("webhook_url_${connection.id.value}"),
+                    )
+                }
             }
             Row {
                 TextButton(onClick = onTest) {

@@ -9,9 +9,9 @@ import io.ktor.http.*
 
 class ConnectionApiClient(private val client: HttpClient) {
 
-    suspend fun listConnections(): List<Connection> {
+    suspend fun listConnections(): ConnectionListResponse {
         val response = client.get(serverUrl(ApiRoutes.Connections.BASE))
-        return response.body<ConnectionListResponse>().connections
+        return response.body<ConnectionListResponse>()
     }
 
     suspend fun getConnection(id: ConnectionId): Connection {

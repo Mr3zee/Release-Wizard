@@ -29,6 +29,12 @@ dependencies {
     implementation(libs.ktor.serverWebsockets)
     implementation(libs.ktor.serializationKotlinxJson)
 
+    // Ktor client (for outbound API calls to external services)
+    implementation(libs.ktor.clientCore)
+    implementation(libs.ktor.clientCio)
+    implementation(libs.ktor.clientContentNegotiation)
+    implementation(libs.ktor.clientSerializationKotlinxJson)
+
     // Database
     implementation(libs.exposed.core)
     implementation(libs.exposed.jdbc)

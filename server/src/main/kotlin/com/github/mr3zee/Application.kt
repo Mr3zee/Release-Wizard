@@ -11,6 +11,7 @@ import com.github.mr3zee.projects.projectsModule
 import com.github.mr3zee.releases.releaseRoutes
 import com.github.mr3zee.releases.releaseWebSocketRoutes
 import com.github.mr3zee.releases.releasesModule
+import com.github.mr3zee.webhooks.webhooksModule
 import io.ktor.events.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
@@ -31,14 +32,16 @@ fun Application.module() {
     val dbConfig = environment.config.databaseConfig()
     val authConfig = environment.config.authConfig()
     val encryptionConfig = environment.config.encryptionConfig()
+    val webhookConfig = environment.config.webhookConfig()
 
     install(Koin) {
         slf4jLogger()
         modules(
-            appModule(dbConfig, encryptionConfig, authConfig),
+            appModule(dbConfig, encryptionConfig, authConfig, webhookConfig),
             authModule,
             projectsModule,
             connectionsModule,
+            webhooksModule,
             releasesModule,
         )
     }
@@ -83,8 +86,13 @@ fun Application.module() {
     configureRouting()
 
     monitor.subscribe(ApplicationStopped) {
-        val engine = org.koin.java.KoinJavaComponent.getKoin().getOrNull<ExecutionEngine>()
-        engine?.shutdown()
+        try {
+            val koin = org.koin.java.KoinJavaComponent.getKoin()
+            koin.getOrNull<ExecutionEngine>()?.shutdown()
+            koin.getOrNull<io.ktor.client.HttpClient>()?.close()
+        } catch (_: IllegalStateException) {
+            // Koin may already be stopped
+        }
     }
 }
 

@@ -5,6 +5,7 @@ import com.github.mr3zee.auth.authModule
 import com.github.mr3zee.connections.connectionsModule
 import com.github.mr3zee.projects.projectsModule
 import com.github.mr3zee.releases.releasesModule
+import com.github.mr3zee.webhooks.webhooksModule
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 import io.ktor.client.plugins.cookies.*
 import io.ktor.http.*
@@ -39,15 +40,20 @@ fun testEncryptionConfig() = EncryptionConfig(
     key = "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY=",
 )
 
+fun testWebhookConfig() = WebhookConfig(
+    baseUrl = "http://localhost:8080",
+)
+
 fun Application.testModule() {
     val authConfig = testAuthConfig()
     install(Koin) {
         slf4jLogger()
         modules(
-            appModule(testDbConfig(), testEncryptionConfig(), authConfig),
+            appModule(testDbConfig(), testEncryptionConfig(), authConfig, testWebhookConfig()),
             authModule,
             projectsModule,
             connectionsModule,
+            webhooksModule,
             releasesModule,
         )
     }

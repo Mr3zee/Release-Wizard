@@ -27,6 +27,7 @@ sealed class ConnectionConfig {
     data class TeamCityConfig(
         val serverUrl: String,
         val token: String,
+        val webhookSecret: String = "",
     ) : ConnectionConfig()
 
     @Serializable
@@ -35,6 +36,7 @@ sealed class ConnectionConfig {
         val token: String,
         val owner: String,
         val repo: String,
+        val webhookSecret: String = "",
     ) : ConnectionConfig()
 
     @Serializable
@@ -42,5 +44,6 @@ sealed class ConnectionConfig {
     data class MavenCentralConfig(
         val username: String,
         val password: String,
+        val baseUrl: String = "https://central.sonatype.com",
     ) : ConnectionConfig()
 }

@@ -20,6 +20,9 @@ class ConnectionsViewModel(
     private val _connections = MutableStateFlow<List<Connection>>(emptyList())
     val connections: StateFlow<List<Connection>> = _connections
 
+    private val _webhookUrls = MutableStateFlow<Map<String, String>>(emptyMap())
+    val webhookUrls: StateFlow<Map<String, String>> = _webhookUrls
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
@@ -31,7 +34,9 @@ class ConnectionsViewModel(
             _isLoading.value = true
             _error.value = null
             try {
-                _connections.value = apiClient.listConnections()
+                val response = apiClient.listConnections()
+                _connections.value = response.connections
+                _webhookUrls.value = response.webhookUrls
             } catch (e: Exception) {
                 _error.value = e.message ?: "Failed to load connections"
             } finally {

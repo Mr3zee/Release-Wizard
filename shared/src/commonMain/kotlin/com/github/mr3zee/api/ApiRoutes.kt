@@ -30,4 +30,11 @@ object ApiRoutes {
         fun byId(id: String) = "$BASE/$id"
         fun test(id: String) = "$BASE/$id/test"
     }
+
+    object Webhooks {
+        const val BASE = "$API_V1/webhooks"
+        fun byTypeAndConnection(type: String, connectionId: String) = "$BASE/$type/$connectionId"
+        fun teamcity(connectionId: String) = "$BASE/teamcity/$connectionId"
+        fun github(connectionId: String) = "$BASE/github/$connectionId"
+    }
 }

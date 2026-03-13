@@ -18,3 +18,5 @@ app:
     sessionSignKey: "6162636465666768696a6b6c6d6e6f707172737475767778797a313233343536"
   encryption:
     key: "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY="
+  webhook:
+    baseUrl: "http://localhost:8080"

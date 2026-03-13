@@ -1,7 +1,10 @@
 package com.github.mr3zee.connections
 
+import com.github.mr3zee.WebhookConfig
 import com.github.mr3zee.api.*
+import com.github.mr3zee.model.Connection
 import com.github.mr3zee.model.ConnectionId
+import com.github.mr3zee.model.ConnectionType
 import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -11,11 +14,15 @@ import java.util.UUID
 
 fun Route.connectionRoutes() {
     val service by inject<ConnectionsService>()
+    val webhookConfig by inject<WebhookConfig>()
 
     route(ApiRoutes.Connections.BASE) {
         get {
             val connections = service.listConnections()
-            call.respond(ConnectionListResponse(connections))
+            val webhookUrls = connections.mapNotNull { conn ->
+                webhookUrl(conn, webhookConfig)?.let { conn.id.value to it }
+            }.toMap()
+            call.respond(ConnectionListResponse(connections, webhookUrls))
         }
 
         post {
@@ -25,7 +32,7 @@ fun Route.connectionRoutes() {
                 return@post
             }
             val connection = service.createConnection(request)
-            call.respond(HttpStatusCode.Created, ConnectionResponse(connection))
+            call.respond(HttpStatusCode.Created, ConnectionResponse(connection, webhookUrl(connection, webhookConfig)))
         }
 
         route("/{id}") {
@@ -33,7 +40,7 @@ fun Route.connectionRoutes() {
                 val id = call.requireConnectionId() ?: return@get
                 val connection = service.getConnection(id)
                 if (connection != null) {
-                    call.respond(ConnectionResponse(connection))
+                    call.respond(ConnectionResponse(connection, webhookUrl(connection, webhookConfig)))
                 } else {
                     call.respond(HttpStatusCode.NotFound, "Connection not found")
                 }
@@ -44,7 +51,7 @@ fun Route.connectionRoutes() {
                 val request = call.receive<UpdateConnectionRequest>()
                 val connection = service.updateConnection(id, request)
                 if (connection != null) {
-                    call.respond(ConnectionResponse(connection))
+                    call.respond(ConnectionResponse(connection, webhookUrl(connection, webhookConfig)))
                 } else {
                     call.respond(HttpStatusCode.NotFound, "Connection not found")
                 }
@@ -72,6 +79,14 @@ fun Route.connectionRoutes() {
             }
         }
     }
+}
+
+private fun webhookUrl(connection: Connection, webhookConfig: WebhookConfig): String? {
+    return when (connection.type) {
+        ConnectionType.TEAMCITY -> ApiRoutes.Webhooks.teamcity(connection.id.value)
+        ConnectionType.GITHUB -> ApiRoutes.Webhooks.github(connection.id.value)
+        else -> null
+    }?.let { path -> "${webhookConfig.baseUrl}$path" }
 }
 
 private suspend fun io.ktor.server.application.ApplicationCall.requireConnectionId(): ConnectionId? {

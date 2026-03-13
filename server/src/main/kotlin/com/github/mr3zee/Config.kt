@@ -19,6 +19,10 @@ data class EncryptionConfig(
     val key: String,
 )
 
+data class WebhookConfig(
+    val baseUrl: String,
+)
+
 fun ApplicationConfig.databaseConfig(): DatabaseConfig {
     return DatabaseConfig(
         url = property("app.database.url").getString(),
@@ -39,5 +43,11 @@ fun ApplicationConfig.authConfig(): AuthConfig {
 fun ApplicationConfig.encryptionConfig(): EncryptionConfig {
     return EncryptionConfig(
         key = property("app.encryption.key").getString(),
+    )
+}
+
+fun ApplicationConfig.webhookConfig(): WebhookConfig {
+    return WebhookConfig(
+        baseUrl = property("app.webhook.baseUrl").getString(),
     )
 }

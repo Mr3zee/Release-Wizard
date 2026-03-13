@@ -24,11 +24,14 @@ fun ConnectionFormScreen(
     var slackWebhookUrl by remember { mutableStateOf("") }
     var teamCityServerUrl by remember { mutableStateOf("") }
     var teamCityToken by remember { mutableStateOf("") }
+    var teamCityWebhookSecret by remember { mutableStateOf("") }
     var githubToken by remember { mutableStateOf("") }
     var githubOwner by remember { mutableStateOf("") }
     var githubRepo by remember { mutableStateOf("") }
+    var githubWebhookSecret by remember { mutableStateOf("") }
     var mavenUsername by remember { mutableStateOf("") }
     var mavenPassword by remember { mutableStateOf("") }
+    var mavenBaseUrl by remember { mutableStateOf("https://central.sonatype.com") }
 
     Scaffold(
         topBar = {
@@ -44,7 +47,8 @@ fun ConnectionFormScreen(
                         onClick = {
                             val config = buildConfig(
                                 selectedType, slackWebhookUrl, teamCityServerUrl, teamCityToken,
-                                githubToken, githubOwner, githubRepo, mavenUsername, mavenPassword,
+                                teamCityWebhookSecret, githubToken, githubOwner, githubRepo,
+                                githubWebhookSecret, mavenUsername, mavenPassword, mavenBaseUrl,
                             )
                             viewModel.createConnection(name, selectedType, config)
                             onBack()
@@ -52,6 +56,7 @@ fun ConnectionFormScreen(
                         enabled = name.isNotBlank() && isConfigValid(
                             selectedType, slackWebhookUrl, teamCityServerUrl, teamCityToken,
                             githubToken, githubOwner, githubRepo, mavenUsername, mavenPassword,
+                            mavenBaseUrl,
                         ),
                         modifier = Modifier.testTag("save_connection_button"),
                     ) {
@@ -138,6 +143,14 @@ fun ConnectionFormScreen(
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth().testTag("teamcity_token"),
                     )
+                    OutlinedTextField(
+                        value = teamCityWebhookSecret,
+                        onValueChange = { teamCityWebhookSecret = it },
+                        label = { Text("Webhook Secret (optional)") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth().testTag("teamcity_webhook_secret"),
+                    )
                 }
                 ConnectionType.GITHUB -> {
                     OutlinedTextField(
@@ -162,6 +175,14 @@ fun ConnectionFormScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().testTag("github_repo"),
                     )
+                    OutlinedTextField(
+                        value = githubWebhookSecret,
+                        onValueChange = { githubWebhookSecret = it },
+                        label = { Text("Webhook Secret (optional)") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth().testTag("github_webhook_secret"),
+                    )
                 }
                 ConnectionType.MAVEN_CENTRAL -> {
                     OutlinedTextField(
@@ -179,6 +200,13 @@ fun ConnectionFormScreen(
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth().testTag("maven_password"),
                     )
+                    OutlinedTextField(
+                        value = mavenBaseUrl,
+                        onValueChange = { mavenBaseUrl = it },
+                        label = { Text("Base URL") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().testTag("maven_base_url"),
+                    )
                 }
             }
         }
@@ -190,16 +218,32 @@ private fun buildConfig(
     slackWebhookUrl: String,
     teamCityServerUrl: String,
     teamCityToken: String,
+    teamCityWebhookSecret: String,
     githubToken: String,
     githubOwner: String,
     githubRepo: String,
+    githubWebhookSecret: String,
     mavenUsername: String,
     mavenPassword: String,
+    mavenBaseUrl: String,
 ): ConnectionConfig = when (type) {
     ConnectionType.SLACK -> ConnectionConfig.SlackConfig(webhookUrl = slackWebhookUrl)
-    ConnectionType.TEAMCITY -> ConnectionConfig.TeamCityConfig(serverUrl = teamCityServerUrl, token = teamCityToken)
-    ConnectionType.GITHUB -> ConnectionConfig.GitHubConfig(token = githubToken, owner = githubOwner, repo = githubRepo)
-    ConnectionType.MAVEN_CENTRAL -> ConnectionConfig.MavenCentralConfig(username = mavenUsername, password = mavenPassword)
+    ConnectionType.TEAMCITY -> ConnectionConfig.TeamCityConfig(
+        serverUrl = teamCityServerUrl,
+        token = teamCityToken,
+        webhookSecret = teamCityWebhookSecret,
+    )
+    ConnectionType.GITHUB -> ConnectionConfig.GitHubConfig(
+        token = githubToken,
+        owner = githubOwner,
+        repo = githubRepo,
+        webhookSecret = githubWebhookSecret,
+    )
+    ConnectionType.MAVEN_CENTRAL -> ConnectionConfig.MavenCentralConfig(
+        username = mavenUsername,
+        password = mavenPassword,
+        baseUrl = mavenBaseUrl,
+    )
 }
 
 private fun isConfigValid(
@@ -212,9 +256,10 @@ private fun isConfigValid(
     githubRepo: String,
     mavenUsername: String,
     mavenPassword: String,
+    mavenBaseUrl: String,
 ): Boolean = when (type) {
     ConnectionType.SLACK -> slackWebhookUrl.isNotBlank()
     ConnectionType.TEAMCITY -> teamCityServerUrl.isNotBlank() && teamCityToken.isNotBlank()
     ConnectionType.GITHUB -> githubToken.isNotBlank() && githubOwner.isNotBlank() && githubRepo.isNotBlank()
-    ConnectionType.MAVEN_CENTRAL -> mavenUsername.isNotBlank() && mavenPassword.isNotBlank()
+    ConnectionType.MAVEN_CENTRAL -> mavenUsername.isNotBlank() && mavenPassword.isNotBlank() && mavenBaseUrl.isNotBlank()
 }

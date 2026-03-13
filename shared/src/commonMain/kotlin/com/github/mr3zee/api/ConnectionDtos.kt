@@ -21,11 +21,13 @@ data class UpdateConnectionRequest(
 @Serializable
 data class ConnectionResponse(
     val connection: Connection,
+    val webhookUrl: String? = null,
 )
 
 @Serializable
 data class ConnectionListResponse(
     val connections: List<Connection>,
+    val webhookUrls: Map<String, String> = emptyMap(),
 )
 
 @Serializable

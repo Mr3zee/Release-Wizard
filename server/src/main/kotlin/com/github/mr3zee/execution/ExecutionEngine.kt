@@ -1,6 +1,7 @@
 package com.github.mr3zee.execution
 
 import com.github.mr3zee.api.ReleaseEvent
+import com.github.mr3zee.connections.ConnectionsRepository
 import com.github.mr3zee.dag.DagTopologicalSort
 import com.github.mr3zee.dag.DagValidator
 import com.github.mr3zee.model.*
@@ -24,6 +25,7 @@ import kotlin.time.Clock
 class ExecutionEngine(
     private val repository: ReleasesRepository,
     private val blockExecutor: BlockExecutor,
+    private val connectionsRepository: ConnectionsRepository,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -365,11 +367,19 @@ class ExecutionEngine(
                     outputsMap,
                 )
 
+                val connections = mutableMapOf<ConnectionId, ConnectionConfig>()
+                block.connectionId?.let { connId ->
+                    val connection = connectionsRepository.findById(connId)
+                    if (connection != null) {
+                        connections[connId] = connection.config
+                    }
+                }
+
                 val context = ExecutionContext(
                     releaseId = release.id,
                     parameters = release.parameters,
                     blockOutputs = outputsMap,
-                    connections = emptyMap(), // Will be populated in Phase 6
+                    connections = connections,
                 )
 
                 val timeoutMs = block.timeoutSeconds?.let { it * 1000 }
