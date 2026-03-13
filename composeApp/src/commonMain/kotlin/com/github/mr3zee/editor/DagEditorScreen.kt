@@ -187,6 +187,8 @@ fun DagEditorScreen(
             // Right: properties panel
             BlockPropertiesPanel(
                 block = selectedBlock,
+                graph = graph,
+                projectParameters = project?.parameters ?: emptyList(),
                 onUpdateName = { id, name -> viewModel.updateBlockName(id, name) },
                 onUpdateType = { id, type -> viewModel.updateBlockType(id, type) },
                 onUpdateParameters = { id, params -> viewModel.updateBlockParameters(id, params) },

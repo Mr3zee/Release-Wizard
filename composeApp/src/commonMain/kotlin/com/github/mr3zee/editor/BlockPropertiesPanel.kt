@@ -14,6 +14,8 @@ import com.github.mr3zee.model.*
 @Composable
 fun BlockPropertiesPanel(
     block: Block?,
+    graph: DagGraph,
+    projectParameters: List<Parameter>,
     onUpdateName: (BlockId, String) -> Unit,
     onUpdateType: (BlockId, BlockType) -> Unit,
     onUpdateParameters: (BlockId, List<Parameter>) -> Unit,
@@ -61,6 +63,8 @@ fun BlockPropertiesPanel(
             is Block.ActionBlock -> {
                 ActionBlockProperties(
                     block = block,
+                    graph = graph,
+                    projectParameters = projectParameters,
                     onUpdateType = onUpdateType,
                     onUpdateParameters = onUpdateParameters,
                     onUpdateTimeout = onUpdateTimeout,
@@ -85,6 +89,8 @@ fun BlockPropertiesPanel(
 @Composable
 private fun ActionBlockProperties(
     block: Block.ActionBlock,
+    graph: DagGraph,
+    projectParameters: List<Parameter>,
     onUpdateType: (BlockId, BlockType) -> Unit,
     onUpdateParameters: (BlockId, List<Parameter>) -> Unit,
     onUpdateTimeout: (BlockId, Long?) -> Unit,
@@ -141,9 +147,16 @@ private fun ActionBlockProperties(
 
     var params by remember(block.id) { mutableStateOf(block.parameters) }
 
+    // Compute predecessors for template picker
+    val predecessors = remember(graph, block.id) {
+        com.github.mr3zee.dag.findPredecessors(graph, block.id)
+    }
+
     params.forEachIndexed { index, param ->
         ParameterRow(
             parameter = param,
+            projectParameters = projectParameters,
+            predecessors = predecessors,
             onUpdate = { updated ->
                 params = params.toMutableList().apply { set(index, updated) }
                 onUpdateParameters(block.id, params)
@@ -170,9 +183,13 @@ private fun ActionBlockProperties(
 @Composable
 private fun ParameterRow(
     parameter: Parameter,
+    projectParameters: List<Parameter>,
+    predecessors: List<Block>,
     onUpdate: (Parameter) -> Unit,
     onRemove: () -> Unit,
 ) {
+    var showTemplatePicker by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -195,10 +212,29 @@ private fun ParameterRow(
             textStyle = MaterialTheme.typography.bodySmall,
         )
         TextButton(
+            onClick = { showTemplatePicker = true },
+            contentPadding = PaddingValues(4.dp),
+            modifier = Modifier.testTag("insert_template_button"),
+        ) {
+            Text("{}", style = MaterialTheme.typography.bodySmall)
+        }
+        TextButton(
             onClick = onRemove,
             contentPadding = PaddingValues(4.dp),
         ) {
             Text("x", color = MaterialTheme.colorScheme.error)
         }
+    }
+
+    if (showTemplatePicker) {
+        TemplatePickerDialog(
+            parameters = projectParameters,
+            predecessors = predecessors,
+            onSelect = { expr ->
+                onUpdate(parameter.copy(value = parameter.value + expr))
+                showTemplatePicker = false
+            },
+            onDismiss = { showTemplatePicker = false },
+        )
     }
 }
