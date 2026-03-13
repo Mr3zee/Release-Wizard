@@ -150,6 +150,8 @@ class ReleaseScreensTest {
                     isConnected = true,
                     onBack = {},
                     onCancel = {},
+                    onRerun = {},
+                    onArchive = {},
                     onApproveBlock = {},
                     onBlockClick = {},
                 )
@@ -192,6 +194,8 @@ class ReleaseScreensTest {
                     isConnected = true,
                     onBack = {},
                     onCancel = {},
+                    onRerun = {},
+                    onArchive = {},
                     onApproveBlock = {},
                     onBlockClick = {},
                 )
@@ -219,6 +223,8 @@ class ReleaseScreensTest {
                     isConnected = true,
                     onBack = {},
                     onCancel = {},
+                    onRerun = {},
+                    onArchive = {},
                     onApproveBlock = {},
                     onBlockClick = {},
                 )
@@ -245,6 +251,8 @@ class ReleaseScreensTest {
                     isConnected = true,
                     onBack = {},
                     onCancel = {},
+                    onRerun = {},
+                    onArchive = {},
                     onApproveBlock = {},
                     onBlockClick = {},
                 )
@@ -272,6 +280,8 @@ class ReleaseScreensTest {
                     isConnected = false,
                     onBack = {},
                     onCancel = {},
+                    onRerun = {},
+                    onArchive = {},
                     onApproveBlock = {},
                     onBlockClick = {},
                 )
@@ -299,6 +309,8 @@ class ReleaseScreensTest {
                     reconnectAttempt = 3,
                     onBack = {},
                     onCancel = {},
+                    onRerun = {},
+                    onArchive = {},
                     onApproveBlock = {},
                     onBlockClick = {},
                 )
@@ -319,6 +331,8 @@ class ReleaseScreensTest {
                     isConnected = true,
                     onBack = {},
                     onCancel = {},
+                    onRerun = {},
+                    onArchive = {},
                     onApproveBlock = {},
                     onBlockClick = {},
                 )
@@ -359,6 +373,8 @@ class ReleaseScreensTest {
                     isConnected = true,
                     onBack = {},
                     onCancel = {},
+                    onRerun = {},
+                    onArchive = {},
                     onApproveBlock = {},
                     onBlockClick = {},
                 )
@@ -390,6 +406,8 @@ class ReleaseScreensTest {
                     isConnected = true,
                     onBack = {},
                     onCancel = { cancelClicked = true },
+                    onRerun = {},
+                    onArchive = {},
                     onApproveBlock = {},
                     onBlockClick = {},
                 )
@@ -418,6 +436,8 @@ class ReleaseScreensTest {
                     isConnected = true,
                     onBack = { backClicked = true },
                     onCancel = {},
+                    onRerun = {},
+                    onArchive = {},
                     onApproveBlock = {},
                     onBlockClick = {},
                 )
@@ -459,6 +479,8 @@ class ReleaseScreensTest {
                     isConnected = true,
                     onBack = {},
                     onCancel = {},
+                    onRerun = {},
+                    onArchive = {},
                     onApproveBlock = {},
                     onBlockClick = {},
                 )
@@ -504,6 +526,8 @@ class ReleaseScreensTest {
                     isConnected = true,
                     onBack = {},
                     onCancel = {},
+                    onRerun = {},
+                    onArchive = {},
                     onApproveBlock = {},
                     onBlockClick = {},
                 )
@@ -543,6 +567,8 @@ class ReleaseScreensTest {
                     isConnected = true,
                     onBack = {},
                     onCancel = {},
+                    onRerun = {},
+                    onArchive = {},
                     onApproveBlock = {},
                     onBlockClick = {},
                 )
@@ -590,6 +616,8 @@ class ReleaseScreensTest {
                     isConnected = true,
                     onBack = {},
                     onCancel = {},
+                    onRerun = {},
+                    onArchive = {},
                     onApproveBlock = {},
                     onBlockClick = {},
                 )
@@ -688,6 +716,8 @@ class ReleaseScreensTest {
                     isConnected = true,
                     onBack = {},
                     onCancel = {},
+                    onRerun = {},
+                    onArchive = {},
                     onApproveBlock = { approvedBlockId = it },
                     onBlockClick = {},
                 )
@@ -700,5 +730,146 @@ class ReleaseScreensTest {
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("approve_block_button").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("approve_block_button").performClick()
         assertEquals(BlockId("approve1"), approvedBlockId)
+    }
+
+    // ---- Phase 1A: Rerun button tests ----
+
+    @Test
+    fun `release detail rerun button visible for succeeded release`() = runComposeUiTest {
+        val release = Release(
+            id = ReleaseId("r1"),
+            projectTemplateId = ProjectId("p1"),
+            status = ReleaseStatus.SUCCEEDED,
+            dagSnapshot = DagGraph(),
+        )
+
+        setContent {
+            MaterialTheme {
+                ReleaseDetailScreen(
+                    release = release,
+                    blockExecutions = emptyList(),
+                    isConnected = true,
+                    onBack = {},
+                    onCancel = {},
+                    onRerun = {},
+                    onArchive = {},
+                    onApproveBlock = {},
+                    onBlockClick = {},
+                )
+            }
+        }
+
+        onNodeWithTag("rerun_release_button").assertExists()
+    }
+
+    @Test
+    fun `release detail rerun button not visible for running release`() = runComposeUiTest {
+        val release = Release(
+            id = ReleaseId("r1"),
+            projectTemplateId = ProjectId("p1"),
+            status = ReleaseStatus.RUNNING,
+            dagSnapshot = DagGraph(),
+        )
+
+        setContent {
+            MaterialTheme {
+                ReleaseDetailScreen(
+                    release = release,
+                    blockExecutions = emptyList(),
+                    isConnected = true,
+                    onBack = {},
+                    onCancel = {},
+                    onRerun = {},
+                    onArchive = {},
+                    onApproveBlock = {},
+                    onBlockClick = {},
+                )
+            }
+        }
+
+        onNodeWithTag("rerun_release_button").assertDoesNotExist()
+    }
+
+    // ---- Phase 1B: Archive button tests ----
+
+    @Test
+    fun `release detail archive button visible for succeeded release`() = runComposeUiTest {
+        val release = Release(
+            id = ReleaseId("r1"),
+            projectTemplateId = ProjectId("p1"),
+            status = ReleaseStatus.SUCCEEDED,
+            dagSnapshot = DagGraph(),
+        )
+
+        setContent {
+            MaterialTheme {
+                ReleaseDetailScreen(
+                    release = release,
+                    blockExecutions = emptyList(),
+                    isConnected = true,
+                    onBack = {},
+                    onCancel = {},
+                    onRerun = {},
+                    onArchive = {},
+                    onApproveBlock = {},
+                    onBlockClick = {},
+                )
+            }
+        }
+
+        onNodeWithTag("archive_release_button").assertExists()
+    }
+
+    @Test
+    fun `release detail archive button hidden for archived release`() = runComposeUiTest {
+        val release = Release(
+            id = ReleaseId("r1"),
+            projectTemplateId = ProjectId("p1"),
+            status = ReleaseStatus.ARCHIVED,
+            dagSnapshot = DagGraph(),
+        )
+
+        setContent {
+            MaterialTheme {
+                ReleaseDetailScreen(
+                    release = release,
+                    blockExecutions = emptyList(),
+                    isConnected = true,
+                    onBack = {},
+                    onCancel = {},
+                    onRerun = {},
+                    onArchive = {},
+                    onApproveBlock = {},
+                    onBlockClick = {},
+                )
+            }
+        }
+
+        // Archive button should be hidden for already-archived releases
+        onNodeWithTag("archive_release_button").assertDoesNotExist()
+        // But rerun button should still be visible (ARCHIVED is terminal)
+        onNodeWithTag("rerun_release_button").assertExists()
+    }
+
+    @Test
+    fun `release list archived status badge renders`() = runComposeUiTest {
+        val releases = """[
+            {"id":"r1","projectTemplateId":"p1","status":"ARCHIVED","dagSnapshot":{"blocks":[],"edges":[],"positions":{}},"parameters":[],"startedAt":"$now","finishedAt":"$now"}
+        ]"""
+        val client = releaseListClient(releases = releases)
+        val vm = ReleaseListViewModel(ReleaseApiClient(client), ProjectApiClient(client))
+
+        setContent {
+            MaterialTheme {
+                ReleaseListScreen(
+                    viewModel = vm,
+                    onViewRelease = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("release_list").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("status_badge_ARCHIVED", useUnmergedTree = true).assertExists()
     }
 }

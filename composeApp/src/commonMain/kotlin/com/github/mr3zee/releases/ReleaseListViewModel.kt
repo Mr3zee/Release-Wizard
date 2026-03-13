@@ -9,6 +9,7 @@ import com.github.mr3zee.api.toUserMessage
 import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.model.ProjectTemplate
 import com.github.mr3zee.model.Release
+import com.github.mr3zee.model.ReleaseId
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -58,6 +59,28 @@ class ReleaseListViewModel(
         viewModelScope.launch {
             try {
                 releaseApiClient.startRelease(CreateReleaseRequest(projectTemplateId = projectId))
+                loadReleases()
+            } catch (e: Exception) {
+                _error.value = e.toUserMessage()
+            }
+        }
+    }
+
+    fun archiveRelease(id: ReleaseId) {
+        viewModelScope.launch {
+            try {
+                releaseApiClient.archiveRelease(id)
+                loadReleases()
+            } catch (e: Exception) {
+                _error.value = e.toUserMessage()
+            }
+        }
+    }
+
+    fun deleteRelease(id: ReleaseId) {
+        viewModelScope.launch {
+            try {
+                releaseApiClient.deleteRelease(id)
                 loadReleases()
             } catch (e: Exception) {
                 _error.value = e.toUserMessage()

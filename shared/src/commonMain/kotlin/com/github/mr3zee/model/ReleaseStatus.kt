@@ -9,4 +9,11 @@ enum class ReleaseStatus {
     SUCCEEDED,
     FAILED,
     CANCELLED,
+    ARCHIVED,
 }
+
+val ReleaseStatus.isTerminal: Boolean
+    get() = this == ReleaseStatus.SUCCEEDED ||
+            this == ReleaseStatus.FAILED ||
+            this == ReleaseStatus.CANCELLED ||
+            this == ReleaseStatus.ARCHIVED

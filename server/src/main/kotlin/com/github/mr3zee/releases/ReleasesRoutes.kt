@@ -2,6 +2,7 @@ package com.github.mr3zee.releases
 
 import com.github.mr3zee.NotFoundException
 import com.github.mr3zee.api.*
+import com.github.mr3zee.auth.userSession
 import com.github.mr3zee.model.BlockId
 import com.github.mr3zee.model.ReleaseId
 import io.ktor.http.*
@@ -16,13 +17,13 @@ fun Route.releaseRoutes() {
 
     route(ApiRoutes.Releases.BASE) {
         get {
-            val releases = service.listReleases()
+            val releases = service.listReleases(call.userSession())
             call.respond(ReleaseListResponse(releases))
         }
 
         post {
             val request = call.receive<CreateReleaseRequest>()
-            val release = service.startRelease(request)
+            val release = service.startRelease(request, call.userSession())
             val executions = service.getBlockExecutions(release.id)
             call.respond(HttpStatusCode.Created, ReleaseResponse(release, executions))
         }
@@ -30,6 +31,7 @@ fun Route.releaseRoutes() {
         route("/{id}") {
             get {
                 val id = call.requireReleaseId()
+                service.checkAccess(id, call.userSession())
                 val release = service.getRelease(id)
                     ?: throw NotFoundException("Release not found: ${id.value}")
                 val executions = service.getBlockExecutions(id)
@@ -38,6 +40,8 @@ fun Route.releaseRoutes() {
 
             post("/await") {
                 val id = call.requireReleaseId()
+                val session = call.userSession()
+                service.checkAccess(id, session)
                 service.awaitRelease(id)
                 val release = service.getRelease(id)
                     ?: throw NotFoundException("Release not found: ${id.value}")
@@ -47,7 +51,7 @@ fun Route.releaseRoutes() {
 
             post("/cancel") {
                 val id = call.requireReleaseId()
-                val cancelled = service.cancelRelease(id)
+                val cancelled = service.cancelRelease(id, call.userSession())
                 if (!cancelled) {
                     throw IllegalArgumentException("Cannot cancel release: ${id.value}")
                 }
@@ -56,11 +60,38 @@ fun Route.releaseRoutes() {
                 call.respond(ReleaseResponse(release, executions))
             }
 
+            post("/rerun") {
+                val id = call.requireReleaseId()
+                val newRelease = service.rerunRelease(id, call.userSession())
+                val executions = service.getBlockExecutions(newRelease.id)
+                call.respond(HttpStatusCode.Created, ReleaseResponse(newRelease, executions))
+            }
+
+            post("/archive") {
+                val id = call.requireReleaseId()
+                val archived = service.archiveRelease(id, call.userSession())
+                if (!archived) {
+                    throw IllegalArgumentException("Cannot archive release: ${id.value}")
+                }
+                val release = service.getRelease(id)!!
+                val executions = service.getBlockExecutions(id)
+                call.respond(ReleaseResponse(release, executions))
+            }
+
+            delete {
+                val id = call.requireReleaseId()
+                val deleted = service.deleteRelease(id, call.userSession())
+                if (!deleted) {
+                    throw IllegalArgumentException("Cannot delete release: ${id.value}")
+                }
+                call.respond(HttpStatusCode.NoContent)
+            }
+
             route("/blocks/{blockId}") {
                 post("/restart") {
                     val releaseId = call.requireReleaseId()
                     val blockId = call.requireBlockId()
-                    val restarted = service.restartBlock(releaseId, blockId)
+                    val restarted = service.restartBlock(releaseId, blockId, call.userSession())
                     if (!restarted) {
                         throw IllegalArgumentException("Cannot restart block: ${blockId.value}")
                     }
@@ -71,7 +102,7 @@ fun Route.releaseRoutes() {
                     val releaseId = call.requireReleaseId()
                     val blockId = call.requireBlockId()
                     val request = call.receive<ApproveBlockRequest>()
-                    val approved = service.approveBlock(releaseId, blockId, request)
+                    val approved = service.approveBlock(releaseId, blockId, request, call.userSession())
                     if (!approved) {
                         throw IllegalArgumentException("Cannot approve block: ${blockId.value}")
                     }

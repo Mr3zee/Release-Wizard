@@ -29,6 +29,18 @@ class ReleaseApiClient(private val client: HttpClient) {
         return client.post(serverUrl(ApiRoutes.Releases.cancel(id.value))).body()
     }
 
+    suspend fun rerunRelease(id: ReleaseId): ReleaseResponse {
+        return client.post(serverUrl(ApiRoutes.Releases.rerun(id.value))).body()
+    }
+
+    suspend fun archiveRelease(id: ReleaseId): ReleaseResponse {
+        return client.post(serverUrl(ApiRoutes.Releases.archive(id.value))).body()
+    }
+
+    suspend fun deleteRelease(id: ReleaseId) {
+        client.delete(serverUrl(ApiRoutes.Releases.byId(id.value)))
+    }
+
     suspend fun approveBlock(releaseId: ReleaseId, blockId: BlockId, input: Map<String, String> = emptyMap()): Boolean {
         val response = client.post(serverUrl(ApiRoutes.Releases.approveBlock(releaseId.value, blockId.value))) {
             contentType(ContentType.Application.Json)

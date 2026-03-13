@@ -6,6 +6,7 @@ import com.github.mr3zee.api.ReleaseApiClient
 import com.github.mr3zee.api.ReleaseEvent
 import com.github.mr3zee.api.toUserMessage
 import com.github.mr3zee.model.*
+import com.github.mr3zee.model.isTerminal
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -71,7 +72,7 @@ class ReleaseDetailViewModel(
                 _isConnected.value = false
                 // Don't reconnect if release is in terminal state
                 val currentRelease = _release.value
-                if (currentRelease != null && currentRelease.status in terminalStatuses) {
+                if (currentRelease != null && currentRelease.status.isTerminal) {
                     return
                 }
 
@@ -125,6 +126,28 @@ class ReleaseDetailViewModel(
         }
     }
 
+    fun rerunRelease(onRerunCreated: (ReleaseId) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val response = releaseApiClient.rerunRelease(releaseId)
+                onRerunCreated(response.release.id)
+            } catch (e: Exception) {
+                _error.value = e.toUserMessage()
+            }
+        }
+    }
+
+    fun archiveRelease() {
+        viewModelScope.launch {
+            try {
+                val response = releaseApiClient.archiveRelease(releaseId)
+                _release.value = response.release
+            } catch (e: Exception) {
+                _error.value = e.toUserMessage()
+            }
+        }
+    }
+
     fun approveBlock(blockId: BlockId, input: Map<String, String> = emptyMap()) {
         viewModelScope.launch {
             try {
@@ -140,11 +163,4 @@ class ReleaseDetailViewModel(
         super.onCleared()
     }
 
-    companion object {
-        private val terminalStatuses = setOf(
-            ReleaseStatus.SUCCEEDED,
-            ReleaseStatus.FAILED,
-            ReleaseStatus.CANCELLED,
-        )
-    }
 }

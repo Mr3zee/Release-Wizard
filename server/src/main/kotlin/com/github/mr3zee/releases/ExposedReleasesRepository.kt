@@ -40,10 +40,29 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
         )
     }
 
-    override suspend fun findAll(): List<Release> = dbQuery {
-        ReleaseTable.selectAll()
-            .orderBy(ReleaseTable.id, SortOrder.DESC)
-            .map { it.toRelease() }
+    override suspend fun findAll(includeArchived: Boolean, ownerId: String?): List<Release> = dbQuery {
+        val query = ReleaseTable.selectAll().run {
+            val conditions = mutableListOf<Op<Boolean>>()
+            if (!includeArchived) {
+                conditions.add(ReleaseTable.status neq ReleaseStatus.ARCHIVED.name)
+            }
+            if (ownerId != null) {
+                conditions.add(ReleaseTable.ownerId eq ownerId)
+            }
+            if (conditions.isNotEmpty()) {
+                where { conditions.reduce { acc, op -> acc and op } }
+            } else {
+                this
+            }
+        }
+        query.orderBy(ReleaseTable.id, SortOrder.DESC).map { it.toRelease() }
+    }
+
+    override suspend fun findOwner(id: ReleaseId): String? = dbQuery {
+        ReleaseTable.select(ReleaseTable.ownerId)
+            .where { ReleaseTable.id eq UUID.fromString(id.value) }
+            .singleOrNull()
+            ?.get(ReleaseTable.ownerId)
     }
 
     override suspend fun findById(id: ReleaseId): Release? = dbQuery {
@@ -70,6 +89,7 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
         projectTemplateId: ProjectId,
         dagSnapshot: DagGraph,
         parameters: List<Parameter>,
+        ownerId: String,
     ): Release = dbQuery {
         val id = UUID.randomUUID()
         ReleaseTable.insert {
@@ -78,6 +98,7 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
             it[ReleaseTable.status] = ReleaseStatus.PENDING.name
             it[ReleaseTable.dagSnapshot] = dagSnapshot
             it[ReleaseTable.parameters] = parameters
+            it[ReleaseTable.ownerId] = ownerId
             it[ReleaseTable.startedAt] = null
             it[ReleaseTable.finishedAt] = null
         }

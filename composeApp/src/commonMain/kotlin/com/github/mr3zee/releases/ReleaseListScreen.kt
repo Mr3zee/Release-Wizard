@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import com.github.mr3zee.model.Release
 import com.github.mr3zee.model.ReleaseId
 import com.github.mr3zee.model.ReleaseStatus
+import com.github.mr3zee.model.isTerminal
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -109,6 +110,8 @@ fun ReleaseListScreen(
                         ReleaseListItem(
                             release = release,
                             onClick = { onViewRelease(release.id) },
+                            onArchive = { viewModel.archiveRelease(release.id) },
+                            onDelete = { viewModel.deleteRelease(release.id) },
                         )
                     }
                 }
@@ -132,7 +135,12 @@ fun ReleaseListScreen(
 private fun ReleaseListItem(
     release: Release,
     onClick: () -> Unit,
+    onArchive: () -> Unit,
+    onDelete: () -> Unit,
 ) {
+    var showMenu by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -166,7 +174,58 @@ private fun ReleaseListItem(
                 }
             }
             StatusBadge(release.status)
+            if (release.status.isTerminal) {
+                Box {
+                    TextButton(
+                        onClick = { showMenu = true },
+                        modifier = Modifier.testTag("release_menu_${release.id.value}"),
+                    ) {
+                        Text("...")
+                    }
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false },
+                    ) {
+                        if (release.status != ReleaseStatus.ARCHIVED) {
+                            DropdownMenuItem(
+                                text = { Text("Archive") },
+                                onClick = {
+                                    showMenu = false
+                                    onArchive()
+                                },
+                                modifier = Modifier.testTag("archive_menu_item"),
+                            )
+                        }
+                        DropdownMenuItem(
+                            text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                            onClick = {
+                                showMenu = false
+                                showDeleteConfirm = true
+                            },
+                            modifier = Modifier.testTag("delete_menu_item"),
+                        )
+                    }
+                }
+            }
         }
+    }
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Delete Release") },
+            text = { Text("This will permanently delete the release and all its data. This cannot be undone.") },
+            confirmButton = {
+                TextButton(onClick = { showDeleteConfirm = false; onDelete() }) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) {
+                    Text("Cancel")
+                }
+            },
+        )
     }
 }
 
@@ -178,6 +237,7 @@ internal fun StatusBadge(status: ReleaseStatus) {
         ReleaseStatus.SUCCEEDED -> Color(0xFF22C55E) to "Succeeded"
         ReleaseStatus.FAILED -> Color(0xFFEF4444) to "Failed"
         ReleaseStatus.CANCELLED -> Color(0xFFF97316) to "Cancelled"
+        ReleaseStatus.ARCHIVED -> Color(0xFF6B7280) to "Archived"
     }
     Surface(
         color = color.copy(alpha = 0.15f),

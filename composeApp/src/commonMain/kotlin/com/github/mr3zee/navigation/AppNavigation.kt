@@ -92,6 +92,12 @@ fun AppNavigation(
                 reconnectAttempt = reconnectAttempt,
                 onBack = { onNavigate(Screen.ReleaseList) },
                 onCancel = { viewModel.cancelRelease() },
+                onRerun = {
+                    viewModel.rerunRelease { newReleaseId ->
+                        onNavigate(Screen.ReleaseView(newReleaseId))
+                    }
+                },
+                onArchive = { viewModel.archiveRelease() },
                 onApproveBlock = { viewModel.approveBlock(it) },
                 onBlockClick = {},
             )

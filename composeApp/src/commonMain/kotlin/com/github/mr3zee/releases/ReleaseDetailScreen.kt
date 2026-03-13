@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.model.*
+import com.github.mr3zee.model.isTerminal
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -18,6 +19,8 @@ fun ReleaseDetailScreen(
     reconnectAttempt: Int = 0,
     onBack: () -> Unit,
     onCancel: () -> Unit,
+    onRerun: () -> Unit,
+    onArchive: () -> Unit,
     onApproveBlock: (BlockId) -> Unit,
     onBlockClick: (BlockId) -> Unit,
 ) {
@@ -64,6 +67,22 @@ fun ReleaseDetailScreen(
                             modifier = Modifier.testTag("cancel_release_button"),
                         ) {
                             Text("Cancel", color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                    if (release != null && release.status.isTerminal) {
+                        TextButton(
+                            onClick = onRerun,
+                            modifier = Modifier.testTag("rerun_release_button"),
+                        ) {
+                            Text("Re-run")
+                        }
+                        if (release.status != ReleaseStatus.ARCHIVED) {
+                            TextButton(
+                                onClick = onArchive,
+                                modifier = Modifier.testTag("archive_release_button"),
+                            ) {
+                                Text("Archive")
+                            }
                         }
                     }
                 },
