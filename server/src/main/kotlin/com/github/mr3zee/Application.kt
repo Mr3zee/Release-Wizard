@@ -6,7 +6,11 @@ import com.github.mr3zee.auth.authModule
 import com.github.mr3zee.auth.authRoutes
 import com.github.mr3zee.connections.connectionRoutes
 import com.github.mr3zee.connections.connectionsModule
+import com.github.mr3zee.execution.ExecutionEngine
 import com.github.mr3zee.execution.RecoveryService
+import com.github.mr3zee.notifications.NotificationListener
+import com.github.mr3zee.notifications.notificationRoutes
+import com.github.mr3zee.notifications.notificationsModule
 import com.github.mr3zee.plugins.CorrelationId
 import com.github.mr3zee.plugins.CorrelationIdKey
 import com.github.mr3zee.plugins.healthRoute
@@ -15,6 +19,12 @@ import com.github.mr3zee.projects.projectsModule
 import com.github.mr3zee.releases.releaseRoutes
 import com.github.mr3zee.releases.releaseWebSocketRoutes
 import com.github.mr3zee.releases.releasesModule
+import com.github.mr3zee.schedules.SchedulerService
+import com.github.mr3zee.schedules.scheduleRoutes
+import com.github.mr3zee.schedules.schedulesModule
+import com.github.mr3zee.triggers.triggerRoutes
+import com.github.mr3zee.triggers.triggerWebhookRoutes
+import com.github.mr3zee.triggers.triggersModule
 import com.github.mr3zee.webhooks.webhookRoutes
 import com.github.mr3zee.webhooks.webhooksModule
 import io.ktor.http.*
@@ -64,6 +74,9 @@ fun Application.module() {
             connectionsModule,
             webhooksModule,
             releasesModule,
+            notificationsModule,
+            schedulesModule,
+            triggersModule,
             module { single { executionScope } },
         )
     }
@@ -162,6 +175,17 @@ fun Application.module() {
                 ),
             )
         }
+        exception<ForbiddenException> { call, cause ->
+            val correlationId = call.attributes.getOrNull(CorrelationIdKey)
+            call.respond(
+                HttpStatusCode.Forbidden,
+                ErrorResponse(
+                    error = cause.message ?: "Forbidden",
+                    code = "FORBIDDEN",
+                    correlationId = correlationId,
+                ),
+            )
+        }
         exception<NotFoundException> { call, cause ->
             val correlationId = call.attributes.getOrNull(CorrelationIdKey)
             call.respond(
@@ -192,11 +216,27 @@ fun Application.module() {
     monitor.subscribe(ApplicationStarted) {
         try {
             val koin = getKoin()
+
+            // Start notification listener BEFORE recovery so events are captured
+            val listener = koin.getOrNull<NotificationListener>()
+            val engine = koin.getOrNull<ExecutionEngine>()
+            val scope = koin.getOrNull<CoroutineScope>()
+            if (listener != null && engine != null && scope != null) {
+                listener.start(engine, scope)
+            }
+
+            // Then run recovery (events emitted here will be captured by listener)
             val recoveryService = koin.getOrNull<RecoveryService>()
             if (recoveryService != null) {
                 runBlocking {
                     recoveryService.recover()
                 }
+            }
+
+            // Start scheduler service (with missed schedule recovery)
+            val schedulerService = koin.getOrNull<SchedulerService>()
+            if (schedulerService != null && scope != null) {
+                schedulerService.start(scope)
             }
         } catch (e: Exception) {
             environment.log.error("Release recovery failed", e)
@@ -206,6 +246,7 @@ fun Application.module() {
     monitor.subscribe(ApplicationStopped) {
         try {
             val koin = getKoin()
+            koin.getOrNull<SchedulerService>()?.stop()
             koin.getOrNull<HttpClient>()?.close()
         } catch (_: IllegalStateException) {
             // Koin may already be stopped
@@ -224,11 +265,15 @@ fun Application.configureRouting() {
         healthRoute()
         authRoutes()
         webhookRoutes()
+        triggerWebhookRoutes()
         authenticate("session-auth") {
             projectRoutes()
             connectionRoutes()
             releaseRoutes()
             releaseWebSocketRoutes()
+            notificationRoutes()
+            scheduleRoutes()
+            triggerRoutes()
         }
     }
 }
