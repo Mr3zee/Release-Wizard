@@ -23,7 +23,7 @@ val releasesModule = module {
             )
         )
     }
-    single { ExecutionEngine(get(), get(), get()) }
+    single { ExecutionEngine(get(), get(), get(), get()) }
     single { RecoveryService(get(), get(), get()) }
     single<ReleasesService> { DefaultReleasesService(get(), get(), get()) }
 }

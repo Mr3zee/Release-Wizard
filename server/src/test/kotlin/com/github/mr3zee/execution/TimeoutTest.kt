@@ -1,6 +1,8 @@
 package com.github.mr3zee.execution
 
 import com.github.mr3zee.model.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
@@ -24,7 +26,7 @@ class TimeoutTest {
     @Test
     fun `block with timeout fails with descriptive message`() = runBlocking {
         val repo = InMemoryReleasesRepository()
-        val engine = ExecutionEngine(repo, SlowBlockExecutor(), FakeConnectionsRepository())
+        val engine = ExecutionEngine(repo, SlowBlockExecutor(), FakeConnectionsRepository(), CoroutineScope(SupervisorJob()))
 
         val release = Release(
             id = ReleaseId("r-timeout"),

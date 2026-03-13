@@ -16,6 +16,8 @@ import com.github.mr3zee.execution.StubBlockExecutor
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 import io.ktor.client.plugins.cookies.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
@@ -69,6 +71,7 @@ val testOverrideModule = module {
     single<HttpClient> {
         createTestHttpClient()
     }
+    single { CoroutineScope(SupervisorJob()) }
 }
 
 fun Application.testModule() {

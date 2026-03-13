@@ -6,7 +6,6 @@ import com.github.mr3zee.auth.authModule
 import com.github.mr3zee.auth.authRoutes
 import com.github.mr3zee.connections.connectionRoutes
 import com.github.mr3zee.connections.connectionsModule
-import com.github.mr3zee.execution.ExecutionEngine
 import com.github.mr3zee.execution.RecoveryService
 import com.github.mr3zee.plugins.CorrelationId
 import com.github.mr3zee.plugins.CorrelationIdKey
@@ -37,8 +36,13 @@ import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import io.ktor.server.websocket.*
 import io.ktor.util.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.SerializationException
+import org.koin.dsl.module
 import org.koin.java.KoinJavaComponent.getKoin
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
@@ -50,6 +54,8 @@ fun Application.module() {
     val encryptionConfig = environment.config.encryptionConfig()
     val webhookConfig = environment.config.webhookConfig()
 
+    val executionScope = CoroutineScope(SupervisorJob(coroutineContext.job) + Dispatchers.Default)
+
     install(Koin) {
         slf4jLogger()
         modules(
@@ -59,6 +65,7 @@ fun Application.module() {
             connectionsModule,
             webhooksModule,
             releasesModule,
+            module { single { executionScope } },
         )
     }
 
@@ -200,7 +207,6 @@ fun Application.module() {
     monitor.subscribe(ApplicationStopped) {
         try {
             val koin = getKoin()
-            koin.getOrNull<ExecutionEngine>()?.shutdown()
             koin.getOrNull<HttpClient>()?.close()
         } catch (_: IllegalStateException) {
             // Koin may already be stopped

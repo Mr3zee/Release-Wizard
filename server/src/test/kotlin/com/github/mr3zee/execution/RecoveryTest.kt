@@ -3,6 +3,8 @@ package com.github.mr3zee.execution
 import com.github.mr3zee.model.*
 import com.github.mr3zee.releases.ReleasesRepository
 import com.github.mr3zee.webhooks.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -17,7 +19,7 @@ class RecoveryTest {
         val webhookRepo = InMemoryWebhookRepo()
         val connectionsRepo = FakeConnectionsRepository()
         val executor = StubBlockExecutor()
-        val engine = ExecutionEngine(releasesRepo, executor, connectionsRepo)
+        val engine = ExecutionEngine(releasesRepo, executor, connectionsRepo, CoroutineScope(SupervisorJob()))
         val recoveryService = RecoveryService(releasesRepo, webhookRepo, engine)
         return TestSetup(releasesRepo, webhookRepo, engine, recoveryService, executor)
     }

@@ -33,9 +33,9 @@ class ExecutionEngine(
     private val repository: ReleasesRepository,
     private val blockExecutor: BlockExecutor,
     private val connectionsRepository: ConnectionsRepository,
+    private val scope: CoroutineScope,
 ) {
     private val log = LoggerFactory.getLogger(ExecutionEngine::class.java)
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     // Active release jobs, keyed by release ID
     private val activeJobs = ConcurrentHashMap<ReleaseId, Job>()
@@ -522,10 +522,6 @@ class ExecutionEngine(
             }
         }
         return result
-    }
-
-    fun shutdown() {
-        scope.cancel()
     }
 
     private suspend fun executeRelease(release: Release) {
