@@ -50,13 +50,15 @@ fun AppNavigation(
         }
         is Screen.ConnectionList -> ConnectionListScreen(
             viewModel = connectionsViewModel,
-            onCreateConnection = { onNavigate(Screen.ConnectionForm) },
-            onEditConnection = { /* Phase 3: edit connection by ID */ },
+            onCreateConnection = { onNavigate(Screen.ConnectionForm()) },
+            onEditConnection = { onNavigate(Screen.ConnectionForm(connectionId = it)) },
             onBack = { onNavigate(Screen.ProjectList) },
         )
         is Screen.ConnectionForm -> ConnectionFormScreen(
             viewModel = connectionsViewModel,
+            connectionId = currentScreen.connectionId,
             onBack = {
+                connectionsViewModel.clearEditingConnection()
                 connectionsViewModel.loadConnections()
                 onNavigate(Screen.ConnectionList)
             },

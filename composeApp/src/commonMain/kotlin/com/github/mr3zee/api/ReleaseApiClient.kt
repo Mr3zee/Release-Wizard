@@ -18,11 +18,6 @@ class ReleaseApiClient(private val client: HttpClient) {
         return client.get(serverUrl(ApiRoutes.Releases.BASE)).body()
     }
 
-    // todo claude: unused
-    suspend fun getRelease(id: ReleaseId): ReleaseResponse {
-        return client.get(serverUrl(ApiRoutes.Releases.byId(id.value))).body()
-    }
-
     suspend fun startRelease(request: CreateReleaseRequest): ReleaseResponse {
         return client.post(serverUrl(ApiRoutes.Releases.BASE)) {
             contentType(ContentType.Application.Json)

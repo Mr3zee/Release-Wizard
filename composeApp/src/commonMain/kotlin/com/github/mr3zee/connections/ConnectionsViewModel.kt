@@ -30,6 +30,9 @@ class ConnectionsViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
+    private val _editingConnection = MutableStateFlow<Connection?>(null)
+    val editingConnection: StateFlow<Connection?> = _editingConnection
+
     fun loadConnections() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -58,7 +61,21 @@ class ConnectionsViewModel(
         }
     }
 
-    // todo claude: unused
+    fun loadConnection(id: ConnectionId) {
+        viewModelScope.launch {
+            _error.value = null
+            try {
+                _editingConnection.value = apiClient.getConnection(id)
+            } catch (e: Exception) {
+                _error.value = e.toUserMessage()
+            }
+        }
+    }
+
+    fun clearEditingConnection() {
+        _editingConnection.value = null
+    }
+
     fun updateConnection(id: ConnectionId, name: String?, config: ConnectionConfig?) {
         viewModelScope.launch {
             _error.value = null

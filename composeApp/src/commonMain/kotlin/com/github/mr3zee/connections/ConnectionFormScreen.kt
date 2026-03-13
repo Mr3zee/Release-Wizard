@@ -8,14 +8,19 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.model.ConnectionConfig
+import com.github.mr3zee.model.ConnectionId
 import com.github.mr3zee.model.ConnectionType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConnectionFormScreen(
     viewModel: ConnectionsViewModel,
+    connectionId: ConnectionId? = null,
     onBack: () -> Unit,
 ) {
+    val isEditMode = connectionId != null
+    val editingConnection by viewModel.editingConnection.collectAsState()
+
     var name by remember { mutableStateOf("") }
     var selectedType by remember { mutableStateOf(ConnectionType.GITHUB) }
     var expanded by remember { mutableStateOf(false) }
@@ -33,10 +38,43 @@ fun ConnectionFormScreen(
     var mavenPassword by remember { mutableStateOf("") }
     var mavenBaseUrl by remember { mutableStateOf("https://central.sonatype.com") }
 
+    if (isEditMode) {
+        LaunchedEffect(connectionId) {
+            viewModel.loadConnection(connectionId!!)
+        }
+
+        LaunchedEffect(editingConnection) {
+            val connection = editingConnection ?: return@LaunchedEffect
+            name = connection.name
+            selectedType = connection.type
+            when (val config = connection.config) {
+                is ConnectionConfig.SlackConfig -> {
+                    slackWebhookUrl = config.webhookUrl
+                }
+                is ConnectionConfig.TeamCityConfig -> {
+                    teamCityServerUrl = config.serverUrl
+                    teamCityToken = config.token
+                    teamCityWebhookSecret = config.webhookSecret
+                }
+                is ConnectionConfig.GitHubConfig -> {
+                    githubToken = config.token
+                    githubOwner = config.owner
+                    githubRepo = config.repo
+                    githubWebhookSecret = config.webhookSecret
+                }
+                is ConnectionConfig.MavenCentralConfig -> {
+                    mavenUsername = config.username
+                    mavenPassword = config.password
+                    mavenBaseUrl = config.baseUrl
+                }
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("New Connection") },
+                title = { Text(if (isEditMode) "Edit Connection" else "New Connection") },
                 navigationIcon = {
                     TextButton(onClick = onBack) {
                         Text("Back")
@@ -50,7 +88,11 @@ fun ConnectionFormScreen(
                                 teamCityWebhookSecret, githubToken, githubOwner, githubRepo,
                                 githubWebhookSecret, mavenUsername, mavenPassword, mavenBaseUrl,
                             )
-                            viewModel.createConnection(name, selectedType, config)
+                            if (isEditMode) {
+                                viewModel.updateConnection(connectionId!!, name, config)
+                            } else {
+                                viewModel.createConnection(name, selectedType, config)
+                            }
                             onBack()
                         },
                         enabled = name.isNotBlank() && isConfigValid(
@@ -86,12 +128,13 @@ fun ConnectionFormScreen(
 
             ExposedDropdownMenuBox(
                 expanded = expanded,
-                onExpandedChange = { expanded = it },
+                onExpandedChange = { if (!isEditMode) expanded = it },
             ) {
                 OutlinedTextField(
                     value = selectedType.name,
                     onValueChange = {},
                     readOnly = true,
+                    enabled = !isEditMode,
                     label = { Text("Type") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                     modifier = Modifier
@@ -99,18 +142,20 @@ fun ConnectionFormScreen(
                         .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                         .testTag("connection_type_selector"),
                 )
-                ExposedDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false },
-                ) {
-                    ConnectionType.entries.forEach { type ->
-                        DropdownMenuItem(
-                            text = { Text(type.name) },
-                            onClick = {
-                                selectedType = type
-                                expanded = false
-                            },
-                        )
+                if (!isEditMode) {
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false },
+                    ) {
+                        ConnectionType.entries.forEach { type ->
+                            DropdownMenuItem(
+                                text = { Text(type.name) },
+                                onClick = {
+                                    selectedType = type
+                                    expanded = false
+                                },
+                            )
+                        }
                     }
                 }
             }
