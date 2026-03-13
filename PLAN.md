@@ -126,18 +126,33 @@ Release Wizard is a Kotlin library release pipeline builder. Users construct pip
 
 ---
 
-## UI Verification Process
+## UI Development & Testing Process
 
-After every phase with UI changes, verify the UI using `compose-ui-test-server`:
+For phases with UI changes, follow this two-step process:
 
-1. **Start the server** (requires the backend to be running for API calls):
-   ```bash
-   COMPOSE_UI_TEST_SERVER_ENABLED=true ./gradlew :composeApp:run &
-   ```
-2. **Health check**: `curl http://localhost:54345/health`
-3. **Interact**: click buttons, enter text, wait for elements via HTTP endpoints
-4. **Screenshot**: `curl "http://localhost:54345/captureScreenshot?path=/tmp/screenshot.png"`
-5. **Verify**: read screenshots to validate UI layout and state
+### Step 1: Manual verification (fast iteration)
+
+Use `compose-ui-test-server` to visually verify during development. Iterate on layout and behavior until correct.
+
+1. **Start the backend**: `./gradlew :server:run`
+2. **Start the app with test server**: `COMPOSE_UI_TEST_SERVER_ENABLED=true ./gradlew :composeApp:run &`
+3. **Health check**: `curl http://localhost:54345/health`
+4. **Interact**: click buttons, enter text, wait for elements via HTTP endpoints
+5. **Screenshot**: `curl "http://localhost:54345/captureScreenshot?path=/tmp/screenshot.png"`
+6. **Verify**: read screenshots to validate UI layout and state
+7. **Iterate**: fix issues, re-run, re-screenshot until correct
+
+### Step 2: Automated UI tests (lock in behavior)
+
+Once manual verification confirms the UI is correct, write `runComposeUiTest` tests in `composeApp/src/jvmTest/` to lock in the behavior as regression tests. These use `MockHttpClient` (Ktor `MockEngine`) — no server needed.
+
+For each new/changed screen, test:
+- **Happy path**: data loads and renders correctly
+- **Empty state**: no data shows appropriate message
+- **Error state**: API failure shows error UI with retry
+- **Interactions**: button callbacks, form validation, navigation
+
+Run: `./gradlew :composeApp:jvmTest`
 
 Key test tags available:
 - Project list: `project_list_screen`, `create_project_fab`, `project_name_input`, `project_list`, `project_item_{id}`, `connections_button`, `logout_button`

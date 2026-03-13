@@ -1,0 +1,120 @@
+package com.github.mr3zee
+
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.*
+import androidx.compose.ui.test.*
+import com.github.mr3zee.api.AuthApiClient
+import com.github.mr3zee.api.ConnectionApiClient
+import com.github.mr3zee.api.ProjectApiClient
+import com.github.mr3zee.auth.AuthViewModel
+import com.github.mr3zee.auth.LoginScreen
+import com.github.mr3zee.connections.ConnectionsViewModel
+import com.github.mr3zee.navigation.AppNavigation
+import com.github.mr3zee.navigation.Screen
+import com.github.mr3zee.projects.ProjectListViewModel
+import io.ktor.client.*
+import io.ktor.http.*
+import kotlin.test.Test
+
+@OptIn(ExperimentalTestApi::class)
+class AppNavigationTest {
+
+    private fun appClient() = mockHttpClient(mapOf(
+        "/auth/me" to json("""{"username":"admin"}"""),
+        "/auth/login" to json("""{"username":"admin"}"""),
+        "/auth/logout" to json("{}"),
+        "/projects" to json("""{"projects":[
+            {"id":"p1","name":"Pipeline A","description":"","dagGraph":{"blocks":[],"edges":[],"positions":{}},"parameters":[],"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}
+        ]}"""),
+        "/connections" to json("""{"connections":[]}"""),
+    ))
+
+    @Composable
+    private fun TestApp(httpClient: HttpClient) {
+        val authApiClient = remember { AuthApiClient(httpClient) }
+        val projectApiClient = remember { ProjectApiClient(httpClient) }
+        val connectionApiClient = remember { ConnectionApiClient(httpClient) }
+        val authViewModel = remember { AuthViewModel(authApiClient) }
+        val projectListViewModel = remember { ProjectListViewModel(projectApiClient) }
+        val connectionsViewModel = remember { ConnectionsViewModel(connectionApiClient) }
+        val user by authViewModel.user.collectAsState()
+        val isCheckingSession by authViewModel.isCheckingSession.collectAsState()
+
+        LaunchedEffect(Unit) { authViewModel.checkSession() }
+
+        var currentScreen by remember { mutableStateOf<Screen>(Screen.ProjectList) }
+
+        MaterialTheme {
+            Surface {
+                when {
+                    isCheckingSession -> {}
+                    user == null -> LoginScreen(viewModel = authViewModel)
+                    else -> AppNavigation(
+                        currentScreen = currentScreen,
+                        onNavigate = { currentScreen = it },
+                        projectListViewModel = projectListViewModel,
+                        projectApiClient = projectApiClient,
+                        connectionsViewModel = connectionsViewModel,
+                        onLogout = { authViewModel.logout(); currentScreen = Screen.ProjectList },
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `auto-login shows project list`() = runComposeUiTest {
+        setContent { TestApp(appClient()) }
+
+        waitUntil(timeoutMillis = 5000L) { onAllNodesWithTag("project_list_screen").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("project_list_screen").assertExists()
+        onNodeWithText("Pipeline A").assertExists()
+    }
+
+    @Test
+    fun `navigate to connections and back`() = runComposeUiTest {
+        setContent { TestApp(appClient()) }
+
+        waitUntil(timeoutMillis = 5000L) { onAllNodesWithTag("project_list_screen").fetchSemanticsNodes().isNotEmpty() }
+
+        onNodeWithTag("connections_button").performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("connection_list_screen").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("connection_list_screen").assertExists()
+
+        onNodeWithText("Back").performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("project_list_screen").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("project_list_screen").assertExists()
+    }
+
+    @Test
+    fun `logout returns to login screen`() = runComposeUiTest {
+        setContent { TestApp(appClient()) }
+
+        waitUntil(timeoutMillis = 5000L) { onAllNodesWithTag("project_list_screen").fetchSemanticsNodes().isNotEmpty() }
+
+        onNodeWithTag("logout_button").performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("login_screen").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("login_screen").assertExists()
+    }
+
+    @Test
+    fun `login flow navigates to project list`() = runComposeUiTest {
+        val client = mockHttpClient(mapOf(
+            "/auth/me" to json("Not authenticated", HttpStatusCode.Unauthorized),
+            "/auth/login" to json("""{"username":"admin"}"""),
+            "/projects" to json("""{"projects":[]}"""),
+        ))
+
+        setContent { TestApp(client) }
+
+        waitUntil(timeoutMillis = 5000L) { onAllNodesWithTag("login_screen").fetchSemanticsNodes().isNotEmpty() }
+
+        onNodeWithTag("login_username").performTextInput("admin")
+        onNodeWithTag("login_password").performTextInput("admin")
+        onNodeWithTag("login_button").performClick()
+
+        waitUntil(timeoutMillis = 5000L) { onAllNodesWithTag("project_list_screen").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("project_list_screen").assertExists()
+    }
+}

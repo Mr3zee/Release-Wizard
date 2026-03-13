@@ -104,6 +104,60 @@ for platform-specific APIs.
    propagation, and make code harder to reason about. See `references/side-effects.md` for
    Compose-specific patterns.
 
+## Canvas Editor Conventions (Release Wizard specific)
+
+The DAG editor (`composeApp/.../editor/`) uses a pure Canvas approach:
+- **Coordinate system**: Block positions stored as dp in `DagGraph.positions`. Canvas converts to pixels via `CanvasTransform(zoom, panOffset, density)`.
+- **Pointer handling**: All interactions (select, drag, pan, zoom, connect) in `pointerInput` on the Canvas. Never use `remember`ed derived values inside `pointerInput` lambdas — create `CanvasTransform` inline from state reads to avoid stale captures.
+- **Undo/redo**: Structural changes (add/remove block/edge, move) push to undo stack. Property changes (name, params, timeout) use `updateGraphSilent` to avoid per-keystroke undo entries. Type changes are discrete and do push undo.
+- **Color mapping**: `blockTypeColor()` in `DagCanvas.kt` is the single source of truth, shared with `EditorToolbar.kt`.
+- **Keyboard shortcuts**: Use `isCtrlPressed || isMetaPressed` for cross-platform Ctrl/Cmd.
+
+## UI Testing
+
+This project has two layers of UI testing:
+
+### 1. Manual verification with compose-ui-test-server (fast iteration)
+Use during development to visually verify UI via HTTP endpoints. See the `compose-ui-test-server` skill for details. This is the **first step** when building or changing UI — iterate quickly with screenshots before writing automated tests.
+
+### 2. Automated Compose UI tests (regression suite)
+Once the UI behavior is correct, write automated `runComposeUiTest` tests in `composeApp/src/jvmTest/`. These run via `./gradlew :composeApp:jvmTest` with no server needed.
+
+**Test infrastructure:**
+- `MockHttpClient.kt` — `mockHttpClient(routes)` creates an `HttpClient` backed by Ktor `MockEngine`. Routes map path suffixes (e.g., `"/projects"`) to `MockRoute(body, status)` via exact `/api/v1` prefix matching. Uses `expectSuccess = true` to match production behavior.
+- Tests compose real screens with real ViewModels, passing mock HTTP clients — no fakes for ViewModels themselves.
+
+**Patterns:**
+```kotlin
+@OptIn(ExperimentalTestApi::class)  // class-level, not per-method
+class MyScreenTest {
+
+    @Test
+    fun `shows data from API`() = runComposeUiTest {
+        val client = mockHttpClient(mapOf("/myroute" to json("""{"items":[]}""")))
+        val vm = MyViewModel(MyApiClient(client))
+        setContent { MaterialTheme { MyScreen(viewModel = vm, ...) } }
+
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("expected").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithText("expected").assertExists()
+    }
+}
+```
+
+**Key rules:**
+- `@OptIn(ExperimentalTestApi::class)` at class level, not per method
+- Use `waitUntil(timeoutMillis = 3000L) { ... }` (first param is `conditionDescription: String?`, not timeout)
+- Never use `delay()` in tests — use `waitUntil` for async state changes
+- Always pass all screen callbacks consistently (don't omit nullable ones in some tests)
+- Test error states (API 500) alongside happy paths and empty states
+- Mock route keys are path suffixes like `"/projects"`, matched against full `/api/v1/projects`
+
+**Existing test files:**
+- `LoginScreenTest` — render, button enable/disable, error display
+- `ProjectListScreenTest` — data display, empty/error states, dialog, callbacks
+- `ConnectionScreensTest` — list, form fields, validation, callbacks
+- `AppNavigationTest` — session auto-login, navigation, logout, login flow
+
 ## Source Code Receipts
 
 Beyond the guidance docs, this skill bundles the **actual source code** from
