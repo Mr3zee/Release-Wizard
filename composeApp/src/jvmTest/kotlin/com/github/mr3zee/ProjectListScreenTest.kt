@@ -8,6 +8,7 @@ import com.github.mr3zee.projects.ProjectListScreen
 import com.github.mr3zee.projects.ProjectListViewModel
 import io.ktor.http.*
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalTestApi::class)
@@ -122,7 +123,7 @@ class ProjectListScreenTest {
 
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("My Pipeline").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("project_item_p1").performClick()
-        assertTrue(editedId?.value == "p1")
+        assertEquals(ProjectId("p1"), editedId)
     }
 
     @Test

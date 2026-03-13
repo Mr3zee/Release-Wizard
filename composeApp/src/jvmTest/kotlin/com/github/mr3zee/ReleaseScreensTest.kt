@@ -1,7 +1,6 @@
 package com.github.mr3zee
 
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.*
 import com.github.mr3zee.api.ProjectApiClient
@@ -10,6 +9,7 @@ import com.github.mr3zee.model.*
 import com.github.mr3zee.releases.*
 import io.ktor.http.*
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalTestApi::class)
@@ -157,7 +157,7 @@ class ReleaseScreensTest {
         }
 
         onNodeWithTag("release_detail_screen").assertExists()
-        onNodeWithTag("status_badge_RUNNING").assertExists()
+        onNodeWithTag("status_badge_RUNNING", useUnmergedTree = true).assertExists()
         onNodeWithTag("execution_dag_canvas").assertExists()
     }
 
@@ -597,7 +597,7 @@ class ReleaseScreensTest {
 
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("release_list").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("release_item_r1").performClick()
-        assertTrue(viewedId?.value == "r1")
+        assertEquals(ReleaseId("r1"), viewedId)
     }
 
     @Test
@@ -671,6 +671,6 @@ class ReleaseScreensTest {
         }
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("approve_block_button").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("approve_block_button").performClick()
-        assertTrue(approvedBlockId?.value == "approve1")
+        assertEquals(BlockId("approve1"), approvedBlockId)
     }
 }
