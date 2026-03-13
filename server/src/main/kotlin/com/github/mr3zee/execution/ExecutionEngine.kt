@@ -11,6 +11,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.coroutineContext
@@ -36,6 +37,12 @@ class ExecutionEngine(
 
     // Tracks whether completion events have been emitted for a release (prevents duplicates)
     private val completionEmitted = ConcurrentHashMap<ReleaseId, java.util.concurrent.atomic.AtomicBoolean>()
+
+    // Releases currently being restarted (cancel-and-recover in progress)
+    private val restartingReleases = ConcurrentHashMap.newKeySet<ReleaseId>()
+
+    // Per-release mutex to prevent concurrent restarts
+    private val restartMutexes = ConcurrentHashMap<ReleaseId, kotlinx.coroutines.sync.Mutex>()
 
     // Pending user action approvals: releaseId -> blockId -> CompletableDeferred
     private val pendingApprovals = ConcurrentHashMap<ReleaseId, ConcurrentHashMap<BlockId, CompletableDeferred<Map<String, String>>>>()
@@ -73,9 +80,11 @@ class ExecutionEngine(
         }
         activeJobs[release.id] = job
         job.invokeOnCompletion {
-            activeJobs.remove(release.id)
-            pendingApprovals.remove(release.id)
-            completionEmitted.remove(release.id)
+            if (!restartingReleases.contains(release.id)) {
+                activeJobs.remove(release.id)
+                pendingApprovals.remove(release.id)
+                completionEmitted.remove(release.id)
+            }
         }
         return job
     }
@@ -118,14 +127,21 @@ class ExecutionEngine(
         }
         activeJobs[release.id] = job
         job.invokeOnCompletion {
-            activeJobs.remove(release.id)
-            pendingApprovals.remove(release.id)
-            completionEmitted.remove(release.id)
+            if (!restartingReleases.contains(release.id)) {
+                activeJobs.remove(release.id)
+                pendingApprovals.remove(release.id)
+                completionEmitted.remove(release.id)
+            }
         }
     }
 
     private suspend fun executeRecovery(release: Release, persistedExecutions: List<BlockExecution>) {
         try {
+            // If recovering a PENDING release, transition it to RUNNING first
+            if (release.status == ReleaseStatus.PENDING) {
+                repository.setStarted(release.id)
+            }
+
             val graph = release.dagSnapshot
             val sorted = DagTopologicalSort.sort(graph)
                 ?: throw IllegalStateException("DAG contains a cycle")
@@ -144,8 +160,10 @@ class ExecutionEngine(
                 }
             }
 
+            val startedAt = release.startedAt ?: Clock.System.now()
+
             // Re-emit current state so WebSocket subscribers see the recovered state
-            emitEvent(ReleaseEvent.ReleaseStatusChanged(release.id, ReleaseStatus.RUNNING, startedAt = release.startedAt))
+            emitEvent(ReleaseEvent.ReleaseStatusChanged(release.id, ReleaseStatus.RUNNING, startedAt = startedAt))
 
             coroutineScope {
                 executeRecoveryWaves(this, release, graph, sorted, predecessors, statusMap, outputsMap, execMap)
@@ -157,6 +175,7 @@ class ExecutionEngine(
             emitCompletionOnce(release.id, finalStatus, Clock.System.now())
 
         } catch (e: CancellationException) {
+            if (restartingReleases.contains(release.id)) return
             val executions = repository.findBlockExecutions(release.id)
             for (exec in executions) {
                 if (exec.status == BlockStatus.RUNNING || exec.status == BlockStatus.WAITING) {
@@ -453,17 +472,19 @@ class ExecutionEngine(
             repository.upsertBlockExecution(succeededExec)
             emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, succeededExec))
         } catch (e: CancellationException) {
-            statusMap[block.id] = BlockStatus.FAILED
-            val cancelledExec = BlockExecution(
-                blockId = block.id,
-                releaseId = release.id,
-                status = BlockStatus.FAILED,
-                error = "Cancelled",
-                startedAt = startTime,
-                finishedAt = Clock.System.now(),
-            )
-            repository.upsertBlockExecution(cancelledExec)
-            emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, cancelledExec))
+            if (!restartingReleases.contains(release.id)) {
+                statusMap[block.id] = BlockStatus.FAILED
+                val cancelledExec = BlockExecution(
+                    blockId = block.id,
+                    releaseId = release.id,
+                    status = BlockStatus.FAILED,
+                    error = "Cancelled",
+                    startedAt = startTime,
+                    finishedAt = Clock.System.now(),
+                )
+                repository.upsertBlockExecution(cancelledExec)
+                emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, cancelledExec))
+            }
             throw e
         } catch (e: Exception) {
             statusMap[block.id] = BlockStatus.FAILED
@@ -480,11 +501,91 @@ class ExecutionEngine(
         }
     }
 
-    fun restartBlock(releaseId: ReleaseId, blockId: BlockId) {
-        // Restart is handled by re-running the full execution loop.
-        // The main loop reads block statuses from DB, so resetting to WAITING
-        // in the service layer + re-executing is sufficient.
-        // TODO: Full restart support in a future phase.
+    /**
+     * Restart a failed block within a release.
+     *
+     * Cancels the active execution (if any), resets the block and its
+     * transitive dependents to WAITING, then re-launches via recovery.
+     * A per-release mutex prevents concurrent restart calls from racing.
+     */
+    suspend fun restartBlock(releaseId: ReleaseId, blockId: BlockId): Boolean {
+        val mutex = restartMutexes.getOrPut(releaseId) { kotlinx.coroutines.sync.Mutex() }
+        return mutex.withLock {
+            val release = repository.findById(releaseId) ?: return@withLock false
+
+            // Cancel current execution FIRST, before modifying DB state,
+            // so the running job doesn't see partially-reset blocks
+            val activeJob = activeJobs[releaseId]
+            if (activeJob != null && activeJob.isActive) {
+                restartingReleases.add(releaseId)
+                activeJob.cancel()
+                activeJob.join()
+                // invokeOnCompletion has run and skipped cleanup due to restart flag
+            }
+
+            // Clear the restart flag now that the old job is fully stopped
+            restartingReleases.remove(releaseId)
+
+            // Clean up stale in-memory state from the old job
+            activeJobs.remove(releaseId)
+            pendingApprovals.remove(releaseId)
+            completionEmitted.remove(releaseId)
+
+            // Reset the failed block in DB
+            val resetExec = BlockExecution(
+                blockId = blockId,
+                releaseId = releaseId,
+                status = BlockStatus.WAITING,
+            )
+            repository.upsertBlockExecution(resetExec)
+            emitEvent(ReleaseEvent.BlockExecutionUpdated(releaseId, resetExec))
+
+            // Reset transitive dependents that were skipped due to the failure
+            val dependents = findTransitiveDependents(release.dagSnapshot, blockId)
+            for (depId in dependents) {
+                val exec = repository.findBlockExecution(releaseId, depId)
+                if (exec != null && exec.status == BlockStatus.FAILED) {
+                    val depReset = exec.copy(
+                        status = BlockStatus.WAITING,
+                        error = null,
+                        startedAt = null,
+                        finishedAt = null,
+                    )
+                    repository.upsertBlockExecution(depReset)
+                    emitEvent(ReleaseEvent.BlockExecutionUpdated(releaseId, depReset))
+                }
+            }
+
+            // Ensure release is in RUNNING state
+            repository.updateStatus(releaseId, ReleaseStatus.RUNNING)
+
+            // Re-launch via recovery
+            val updatedRelease = repository.findById(releaseId)!!
+            val executions = repository.findBlockExecutions(releaseId)
+            recoverRelease(updatedRelease, executions)
+
+            true
+        }
+    }
+
+    /**
+     * Find all blocks transitively reachable from [blockId] via outgoing edges.
+     */
+    private fun findTransitiveDependents(graph: DagGraph, blockId: BlockId): Set<BlockId> {
+        val adjacency = mutableMapOf<BlockId, MutableSet<BlockId>>()
+        for (edge in graph.edges) {
+            adjacency.getOrPut(edge.fromBlockId) { mutableSetOf() }.add(edge.toBlockId)
+        }
+        val result = mutableSetOf<BlockId>()
+        val queue = ArrayDeque<BlockId>()
+        adjacency[blockId]?.let { queue.addAll(it) }
+        while (queue.isNotEmpty()) {
+            val current = queue.removeFirst()
+            if (result.add(current)) {
+                adjacency[current]?.let { queue.addAll(it) }
+            }
+        }
+        return result
     }
 
     fun shutdown() {
@@ -529,6 +630,7 @@ class ExecutionEngine(
             emitCompletionOnce(release.id, finalStatus, Clock.System.now())
 
         } catch (e: CancellationException) {
+            if (restartingReleases.contains(release.id)) return
             val executions = repository.findBlockExecutions(release.id)
             for (exec in executions) {
                 if (exec.status == BlockStatus.RUNNING || exec.status == BlockStatus.WAITING) {
@@ -791,17 +893,19 @@ class ExecutionEngine(
             repository.upsertBlockExecution(succeededExec)
             emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, succeededExec))
         } catch (e: CancellationException) {
-            statusMap[block.id] = BlockStatus.FAILED
-            val cancelledExec = BlockExecution(
-                blockId = block.id,
-                releaseId = release.id,
-                status = BlockStatus.FAILED,
-                error = "Cancelled",
-                startedAt = startTime,
-                finishedAt = Clock.System.now(),
-            )
-            repository.upsertBlockExecution(cancelledExec)
-            emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, cancelledExec))
+            if (!restartingReleases.contains(release.id)) {
+                statusMap[block.id] = BlockStatus.FAILED
+                val cancelledExec = BlockExecution(
+                    blockId = block.id,
+                    releaseId = release.id,
+                    status = BlockStatus.FAILED,
+                    error = "Cancelled",
+                    startedAt = startTime,
+                    finishedAt = Clock.System.now(),
+                )
+                repository.upsertBlockExecution(cancelledExec)
+                emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, cancelledExec))
+            }
             throw e
         } catch (e: Exception) {
             statusMap[block.id] = BlockStatus.FAILED

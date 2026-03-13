@@ -23,40 +23,51 @@ data class WebhookConfig(
     val baseUrl: String,
 )
 
-/**
- * Read a config property with optional env var override.
- * Env var takes precedence if set; otherwise falls back to YAML value.
- */
-private fun ApplicationConfig.propertyOrEnv(path: String, envVar: String): String {
-    return System.getenv(envVar)?.takeIf { it.isNotEmpty() }
-        ?: property(path).getString()
-}
-
 fun ApplicationConfig.databaseConfig(): DatabaseConfig {
     return DatabaseConfig(
-        url = propertyOrEnv("app.database.url", "DB_URL"),
-        user = propertyOrEnv("app.database.user", "DB_USER"),
-        password = propertyOrEnv("app.database.password", "DB_PASSWORD"),
+        url = property("app.database.url").getString(),
+        user = property("app.database.user").getString(),
+        password = property("app.database.password").getString(),
         driver = property("app.database.driver").getString(),
     )
 }
 
 fun ApplicationConfig.authConfig(): AuthConfig {
+    val username = property("app.auth.username").getString()
+    val password = property("app.auth.password").getString()
+    val sessionSignKey = property("app.auth.sessionSignKey").getString()
+
+    require(username.isNotBlank()) {
+        "app.auth.username must not be blank. Set AUTH_USERNAME env var."
+    }
+    require(password.isNotBlank()) {
+        "app.auth.password must not be blank. Set AUTH_PASSWORD env var."
+    }
+    require(sessionSignKey.length >= 64) {
+        "app.auth.sessionSignKey must be at least 64 hex characters (32 bytes). " +
+            "Set AUTH_SESSION_SIGN_KEY env var."
+    }
+
     return AuthConfig(
-        username = propertyOrEnv("app.auth.username", "AUTH_USERNAME"),
-        password = propertyOrEnv("app.auth.password", "AUTH_PASSWORD"),
-        sessionSignKey = propertyOrEnv("app.auth.sessionSignKey", "AUTH_SESSION_SIGN_KEY"),
+        username = username,
+        password = password,
+        sessionSignKey = sessionSignKey,
     )
 }
 
 fun ApplicationConfig.encryptionConfig(): EncryptionConfig {
-    return EncryptionConfig(
-        key = propertyOrEnv("app.encryption.key", "ENCRYPTION_KEY"),
-    )
+    val key = property("app.encryption.key").getString()
+
+    require(key.length >= 32) {
+        "app.encryption.key must be at least 32 characters (Base64-encoded 256-bit key). " +
+            "Set ENCRYPTION_KEY env var."
+    }
+
+    return EncryptionConfig(key = key)
 }
 
 fun ApplicationConfig.webhookConfig(): WebhookConfig {
     return WebhookConfig(
-        baseUrl = propertyOrEnv("app.webhook.baseUrl", "WEBHOOK_BASE_URL"),
+        baseUrl = property("app.webhook.baseUrl").getString(),
     )
 }

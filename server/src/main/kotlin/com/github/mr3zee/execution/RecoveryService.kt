@@ -28,15 +28,17 @@ class RecoveryService(
             log.info("Cleaned up {} stale completed webhooks", deletedWebhooks)
         }
 
-        // Find all RUNNING releases
-        val runningReleases = releasesRepository.findByStatuses(setOf(ReleaseStatus.RUNNING))
+        // Find all RUNNING and PENDING releases
+        val runningReleases = releasesRepository.findByStatuses(
+            setOf(ReleaseStatus.RUNNING, ReleaseStatus.PENDING),
+        )
 
         if (runningReleases.isEmpty()) {
-            log.info("No RUNNING releases to recover")
+            log.info("No RUNNING/PENDING releases to recover")
             return
         }
 
-        log.info("Found {} RUNNING release(s) to recover", runningReleases.size)
+        log.info("Found {} RUNNING/PENDING release(s) to recover", runningReleases.size)
 
         var resumed = 0
         var failed = 0

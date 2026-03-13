@@ -83,20 +83,12 @@ class DefaultReleasesService(
 
     override suspend fun restartBlock(releaseId: ReleaseId, blockId: BlockId): Boolean {
         val release = repository.findById(releaseId) ?: return false
-        if (release.status != ReleaseStatus.RUNNING) return false
+        if (release.status != ReleaseStatus.RUNNING && release.status != ReleaseStatus.FAILED) return false
 
         val execution = repository.findBlockExecution(releaseId, blockId) ?: return false
         if (execution.status != BlockStatus.FAILED) return false
 
-        repository.upsertBlockExecution(
-            execution.copy(
-                status = BlockStatus.WAITING,
-                error = null,
-                startedAt = null,
-                finishedAt = null,
-            )
-        )
-        return true
+        return executionEngine.restartBlock(releaseId, blockId)
     }
 
     override suspend fun approveBlock(releaseId: ReleaseId, blockId: BlockId, request: ApproveBlockRequest): Boolean {

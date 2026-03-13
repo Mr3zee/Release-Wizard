@@ -21,6 +21,7 @@ interface PendingWebhookRepository {
     ): PendingWebhook
 
     suspend fun findByExternalIdAndType(externalId: String, type: WebhookType): PendingWebhook?
+    suspend fun findPendingByExternalIdAndType(externalId: String, type: WebhookType): PendingWebhook?
     suspend fun findByConnectionIdAndType(connectionId: ConnectionId, type: WebhookType): List<PendingWebhook>
     suspend fun findPendingByReleaseId(releaseId: ReleaseId): List<PendingWebhook>
     suspend fun findByReleaseIdAndBlockId(releaseId: ReleaseId, blockId: BlockId): PendingWebhook?
@@ -88,6 +89,18 @@ class ExposedPendingWebhookRepository(
             .where {
                 (PendingWebhookTable.externalId eq externalId) and
                     (PendingWebhookTable.type eq type.name)
+            }
+            .orderBy(PendingWebhookTable.createdAt, SortOrder.DESC)
+            .firstOrNull()
+            ?.toWebhook()
+    }
+
+    override suspend fun findPendingByExternalIdAndType(externalId: String, type: WebhookType): PendingWebhook? = dbQuery {
+        PendingWebhookTable.selectAll()
+            .where {
+                (PendingWebhookTable.externalId eq externalId) and
+                    (PendingWebhookTable.type eq type.name) and
+                    (PendingWebhookTable.status eq WebhookStatus.PENDING.name)
             }
             .orderBy(PendingWebhookTable.createdAt, SortOrder.DESC)
             .firstOrNull()

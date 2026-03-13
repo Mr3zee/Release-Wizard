@@ -12,15 +12,15 @@ ktor:
 #                  AUTH_SESSION_SIGN_KEY, ENCRYPTION_KEY, WEBHOOK_BASE_URL
 app:
   database:
-    url: "jdbc:postgresql://localhost:5432/release_wizard"
-    user: "postgres"
-    password: "postgres"
+    url: "$DB_URL:jdbc:postgresql://localhost:5432/release_wizard"
+    user: "$DB_USER:postgres"
+    password: "$DB_PASSWORD:postgres"
     driver: "org.postgresql.Driver"
   auth:
-    username: "admin"
-    password: "admin"
-    sessionSignKey: "6162636465666768696a6b6c6d6e6f707172737475767778797a313233343536"
+    username: "$AUTH_USERNAME"
+    password: "$AUTH_PASSWORD"
+    sessionSignKey: "$AUTH_SESSION_SIGN_KEY"
   encryption:
-    key: "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY="
+    key: "$ENCRYPTION_KEY"
   webhook:
-    baseUrl: "http://localhost:8080"
+    baseUrl: "$WEBHOOK_BASE_URL:http://localhost:8080"

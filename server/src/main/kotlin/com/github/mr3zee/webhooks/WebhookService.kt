@@ -6,6 +6,10 @@ import com.github.mr3zee.model.ConnectionId
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.slf4j.LoggerFactory
 import java.security.MessageDigest
 import javax.crypto.Mac
@@ -51,7 +55,8 @@ class WebhookService(
             }
         }
 
-        return completeMatchingWebhooks(connectionId, WebhookType.TEAMCITY, payload)
+        val externalId = extractTeamCityBuildId(payload)
+        return completeMatchingWebhooks(connectionId, WebhookType.TEAMCITY, payload, externalId)
     }
 
     /**
@@ -81,21 +86,44 @@ class WebhookService(
             }
         }
 
-        return completeMatchingWebhooks(connectionId, WebhookType.GITHUB, payload)
+        val externalId = extractGitHubRunId(payload)
+        return completeMatchingWebhooks(connectionId, WebhookType.GITHUB, payload, externalId)
     }
 
+    /**
+     * Match incoming webhooks by externalId when available, falling back to
+     * connection+type matching when the payload does not contain an identifier.
+     */
     private suspend fun completeMatchingWebhooks(
         connectionId: ConnectionId,
         type: WebhookType,
         payload: String,
+        externalId: String?,
     ): WebhookResult {
-        val pendingWebhooks = webhookRepository.findByConnectionIdAndType(connectionId, type)
+        val pendingWebhooks = if (externalId != null) {
+            // Precise matching by externalId — avoid cross-release contamination
+            val exact = webhookRepository.findPendingByExternalIdAndType(externalId, type)
+            if (exact != null && exact.connectionId == connectionId) {
+                listOf(exact)
+            } else {
+                log.warn(
+                    "No pending webhook for externalId={} on connection {}",
+                    externalId, connectionId.value,
+                )
+                emptyList()
+            }
+        } else {
+            // No externalId in payload — fall back to connection+type matching
+            log.warn("Could not extract externalId from {} webhook payload for connection {}", type, connectionId.value)
+            webhookRepository.findByConnectionIdAndType(connectionId, type)
+        }
+
         if (pendingWebhooks.isEmpty()) {
             return WebhookResult.NoPendingWebhooks
         }
 
         for (webhook in pendingWebhooks) {
-            log.info("Webhook matched: block={} release={} type={}", webhook.blockId.value, webhook.releaseId.value, type)
+            log.info("Webhook matched: block={} release={} type={} externalId={}", webhook.blockId.value, webhook.releaseId.value, type, webhook.externalId)
             webhookRepository.updateStatus(webhook.id, WebhookStatus.COMPLETED, payload)
             _completions.emit(
                 WebhookCompletion(
@@ -109,6 +137,25 @@ class WebhookService(
         }
 
         return WebhookResult.Accepted
+    }
+
+    private fun extractTeamCityBuildId(payload: String): String? {
+        return try {
+            val json = Json.decodeFromString<JsonObject>(payload)
+            json["build"]?.jsonObject?.get("id")?.jsonPrimitive?.content
+                ?: json["id"]?.jsonPrimitive?.content
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun extractGitHubRunId(payload: String): String? {
+        return try {
+            val json = Json.decodeFromString<JsonObject>(payload)
+            json["workflow_run"]?.jsonObject?.get("id")?.jsonPrimitive?.content
+        } catch (_: Exception) {
+            null
+        }
     }
 
     /**

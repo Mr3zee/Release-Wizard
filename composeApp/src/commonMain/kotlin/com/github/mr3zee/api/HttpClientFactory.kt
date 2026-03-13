@@ -1,7 +1,6 @@
 package com.github.mr3zee.api
 
 import com.github.mr3zee.AppJson
-import com.github.mr3zee.SERVER_PORT
 import com.github.mr3zee.auth.AuthEventBus
 import io.ktor.client.*
 import io.ktor.client.plugins.*
@@ -33,6 +32,6 @@ fun createHttpClient(): HttpClient {
     }
 }
 
-fun serverUrl(path: String): String = "http://localhost:$SERVER_PORT$path"
+fun serverUrl(path: String): String = "${platformHttpBaseUrl()}$path"
 
-fun wsServerUrl(path: String): String = "ws://localhost:$SERVER_PORT$path"
+fun wsServerUrl(path: String): String = "${platformWsBaseUrl()}$path"

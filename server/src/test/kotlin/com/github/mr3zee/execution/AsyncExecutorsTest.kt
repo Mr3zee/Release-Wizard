@@ -284,6 +284,10 @@ class InMemoryPendingWebhookRepository : PendingWebhookRepository {
         return webhooks.find { it.externalId == externalId && it.type == type }
     }
 
+    override suspend fun findPendingByExternalIdAndType(externalId: String, type: WebhookType): PendingWebhook? {
+        return webhooks.find { it.externalId == externalId && it.type == type && it.status == WebhookStatus.PENDING }
+    }
+
     override suspend fun findByConnectionIdAndType(connectionId: ConnectionId, type: WebhookType): List<PendingWebhook> {
         return webhooks.filter { it.connectionId == connectionId && it.type == type && it.status == WebhookStatus.PENDING }
     }
