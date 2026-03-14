@@ -3,15 +3,21 @@ package com.github.mr3zee.navigation
 import androidx.compose.runtime.*
 import com.github.mr3zee.api.ProjectApiClient
 import com.github.mr3zee.api.ReleaseApiClient
+import com.github.mr3zee.api.TeamApiClient
+import com.github.mr3zee.api.UserTeamInfo
 import com.github.mr3zee.connections.ConnectionFormScreen
 import com.github.mr3zee.connections.ConnectionListScreen
 import com.github.mr3zee.connections.ConnectionsViewModel
 import com.github.mr3zee.editor.DagEditorScreen
 import com.github.mr3zee.editor.DagEditorViewModel
+import com.github.mr3zee.model.TeamId
+import com.github.mr3zee.model.TeamRole
 import com.github.mr3zee.projects.ProjectListScreen
 import com.github.mr3zee.projects.ProjectListViewModel
 import com.github.mr3zee.releases.*
+import com.github.mr3zee.teams.*
 import com.github.mr3zee.theme.ThemePreference
+import kotlinx.coroutines.flow.StateFlow
 
 @Composable
 fun AppNavigation(
@@ -23,7 +29,12 @@ fun AppNavigation(
     releaseApiClient: ReleaseApiClient,
     releaseListViewModel: ReleaseListViewModel,
     connectionsViewModel: ConnectionsViewModel,
+    teamApiClient: TeamApiClient,
+    activeTeamId: StateFlow<TeamId?>,
+    userTeams: List<UserTeamInfo>,
     onLogout: () -> Unit,
+    onTeamChanged: (TeamId) -> Unit,
+    onRefreshUser: () -> Unit,
     themePreference: ThemePreference = ThemePreference.SYSTEM,
     onThemeChange: (ThemePreference) -> Unit = {},
 ) {
@@ -33,9 +44,13 @@ fun AppNavigation(
             onEditProject = { onNavigate(Screen.ProjectEditor(projectId = it)) },
             onConnections = { onNavigate(Screen.ConnectionList) },
             onReleases = { onNavigate(Screen.ReleaseList) },
+            onTeams = { onNavigate(Screen.TeamList) },
             onLogout = onLogout,
             themePreference = themePreference,
             onThemeChange = onThemeChange,
+            activeTeamId = activeTeamId,
+            userTeams = userTeams,
+            onTeamChanged = onTeamChanged,
         )
         is Screen.ProjectEditor -> {
             val projectId = currentScreen.projectId
@@ -77,9 +92,6 @@ fun AppNavigation(
             )
         }
         is Screen.ReleaseView -> {
-            // Navigation uses a plain `when` without crossfade/animation, so switching
-            // away fully disposes this branch. On re-entry, `remember` runs fresh,
-            // creating a new ViewModel, and `DisposableEffect` fires `connect()` again.
             val viewModel = remember(currentScreen.releaseId) {
                 ReleaseDetailViewModel(currentScreen.releaseId, releaseApiClient)
             }
@@ -109,6 +121,62 @@ fun AppNavigation(
                 onArchive = { viewModel.archiveRelease() },
                 onApproveBlock = { viewModel.approveBlock(it) },
                 onBlockClick = {},
+            )
+        }
+        is Screen.TeamList -> {
+            val viewModel = remember { TeamListViewModel(teamApiClient) }
+            TeamListScreen(
+                viewModel = viewModel,
+                onTeamClick = { onNavigate(Screen.TeamDetail(it)) },
+                onTeamCreated = { teamId ->
+                    onTeamChanged(teamId)
+                    onRefreshUser()
+                    onNavigate(Screen.ProjectList)
+                },
+                onMyInvites = { onNavigate(Screen.MyInvites) },
+                onBack = { onGoBack() },
+                memberTeamIds = userTeams.map { it.teamId }.toSet(),
+            )
+        }
+        is Screen.TeamDetail -> {
+            val viewModel = remember(currentScreen.teamId) {
+                TeamDetailViewModel(currentScreen.teamId, teamApiClient)
+            }
+            val isTeamLead = userTeams.any { it.teamId == currentScreen.teamId && it.role == TeamRole.TEAM_LEAD }
+            TeamDetailScreen(
+                viewModel = viewModel,
+                onManage = { onNavigate(Screen.TeamManage(currentScreen.teamId)) },
+                onAuditLog = { onNavigate(Screen.AuditLog(currentScreen.teamId)) },
+                onBack = { onGoBack() },
+                isTeamLead = isTeamLead,
+            )
+        }
+        is Screen.TeamManage -> {
+            val viewModel = remember(currentScreen.teamId) {
+                TeamManageViewModel(currentScreen.teamId, teamApiClient)
+            }
+            TeamManageScreen(
+                viewModel = viewModel,
+                onBack = { onGoBack() },
+            )
+        }
+        is Screen.MyInvites -> {
+            val viewModel = remember { MyInvitesViewModel(teamApiClient) }
+            MyInvitesScreen(
+                viewModel = viewModel,
+                onBack = { onGoBack() },
+                onInviteAccepted = {
+                    onRefreshUser()
+                },
+            )
+        }
+        is Screen.AuditLog -> {
+            val viewModel = remember(currentScreen.teamId) {
+                AuditLogViewModel(currentScreen.teamId, teamApiClient)
+            }
+            AuditLogScreen(
+                viewModel = viewModel,
+                onBack = { onGoBack() },
             )
         }
     }

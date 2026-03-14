@@ -8,18 +8,21 @@ import com.github.mr3zee.api.ProjectApiClient
 import com.github.mr3zee.api.toUserMessage
 import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.model.ProjectTemplate
+import com.github.mr3zee.model.TeamId
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(FlowPreview::class)
 class ProjectListViewModel(
     private val apiClient: ProjectApiClient,
+    private val activeTeamId: StateFlow<TeamId?>,
 ) : ViewModel() {
 
     private val _projects = MutableStateFlow<List<ProjectTemplate>>(emptyList())
@@ -45,6 +48,11 @@ class ProjectListViewModel(
     init {
         viewModelScope.launch {
             _searchQuery.debounce(300.milliseconds).distinctUntilChanged().collectLatest {
+                loadProjectsInternal(reset = true)
+            }
+        }
+        viewModelScope.launch {
+            activeTeamId.filterNotNull().distinctUntilChanged().collectLatest {
                 loadProjectsInternal(reset = true)
             }
         }
@@ -105,7 +113,8 @@ class ProjectListViewModel(
         viewModelScope.launch {
             _error.value = null
             try {
-                val project = apiClient.createProject(CreateProjectRequest(name = name))
+                val teamId = activeTeamId.value ?: error("No active team selected")
+                val project = apiClient.createProject(CreateProjectRequest(name = name, teamId = teamId))
                 loadProjects()
                 onCreated?.invoke(project.id)
             } catch (e: Exception) {

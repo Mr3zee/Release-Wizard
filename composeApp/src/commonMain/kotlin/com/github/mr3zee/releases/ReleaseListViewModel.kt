@@ -12,6 +12,7 @@ import com.github.mr3zee.model.ProjectTemplate
 import com.github.mr3zee.model.Release
 import com.github.mr3zee.model.ReleaseId
 import com.github.mr3zee.model.ReleaseStatus
+import com.github.mr3zee.model.TeamId
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,6 +20,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -26,6 +28,7 @@ import kotlin.time.Duration.Companion.milliseconds
 class ReleaseListViewModel(
     private val releaseApiClient: ReleaseApiClient,
     private val projectApiClient: ProjectApiClient,
+    private val activeTeamId: StateFlow<TeamId?>,
 ) : ViewModel() {
 
     private val _releases = MutableStateFlow<List<Release>>(emptyList())
@@ -68,6 +71,11 @@ class ReleaseListViewModel(
                 .collectLatest {
                     loadReleasesInternal(reset = true)
                 }
+        }
+        viewModelScope.launch {
+            activeTeamId.filterNotNull().distinctUntilChanged().collectLatest {
+                loadReleasesInternal(reset = true)
+            }
         }
     }
 

@@ -10,10 +10,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import com.github.mr3zee.api.UserTeamInfo
 import com.github.mr3zee.components.loadMoreItem
 import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.model.ProjectTemplate
+import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.theme.ThemePreference
+import kotlinx.coroutines.flow.StateFlow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -22,9 +25,13 @@ fun ProjectListScreen(
     onEditProject: (ProjectId) -> Unit,
     onConnections: (() -> Unit)? = null,
     onReleases: (() -> Unit)? = null,
+    onTeams: (() -> Unit)? = null,
     onLogout: (() -> Unit)? = null,
     themePreference: ThemePreference = ThemePreference.SYSTEM,
     onThemeChange: (ThemePreference) -> Unit = {},
+    activeTeamId: StateFlow<TeamId?>? = null,
+    userTeams: List<UserTeamInfo> = emptyList(),
+    onTeamChanged: (TeamId) -> Unit = {},
 ) {
     val projects by viewModel.projects.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -38,11 +45,34 @@ fun ProjectListScreen(
     var showCreateDialog by remember { mutableStateOf(false) }
     var projectToDelete by remember { mutableStateOf<ProjectTemplate?>(null) }
 
+    val currentTeamId = activeTeamId?.collectAsState()?.value
+    var showTeamPicker by remember { mutableStateOf(false) }
+    val activeTeamName = userTeams.find { it.teamId == currentTeamId }?.teamName ?: "No Team"
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Projects") },
+                title = {
+                    if (userTeams.size > 1) {
+                        TextButton(
+                            onClick = { showTeamPicker = true },
+                            modifier = Modifier.testTag("team_switcher"),
+                        ) {
+                            Text("Projects - $activeTeamName")
+                        }
+                    } else {
+                        Text("Projects")
+                    }
+                },
                 actions = {
+                    if (onTeams != null) {
+                        TextButton(
+                            onClick = onTeams,
+                            modifier = Modifier.testTag("teams_button"),
+                        ) {
+                            Text("Teams")
+                        }
+                    }
                     TextButton(
                         onClick = {
                             val next = when (themePreference) {
@@ -196,6 +226,36 @@ fun ProjectListScreen(
                 TextButton(onClick = { projectToDelete = null }) {
                     Text("Cancel")
                 }
+            },
+        )
+    }
+
+    if (showTeamPicker && userTeams.size > 1) {
+        AlertDialog(
+            onDismissRequest = { showTeamPicker = false },
+            title = { Text("Switch Team") },
+            text = {
+                Column {
+                    userTeams.forEach { teamInfo ->
+                        TextButton(
+                            onClick = {
+                                onTeamChanged(teamInfo.teamId)
+                                showTeamPicker = false
+                            },
+                            modifier = Modifier.fillMaxWidth().testTag("team_picker_${teamInfo.teamId.value}"),
+                        ) {
+                            Text(
+                                teamInfo.teamName,
+                                color = if (teamInfo.teamId == currentTeamId) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showTeamPicker = false }) { Text("Cancel") }
             },
         )
     }

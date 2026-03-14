@@ -11,6 +11,7 @@ import com.github.mr3zee.model.Connection
 import com.github.mr3zee.model.ConnectionConfig
 import com.github.mr3zee.model.ConnectionId
 import com.github.mr3zee.model.ConnectionType
+import com.github.mr3zee.model.TeamId
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,12 +19,14 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(FlowPreview::class)
 class ConnectionsViewModel(
     private val apiClient: ConnectionApiClient,
+    private val activeTeamId: StateFlow<TeamId?>,
 ) : ViewModel() {
 
     private val _connections = MutableStateFlow<List<Connection>>(emptyList())
@@ -65,6 +68,11 @@ class ConnectionsViewModel(
                 .collectLatest {
                     loadConnectionsInternal(reset = true)
                 }
+        }
+        viewModelScope.launch {
+            activeTeamId.filterNotNull().distinctUntilChanged().collectLatest {
+                loadConnectionsInternal(reset = true)
+            }
         }
     }
 
@@ -139,7 +147,8 @@ class ConnectionsViewModel(
         viewModelScope.launch {
             _error.value = null
             try {
-                apiClient.createConnection(CreateConnectionRequest(name = name, type = type, config = config))
+                val teamId = activeTeamId.value ?: error("No active team selected")
+                apiClient.createConnection(CreateConnectionRequest(name = name, teamId = teamId, type = type, config = config))
                 loadConnections()
             } catch (e: Exception) {
                 _error.value = e.toUserMessage()
