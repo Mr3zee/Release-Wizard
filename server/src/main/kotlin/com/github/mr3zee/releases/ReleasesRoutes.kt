@@ -5,6 +5,7 @@ import com.github.mr3zee.api.*
 import com.github.mr3zee.auth.userSession
 import com.github.mr3zee.model.BlockId
 import com.github.mr3zee.model.ReleaseId
+import com.github.mr3zee.model.TeamId
 import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -24,8 +25,9 @@ fun Route.releaseRoutes() {
             val status = statusStr?.let { runCatching { com.github.mr3zee.model.ReleaseStatus.valueOf(it) }.getOrNull() }
             val projectId = call.request.queryParameters["projectId"]?.let { com.github.mr3zee.model.ProjectId(it) }
             val tag = call.request.queryParameters["tag"]
+            val teamId = call.request.queryParameters["teamId"]?.let { TeamId(it) }
             val (releases, totalCount) = service.listReleases(
-                call.userSession(), offset, limit, search, status, projectId, tag,
+                call.userSession(), teamId, offset, limit, search, status, projectId, tag,
             )
             call.respond(ReleaseListResponse(
                 releases = releases,

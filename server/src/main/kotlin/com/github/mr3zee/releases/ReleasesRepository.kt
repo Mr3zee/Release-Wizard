@@ -5,7 +5,8 @@ import com.github.mr3zee.model.*
 interface ReleasesRepository {
     suspend fun findAll(
         includeArchived: Boolean = false,
-        ownerId: String? = null,
+        teamId: String? = null,
+        teamIds: List<String>? = null,
         offset: Int = 0,
         limit: Int = 20,
         search: String? = null,
@@ -15,7 +16,8 @@ interface ReleasesRepository {
     ): List<Release>
     suspend fun countAll(
         includeArchived: Boolean = false,
-        ownerId: String? = null,
+        teamId: String? = null,
+        teamIds: List<String>? = null,
         search: String? = null,
         status: ReleaseStatus? = null,
         projectTemplateId: ProjectId? = null,
@@ -23,7 +25,8 @@ interface ReleasesRepository {
     ): Long
     suspend fun findAllWithCount(
         includeArchived: Boolean = false,
-        ownerId: String? = null,
+        teamId: String? = null,
+        teamIds: List<String>? = null,
         offset: Int = 0,
         limit: Int = 20,
         search: String? = null,
@@ -32,14 +35,14 @@ interface ReleasesRepository {
         releaseIds: Set<String>? = null,
     ): Pair<List<Release>, Long>
     suspend fun findById(id: ReleaseId): Release?
-    suspend fun findOwner(id: ReleaseId): String?
+    suspend fun findTeamId(id: ReleaseId): String?
     suspend fun findByProjectId(projectId: ProjectId): List<Release>
     suspend fun findByStatuses(statuses: Set<ReleaseStatus>): List<Release>
     suspend fun create(
         projectTemplateId: ProjectId,
         dagSnapshot: DagGraph,
         parameters: List<Parameter>,
-        ownerId: String = "",
+        teamId: String,
     ): Release
     suspend fun updateStatus(id: ReleaseId, status: ReleaseStatus): Boolean
     suspend fun setStarted(id: ReleaseId): Boolean

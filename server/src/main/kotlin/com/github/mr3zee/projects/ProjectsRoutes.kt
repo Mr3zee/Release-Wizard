@@ -3,6 +3,7 @@ package com.github.mr3zee.projects
 import com.github.mr3zee.api.*
 import com.github.mr3zee.auth.userSession
 import com.github.mr3zee.model.ProjectId
+import com.github.mr3zee.model.TeamId
 import io.ktor.http.*
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.request.*
@@ -19,7 +20,8 @@ fun Route.projectRoutes() {
             val offset = call.request.queryParameters["offset"]?.toIntOrNull() ?: 0
             val limit = (call.request.queryParameters["limit"]?.toIntOrNull() ?: 20).coerceIn(1, 200)
             val search = call.request.queryParameters["q"]
-            val (projects, totalCount) = service.listProjects(call.userSession(), offset, limit, search)
+            val teamId = call.request.queryParameters["teamId"]?.let { TeamId(it) }
+            val (projects, totalCount) = service.listProjects(call.userSession(), teamId, offset, limit, search)
             call.respond(ProjectListResponse(
                 projects = projects,
                 pagination = PaginationInfo(totalCount = totalCount, offset = offset, limit = limit),

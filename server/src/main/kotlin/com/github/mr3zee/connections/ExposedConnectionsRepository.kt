@@ -36,13 +36,16 @@ class ExposedConnectionsRepository(
     }
 
     private fun buildConnectionConditions(
-        ownerId: String?,
+        teamId: String?,
+        teamIds: List<String>?,
         search: String?,
         type: ConnectionType?,
     ): List<Op<Boolean>> {
         val conditions = mutableListOf<Op<Boolean>>()
-        if (ownerId != null) {
-            conditions.add(ConnectionTable.ownerId eq ownerId)
+        if (teamId != null) {
+            conditions.add(ConnectionTable.teamId eq teamId)
+        } else if (teamIds != null) {
+            conditions.add(ConnectionTable.teamId inList teamIds)
         }
         if (!search.isNullOrBlank()) {
             conditions.add(ConnectionTable.name.lowerCase() like likeContains(search))
@@ -54,13 +57,14 @@ class ExposedConnectionsRepository(
     }
 
     override suspend fun findAll(
-        ownerId: String?,
+        teamId: String?,
+        teamIds: List<String>?,
         offset: Int,
         limit: Int,
         search: String?,
         type: ConnectionType?,
     ): List<Connection> = dbQuery {
-        val conditions = buildConnectionConditions(ownerId, search, type)
+        val conditions = buildConnectionConditions(teamId, teamIds, search, type)
         val query = ConnectionTable.selectAll()
         if (conditions.isNotEmpty()) {
             query.where { conditions.reduce { acc, op -> acc and op } }
@@ -72,11 +76,12 @@ class ExposedConnectionsRepository(
     }
 
     override suspend fun countAll(
-        ownerId: String?,
+        teamId: String?,
+        teamIds: List<String>?,
         search: String?,
         type: ConnectionType?,
     ): Long = dbQuery {
-        val conditions = buildConnectionConditions(ownerId, search, type)
+        val conditions = buildConnectionConditions(teamId, teamIds, search, type)
         val query = ConnectionTable.selectAll()
         if (conditions.isNotEmpty()) {
             query.where { conditions.reduce { acc, op -> acc and op } }
@@ -85,13 +90,14 @@ class ExposedConnectionsRepository(
     }
 
     override suspend fun findAllWithCount(
-        ownerId: String?,
+        teamId: String?,
+        teamIds: List<String>?,
         offset: Int,
         limit: Int,
         search: String?,
         type: ConnectionType?,
     ): Pair<List<Connection>, Long> = dbQuery {
-        val conditions = buildConnectionConditions(ownerId, search, type)
+        val conditions = buildConnectionConditions(teamId, teamIds, search, type)
 
         val countQuery = ConnectionTable.selectAll()
         if (conditions.isNotEmpty()) {
@@ -118,18 +124,18 @@ class ExposedConnectionsRepository(
             ?.toConnection()
     }
 
-    override suspend fun findOwner(id: ConnectionId): String? = dbQuery {
-        ConnectionTable.select(ConnectionTable.ownerId)
+    override suspend fun findTeamId(id: ConnectionId): String? = dbQuery {
+        ConnectionTable.select(ConnectionTable.teamId)
             .where { ConnectionTable.id eq UUID.fromString(id.value) }
             .singleOrNull()
-            ?.get(ConnectionTable.ownerId)
+            ?.get(ConnectionTable.teamId)
     }
 
     override suspend fun create(
         name: String,
         type: ConnectionType,
         config: ConnectionConfig,
-        ownerId: String,
+        teamId: String,
     ): Connection = dbQuery {
         val now = Clock.System.now()
         val id = UUID.randomUUID()
@@ -139,7 +145,7 @@ class ExposedConnectionsRepository(
             it[ConnectionTable.name] = name
             it[ConnectionTable.type] = type
             it[ConnectionTable.encryptedConfig] = encryptedConfig
-            it[ConnectionTable.ownerId] = ownerId
+            it[ConnectionTable.teamId] = teamId
             it[ConnectionTable.createdAt] = now
             it[ConnectionTable.updatedAt] = now
         }

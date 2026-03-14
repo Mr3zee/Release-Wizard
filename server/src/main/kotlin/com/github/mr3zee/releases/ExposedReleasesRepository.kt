@@ -61,7 +61,8 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
 
     private fun buildReleaseConditions(
         includeArchived: Boolean,
-        ownerId: String?,
+        teamId: String?,
+        teamIds: List<String>?,
         search: String?,
         status: ReleaseStatus?,
         projectTemplateId: ProjectId?,
@@ -71,8 +72,10 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
         if (!includeArchived) {
             conditions.add(ReleaseTable.status neq ReleaseStatus.ARCHIVED.name)
         }
-        if (ownerId != null) {
-            conditions.add(ReleaseTable.ownerId eq ownerId)
+        if (teamId != null) {
+            conditions.add(ReleaseTable.teamId eq teamId)
+        } else if (teamIds != null) {
+            conditions.add(ReleaseTable.teamId inList teamIds)
         }
         if (status != null) {
             conditions.add(ReleaseTable.status eq status.name)
@@ -122,7 +125,8 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
 
     override suspend fun findAll(
         includeArchived: Boolean,
-        ownerId: String?,
+        teamId: String?,
+        teamIds: List<String>?,
         offset: Int,
         limit: Int,
         search: String?,
@@ -130,19 +134,20 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
         projectTemplateId: ProjectId?,
         releaseIds: Set<String>?,
     ): List<Release> = dbQuery {
-        val conditions = buildReleaseConditions(includeArchived, ownerId, search, status, projectTemplateId, releaseIds)
+        val conditions = buildReleaseConditions(includeArchived, teamId, teamIds, search, status, projectTemplateId, releaseIds)
         queryReleasesWithTags(conditions, offset, limit)
     }
 
     override suspend fun countAll(
         includeArchived: Boolean,
-        ownerId: String?,
+        teamId: String?,
+        teamIds: List<String>?,
         search: String?,
         status: ReleaseStatus?,
         projectTemplateId: ProjectId?,
         releaseIds: Set<String>?,
     ): Long = dbQuery {
-        val conditions = buildReleaseConditions(includeArchived, ownerId, search, status, projectTemplateId, releaseIds)
+        val conditions = buildReleaseConditions(includeArchived, teamId, teamIds, search, status, projectTemplateId, releaseIds)
         val query = ReleaseTable.selectAll()
         if (conditions.isNotEmpty()) {
             query.where { conditions.reduce { acc, op -> acc and op } }
@@ -152,7 +157,8 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
 
     override suspend fun findAllWithCount(
         includeArchived: Boolean,
-        ownerId: String?,
+        teamId: String?,
+        teamIds: List<String>?,
         offset: Int,
         limit: Int,
         search: String?,
@@ -160,7 +166,7 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
         projectTemplateId: ProjectId?,
         releaseIds: Set<String>?,
     ): Pair<List<Release>, Long> = dbQuery {
-        val conditions = buildReleaseConditions(includeArchived, ownerId, search, status, projectTemplateId, releaseIds)
+        val conditions = buildReleaseConditions(includeArchived, teamId, teamIds, search, status, projectTemplateId, releaseIds)
 
         val countQuery = ReleaseTable.selectAll()
         if (conditions.isNotEmpty()) {
@@ -171,11 +177,11 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
         queryReleasesWithTags(conditions, offset, limit) to totalCount
     }
 
-    override suspend fun findOwner(id: ReleaseId): String? = dbQuery {
-        ReleaseTable.select(ReleaseTable.ownerId)
+    override suspend fun findTeamId(id: ReleaseId): String? = dbQuery {
+        ReleaseTable.select(ReleaseTable.teamId)
             .where { ReleaseTable.id eq UUID.fromString(id.value) }
             .singleOrNull()
-            ?.get(ReleaseTable.ownerId)
+            ?.get(ReleaseTable.teamId)
     }
 
     override suspend fun findById(id: ReleaseId): Release? = dbQuery {
@@ -207,7 +213,7 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
         projectTemplateId: ProjectId,
         dagSnapshot: DagGraph,
         parameters: List<Parameter>,
-        ownerId: String,
+        teamId: String,
     ): Release = dbQuery {
         val id = UUID.randomUUID()
         ReleaseTable.insert {
@@ -216,7 +222,7 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
             it[ReleaseTable.status] = ReleaseStatus.PENDING.name
             it[ReleaseTable.dagSnapshot] = dagSnapshot
             it[ReleaseTable.parameters] = parameters
-            it[ReleaseTable.ownerId] = ownerId
+            it[ReleaseTable.teamId] = teamId
             it[ReleaseTable.startedAt] = null
             it[ReleaseTable.finishedAt] = null
         }
@@ -255,11 +261,9 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
     }
 
     override suspend fun delete(id: ReleaseId): Boolean = dbQuery {
-        // Delete block executions first
         BlockExecutionTable.deleteWhere {
             BlockExecutionTable.releaseId eq id.value
         }
-        // Delete tags
         ReleaseTagTable.deleteWhere {
             ReleaseTagTable.releaseId eq id.value
         }

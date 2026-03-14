@@ -6,7 +6,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.v1.jdbc.Database
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 import org.koin.ktor.ext.inject
 import org.slf4j.LoggerFactory
 
@@ -23,7 +23,7 @@ fun Route.healthRoute() {
 
     get(ApiRoutes.HEALTH) {
         try {
-            transaction(db) {
+            suspendTransaction(db) {
                 @Suppress("SqlNoDataSourceInspection")
                 exec("SELECT 1")
             }

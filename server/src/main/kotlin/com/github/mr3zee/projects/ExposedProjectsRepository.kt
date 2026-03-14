@@ -31,12 +31,15 @@ class ExposedProjectsRepository(private val db: Database) : ProjectsRepository {
     }
 
     private fun buildProjectConditions(
-        ownerId: String?,
+        teamId: String?,
+        teamIds: List<String>?,
         search: String?,
     ): List<Op<Boolean>> {
         val conditions = mutableListOf<Op<Boolean>>()
-        if (ownerId != null) {
-            conditions.add(ProjectTemplateTable.ownerId eq ownerId)
+        if (teamId != null) {
+            conditions.add(ProjectTemplateTable.teamId eq teamId)
+        } else if (teamIds != null) {
+            conditions.add(ProjectTemplateTable.teamId inList teamIds)
         }
         if (!search.isNullOrBlank()) {
             conditions.add(ProjectTemplateTable.name.lowerCase() like likeContains(search))
@@ -45,12 +48,13 @@ class ExposedProjectsRepository(private val db: Database) : ProjectsRepository {
     }
 
     override suspend fun findAll(
-        ownerId: String?,
+        teamId: String?,
+        teamIds: List<String>?,
         offset: Int,
         limit: Int,
         search: String?,
     ): List<ProjectTemplate> = dbQuery {
-        val conditions = buildProjectConditions(ownerId, search)
+        val conditions = buildProjectConditions(teamId, teamIds, search)
         val query = ProjectTemplateTable.selectAll()
         if (conditions.isNotEmpty()) {
             query.where { conditions.reduce { acc, op -> acc and op } }
@@ -61,8 +65,8 @@ class ExposedProjectsRepository(private val db: Database) : ProjectsRepository {
             .map { it.toProjectTemplate() }
     }
 
-    override suspend fun countAll(ownerId: String?, search: String?): Long = dbQuery {
-        val conditions = buildProjectConditions(ownerId, search)
+    override suspend fun countAll(teamId: String?, teamIds: List<String>?, search: String?): Long = dbQuery {
+        val conditions = buildProjectConditions(teamId, teamIds, search)
         val query = ProjectTemplateTable.selectAll()
         if (conditions.isNotEmpty()) {
             query.where { conditions.reduce { acc, op -> acc and op } }
@@ -71,12 +75,13 @@ class ExposedProjectsRepository(private val db: Database) : ProjectsRepository {
     }
 
     override suspend fun findAllWithCount(
-        ownerId: String?,
+        teamId: String?,
+        teamIds: List<String>?,
         offset: Int,
         limit: Int,
         search: String?,
     ): Pair<List<ProjectTemplate>, Long> = dbQuery {
-        val conditions = buildProjectConditions(ownerId, search)
+        val conditions = buildProjectConditions(teamId, teamIds, search)
 
         val countQuery = ProjectTemplateTable.selectAll()
         if (conditions.isNotEmpty()) {
@@ -103,11 +108,11 @@ class ExposedProjectsRepository(private val db: Database) : ProjectsRepository {
             ?.toProjectTemplate()
     }
 
-    override suspend fun findOwner(id: ProjectId): String? = dbQuery {
-        ProjectTemplateTable.select(ProjectTemplateTable.ownerId)
+    override suspend fun findTeamId(id: ProjectId): String? = dbQuery {
+        ProjectTemplateTable.select(ProjectTemplateTable.teamId)
             .where { ProjectTemplateTable.id eq UUID.fromString(id.value) }
             .singleOrNull()
-            ?.get(ProjectTemplateTable.ownerId)
+            ?.get(ProjectTemplateTable.teamId)
     }
 
     override suspend fun create(
@@ -115,7 +120,7 @@ class ExposedProjectsRepository(private val db: Database) : ProjectsRepository {
         description: String,
         dagGraph: DagGraph,
         parameters: List<Parameter>,
-        ownerId: String,
+        teamId: String,
         defaultTags: List<String>,
     ): ProjectTemplate = dbQuery {
         val now = Clock.System.now()
@@ -127,7 +132,7 @@ class ExposedProjectsRepository(private val db: Database) : ProjectsRepository {
             it[ProjectTemplateTable.dagGraph] = dagGraph
             it[ProjectTemplateTable.parameters] = parameters
             it[ProjectTemplateTable.defaultTags] = defaultTags
-            it[ProjectTemplateTable.ownerId] = ownerId
+            it[ProjectTemplateTable.teamId] = teamId
             it[ProjectTemplateTable.createdAt] = now
             it[ProjectTemplateTable.updatedAt] = now
         }

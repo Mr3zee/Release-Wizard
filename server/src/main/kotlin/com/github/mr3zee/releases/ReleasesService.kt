@@ -3,13 +3,18 @@ package com.github.mr3zee.releases
 import com.github.mr3zee.ForbiddenException
 import com.github.mr3zee.api.ApproveBlockRequest
 import com.github.mr3zee.api.CreateReleaseRequest
+import com.github.mr3zee.audit.AuditService
+import com.github.mr3zee.NotFoundException
 import com.github.mr3zee.auth.UserSession
+import com.github.mr3zee.connections.ConnectionsRepository
 import com.github.mr3zee.execution.ExecutionEngine
 import com.github.mr3zee.model.*
+import com.github.mr3zee.model.collectConnectionIds
 import com.github.mr3zee.model.findActionBlock
 import com.github.mr3zee.model.isTerminal
 import com.github.mr3zee.projects.ProjectsRepository
 import com.github.mr3zee.tags.TagRepository
+import com.github.mr3zee.teams.TeamAccessService
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.ConcurrentHashMap
@@ -18,6 +23,7 @@ import kotlin.time.Clock
 interface ReleasesService {
     suspend fun listReleases(
         session: UserSession,
+        teamId: TeamId? = null,
         offset: Int = 0,
         limit: Int = 20,
         search: String? = null,
@@ -44,12 +50,16 @@ class DefaultReleasesService(
     private val projectsRepository: ProjectsRepository,
     private val executionEngine: ExecutionEngine,
     private val tagRepository: TagRepository,
+    private val teamAccessService: TeamAccessService,
+    private val auditService: AuditService,
+    private val connectionsRepository: ConnectionsRepository,
 ) : ReleasesService {
 
     private val approvalMutexes = ConcurrentHashMap<String, Mutex>()
 
     override suspend fun listReleases(
         session: UserSession,
+        teamId: TeamId?,
         offset: Int,
         limit: Int,
         search: String?,
@@ -57,18 +67,38 @@ class DefaultReleasesService(
         projectTemplateId: ProjectId?,
         tag: String?,
     ): Pair<List<Release>, Long> {
-        val ownerId = if (session.role == UserRole.ADMIN) null else session.userId
         // If tag is provided, resolve matching release IDs first
         val releaseIds = if (tag != null) {
             val ids = tagRepository.findReleaseIdsByTag(tag).toSet()
             if (ids.isEmpty()) return emptyList<Release>() to 0L
             ids
         } else null
-        return repository.findAllWithCount(
-            ownerId = ownerId, offset = offset, limit = limit,
-            search = search, status = status, projectTemplateId = projectTemplateId,
-            releaseIds = releaseIds,
-        )
+
+        return when {
+            teamId != null -> {
+                teamAccessService.checkMembership(teamId, session)
+                repository.findAllWithCount(
+                    teamId = teamId.value, offset = offset, limit = limit,
+                    search = search, status = status, projectTemplateId = projectTemplateId,
+                    releaseIds = releaseIds,
+                )
+            }
+            session.role == UserRole.ADMIN -> {
+                repository.findAllWithCount(
+                    offset = offset, limit = limit,
+                    search = search, status = status, projectTemplateId = projectTemplateId,
+                    releaseIds = releaseIds,
+                )
+            }
+            else -> {
+                val teamIds = teamAccessService.getUserTeamIds(session.userId).map { it.value }
+                repository.findAllWithCount(
+                    teamIds = teamIds, offset = offset, limit = limit,
+                    search = search, status = status, projectTemplateId = projectTemplateId,
+                    releaseIds = releaseIds,
+                )
+            }
+        }
     }
 
     override suspend fun getRelease(id: ReleaseId): Release? {
@@ -83,6 +113,12 @@ class DefaultReleasesService(
         val project = projectsRepository.findById(request.projectTemplateId)
             ?: throw IllegalArgumentException("Project not found: ${request.projectTemplateId.value}")
 
+        // Get teamId from project — releases inherit team from their project
+        val projectTeamId = projectsRepository.findTeamId(request.projectTemplateId)
+            ?: throw IllegalArgumentException("Project has no team")
+        teamAccessService.checkMembership(TeamId(projectTeamId), session)
+        validateConnectionTeamConsistency(project.dagGraph, projectTeamId)
+
         if (project.dagGraph.blocks.isEmpty()) {
             throw IllegalArgumentException("Project has no blocks to execute")
         }
@@ -93,12 +129,12 @@ class DefaultReleasesService(
             projectTemplateId = project.id,
             dagSnapshot = project.dagGraph,
             parameters = mergedParams,
-            ownerId = session.userId,
+            teamId = projectTeamId,
         )
 
         // Set tags (merge default tags from project with request tags)
         val tags = (project.defaultTags + request.tags).map { it.trim().lowercase() }.distinct()
-        applyTags(release.id, tags)
+        applyTags(release.id, tags, projectTeamId)
 
         // Initialize block executions as WAITING
         for (block in project.dagGraph.blocks) {
@@ -113,12 +149,17 @@ class DefaultReleasesService(
 
         executionEngine.startExecution(release)
 
+        auditService.log(TeamId(projectTeamId), session, AuditAction.RELEASE_STARTED, AuditTargetType.RELEASE, release.id.value, "Started release for project '${project.name}'")
+
         return release.copy(tags = tags)
     }
 
     override suspend fun startScheduledRelease(projectId: ProjectId, parameters: List<Parameter>): Release {
         val project = projectsRepository.findById(projectId)
             ?: throw IllegalArgumentException("Project not found: ${projectId.value}")
+
+        val projectTeamId = projectsRepository.findTeamId(projectId)
+            ?: error("Project ${projectId.value} has no team")
 
         if (project.dagGraph.blocks.isEmpty()) {
             throw IllegalArgumentException("Project has no blocks to execute")
@@ -130,12 +171,12 @@ class DefaultReleasesService(
             projectTemplateId = project.id,
             dagSnapshot = project.dagGraph,
             parameters = mergedParams,
-            ownerId = "",
+            teamId = projectTeamId,
         )
 
         // Apply project's default tags to scheduled releases
         val tags = project.defaultTags.map { it.trim().lowercase() }.distinct()
-        applyTags(release.id, tags)
+        applyTags(release.id, tags, projectTeamId)
 
         for (block in project.dagGraph.blocks) {
             repository.upsertBlockExecution(
@@ -162,16 +203,19 @@ class DefaultReleasesService(
             throw IllegalArgumentException("Cannot re-run release in status ${original.status}")
         }
 
+        val releaseTeamId = repository.findTeamId(id)
+            ?: error("Release ${id.value} has no team")
+
         val release = repository.create(
             projectTemplateId = original.projectTemplateId,
             dagSnapshot = original.dagSnapshot,
             parameters = original.parameters,
-            ownerId = session.userId,
+            teamId = releaseTeamId,
         )
 
         // Copy tags from the original release
         val originalTags = original.tags
-        applyTags(release.id, originalTags)
+        applyTags(release.id, originalTags, releaseTeamId)
 
         for (block in original.dagSnapshot.blocks) {
             repository.upsertBlockExecution(
@@ -193,10 +237,12 @@ class DefaultReleasesService(
         if (release.status != ReleaseStatus.RUNNING && release.status != ReleaseStatus.PENDING) {
             return false
         }
-        // cancelExecution cancels the job and joins, so DB is updated before return
         executionEngine.cancelExecution(id)
-        // Clean up approval mutexes for this release
         approvalMutexes.keys.removeIf { it.startsWith("${id.value}:") }
+        val teamId = repository.findTeamId(id)
+        if (teamId != null) {
+            auditService.log(TeamId(teamId), session, AuditAction.RELEASE_CANCELLED, AuditTargetType.RELEASE, id.value)
+        }
         return true
     }
 
@@ -206,7 +252,6 @@ class DefaultReleasesService(
         if (!release.status.isTerminal) return false
         val archived = repository.updateStatus(id, ReleaseStatus.ARCHIVED)
         if (archived) {
-            // Clean up approval mutexes for this release
             approvalMutexes.keys.removeIf { it.startsWith("${id.value}:") }
         }
         return archived
@@ -218,7 +263,6 @@ class DefaultReleasesService(
         if (!release.status.isTerminal) return false
         val deleted = repository.delete(id)
         if (deleted) {
-            // Clean up approval mutexes for this release
             approvalMutexes.keys.removeIf { it.startsWith("${id.value}:") }
         }
         return deleted
@@ -244,39 +288,31 @@ class DefaultReleasesService(
         checkAccess(releaseId, session)
         if (release.status != ReleaseStatus.RUNNING) return false
 
-        // Find the block's approval rule (search nested containers too)
         val block = release.dagSnapshot.findActionBlock(blockId)
         val rule = block?.approvalRule
 
         if (rule != null) {
-            // Invalid rule — treat as no rule, approve immediately
             if (rule.requiredCount < 1) {
                 return executionEngine.approveBlock(releaseId, blockId, request.input)
             }
 
-            // Acquire mutex AFTER validations to prevent DoS via fabricated IDs
             val mutexKey = "${releaseId.value}:${blockId.value}"
             val mutex = approvalMutexes.getOrPut(mutexKey) { Mutex() }
 
             mutex.withLock {
-                // Re-read execution within the lock to get latest state
                 val execution = repository.findBlockExecution(releaseId, blockId) ?: return false
                 if (execution.status != BlockStatus.WAITING_FOR_INPUT) return false
 
-                // Check role requirement
                 if (rule.requiredRole != null && session.role != rule.requiredRole) {
                     throw ForbiddenException("Approval requires ${rule.requiredRole} role")
                 }
-                // Check user requirement
                 if (rule.requiredUserIds.isNotEmpty() && session.userId !in rule.requiredUserIds) {
                     throw ForbiddenException("You are not authorized to approve this block")
                 }
-                // Check for duplicate approval
                 if (execution.approvals.any { it.userId == session.userId }) {
                     throw IllegalArgumentException("You have already approved this block")
                 }
 
-                // Add approval
                 val newApproval = BlockApproval(
                     userId = session.userId,
                     username = session.username,
@@ -286,15 +322,12 @@ class DefaultReleasesService(
                 val updatedExecution = execution.copy(approvals = updatedApprovals)
                 repository.upsertBlockExecution(updatedExecution)
 
-                // Check if we have enough approvals
                 if (updatedApprovals.size < rule.requiredCount) {
-                    // Partial approval -- emit update event so subscribers see the new approval
                     executionEngine.emitBlockUpdate(releaseId, updatedExecution)
                     return true
                 }
             }
 
-            // Approval threshold met — clean up mutex since this block won't need approval again
             approvalMutexes.remove(mutexKey)
         } else {
             val execution = repository.findBlockExecution(releaseId, blockId) ?: return false
@@ -304,18 +337,16 @@ class DefaultReleasesService(
         return executionEngine.approveBlock(releaseId, blockId, request.input)
     }
 
-    private suspend fun applyTags(releaseId: ReleaseId, tags: List<String>) {
+    private suspend fun applyTags(releaseId: ReleaseId, tags: List<String>, teamId: String) {
         if (tags.isNotEmpty()) {
-            tagRepository.setTagsForRelease(releaseId, tags)
+            tagRepository.setTagsForRelease(releaseId, tags, teamId)
         }
     }
 
     override suspend fun checkAccess(id: ReleaseId, session: UserSession) {
         if (session.role == UserRole.ADMIN) return
-        val ownerId = repository.findOwner(id)
-        if (ownerId != null && ownerId != session.userId) {
-            throw ForbiddenException("Access denied")
-        }
+        val teamId = repository.findTeamId(id) ?: throw NotFoundException("Resource not found")
+        teamAccessService.checkMembership(TeamId(teamId), session)
     }
 
     private fun mergeParameters(projectParams: List<Parameter>, requestParams: List<Parameter>): List<Parameter> {
@@ -326,4 +357,13 @@ class DefaultReleasesService(
         return merged.values.toList()
     }
 
+    private suspend fun validateConnectionTeamConsistency(dagGraph: DagGraph, expectedTeamId: String) {
+        val connectionIds = dagGraph.collectConnectionIds()
+        for (connId in connectionIds) {
+            val connTeamId = connectionsRepository.findTeamId(connId)
+            if (connTeamId != null && connTeamId != expectedTeamId) {
+                throw IllegalArgumentException("Connection ${connId.value} belongs to a different team")
+            }
+        }
+    }
 }

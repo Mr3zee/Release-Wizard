@@ -10,10 +10,11 @@ import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 
 interface TagRepository {
     suspend fun findTagsForRelease(releaseId: ReleaseId): List<String>
-    suspend fun setTagsForRelease(releaseId: ReleaseId, tags: List<String>)
+    suspend fun setTagsForRelease(releaseId: ReleaseId, tags: List<String>, teamId: String = "")
     suspend fun findAllTagsWithCount(): List<Pair<String, Long>>
-    suspend fun renameTag(oldName: String, newName: String): Long
-    suspend fun deleteTag(name: String): Long
+    suspend fun findTagsWithCountByTeam(teamId: String): List<Pair<String, Long>>
+    suspend fun renameTag(oldName: String, newName: String, teamId: String? = null): Long
+    suspend fun deleteTag(name: String, teamId: String? = null): Long
     suspend fun findReleaseIdsByTag(tag: String): List<String>
 }
 
@@ -28,13 +29,14 @@ class ExposedTagRepository(private val db: Database) : TagRepository {
             .map { it[ReleaseTagTable.tag] }
     }
 
-    override suspend fun setTagsForRelease(releaseId: ReleaseId, tags: List<String>) = dbQuery {
+    override suspend fun setTagsForRelease(releaseId: ReleaseId, tags: List<String>, teamId: String) = dbQuery {
         ReleaseTagTable.deleteWhere { ReleaseTagTable.releaseId eq releaseId.value }
         for (tag in tags.map { it.trim().lowercase() }.distinct()) {
             if (tag.isNotBlank()) {
                 ReleaseTagTable.insert {
                     it[ReleaseTagTable.releaseId] = releaseId.value
                     it[ReleaseTagTable.tag] = tag
+                    it[ReleaseTagTable.teamId] = teamId
                 }
             }
         }
@@ -48,12 +50,25 @@ class ExposedTagRepository(private val db: Database) : TagRepository {
             .map { it[ReleaseTagTable.tag] to it[countExpr] }
     }
 
-    override suspend fun renameTag(oldName: String, newName: String): Long = dbQuery {
+    override suspend fun findTagsWithCountByTeam(teamId: String): List<Pair<String, Long>> = dbQuery {
+        val countExpr = ReleaseTagTable.releaseId.count()
+        ReleaseTagTable.select(ReleaseTagTable.tag, countExpr)
+            .where { ReleaseTagTable.teamId eq teamId }
+            .groupBy(ReleaseTagTable.tag)
+            .orderBy(ReleaseTagTable.tag, SortOrder.ASC)
+            .map { it[ReleaseTagTable.tag] to it[countExpr] }
+    }
+
+    override suspend fun renameTag(oldName: String, newName: String, teamId: String?): Long = dbQuery {
         val normalizedOld = oldName.trim().lowercase()
         val normalizedNew = newName.trim().lowercase()
         if (normalizedOld == normalizedNew) return@dbQuery 0L
 
-        // Find releases that already have the new tag — for those, just delete the old tag
+        fun baseCondition(): Op<Boolean> {
+            val cond: Op<Boolean> = ReleaseTagTable.tag eq normalizedOld
+            return if (teamId != null) cond and (ReleaseTagTable.teamId eq teamId) else cond
+        }
+
         val releasesWithNewTag = ReleaseTagTable.select(ReleaseTagTable.releaseId)
             .where { ReleaseTagTable.tag eq normalizedNew }
             .map { it[ReleaseTagTable.releaseId] }
@@ -61,20 +76,22 @@ class ExposedTagRepository(private val db: Database) : TagRepository {
 
         if (releasesWithNewTag.isNotEmpty()) {
             ReleaseTagTable.deleteWhere {
-                (ReleaseTagTable.tag eq normalizedOld) and (ReleaseTagTable.releaseId inList releasesWithNewTag)
+                baseCondition() and (ReleaseTagTable.releaseId inList releasesWithNewTag)
             }
         }
 
-        // Rename remaining old tags to new
-        val updated = ReleaseTagTable.update({ ReleaseTagTable.tag eq normalizedOld }) {
+        val updated = ReleaseTagTable.update({ baseCondition() }) {
             it[ReleaseTagTable.tag] = normalizedNew
         }
         updated.toLong()
     }
 
-    override suspend fun deleteTag(name: String): Long = dbQuery {
+    override suspend fun deleteTag(name: String, teamId: String?): Long = dbQuery {
         val normalized = name.trim().lowercase()
-        val deleted = ReleaseTagTable.deleteWhere { ReleaseTagTable.tag eq normalized }
+        val deleted = ReleaseTagTable.deleteWhere {
+            val cond: Op<Boolean> = ReleaseTagTable.tag eq normalized
+            if (teamId != null) cond and (ReleaseTagTable.teamId eq teamId) else cond
+        }
         deleted.toLong()
     }
 

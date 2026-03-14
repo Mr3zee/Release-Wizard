@@ -6,6 +6,7 @@ import com.github.mr3zee.auth.userSession
 import com.github.mr3zee.model.Connection
 import com.github.mr3zee.model.ConnectionId
 import com.github.mr3zee.model.ConnectionType
+import com.github.mr3zee.model.TeamId
 import io.ktor.http.*
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.request.*
@@ -25,8 +26,9 @@ fun Route.connectionRoutes() {
             val search = call.request.queryParameters["q"]
             val typeStr = call.request.queryParameters["type"]
             val type = typeStr?.let { runCatching { ConnectionType.valueOf(it) }.getOrNull() }
+            val teamId = call.request.queryParameters["teamId"]?.let { TeamId(it) }
             val (connections, totalCount) = service.listConnections(
-                call.userSession(), offset, limit, search, type,
+                call.userSession(), teamId, offset, limit, search, type,
             )
             val webhookUrls = connections.mapNotNull { conn ->
                 webhookUrl(conn, webhookConfig)?.let { conn.id.value to it }

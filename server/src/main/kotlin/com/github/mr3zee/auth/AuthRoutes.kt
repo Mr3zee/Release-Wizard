@@ -3,7 +3,9 @@ package com.github.mr3zee.auth
 import com.github.mr3zee.api.*
 import com.github.mr3zee.model.UserRole
 import com.github.mr3zee.model.UserId
+import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.plugins.CorrelationIdKey
+import com.github.mr3zee.teams.TeamRepository
 import io.ktor.http.*
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.auth.*
@@ -96,7 +98,12 @@ fun Route.authRoutes() {
     get(ApiRoutes.Auth.ME) {
         val session = call.sessions.get<UserSession>()
         if (session != null) {
-            call.respond(UserInfo(username = session.username, id = session.userId, role = session.role))
+            val teamRepository by inject<TeamRepository>()
+            val userTeams = teamRepository.getUserTeams(session.userId)
+            val teamInfos = userTeams.map { (team, role) ->
+                UserTeamInfo(teamId = team.id, teamName = team.name, role = role)
+            }
+            call.respond(UserInfo(username = session.username, id = session.userId, role = session.role, teams = teamInfos))
         } else {
             respondUnauthorized(call, "Not authenticated")
         }

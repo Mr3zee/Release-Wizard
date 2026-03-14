@@ -4,6 +4,6 @@ import org.koin.dsl.module
 
 val notificationsModule = module {
     single<NotificationRepository> { ExposedNotificationRepository(get()) }
-    single<NotificationService> { DefaultNotificationService(get(), get()) }
+    single<NotificationService> { DefaultNotificationService(get(), get(), get()) }
     single { NotificationListener(get(), get(), get()) }
 }

@@ -5,8 +5,10 @@ import com.github.mr3zee.api.CreateTriggerRequest
 import com.github.mr3zee.api.TriggerResponse
 import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.model.ProjectId
+import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.model.UserRole
 import com.github.mr3zee.projects.ProjectsRepository
+import com.github.mr3zee.teams.TeamAccessService
 import com.github.mr3zee.releases.ReleasesService
 import com.github.mr3zee.api.ApiRoutes
 import java.security.MessageDigest
@@ -27,6 +29,7 @@ class DefaultTriggerService(
     private val releasesService: ReleasesService,
     private val projectsRepository: ProjectsRepository,
     private val webhookBaseUrl: String,
+    private val teamAccessService: TeamAccessService,
 ) : TriggerService {
 
     override suspend fun listByProject(projectId: ProjectId, session: UserSession): List<TriggerResponse> {
@@ -98,9 +101,9 @@ class DefaultTriggerService(
 
     private suspend fun checkProjectAccess(projectId: ProjectId, session: UserSession) {
         if (session.role == UserRole.ADMIN) return
-        val projectOwner = projectsRepository.findOwner(projectId)
-        if (projectOwner != null && projectOwner != session.userId) {
-            throw ForbiddenException("Access denied")
+        val projectTeamId = projectsRepository.findTeamId(projectId)
+        if (projectTeamId != null) {
+            teamAccessService.checkMembership(TeamId(projectTeamId), session)
         }
     }
 

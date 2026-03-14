@@ -26,6 +26,9 @@ import com.github.mr3zee.schedules.scheduleRoutes
 import com.github.mr3zee.schedules.schedulesModule
 import com.github.mr3zee.tags.tagRoutes
 import com.github.mr3zee.tags.tagsModule
+import com.github.mr3zee.teams.myInviteRoutes
+import com.github.mr3zee.teams.teamRoutes
+import com.github.mr3zee.teams.teamsModule
 import com.github.mr3zee.triggers.triggerRoutes
 import com.github.mr3zee.triggers.triggerWebhookRoutes
 import com.github.mr3zee.triggers.triggersModule
@@ -83,6 +86,7 @@ fun Application.module() {
             schedulesModule,
             triggersModule,
             tagsModule,
+            teamsModule,
             module { single { executionScope } },
         )
     }
@@ -280,6 +284,8 @@ fun Application.configureRouting() {
         webhookRoutes()
         triggerWebhookRoutes()
         authenticate("session-auth") {
+            teamRoutes()
+            myInviteRoutes()
             projectRoutes()
             connectionRoutes()
             releaseRoutes()
