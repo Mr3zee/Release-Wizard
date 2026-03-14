@@ -29,12 +29,39 @@ object ApiRoutes {
         const val USERS = "$API_V1/auth/users"
         fun userById(id: String) = "$USERS/$id"
         fun userRole(id: String) = "$USERS/$id/role"
+
+        object MyInvites {
+            const val BASE = "$API_V1/auth/me/invites"
+            fun byId(id: String) = "$BASE/$id"
+            fun accept(id: String) = "$BASE/$id/accept"
+            fun decline(id: String) = "$BASE/$id/decline"
+        }
     }
 
     object Connections {
         const val BASE = "$API_V1/connections"
         fun byId(id: String) = "$BASE/$id"
         fun test(id: String) = "$BASE/$id/test"
+    }
+
+    object Teams {
+        const val BASE = "$API_V1/teams"
+        fun byId(id: String) = "$BASE/$id"
+
+        fun members(teamId: String) = "$BASE/$teamId/members"
+        fun member(teamId: String, userId: String) = "$BASE/$teamId/members/$userId"
+        fun leave(teamId: String) = "$BASE/$teamId/leave"
+
+        fun invites(teamId: String) = "$BASE/$teamId/invites"
+        fun invite(teamId: String, inviteId: String) = "$BASE/$teamId/invites/$inviteId"
+
+        fun joinRequests(teamId: String) = "$BASE/$teamId/join-requests"
+        fun approveJoinRequest(teamId: String, requestId: String) = "$BASE/$teamId/join-requests/$requestId/approve"
+        fun rejectJoinRequest(teamId: String, requestId: String) = "$BASE/$teamId/join-requests/$requestId/reject"
+
+        fun audit(teamId: String) = "$BASE/$teamId/audit"
+
+        fun tags(teamId: String) = "$BASE/$teamId/tags"
     }
 
     object Notifications {

@@ -3,11 +3,13 @@ package com.github.mr3zee.api
 import com.github.mr3zee.model.Connection
 import com.github.mr3zee.model.ConnectionConfig
 import com.github.mr3zee.model.ConnectionType
+import com.github.mr3zee.model.TeamId
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class CreateConnectionRequest(
     val name: String,
+    val teamId: TeamId,
     val type: ConnectionType,
     val config: ConnectionConfig,
 )

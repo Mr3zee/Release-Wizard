@@ -15,3 +15,21 @@ fun DagGraph.findActionBlock(blockId: BlockId): Block.ActionBlock? {
     }
     return null
 }
+
+/**
+ * Recursively collect all distinct [ConnectionId]s referenced by action blocks
+ * in this graph, including inside nested container blocks.
+ */
+fun DagGraph.collectConnectionIds(): List<ConnectionId> {
+    val result = mutableSetOf<ConnectionId>()
+    fun collect(graph: DagGraph) {
+        for (block in graph.blocks) {
+            when (block) {
+                is Block.ActionBlock -> block.connectionId?.let { result.add(it) }
+                is Block.ContainerBlock -> collect(block.children)
+            }
+        }
+    }
+    collect(this)
+    return result.toList()
+}

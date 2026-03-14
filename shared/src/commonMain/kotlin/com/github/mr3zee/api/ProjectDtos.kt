@@ -3,11 +3,13 @@ package com.github.mr3zee.api
 import com.github.mr3zee.model.DagGraph
 import com.github.mr3zee.model.Parameter
 import com.github.mr3zee.model.ProjectTemplate
+import com.github.mr3zee.model.TeamId
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class CreateProjectRequest(
     val name: String,
+    val teamId: TeamId,
     val description: String = "",
     val dagGraph: DagGraph = DagGraph(),
     val parameters: List<Parameter> = emptyList(),

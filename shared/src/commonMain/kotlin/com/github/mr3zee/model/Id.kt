@@ -18,3 +18,7 @@ value class BlockId(val value: String)
 @Serializable
 @JvmInline
 value class ConnectionId(val value: String)
+
+@Serializable
+@JvmInline
+value class TeamId(val value: String)
