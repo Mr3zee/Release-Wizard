@@ -7,14 +7,16 @@ import com.github.mr3zee.api.ReleaseEvent
 import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.execution.ExecutionEngine
 import com.github.mr3zee.model.ReleaseId
+import com.github.mr3zee.model.isTerminal
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import org.koin.ktor.ext.inject
 import java.util.UUID
 
@@ -54,21 +56,34 @@ fun Route.releaseWebSocketRoutes() {
             }
 
             // Subscribe to events BEFORE querying snapshot to avoid race condition.
-            // Buffer events that arrive between subscription and snapshot send.
+            // Use UNDISPATCHED start to ensure the collector begins immediately,
+            // preventing events from being lost between subscription and snapshot.
             val eventBuffer = Channel<ReleaseEvent>(Channel.UNLIMITED)
-            val collectJob = engine.events
-                .filter { it.releaseId == releaseId }
-                .onEach { eventBuffer.send(it) }
-                .launchIn(this)
+            val collectJob = launch(start = CoroutineStart.UNDISPATCHED) {
+                engine.events
+                    .filter { it.releaseId == releaseId }
+                    .onEach { eventBuffer.send(it) }
+                    .collect {}
+            }
 
             // Send initial snapshot
             val executions = service.getBlockExecutions(releaseId)
+            val currentRelease = service.getRelease(releaseId) ?: release
             val snapshot = ReleaseEvent.Snapshot(
                 releaseId = releaseId,
-                release = release,
+                release = currentRelease,
                 blockExecutions = executions,
             )
             send(Frame.Text(AppJson.encodeToString(ReleaseEvent.serializer(), snapshot)))
+
+            // If the release is already in a terminal state, the ReleaseCompleted event
+            // may have been emitted before our subscription started. Close immediately.
+            if (currentRelease.status.isTerminal) {
+                close(CloseReason(CloseReason.Codes.NORMAL, "Release completed"))
+                collectJob.cancel()
+                eventBuffer.close()
+                return@webSocket
+            }
 
             // Forward buffered and subsequent events
             try {

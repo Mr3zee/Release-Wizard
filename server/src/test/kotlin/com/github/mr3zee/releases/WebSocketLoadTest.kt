@@ -230,21 +230,20 @@ class WebSocketLoadTest {
             )
 
             // Should start with a Snapshot
+            val snapshot = events.first()
             assertIs<ReleaseEvent.Snapshot>(
-                events.first(),
+                snapshot,
                 "Client $clientIdx should receive Snapshot first",
             )
 
-            // Should end with ReleaseCompleted
+            // Client should see SUCCEEDED either via ReleaseCompleted event
+            // or via the snapshot (if the release completed before WS connected)
             val completed = events.filterIsInstance<ReleaseEvent.ReleaseCompleted>()
+            val succeededViaEvent = completed.any { it.status == ReleaseStatus.SUCCEEDED }
+            val succeededViaSnapshot = snapshot.release.status == ReleaseStatus.SUCCEEDED
             assertTrue(
-                completed.isNotEmpty(),
-                "Client $clientIdx should receive ReleaseCompleted",
-            )
-            assertEquals(
-                ReleaseStatus.SUCCEEDED,
-                completed.first().status,
-                "Client $clientIdx release should succeed",
+                succeededViaEvent || succeededViaSnapshot,
+                "Client $clientIdx should see SUCCEEDED via event or snapshot",
             )
         }
     }
@@ -389,12 +388,19 @@ class WebSocketLoadTest {
 
             val allEvents = eventCollectors.awaitAll()
 
-            // Extract block IDs that reached SUCCEEDED across all clients
+            // Extract block IDs that reached SUCCEEDED across all clients.
+            // Include blocks already SUCCEEDED in the snapshot (connected after gate approved).
             val succeededBlocksByClient = allEvents.map { events ->
-                events.filterIsInstance<ReleaseEvent.BlockExecutionUpdated>()
+                val fromEvents = events.filterIsInstance<ReleaseEvent.BlockExecutionUpdated>()
                     .filter { it.blockExecution.status == BlockStatus.SUCCEEDED }
                     .map { it.blockExecution.blockId }
                     .toSet()
+                val fromSnapshot = events.filterIsInstance<ReleaseEvent.Snapshot>()
+                    .flatMap { it.blockExecutions }
+                    .filter { it.status == BlockStatus.SUCCEEDED }
+                    .map { it.blockId }
+                    .toSet()
+                fromEvents + fromSnapshot
             }
 
             // All clients should see all 4 blocks reach SUCCEEDED (gate + a + b + c)
