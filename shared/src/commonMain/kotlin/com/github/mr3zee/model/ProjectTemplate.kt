@@ -10,6 +10,7 @@ data class ProjectTemplate(
     val description: String = "",
     val dagGraph: DagGraph = DagGraph(),
     val parameters: List<Parameter> = emptyList(),
+    val defaultTags: List<String> = emptyList(),
     val createdAt: Instant,
     val updatedAt: Instant,
 )

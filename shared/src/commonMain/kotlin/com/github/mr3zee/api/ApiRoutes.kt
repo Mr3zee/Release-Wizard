@@ -59,5 +59,10 @@ object ApiRoutes {
         fun webhook(triggerId: String) = "$API_V1/triggers/webhook/$triggerId"
     }
 
+    object Tags {
+        const val BASE = "$API_V1/tags"
+        fun byName(name: String) = "$BASE/$name"
+    }
+
     const val HEALTH = "/health"
 }

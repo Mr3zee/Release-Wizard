@@ -8,9 +8,22 @@ import com.github.mr3zee.execution.ExecutionEngine
 import com.github.mr3zee.model.*
 import com.github.mr3zee.model.isTerminal
 import com.github.mr3zee.projects.ProjectsRepository
+import com.github.mr3zee.tags.TagRepository
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.Clock
 
 interface ReleasesService {
-    suspend fun listReleases(session: UserSession): List<Release>
+    suspend fun listReleases(
+        session: UserSession,
+        offset: Int = 0,
+        limit: Int = 20,
+        search: String? = null,
+        status: ReleaseStatus? = null,
+        projectTemplateId: ProjectId? = null,
+        tag: String? = null,
+    ): Pair<List<Release>, Long>
     suspend fun getRelease(id: ReleaseId): Release?
     suspend fun getBlockExecutions(releaseId: ReleaseId): List<BlockExecution>
     suspend fun startRelease(request: CreateReleaseRequest, session: UserSession): Release
@@ -29,11 +42,32 @@ class DefaultReleasesService(
     private val repository: ReleasesRepository,
     private val projectsRepository: ProjectsRepository,
     private val executionEngine: ExecutionEngine,
+    private val tagRepository: TagRepository,
 ) : ReleasesService {
 
-    override suspend fun listReleases(session: UserSession): List<Release> {
+    private val approvalMutexes = ConcurrentHashMap<String, Mutex>()
+
+    override suspend fun listReleases(
+        session: UserSession,
+        offset: Int,
+        limit: Int,
+        search: String?,
+        status: ReleaseStatus?,
+        projectTemplateId: ProjectId?,
+        tag: String?,
+    ): Pair<List<Release>, Long> {
         val ownerId = if (session.role == UserRole.ADMIN) null else session.userId
-        return repository.findAll(ownerId = ownerId)
+        // If tag is provided, resolve matching release IDs first
+        val releaseIds = if (tag != null) {
+            val ids = tagRepository.findReleaseIdsByTag(tag).toSet()
+            if (ids.isEmpty()) return emptyList<Release>() to 0L
+            ids
+        } else null
+        return repository.findAllWithCount(
+            ownerId = ownerId, offset = offset, limit = limit,
+            search = search, status = status, projectTemplateId = projectTemplateId,
+            releaseIds = releaseIds,
+        )
     }
 
     override suspend fun getRelease(id: ReleaseId): Release? {
@@ -61,6 +95,12 @@ class DefaultReleasesService(
             ownerId = session.userId,
         )
 
+        // Set tags (merge default tags from project with request tags)
+        val tags = (project.defaultTags + request.tags).map { it.trim().lowercase() }.distinct()
+        if (tags.isNotEmpty()) {
+            tagRepository.setTagsForRelease(release.id, tags)
+        }
+
         // Initialize block executions as WAITING
         for (block in project.dagGraph.blocks) {
             repository.upsertBlockExecution(
@@ -74,7 +114,7 @@ class DefaultReleasesService(
 
         executionEngine.startExecution(release)
 
-        return release
+        return release.copy(tags = tags)
     }
 
     override suspend fun startScheduledRelease(projectId: ProjectId, parameters: List<Parameter>): Release {
@@ -94,6 +134,12 @@ class DefaultReleasesService(
             ownerId = "",
         )
 
+        // Apply project's default tags to scheduled releases
+        val tags = project.defaultTags.map { it.trim().lowercase() }.distinct()
+        if (tags.isNotEmpty()) {
+            tagRepository.setTagsForRelease(release.id, tags)
+        }
+
         for (block in project.dagGraph.blocks) {
             repository.upsertBlockExecution(
                 BlockExecution(
@@ -106,7 +152,7 @@ class DefaultReleasesService(
 
         executionEngine.startExecution(release)
 
-        return release
+        return release.copy(tags = tags)
     }
 
     override suspend fun rerunRelease(id: ReleaseId, session: UserSession): Release {
@@ -126,6 +172,12 @@ class DefaultReleasesService(
             ownerId = session.userId,
         )
 
+        // Copy tags from the original release
+        val originalTags = original.tags
+        if (originalTags.isNotEmpty()) {
+            tagRepository.setTagsForRelease(release.id, originalTags)
+        }
+
         for (block in original.dagSnapshot.blocks) {
             repository.upsertBlockExecution(
                 BlockExecution(
@@ -137,7 +189,7 @@ class DefaultReleasesService(
         }
 
         executionEngine.startExecution(release)
-        return release
+        return release.copy(tags = originalTags)
     }
 
     override suspend fun cancelRelease(id: ReleaseId, session: UserSession): Boolean {
@@ -148,6 +200,8 @@ class DefaultReleasesService(
         }
         // cancelExecution cancels the job and joins, so DB is updated before return
         executionEngine.cancelExecution(id)
+        // Clean up approval mutexes for this release
+        approvalMutexes.keys.removeIf { it.startsWith("${id.value}:") }
         return true
     }
 
@@ -155,14 +209,24 @@ class DefaultReleasesService(
         val release = repository.findById(id) ?: return false
         checkAccess(id, session)
         if (!release.status.isTerminal) return false
-        return repository.updateStatus(id, ReleaseStatus.ARCHIVED)
+        val archived = repository.updateStatus(id, ReleaseStatus.ARCHIVED)
+        if (archived) {
+            // Clean up approval mutexes for this release
+            approvalMutexes.keys.removeIf { it.startsWith("${id.value}:") }
+        }
+        return archived
     }
 
     override suspend fun deleteRelease(id: ReleaseId, session: UserSession): Boolean {
         val release = repository.findById(id) ?: return false
         checkAccess(id, session)
         if (!release.status.isTerminal) return false
-        return repository.delete(id)
+        val deleted = repository.delete(id)
+        if (deleted) {
+            // Clean up approval mutexes for this release
+            approvalMutexes.keys.removeIf { it.startsWith("${id.value}:") }
+        }
+        return deleted
     }
 
     override suspend fun awaitRelease(id: ReleaseId) {
@@ -185,10 +249,76 @@ class DefaultReleasesService(
         checkAccess(releaseId, session)
         if (release.status != ReleaseStatus.RUNNING) return false
 
-        val execution = repository.findBlockExecution(releaseId, blockId) ?: return false
-        if (execution.status != BlockStatus.WAITING_FOR_INPUT) return false
+        // Find the block's approval rule (search nested containers too)
+        val block = findActionBlock(release.dagSnapshot, blockId)
+        val rule = block?.approvalRule
+
+        if (rule != null) {
+            // Invalid rule — treat as no rule, approve immediately
+            if (rule.requiredCount < 1) {
+                return executionEngine.approveBlock(releaseId, blockId, request.input)
+            }
+
+            // Acquire mutex AFTER validations to prevent DoS via fabricated IDs
+            val mutexKey = "${releaseId.value}:${blockId.value}"
+            val mutex = approvalMutexes.getOrPut(mutexKey) { Mutex() }
+
+            mutex.withLock {
+                // Re-read execution within the lock to get latest state
+                val execution = repository.findBlockExecution(releaseId, blockId) ?: return false
+                if (execution.status != BlockStatus.WAITING_FOR_INPUT) return false
+
+                // Check role requirement
+                if (rule.requiredRole != null && session.role != rule.requiredRole) {
+                    throw ForbiddenException("Approval requires ${rule.requiredRole} role")
+                }
+                // Check user requirement
+                if (rule.requiredUserIds.isNotEmpty() && session.userId !in rule.requiredUserIds) {
+                    throw ForbiddenException("You are not authorized to approve this block")
+                }
+                // Check for duplicate approval
+                if (execution.approvals.any { it.userId == session.userId }) {
+                    throw IllegalArgumentException("You have already approved this block")
+                }
+
+                // Add approval
+                val newApproval = BlockApproval(
+                    userId = session.userId,
+                    username = session.username,
+                    approvedAt = Clock.System.now().toEpochMilliseconds(),
+                )
+                val updatedApprovals = execution.approvals + newApproval
+                val updatedExecution = execution.copy(approvals = updatedApprovals)
+                repository.upsertBlockExecution(updatedExecution)
+
+                // Check if we have enough approvals
+                if (updatedApprovals.size < rule.requiredCount) {
+                    // Partial approval -- emit update event so subscribers see the new approval
+                    executionEngine.emitBlockUpdate(releaseId, updatedExecution)
+                    return true
+                }
+            }
+
+            // Approval threshold met — clean up mutex since this block won't need approval again
+            approvalMutexes.remove(mutexKey)
+        } else {
+            val execution = repository.findBlockExecution(releaseId, blockId) ?: return false
+            if (execution.status != BlockStatus.WAITING_FOR_INPUT) return false
+        }
 
         return executionEngine.approveBlock(releaseId, blockId, request.input)
+    }
+
+    private fun findActionBlock(graph: DagGraph, blockId: BlockId): Block.ActionBlock? {
+        for (block in graph.blocks) {
+            when (block) {
+                is Block.ActionBlock -> if (block.id == blockId) return block
+                is Block.ContainerBlock -> {
+                    findActionBlock(block.children, blockId)?.let { return it }
+                }
+            }
+        }
+        return null
     }
 
     override suspend fun checkAccess(id: ReleaseId, session: UserSession) {

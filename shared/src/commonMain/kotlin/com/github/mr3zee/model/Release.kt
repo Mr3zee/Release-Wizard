@@ -10,6 +10,7 @@ data class Release(
     val status: ReleaseStatus,
     val dagSnapshot: DagGraph,
     val parameters: List<Parameter> = emptyList(),
+    val tags: List<String> = emptyList(),
     val startedAt: Instant? = null,
     val finishedAt: Instant? = null,
 )

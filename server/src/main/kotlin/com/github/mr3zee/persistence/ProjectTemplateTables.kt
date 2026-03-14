@@ -4,6 +4,7 @@ import com.github.mr3zee.AppJson
 import com.github.mr3zee.model.DagGraph
 import com.github.mr3zee.model.Parameter
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.serializer
 import org.jetbrains.exposed.v1.core.dao.id.java.UUIDTable
 import org.jetbrains.exposed.v1.json.jsonb
 import org.jetbrains.exposed.v1.datetime.timestamp
@@ -13,7 +14,12 @@ object ProjectTemplateTable : UUIDTable("project_templates") {
     val description = text("description").default("")
     val dagGraph = jsonb<DagGraph>("dag_graph", AppJson)
     val parameters = jsonb("parameters", AppJson, ListSerializer(Parameter.serializer()))
+    val defaultTags = jsonb("default_tags", AppJson, ListSerializer(String.serializer()))
     val ownerId = varchar("owner_id", 36)
     val createdAt = timestamp("created_at")
     val updatedAt = timestamp("updated_at")
+
+    init {
+        index(false, ownerId)
+    }
 }

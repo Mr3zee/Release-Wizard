@@ -23,7 +23,7 @@ fun dataSource(config: DatabaseConfig): DataSource {
 fun initDatabase(ds: DataSource): Database {
     val database = Database.connect(ds)
     transaction(database) {
-        SchemaUtils.create(UserTable, ProjectTemplateTable, ConnectionTable, ReleaseTable, BlockExecutionTable, PendingWebhookTable, NotificationConfigTable, ScheduleTable, TriggerTable)
+        SchemaUtils.create(UserTable, ProjectTemplateTable, ConnectionTable, ReleaseTable, BlockExecutionTable, PendingWebhookTable, NotificationConfigTable, ScheduleTable, TriggerTable, ReleaseTagTable)
     }
     return database
 }
