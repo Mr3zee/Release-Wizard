@@ -31,6 +31,7 @@ class StubBlockExecutor : BlockExecutor {
             BlockType.GITHUB_PUBLICATION -> mapOf(
                 "releaseUrl" to "https://github.com/owner/repo/releases/tag/v1.0.0",
                 "tagName" to "v1.0.0",
+                "releaseId" to "12345",
             )
             BlockType.MAVEN_CENTRAL_PUBLICATION -> mapOf(
                 "repositoryId" to "comexample-1001",

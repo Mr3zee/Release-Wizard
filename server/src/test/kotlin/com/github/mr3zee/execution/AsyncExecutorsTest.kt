@@ -10,6 +10,7 @@ import io.ktor.client.engine.mock.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import com.github.mr3zee.waitUntil
 import kotlinx.coroutines.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -32,23 +33,6 @@ class AsyncExecutorsTest {
         blockOutputs = emptyMap(),
         connections = mapOf(ConnectionId(connectionId) to config),
     )
-
-    /**
-     * Poll until condition is true.
-     * Uses yield() to give other coroutines a chance to run on the same thread.
-     * With UNDISPATCHED async in executors, the webhook is registered synchronously
-     * before the executor suspends, so this typically succeeds after a single yield.
-     */
-    private suspend fun waitUntil(
-        maxAttempts: Int = 1000,
-        condition: suspend () -> Boolean,
-    ) {
-        repeat(maxAttempts) {
-            if (condition()) return
-            yield()
-        }
-        throw AssertionError("waitUntil timed out after $maxAttempts attempts")
-    }
 
     // --- TeamCity Build Executor ---
 

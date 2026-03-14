@@ -22,6 +22,8 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientCon
 import io.ktor.client.plugins.cookies.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.yield
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
@@ -215,6 +217,23 @@ fun Application.testModule(dbConfig: DatabaseConfig = testDbConfig()) {
         }
     }
     configureRouting()
+}
+
+/**
+ * Poll until condition is true.
+ * [delayMillis] = 0 uses yield() (for unit tests with mocks on the same thread).
+ * [delayMillis] > 0 uses delay() (for integration tests with real I/O).
+ */
+suspend fun waitUntil(
+    maxAttempts: Int = 1000,
+    delayMillis: Long = 0,
+    condition: suspend () -> Boolean,
+) {
+    repeat(maxAttempts) {
+        if (condition()) return
+        if (delayMillis > 0) delay(delayMillis) else yield()
+    }
+    throw AssertionError("waitUntil timed out after $maxAttempts attempts")
 }
 
 fun ApplicationTestBuilder.jsonClient() = createClient {

@@ -59,7 +59,8 @@ class GitHubPublicationExecutor(
             val responseBody = checkResponse.body<JsonObject>()
             val releaseUrl = responseBody["html_url"]?.jsonPrimitive?.content ?: ""
             val actualTag = responseBody["tag_name"]?.jsonPrimitive?.content ?: tagName
-            mapOf("releaseUrl" to releaseUrl, "tagName" to actualTag)
+            val releaseId = responseBody["id"]?.jsonPrimitive?.content ?: ""
+            mapOf("releaseUrl" to releaseUrl, "tagName" to actualTag, "releaseId" to releaseId)
         } else {
             // Release doesn't exist — create it
             execute(block, parameters, context)
@@ -105,9 +106,12 @@ class GitHubPublicationExecutor(
         val releaseUrl = responseBody["html_url"]?.jsonPrimitive?.content ?: ""
         val actualTag = responseBody["tag_name"]?.jsonPrimitive?.content ?: tagName
 
+        val releaseId = responseBody["id"]?.jsonPrimitive?.content ?: ""
+
         return mapOf(
             "releaseUrl" to releaseUrl,
             "tagName" to actualTag,
+            "releaseId" to releaseId,
         )
     }
 
