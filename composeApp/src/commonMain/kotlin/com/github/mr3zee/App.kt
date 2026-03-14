@@ -19,9 +19,14 @@ import com.github.mr3zee.auth.AuthViewModel
 import com.github.mr3zee.auth.LoginScreen
 import com.github.mr3zee.connections.ConnectionsViewModel
 import com.github.mr3zee.navigation.AppNavigation
+import com.github.mr3zee.navigation.NavigationController
 import com.github.mr3zee.navigation.Screen
 import com.github.mr3zee.projects.ProjectListViewModel
 import com.github.mr3zee.releases.ReleaseListViewModel
+import com.github.mr3zee.theme.AppTheme
+import com.github.mr3zee.theme.ThemePreference
+import com.github.mr3zee.theme.loadThemePreference
+import com.github.mr3zee.theme.saveThemePreference
 
 @Composable
 fun App() {
@@ -46,20 +51,23 @@ fun App() {
         authViewModel.checkSession()
     }
 
-    var currentScreen by remember { mutableStateOf<Screen>(Screen.ProjectList) }
+    var themePreference by remember { mutableStateOf(loadThemePreference()) }
+
+    val navController = remember { NavigationController() }
+    val currentScreen = navController.currentScreen
 
     LaunchedEffect(Unit) {
         AuthEventBus.events.collect { event ->
             when (event) {
                 is AuthEvent.SessionExpired -> {
                     authViewModel.onSessionExpired()
-                    currentScreen = Screen.ProjectList
+                    navController.resetTo(Screen.ProjectList)
                 }
             }
         }
     }
 
-    MaterialTheme {
+    AppTheme(themePreference = themePreference) {
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background,
@@ -79,7 +87,9 @@ fun App() {
                 else -> {
                     AppNavigation(
                         currentScreen = currentScreen,
-                        onNavigate = { currentScreen = it },
+                        onNavigate = { navController.navigate(it) },
+                        onGoBack = { navController.goBack() },
+                        navController = navController,
                         projectListViewModel = projectListViewModel,
                         projectApiClient = projectApiClient,
                         releaseApiClient = releaseApiClient,
@@ -87,7 +97,12 @@ fun App() {
                         connectionsViewModel = connectionsViewModel,
                         onLogout = {
                             authViewModel.logout()
-                            currentScreen = Screen.ProjectList
+                            navController.resetTo(Screen.ProjectList)
+                        },
+                        themePreference = themePreference,
+                        onThemeChange = {
+                            themePreference = it
+                            saveThemePreference(it)
                         },
                     )
                 }

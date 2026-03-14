@@ -11,17 +11,22 @@ import com.github.mr3zee.editor.DagEditorViewModel
 import com.github.mr3zee.projects.ProjectListScreen
 import com.github.mr3zee.projects.ProjectListViewModel
 import com.github.mr3zee.releases.*
+import com.github.mr3zee.theme.ThemePreference
 
 @Composable
 fun AppNavigation(
     currentScreen: Screen,
     onNavigate: (Screen) -> Unit,
+    onGoBack: () -> Boolean,
+    navController: NavigationController,
     projectListViewModel: ProjectListViewModel,
     projectApiClient: ProjectApiClient,
     releaseApiClient: ReleaseApiClient,
     releaseListViewModel: ReleaseListViewModel,
     connectionsViewModel: ConnectionsViewModel,
     onLogout: () -> Unit,
+    themePreference: ThemePreference = ThemePreference.SYSTEM,
+    onThemeChange: (ThemePreference) -> Unit = {},
 ) {
     when (currentScreen) {
         is Screen.ProjectList -> ProjectListScreen(
@@ -30,6 +35,8 @@ fun AppNavigation(
             onConnections = { onNavigate(Screen.ConnectionList) },
             onReleases = { onNavigate(Screen.ReleaseList) },
             onLogout = onLogout,
+            themePreference = themePreference,
+            onThemeChange = onThemeChange,
         )
         is Screen.ProjectEditor -> {
             val projectId = currentScreen.projectId
@@ -41,18 +48,18 @@ fun AppNavigation(
                     viewModel = viewModel,
                     onBack = {
                         projectListViewModel.loadProjects()
-                        onNavigate(Screen.ProjectList)
+                        onGoBack()
                     },
                 )
             } else {
-                onNavigate(Screen.ProjectList)
+                LaunchedEffect(Unit) { onGoBack() }
             }
         }
         is Screen.ConnectionList -> ConnectionListScreen(
             viewModel = connectionsViewModel,
             onCreateConnection = { onNavigate(Screen.ConnectionForm()) },
             onEditConnection = { onNavigate(Screen.ConnectionForm(connectionId = it)) },
-            onBack = { onNavigate(Screen.ProjectList) },
+            onBack = { onGoBack() },
         )
         is Screen.ConnectionForm -> ConnectionFormScreen(
             viewModel = connectionsViewModel,
@@ -60,17 +67,20 @@ fun AppNavigation(
             onBack = {
                 connectionsViewModel.clearEditingConnection()
                 connectionsViewModel.loadConnections()
-                onNavigate(Screen.ConnectionList)
+                onGoBack()
             },
         )
         is Screen.ReleaseList -> {
             ReleaseListScreen(
                 viewModel = releaseListViewModel,
                 onViewRelease = { onNavigate(Screen.ReleaseView(it)) },
-                onBack = { onNavigate(Screen.ProjectList) },
+                onBack = { onGoBack() },
             )
         }
         is Screen.ReleaseView -> {
+            // Navigation uses a plain `when` without crossfade/animation, so switching
+            // away fully disposes this branch. On re-entry, `remember` runs fresh,
+            // creating a new ViewModel, and `DisposableEffect` fires `connect()` again.
             val viewModel = remember(currentScreen.releaseId) {
                 ReleaseDetailViewModel(currentScreen.releaseId, releaseApiClient)
             }
@@ -90,7 +100,7 @@ fun AppNavigation(
                 blockExecutions = blockExecutions,
                 isConnected = isConnected,
                 reconnectAttempt = reconnectAttempt,
-                onBack = { onNavigate(Screen.ReleaseList) },
+                onBack = { onGoBack() },
                 onCancel = { viewModel.cancelRelease() },
                 onRerun = {
                     viewModel.rerunRelease { newReleaseId ->
