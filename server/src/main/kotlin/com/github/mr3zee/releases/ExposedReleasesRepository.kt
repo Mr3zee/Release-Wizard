@@ -88,6 +88,23 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
         return conditions
     }
 
+    private fun queryReleasesWithTags(
+        conditions: List<Op<Boolean>>,
+        offset: Int,
+        limit: Int,
+    ): List<Release> {
+        val query = ReleaseTable.selectAll()
+        if (conditions.isNotEmpty()) {
+            query.where { conditions.reduce { acc, op -> acc and op } }
+        }
+        val releases = query.orderBy(ReleaseTable.startedAt to SortOrder.DESC)
+            .limit(limit)
+            .offset(safeOffset(offset))
+            .map { it.toRelease() }
+        val tagsMap = loadTagsForReleases(releases.map { it.id.value })
+        return releases.map { release -> release.copy(tags = tagsMap[release.id.value] ?: emptyList()) }
+    }
+
     override suspend fun findAll(
         includeArchived: Boolean,
         ownerId: String?,
@@ -99,16 +116,7 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
         releaseIds: Set<String>?,
     ): List<Release> = dbQuery {
         val conditions = buildReleaseConditions(includeArchived, ownerId, search, status, projectTemplateId, releaseIds)
-        val query = ReleaseTable.selectAll()
-        if (conditions.isNotEmpty()) {
-            query.where { conditions.reduce { acc, op -> acc and op } }
-        }
-        val releases = query.orderBy(ReleaseTable.startedAt to SortOrder.DESC)
-            .limit(limit)
-            .offset(safeOffset(offset))
-            .map { it.toRelease() }
-        val tagsMap = loadTagsForReleases(releases.map { it.id.value })
-        releases.map { release -> release.copy(tags = tagsMap[release.id.value] ?: emptyList()) }
+        queryReleasesWithTags(conditions, offset, limit)
     }
 
     override suspend fun countAll(
@@ -145,19 +153,7 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
         }
         val totalCount = countQuery.count()
 
-        // todo claude: duplicate 9 lines
-        val dataQuery = ReleaseTable.selectAll()
-        if (conditions.isNotEmpty()) {
-            dataQuery.where { conditions.reduce { acc, op -> acc and op } }
-        }
-        val releases = dataQuery.orderBy(ReleaseTable.startedAt to SortOrder.DESC)
-            .limit(limit)
-            .offset(safeOffset(offset))
-            .map { it.toRelease() }
-        val tagsMap = loadTagsForReleases(releases.map { it.id.value })
-        val releasesWithTags = releases.map { release -> release.copy(tags = tagsMap[release.id.value] ?: emptyList()) }
-
-        releasesWithTags to totalCount
+        queryReleasesWithTags(conditions, offset, limit) to totalCount
     }
 
     override suspend fun findOwner(id: ReleaseId): String? = dbQuery {

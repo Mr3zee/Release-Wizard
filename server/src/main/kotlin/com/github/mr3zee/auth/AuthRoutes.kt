@@ -110,29 +110,13 @@ fun Route.authRoutes() {
         }
 
         get(ApiRoutes.Auth.USERS) {
-            // todo claude: duplicate 8 lines
-            val session = call.sessions.get<UserSession>() ?: run {
-                respondUnauthorized(call, "Not authenticated")
-                return@get
-            }
-            if (session.role != UserRole.ADMIN) {
-                call.respond(HttpStatusCode.Forbidden, ErrorResponse(error = "Admin access required", code = "FORBIDDEN"))
-                return@get
-            }
+            requireAdminSession(call) ?: return@get
             val users = authService.listUsers()
             call.respond(UserListResponse(users))
         }
 
         put(ApiRoutes.Auth.USERS + "/{userId}/role") {
-            // todo claude: duplicate 8 lines
-            val session = call.sessions.get<UserSession>() ?: run {
-                respondUnauthorized(call, "Not authenticated")
-                return@put
-            }
-            if (session.role != UserRole.ADMIN) {
-                call.respond(HttpStatusCode.Forbidden, ErrorResponse(error = "Admin access required", code = "FORBIDDEN"))
-                return@put
-            }
+            requireAdminSession(call) ?: return@put
             val userId = call.parameters["userId"] ?: throw IllegalArgumentException("Missing userId")
             val request = call.receive<UpdateUserRoleRequest>()
             val result = authService.safeUpdateUserRole(UserId(userId), request.role)
@@ -150,6 +134,19 @@ fun Route.authRoutes() {
             )
         }
     }
+}
+
+private suspend fun requireAdminSession(call: ApplicationCall): UserSession? {
+    val session = call.sessions.get<UserSession>()
+    if (session == null) {
+        respondUnauthorized(call, "Not authenticated")
+        return null
+    }
+    if (session.role != UserRole.ADMIN) {
+        call.respond(HttpStatusCode.Forbidden, ErrorResponse(error = "Admin access required", code = "FORBIDDEN"))
+        return null
+    }
+    return session
 }
 
 private suspend fun respondUnauthorized(call: ApplicationCall, message: String) {

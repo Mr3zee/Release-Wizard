@@ -1,7 +1,6 @@
 package com.github.mr3zee.slack
 
-import java.io.File
-import java.util.Properties
+import com.github.mr3zee.TestPropertiesLoader
 
 /**
  * Configuration for Slack integration tests.
@@ -13,23 +12,9 @@ data class SlackTestConfig(
     val channelId: String,
 ) {
     companion object {
-        private fun findLocalProperties(): File {
-            // todo claude: duplicate 9 lines
-            val cwd = File("local.properties")
-            if (cwd.exists()) return cwd
-            var dir = File(".").absoluteFile.parentFile
-            while (dir != null) {
-                val candidate = File(dir, "local.properties")
-                if (candidate.exists()) return candidate
-                dir = dir.parentFile
-            }
-            return cwd
-        }
-
         fun loadOrNull(): SlackTestConfig? {
-            val propsFile = findLocalProperties()
-            if (propsFile.exists()) {
-                val props = Properties().apply { propsFile.inputStream().use { load(it) } }
+            val props = TestPropertiesLoader.loadProperties()
+            if (props != null) {
                 val webhookUrl = props.getProperty("slack.test.webhookUrl")
                 val botToken = props.getProperty("slack.test.botToken")
                 val channelId = props.getProperty("slack.test.channelId")

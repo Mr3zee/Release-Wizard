@@ -24,12 +24,7 @@ fun Route.tagRoutes() {
 
         route("/{name}") {
             put {
-                // todo claude: duplicate 6 lines
-                val session = call.sessions.get<UserSession>()
-                    ?: throw ForbiddenException("Not authenticated")
-                if (session.role != UserRole.ADMIN) {
-                    throw ForbiddenException("Admin access required for tag management")
-                }
+                requireTagAdmin()
                 val name = call.parameters["name"] ?: throw IllegalArgumentException("Missing tag name")
                 val request = call.receive<RenameTagRequest>()
                 val updated = service.renameTag(name, request.newName)
@@ -37,12 +32,7 @@ fun Route.tagRoutes() {
             }
 
             delete {
-                // todo claude: duplicate 6 lines
-                val session = call.sessions.get<UserSession>()
-                    ?: throw ForbiddenException("Not authenticated")
-                if (session.role != UserRole.ADMIN) {
-                    throw ForbiddenException("Admin access required for tag management")
-                }
+                requireTagAdmin()
                 val name = call.parameters["name"] ?: throw IllegalArgumentException("Missing tag name")
                 val deleted = service.deleteTag(name)
                 if (deleted > 0) {
@@ -52,5 +42,13 @@ fun Route.tagRoutes() {
                 }
             }
         }
+    }
+}
+
+private fun RoutingContext.requireTagAdmin() {
+    val session = call.sessions.get<UserSession>()
+        ?: throw ForbiddenException("Not authenticated")
+    if (session.role != UserRole.ADMIN) {
+        throw ForbiddenException("Admin access required for tag management")
     }
 }

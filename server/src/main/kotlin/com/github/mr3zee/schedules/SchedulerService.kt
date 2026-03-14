@@ -1,17 +1,10 @@
 package com.github.mr3zee.schedules
 
 import com.github.mr3zee.releases.ReleasesService
-import com.cronutils.model.CronType
-import com.cronutils.model.definition.CronDefinitionBuilder
-import com.cronutils.model.time.ExecutionTime
-import com.cronutils.parser.CronParser
 import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
-import java.time.ZoneOffset
-import java.time.ZonedDateTime
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Instant
 
 class SchedulerService(
     private val scheduleRepository: ScheduleRepository,
@@ -21,10 +14,6 @@ class SchedulerService(
 ) {
     private val logger = LoggerFactory.getLogger(SchedulerService::class.java)
     private var pollingJob: Job? = null
-
-    private val cronParser = CronParser(
-        CronDefinitionBuilder.instanceDefinitionFor(CronType.UNIX)
-    )
 
     /**
      * Start the scheduler polling loop.
@@ -98,28 +87,12 @@ class SchedulerService(
 
     private suspend fun advanceNextRun(schedule: ScheduleEntity) {
         val now = Clock.System.now()
-        val nextRun = computeNextRun(schedule.cronExpression)
+        val nextRun = CronUtils.computeNextRun(schedule.cronExpression)
         scheduleRepository.update(
             id = schedule.id,
             enabled = null,
             nextRunAt = nextRun,
             lastRunAt = now,
         )
-    }
-
-    private fun computeNextRun(cronExpression: String): Instant? {
-        // todo claude: duplicate 12 lines
-        return try {
-            val cron = cronParser.parse(cronExpression)
-            val executionTime = ExecutionTime.forCron(cron)
-            val next = executionTime.nextExecution(ZonedDateTime.now(ZoneOffset.UTC))
-            if (next.isPresent) {
-                Instant.fromEpochMilliseconds(next.get().toInstant().toEpochMilli())
-            } else {
-                null
-            }
-        } catch (_: Exception) {
-            null
-        }
     }
 }

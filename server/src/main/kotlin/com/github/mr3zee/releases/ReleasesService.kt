@@ -6,6 +6,7 @@ import com.github.mr3zee.api.CreateReleaseRequest
 import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.execution.ExecutionEngine
 import com.github.mr3zee.model.*
+import com.github.mr3zee.model.findActionBlock
 import com.github.mr3zee.model.isTerminal
 import com.github.mr3zee.projects.ProjectsRepository
 import com.github.mr3zee.tags.TagRepository
@@ -97,10 +98,7 @@ class DefaultReleasesService(
 
         // Set tags (merge default tags from project with request tags)
         val tags = (project.defaultTags + request.tags).map { it.trim().lowercase() }.distinct()
-        // todo claude: duplicate 3 lines
-        if (tags.isNotEmpty()) {
-            tagRepository.setTagsForRelease(release.id, tags)
-        }
+        applyTags(release.id, tags)
 
         // Initialize block executions as WAITING
         for (block in project.dagGraph.blocks) {
@@ -137,10 +135,7 @@ class DefaultReleasesService(
 
         // Apply project's default tags to scheduled releases
         val tags = project.defaultTags.map { it.trim().lowercase() }.distinct()
-        // todo claude: duplicate 3 lines
-        if (tags.isNotEmpty()) {
-            tagRepository.setTagsForRelease(release.id, tags)
-        }
+        applyTags(release.id, tags)
 
         for (block in project.dagGraph.blocks) {
             repository.upsertBlockExecution(
@@ -176,10 +171,7 @@ class DefaultReleasesService(
 
         // Copy tags from the original release
         val originalTags = original.tags
-        // todo claude: duplicate 3 lines
-        if (originalTags.isNotEmpty()) {
-            tagRepository.setTagsForRelease(release.id, originalTags)
-        }
+        applyTags(release.id, originalTags)
 
         for (block in original.dagSnapshot.blocks) {
             repository.upsertBlockExecution(
@@ -253,7 +245,7 @@ class DefaultReleasesService(
         if (release.status != ReleaseStatus.RUNNING) return false
 
         // Find the block's approval rule (search nested containers too)
-        val block = findActionBlock(release.dagSnapshot, blockId)
+        val block = release.dagSnapshot.findActionBlock(blockId)
         val rule = block?.approvalRule
 
         if (rule != null) {
@@ -312,17 +304,10 @@ class DefaultReleasesService(
         return executionEngine.approveBlock(releaseId, blockId, request.input)
     }
 
-    private fun findActionBlock(graph: DagGraph, blockId: BlockId): Block.ActionBlock? {
-        // todo claude: duplicate 9 lines
-        for (block in graph.blocks) {
-            when (block) {
-                is Block.ActionBlock -> if (block.id == blockId) return block
-                is Block.ContainerBlock -> {
-                    findActionBlock(block.children, blockId)?.let { return it }
-                }
-            }
+    private suspend fun applyTags(releaseId: ReleaseId, tags: List<String>) {
+        if (tags.isNotEmpty()) {
+            tagRepository.setTagsForRelease(releaseId, tags)
         }
-        return null
     }
 
     override suspend fun checkAccess(id: ReleaseId, session: UserSession) {

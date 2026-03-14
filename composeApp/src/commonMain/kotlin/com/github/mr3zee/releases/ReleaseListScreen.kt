@@ -11,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import com.github.mr3zee.components.loadMoreItem
 import com.github.mr3zee.model.Release
 import com.github.mr3zee.model.ReleaseId
 import com.github.mr3zee.model.ReleaseStatus
@@ -151,21 +152,7 @@ fun ReleaseListScreen(
                             onDelete = { viewModel.deleteRelease(release.id) },
                         )
                     }
-                    // todo claude: duplicate 14 lines
-                    val hasMore = pagination?.let { (it.offset + it.limit) < it.totalCount } ?: false
-                    if (hasMore) {
-                        item {
-                            LaunchedEffect(Unit) { viewModel.loadMore() }
-                            if (isLoadingMore) {
-                                Box(
-                                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                                }
-                            }
-                        }
-                    }
+                    loadMoreItem(pagination, isLoadingMore, onLoadMore = { viewModel.loadMore() })
                 }
             }
         }

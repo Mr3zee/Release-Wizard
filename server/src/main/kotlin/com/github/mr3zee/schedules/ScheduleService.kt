@@ -6,13 +6,6 @@ import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.model.Schedule
 import com.github.mr3zee.model.UserRole
 import com.github.mr3zee.projects.ProjectsRepository
-import com.cronutils.model.CronType
-import com.cronutils.model.definition.CronDefinitionBuilder
-import com.cronutils.parser.CronParser
-import com.cronutils.model.time.ExecutionTime
-import java.time.ZoneOffset
-import java.time.ZonedDateTime
-import kotlin.time.Instant
 
 interface ScheduleService {
     suspend fun listByProject(projectId: ProjectId, session: UserSession): List<Schedule>
@@ -26,10 +19,6 @@ class DefaultScheduleService(
     private val repository: ScheduleRepository,
     private val projectsRepository: ProjectsRepository,
 ) : ScheduleService {
-
-    private val cronParser = CronParser(
-        CronDefinitionBuilder.instanceDefinitionFor(CronType.UNIX)
-    )
 
     override suspend fun listByProject(projectId: ProjectId, session: UserSession): List<Schedule> {
         checkProjectAccess(projectId, session)
@@ -49,10 +38,10 @@ class DefaultScheduleService(
     ): Schedule {
         checkProjectAccess(projectId, session)
         // Validate cron expression
-        val cron = cronParser.parse(request.cronExpression)
+        val cron = CronUtils.parser.parse(request.cronExpression)
         cron.validate()
 
-        val nextRunAt = computeNextRun(request.cronExpression)
+        val nextRunAt = CronUtils.computeNextRun(request.cronExpression)
 
         val entity = repository.create(
             projectId = projectId,
@@ -69,7 +58,7 @@ class DefaultScheduleService(
         val entity = repository.findById(id) ?: return null
         checkAccess(entity, session)
 
-        val nextRunAt = if (enabled) computeNextRun(entity.cronExpression) else entity.nextRunAt
+        val nextRunAt = if (enabled) CronUtils.computeNextRun(entity.cronExpression) else entity.nextRunAt
         val updated = repository.update(id, enabled = enabled, nextRunAt = nextRunAt, lastRunAt = null)
         return updated?.toModel()
     }
@@ -92,21 +81,6 @@ class DefaultScheduleService(
         }
     }
 
-    fun computeNextRun(cronExpression: String): Instant? {
-        // todo claude: duplicate 12 lines
-        return try {
-            val cron = cronParser.parse(cronExpression)
-            val executionTime = ExecutionTime.forCron(cron)
-            val next = executionTime.nextExecution(ZonedDateTime.now(ZoneOffset.UTC))
-            if (next.isPresent) {
-                Instant.fromEpochMilliseconds(next.get().toInstant().toEpochMilli())
-            } else {
-                null
-            }
-        } catch (_: Exception) {
-            null
-        }
-    }
 }
 
 private fun ScheduleEntity.toModel() = Schedule(

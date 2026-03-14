@@ -6,6 +6,7 @@ import com.github.mr3zee.connections.ConnectionsRepository
 import com.github.mr3zee.dag.DagTopologicalSort
 import com.github.mr3zee.dag.DagValidator
 import com.github.mr3zee.model.*
+import com.github.mr3zee.model.findActionBlock
 import com.github.mr3zee.releases.ReleasesRepository
 import com.github.mr3zee.template.TemplateEngine
 import kotlinx.coroutines.*
@@ -124,18 +125,7 @@ class ExecutionEngine(
         val job = scope.launch {
             executeRelease(release)
         }
-        // todo claude: duplicate 11 lines
-        activeJobs[release.id] = job
-        job.invokeOnCompletion {
-            if (!restartingReleases.contains(release.id)) {
-                activeJobs.remove(release.id)
-                pendingApprovals.remove(release.id)
-                completionEmitted.remove(release.id)
-                replayBuffers.remove(release.id)
-                sequenceCounters.remove(release.id)
-                restartMutexes.remove(release.id)
-            }
-        }
+        registerJob(release.id, job)
         return job
     }
 
@@ -182,18 +172,7 @@ class ExecutionEngine(
         val job = scope.launch {
             executeRecovery(release, persistedExecutions)
         }
-        // todo claude: duplicate 11 lines
-        activeJobs[release.id] = job
-        job.invokeOnCompletion {
-            if (!restartingReleases.contains(release.id)) {
-                activeJobs.remove(release.id)
-                pendingApprovals.remove(release.id)
-                completionEmitted.remove(release.id)
-                replayBuffers.remove(release.id)
-                sequenceCounters.remove(release.id)
-                restartMutexes.remove(release.id)
-            }
-        }
+        registerJob(release.id, job)
     }
 
     private suspend fun executeRecovery(release: Release, persistedExecutions: List<BlockExecution>) {
@@ -304,7 +283,7 @@ class ExecutionEngine(
                 pendingApprovals.getOrPut(release.id) { ConcurrentHashMap() }[block.id] = deferred
 
                 // Check if approvals already met threshold before crash — auto-complete
-                val actionBlock = findActionBlock(release.dagSnapshot, block.id)
+                val actionBlock = release.dagSnapshot.findActionBlock(block.id)
                 val rule = actionBlock?.approvalRule
                 if (rule != null && rule.requiredCount > 0 && persistedExec.approvals.size >= rule.requiredCount) {
                     deferred.complete(emptyMap())
@@ -850,21 +829,18 @@ class ExecutionEngine(
         emitEvent(ReleaseEvent.BlockExecutionUpdated(releaseId, execution))
     }
 
-    /**
-     * Recursively search for an [Block.ActionBlock] by [blockId] in the given [graph],
-     * including inside nested container blocks.
-     */
-    private fun findActionBlock(graph: DagGraph, blockId: BlockId): Block.ActionBlock? {
-        // todo claude: duplicate 9 lines
-        for (block in graph.blocks) {
-            when (block) {
-                is Block.ActionBlock -> if (block.id == blockId) return block
-                is Block.ContainerBlock -> {
-                    findActionBlock(block.children, blockId)?.let { return it }
-                }
+    private fun registerJob(releaseId: ReleaseId, job: Job) {
+        activeJobs[releaseId] = job
+        job.invokeOnCompletion {
+            if (!restartingReleases.contains(releaseId)) {
+                activeJobs.remove(releaseId)
+                pendingApprovals.remove(releaseId)
+                completionEmitted.remove(releaseId)
+                replayBuffers.remove(releaseId)
+                sequenceCounters.remove(releaseId)
+                restartMutexes.remove(releaseId)
             }
         }
-        return null
     }
 
     private fun buildPredecessorMap(graph: DagGraph): Map<BlockId, Set<BlockId>> {

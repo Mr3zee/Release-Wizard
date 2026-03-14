@@ -83,11 +83,8 @@ class ConnectionsViewModel(
     }
 
     fun loadMore() {
-        // todo claude: duplicate 8 lines
-        val pag = _pagination.value ?: return
+        val nextOffset = _pagination.value?.nextPageOffset() ?: return
         if (_isLoadingMore.value) return
-        val nextOffset = pag.offset + pag.limit
-        if (nextOffset >= pag.totalCount) return
 
         // Capture current filter state to detect changes during in-flight request
         val currentSearch = _searchQuery.value

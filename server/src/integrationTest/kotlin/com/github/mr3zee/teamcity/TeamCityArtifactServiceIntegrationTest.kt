@@ -37,41 +37,42 @@ class TeamCityArtifactServiceIntegrationTest {
         fun tearDown() {
             client?.close()
         }
+
+        fun requireConfig(): TeamCityTestConfig =
+            config ?: error("TeamCityTestConfig not loaded — setUp should have skipped this test")
+
+        fun requireService(): TeamCityArtifactService =
+            TeamCityArtifactService(client ?: error("HttpClient not initialized"))
+
+        fun requireBuildId(): String =
+            artifactBuildId ?: error("artifactBuildId not configured")
     }
 
-    @Test
-    fun `broad glob returns non-empty artifact list`() = runBlocking {
-        // todo claude: duplicate 11 lines
-        val cfg = config ?: error("TeamCityTestConfig not loaded — setUp should have skipped this test")
-        val service = TeamCityArtifactService(client ?: error("HttpClient not initialized"))
-
-        val artifacts = service.fetchMatchingArtifacts(
+    private suspend fun fetchAllArtifacts(): List<String> {
+        val cfg = requireConfig()
+        return requireService().fetchMatchingArtifacts(
             serverUrl = cfg.serverUrl,
             token = cfg.token,
-            buildId = artifactBuildId ?: error("artifactBuildId not configured"),
+            buildId = requireBuildId(),
             globPattern = "**/*",
             maxDepth = 10,
             maxFiles = 1000,
         )
+    }
 
+    @Test
+    fun `broad glob returns non-empty artifact list`() = runBlocking {
+        val artifacts = fetchAllArtifacts()
         assertTrue(artifacts.isNotEmpty(), "Build $artifactBuildId should have artifacts")
     }
 
     @Test
     fun `specific glob pattern filters correctly`() = runBlocking {
-        // todo claude: duplicate 12 lines
-        val cfg = config ?: error("TeamCityTestConfig not loaded — setUp should have skipped this test")
-        val service = TeamCityArtifactService(client ?: error("HttpClient not initialized"))
+        val cfg = requireConfig()
+        val service = requireService()
 
         // Fetch all artifacts first to find a real extension to filter by
-        val all = service.fetchMatchingArtifacts(
-            serverUrl = cfg.serverUrl,
-            token = cfg.token,
-            buildId = artifactBuildId ?: error("artifactBuildId not configured"),
-            globPattern = "**/*",
-            maxDepth = 10,
-            maxFiles = 1000,
-        )
+        val all = fetchAllArtifacts()
         assertTrue(all.isNotEmpty(), "Precondition: build must have artifacts")
 
         // Pick the extension of the first artifact and filter by it
@@ -81,7 +82,7 @@ class TeamCityArtifactServiceIntegrationTest {
         val filtered = service.fetchMatchingArtifacts(
             serverUrl = cfg.serverUrl,
             token = cfg.token,
-            buildId = artifactBuildId ?: error("artifactBuildId not configured"),
+            buildId = requireBuildId(),
             globPattern = "**/*.$firstExt",
             maxDepth = 10,
             maxFiles = 1000,
@@ -100,24 +101,16 @@ class TeamCityArtifactServiceIntegrationTest {
 
     @Test
     fun `maxFiles limits returned results`() = runBlocking {
-        // todo claude: duplicate 11 lines
-        val cfg = config ?: error("TeamCityTestConfig not loaded — setUp should have skipped this test")
-        val service = TeamCityArtifactService(client ?: error("HttpClient not initialized"))
+        val cfg = requireConfig()
+        val service = requireService()
 
-        val all = service.fetchMatchingArtifacts(
-            serverUrl = cfg.serverUrl,
-            token = cfg.token,
-            buildId = artifactBuildId ?: error("artifactBuildId not configured"),
-            globPattern = "**/*",
-            maxDepth = 10,
-            maxFiles = 1000,
-        )
+        val all = fetchAllArtifacts()
         Assume.assumeTrue("Build must have at least 2 artifacts", all.size >= 2)
 
         val limited = service.fetchMatchingArtifacts(
             serverUrl = cfg.serverUrl,
             token = cfg.token,
-            buildId = artifactBuildId ?: error("artifactBuildId not configured"),
+            buildId = requireBuildId(),
             globPattern = "**/*",
             maxDepth = 10,
             maxFiles = 1,
@@ -129,13 +122,13 @@ class TeamCityArtifactServiceIntegrationTest {
 
     @Test
     fun `non-matching glob returns empty list`() = runBlocking {
-        val cfg = config ?: error("TeamCityTestConfig not loaded — setUp should have skipped this test")
-        val service = TeamCityArtifactService(client ?: error("HttpClient not initialized"))
+        val cfg = requireConfig()
+        val service = requireService()
 
         val result = service.fetchMatchingArtifacts(
             serverUrl = cfg.serverUrl,
             token = cfg.token,
-            buildId = artifactBuildId ?: error("artifactBuildId not configured"),
+            buildId = requireBuildId(),
             globPattern = "**/*.nonexistent_extension_xyz",
             maxDepth = 10,
             maxFiles = 1000,

@@ -289,37 +289,21 @@ class DagEditorViewModel(
         val clip = _clipboard.value ?: return
         val g = _graph.value
 
-        // Generate new IDs for every block
-        val idMapping = clip.blocks.associate { it.id to BlockId(Uuid.random().toString()) }
-
-        // todo claude: duplicate 13 lines
-        val newBlocks = clip.blocks.map { block ->
-            val newId = idMapping[block.id] ?: error("Missing ID mapping for block ${block.id}")
-            when (block) {
-                is Block.ActionBlock -> block.copy(id = newId)
-                is Block.ContainerBlock -> block.copy(id = newId, children = remapDagGraph(block.children, idMapping))
-            }
+        val remapped = remapDagGraph(clip, emptyMap())
+        // Offset positions to visually separate pasted blocks
+        val offsetPositions = remapped.positions.mapValues { (_, pos) ->
+            BlockPosition(pos.x + 30f, pos.y + 30f)
         }
-
-        val newEdges = clip.edges.mapNotNull { edge ->
-            val newFrom = idMapping[edge.fromBlockId] ?: return@mapNotNull null
-            val newTo = idMapping[edge.toBlockId] ?: return@mapNotNull null
-            Edge(fromBlockId = newFrom, toBlockId = newTo)
-        }
-
-        val newPositions = clip.positions.mapKeys { (oldId, _) ->
-            idMapping[oldId] ?: error("Missing ID mapping for position $oldId")
-        }.mapValues { (_, pos) -> BlockPosition(pos.x + 30f, pos.y + 30f) }
 
         updateGraph(
             g.copy(
-                blocks = g.blocks + newBlocks,
-                edges = g.edges + newEdges,
-                positions = g.positions + newPositions,
+                blocks = g.blocks + remapped.blocks,
+                edges = g.edges + remapped.edges,
+                positions = g.positions + offsetPositions,
             )
         )
 
-        _selectedBlockIds.value = idMapping.values.toSet()
+        _selectedBlockIds.value = remapped.blocks.map { it.id }.toSet()
         _selectedEdgeIndex.value = null
     }
 
@@ -383,9 +367,8 @@ class DagEditorViewModel(
         val childMapping = graph.blocks.associate { it.id to BlockId(Uuid.random().toString()) }
         val allMapping = parentMapping + childMapping
 
-        // todo claude: duplicate 13 lines
         val newBlocks = graph.blocks.map { block ->
-            val newId = childMapping[block.id]!!
+            val newId = childMapping[block.id] ?: error("Missing ID mapping for block ${block.id}")
             when (block) {
                 is Block.ActionBlock -> block.copy(id = newId)
                 is Block.ContainerBlock -> block.copy(id = newId, children = remapDagGraph(block.children, allMapping))
