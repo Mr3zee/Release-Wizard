@@ -1,0 +1,58 @@
+package com.github.mr3zee.teamcity
+
+import java.io.File
+import java.util.Properties
+
+/**
+ * Configuration for TeamCity integration tests.
+ * Loaded from local.properties or environment variables.
+ */
+data class TeamCityTestConfig(
+    val serverUrl: String,
+    val token: String,
+    val buildTypeId: String,
+) {
+    companion object {
+        private fun findLocalProperties(): File {
+            val cwd = File("local.properties")
+            if (cwd.exists()) return cwd
+            var dir = File(".").absoluteFile.parentFile
+            while (dir != null) {
+                val candidate = File(dir, "local.properties")
+                if (candidate.exists()) return candidate
+                dir = dir.parentFile
+            }
+            return cwd
+        }
+
+        fun loadOrNull(): TeamCityTestConfig? {
+            val propsFile = findLocalProperties()
+            if (propsFile.exists()) {
+                val props = Properties().apply { propsFile.inputStream().use { load(it) } }
+                val serverUrl = props.getProperty("teamcity.test.serverUrl")
+                val token = props.getProperty("teamcity.test.token")
+                val buildTypeId = props.getProperty("teamcity.test.buildTypeId")
+                if (!serverUrl.isNullOrBlank() && !token.isNullOrBlank() && !buildTypeId.isNullOrBlank()) {
+                    return TeamCityTestConfig(
+                        serverUrl = serverUrl.trimEnd('/'),
+                        token = token,
+                        buildTypeId = buildTypeId,
+                    )
+                }
+            }
+
+            val serverUrl = System.getenv("TEAMCITY_TEST_SERVER_URL")
+            val token = System.getenv("TEAMCITY_TEST_TOKEN")
+            val buildTypeId = System.getenv("TEAMCITY_TEST_BUILD_TYPE_ID")
+            if (serverUrl.isNullOrBlank() || token.isNullOrBlank() || buildTypeId.isNullOrBlank()) {
+                return null
+            }
+
+            return TeamCityTestConfig(
+                serverUrl = serverUrl.trimEnd('/'),
+                token = token,
+                buildTypeId = buildTypeId,
+            )
+        }
+    }
+}
