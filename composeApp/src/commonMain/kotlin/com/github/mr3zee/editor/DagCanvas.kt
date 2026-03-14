@@ -8,10 +8,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isCtrlPressed
+import androidx.compose.ui.input.pointer.isMetaPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.rememberTextMeasurer
 import com.github.mr3zee.model.*
+import com.github.mr3zee.theme.LocalAppColors
 
 // Hit testing
 private sealed class HitTarget {
@@ -88,9 +91,10 @@ private data class ConnectionDraft(
 @Composable
 fun DagCanvas(
     graph: DagGraph,
-    selectedBlockId: BlockId?,
+    selectedBlockIds: Set<BlockId>,
     selectedEdgeIndex: Int?,
     onSelectBlock: (BlockId?) -> Unit,
+    onToggleBlockSelection: (BlockId) -> Unit,
     onSelectEdge: (Int?) -> Unit,
     onMoveBlock: (BlockId, Float, Float) -> Unit,
     onCommitMove: () -> Unit,
@@ -99,6 +103,7 @@ fun DagCanvas(
 ) {
     val textMeasurer = rememberTextMeasurer()
     val density = LocalDensity.current.density
+    val appColors = LocalAppColors.current
 
     var zoom by remember { mutableFloatStateOf(1f) }
     var panOffset by remember { mutableStateOf(Offset.Zero) }
@@ -112,9 +117,9 @@ fun DagCanvas(
         modifier = modifier
             .fillMaxSize()
             .clipToBounds()
-            .background(CANVAS_BG)
+            .background(appColors.canvasBackground)
             // Scroll for zoom + hover tracking
-            .pointerInput(graph) {
+            .pointerInput(Unit) {
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent()
@@ -134,7 +139,7 @@ fun DagCanvas(
                 }
             }
             // Click and drag
-            .pointerInput(graph, selectedBlockId) {
+            .pointerInput(Unit) {
                 awaitPointerEventScope {
                     while (true) {
                         val down = awaitPointerEvent()
@@ -155,10 +160,21 @@ fun DagCanvas(
                             if (!moveChange.pressed) {
                                 // Released
                                 if (!wasDragged) {
+                                    val isModifierHeld = down.keyboardModifiers.isCtrlPressed ||
+                                            down.keyboardModifiers.isMetaPressed
                                     when (hit) {
-                                        is HitTarget.BlockHit -> onSelectBlock(hit.blockId)
-                                        is HitTarget.InputPort -> onSelectBlock(hit.blockId)
-                                        is HitTarget.OutputPort -> onSelectBlock(hit.blockId)
+                                        is HitTarget.BlockHit -> {
+                                            if (isModifierHeld) onToggleBlockSelection(hit.blockId)
+                                            else onSelectBlock(hit.blockId)
+                                        }
+                                        is HitTarget.InputPort -> {
+                                            if (isModifierHeld) onToggleBlockSelection(hit.blockId)
+                                            else onSelectBlock(hit.blockId)
+                                        }
+                                        is HitTarget.OutputPort -> {
+                                            if (isModifierHeld) onToggleBlockSelection(hit.blockId)
+                                            else onSelectBlock(hit.blockId)
+                                        }
                                         is HitTarget.EdgeHit -> onSelectEdge(hit.index)
                                         is HitTarget.None -> {
                                             onSelectBlock(null)
@@ -214,26 +230,26 @@ fun DagCanvas(
                 }
             }
     ) {
-        drawGrid(drawTransform)
+        drawGrid(drawTransform, appColors)
 
         for ((index, edge) in graph.edges.withIndex()) {
             val fromPos = graph.positions[edge.fromBlockId] ?: continue
             val toPos = graph.positions[edge.toBlockId] ?: continue
             val isSelected = index == selectedEdgeIndex
-            drawEdge(drawTransform, fromPos, toPos, isSelected)
+            drawEdge(drawTransform, fromPos, toPos, isSelected, appColors)
         }
 
         connectionDraft?.let { draft ->
             val fromPos = graph.positions[draft.fromBlockId] ?: return@let
             val startScreenX = drawTransform.toScreenX(fromPos.x + BLOCK_WIDTH)
             val startScreenY = drawTransform.toScreenY(fromPos.y + BLOCK_HEIGHT / 2)
-            drawDraftEdge(Offset(startScreenX, startScreenY), draft.currentScreenPos)
+            drawDraftEdge(Offset(startScreenX, startScreenY), draft.currentScreenPos, appColors)
         }
 
         for (block in graph.blocks) {
             val pos = graph.positions[block.id] ?: continue
-            val isSelected = block.id == selectedBlockId
-            drawBlock(drawTransform, block, pos, isSelected, textMeasurer, zoom)
+            val isSelected = block.id in selectedBlockIds
+            drawBlock(drawTransform, block, pos, isSelected, textMeasurer, zoom, appColors)
         }
 
         for (block in graph.blocks) {
@@ -242,7 +258,7 @@ fun DagCanvas(
                     (hoveredPort as HitTarget.InputPort).blockId == block.id
             val isOutputHovered = hoveredPort is HitTarget.OutputPort &&
                     (hoveredPort as HitTarget.OutputPort).blockId == block.id
-            drawPorts(drawTransform, pos, isInputHovered, isOutputHovered)
+            drawPorts(drawTransform, pos, isInputHovered, isOutputHovered, appColors)
         }
     }
 }

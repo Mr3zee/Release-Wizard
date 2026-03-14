@@ -18,7 +18,7 @@ fun DagEditorScreen(
 ) {
     val project by viewModel.project.collectAsState()
     val graph by viewModel.graph.collectAsState()
-    val selectedBlockId by viewModel.selectedBlockId.collectAsState()
+    val selectedBlockIds by viewModel.selectedBlockIds.collectAsState()
     val selectedEdgeIndex by viewModel.selectedEdgeIndex.collectAsState()
     val isDirty by viewModel.isDirty.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
@@ -32,8 +32,8 @@ fun DagEditorScreen(
         viewModel.loadProject()
     }
 
-    val selectedBlock = remember(selectedBlockId, graph) {
-        selectedBlockId?.let { id -> graph.blocks.find { it.id == id } }
+    val selectedBlock = remember(selectedBlockIds, graph) {
+        if (selectedBlockIds.size == 1) graph.blocks.find { it.id == selectedBlockIds.first() } else null
     }
 
     Scaffold(
@@ -77,7 +77,7 @@ fun DagEditorScreen(
                     val isModifier = event.isCtrlPressed || event.isMetaPressed
                     when {
                         event.key == Key.Delete || event.key == Key.Backspace -> {
-                            if (selectedBlockId != null) viewModel.removeSelectedBlock()
+                            if (selectedBlockIds.isNotEmpty()) viewModel.removeSelectedBlocks()
                             else if (selectedEdgeIndex != null) viewModel.removeSelectedEdge()
                             true
                         }
@@ -91,6 +91,18 @@ fun DagEditorScreen(
                         }
                         isModifier && event.key == Key.S -> {
                             if (isDirty) viewModel.save()
+                            true
+                        }
+                        isModifier && event.key == Key.C -> {
+                            viewModel.copySelected()
+                            true
+                        }
+                        isModifier && event.key == Key.V -> {
+                            viewModel.pasteClipboard()
+                            true
+                        }
+                        isModifier && event.key == Key.A -> {
+                            viewModel.selectAll()
                             true
                         }
                         else -> false
@@ -154,14 +166,14 @@ fun DagEditorScreen(
                     viewModel.addContainerBlock(name, x, y)
                 },
                 onDelete = {
-                    if (selectedBlockId != null) viewModel.removeSelectedBlock()
+                    if (selectedBlockIds.isNotEmpty()) viewModel.removeSelectedBlocks()
                     else if (selectedEdgeIndex != null) viewModel.removeSelectedEdge()
                 },
                 onUndo = { viewModel.undo() },
                 onRedo = { viewModel.redo() },
                 canUndo = canUndo,
                 canRedo = canRedo,
-                hasSelection = selectedBlockId != null || selectedEdgeIndex != null,
+                hasSelection = selectedBlockIds.isNotEmpty() || selectedEdgeIndex != null,
             )
 
             VerticalDivider()
@@ -169,9 +181,10 @@ fun DagEditorScreen(
             // Center: canvas
             DagCanvas(
                 graph = graph,
-                selectedBlockId = selectedBlockId,
+                selectedBlockIds = selectedBlockIds,
                 selectedEdgeIndex = selectedEdgeIndex,
                 onSelectBlock = { viewModel.selectBlock(it) },
+                onToggleBlockSelection = { viewModel.toggleBlockSelection(it) },
                 onSelectEdge = { viewModel.selectEdge(it) },
                 onMoveBlock = { id, dx, dy -> viewModel.moveBlock(id, dx, dy) },
                 onCommitMove = { viewModel.commitMove() },

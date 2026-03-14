@@ -25,11 +25,14 @@ class DagEditorViewModel(
     private val _graph = MutableStateFlow(DagGraph())
     val graph: StateFlow<DagGraph> = _graph
 
-    private val _selectedBlockId = MutableStateFlow<BlockId?>(null)
-    val selectedBlockId: StateFlow<BlockId?> = _selectedBlockId
+    private val _selectedBlockIds = MutableStateFlow<Set<BlockId>>(emptySet())
+    val selectedBlockIds: StateFlow<Set<BlockId>> = _selectedBlockIds
 
     private val _selectedEdgeIndex = MutableStateFlow<Int?>(null)
     val selectedEdgeIndex: StateFlow<Int?> = _selectedEdgeIndex
+
+    private val _clipboard = MutableStateFlow<DagGraph?>(null)
+    val clipboard: StateFlow<DagGraph?> = _clipboard
 
     private val _isDirty = MutableStateFlow(false)
     val isDirty: StateFlow<Boolean> = _isDirty
@@ -114,7 +117,7 @@ class DagEditorViewModel(
                 positions = _graph.value.positions + (blockId to position),
             )
         )
-        _selectedBlockId.value = blockId
+        _selectedBlockIds.value = setOf(blockId)
         _selectedEdgeIndex.value = null
     }
 
@@ -129,21 +132,22 @@ class DagEditorViewModel(
                 positions = _graph.value.positions + (blockId to position),
             )
         )
-        _selectedBlockId.value = blockId
+        _selectedBlockIds.value = setOf(blockId)
         _selectedEdgeIndex.value = null
     }
 
-    fun removeSelectedBlock() {
-        val blockId = _selectedBlockId.value ?: return
+    fun removeSelectedBlocks() {
+        val blockIds = _selectedBlockIds.value
+        if (blockIds.isEmpty()) return
         val g = _graph.value
         updateGraph(
             g.copy(
-                blocks = g.blocks.filter { it.id != blockId },
-                edges = g.edges.filter { it.fromBlockId != blockId && it.toBlockId != blockId },
-                positions = g.positions - blockId,
+                blocks = g.blocks.filter { it.id !in blockIds },
+                edges = g.edges.filter { it.fromBlockId !in blockIds && it.toBlockId !in blockIds },
+                positions = g.positions.filterKeys { it !in blockIds },
             )
         )
-        _selectedBlockId.value = null
+        _selectedBlockIds.value = emptySet()
         _selectedEdgeIndex.value = null
     }
 
@@ -179,13 +183,19 @@ class DagEditorViewModel(
     }
 
     fun selectBlock(blockId: BlockId?) {
-        _selectedBlockId.value = blockId
+        _selectedBlockIds.value = if (blockId != null) setOf(blockId) else emptySet()
+        _selectedEdgeIndex.value = null
+    }
+
+    fun toggleBlockSelection(blockId: BlockId) {
+        val current = _selectedBlockIds.value
+        _selectedBlockIds.value = if (blockId in current) current - blockId else current + blockId
         _selectedEdgeIndex.value = null
     }
 
     fun selectEdge(index: Int?) {
         _selectedEdgeIndex.value = index
-        _selectedBlockId.value = null
+        _selectedBlockIds.value = emptySet()
     }
 
     // Property updates — mutate graph without flooding undo stack.
@@ -263,6 +273,58 @@ class DagEditorViewModel(
         revalidate()
     }
 
+    fun copySelected() {
+        val selected = _selectedBlockIds.value
+        if (selected.isEmpty()) return
+        val g = _graph.value
+        val blocks = g.blocks.filter { it.id in selected }
+        val edges = g.edges.filter { it.fromBlockId in selected && it.toBlockId in selected }
+        val positions = g.positions.filterKeys { it in selected }
+        _clipboard.value = DagGraph(blocks = blocks, edges = edges, positions = positions)
+    }
+
+    @OptIn(ExperimentalUuidApi::class)
+    fun pasteClipboard() {
+        val clip = _clipboard.value ?: return
+        val g = _graph.value
+
+        // Generate new IDs for every block
+        val idMapping = clip.blocks.associate { it.id to BlockId(Uuid.random().toString()) }
+
+        val newBlocks = clip.blocks.map { block ->
+            val newId = idMapping[block.id]!!
+            when (block) {
+                is Block.ActionBlock -> block.copy(id = newId)
+                is Block.ContainerBlock -> block.copy(id = newId, children = remapDagGraph(block.children, idMapping))
+            }
+        }
+
+        val newEdges = clip.edges.mapNotNull { edge ->
+            val newFrom = idMapping[edge.fromBlockId] ?: return@mapNotNull null
+            val newTo = idMapping[edge.toBlockId] ?: return@mapNotNull null
+            Edge(fromBlockId = newFrom, toBlockId = newTo)
+        }
+
+        val newPositions = clip.positions.mapKeys { (oldId, _) -> idMapping[oldId]!! }
+            .mapValues { (_, pos) -> BlockPosition(pos.x + 30f, pos.y + 30f) }
+
+        updateGraph(
+            g.copy(
+                blocks = g.blocks + newBlocks,
+                edges = g.edges + newEdges,
+                positions = g.positions + newPositions,
+            )
+        )
+
+        _selectedBlockIds.value = idMapping.values.toSet()
+        _selectedEdgeIndex.value = null
+    }
+
+    fun selectAll() {
+        _selectedBlockIds.value = _graph.value.blocks.map { it.id }.toSet()
+        _selectedEdgeIndex.value = null
+    }
+
     /** Compute next block placement position avoiding overlap with existing blocks. */
     fun nextPlacementPosition(): Pair<Float, Float> {
         val positions = _graph.value.positions.values
@@ -311,5 +373,29 @@ class DagEditorViewModel(
 
     private fun revalidate() {
         _validationErrors.value = DagValidator.validate(_graph.value)
+    }
+
+    @OptIn(ExperimentalUuidApi::class)
+    private fun remapDagGraph(graph: DagGraph, parentMapping: Map<BlockId, BlockId>): DagGraph {
+        val childMapping = graph.blocks.associate { it.id to BlockId(Uuid.random().toString()) }
+        val allMapping = parentMapping + childMapping
+
+        val newBlocks = graph.blocks.map { block ->
+            val newId = childMapping[block.id]!!
+            when (block) {
+                is Block.ActionBlock -> block.copy(id = newId)
+                is Block.ContainerBlock -> block.copy(id = newId, children = remapDagGraph(block.children, allMapping))
+            }
+        }
+
+        val newEdges = graph.edges.mapNotNull { edge ->
+            val newFrom = childMapping[edge.fromBlockId] ?: return@mapNotNull null
+            val newTo = childMapping[edge.toBlockId] ?: return@mapNotNull null
+            Edge(fromBlockId = newFrom, toBlockId = newTo)
+        }
+
+        val newPositions = graph.positions.mapKeys { (oldId, _) -> childMapping[oldId]!! }
+
+        return DagGraph(blocks = newBlocks, edges = newEdges, positions = newPositions)
     }
 }

@@ -44,7 +44,7 @@ class DagCanvasTest {
             MaterialTheme {
                 DagCanvas(
                     graph = graph,
-                    selectedBlockId = null,
+                    selectedBlockIds = emptySet(),
                     selectedEdgeIndex = null,
                     onSelectBlock = { selectedBlockId = it },
                     onSelectEdge = {},
@@ -79,7 +79,7 @@ class DagCanvasTest {
             MaterialTheme {
                 DagCanvas(
                     graph = graph,
-                    selectedBlockId = null,
+                    selectedBlockIds = emptySet(),
                     selectedEdgeIndex = null,
                     onSelectBlock = { selectedBlockId = it },
                     onSelectEdge = { selectedEdgeIndex = it },
@@ -118,7 +118,7 @@ class DagCanvasTest {
             MaterialTheme {
                 DagCanvas(
                     graph = graph,
-                    selectedBlockId = null,
+                    selectedBlockIds = emptySet(),
                     selectedEdgeIndex = null,
                     onSelectBlock = {},
                     onSelectEdge = {},
@@ -158,7 +158,7 @@ class DagCanvasTest {
             MaterialTheme {
                 DagCanvas(
                     graph = graph,
-                    selectedBlockId = null,
+                    selectedBlockIds = emptySet(),
                     selectedEdgeIndex = null,
                     onSelectBlock = { selectedBlockId = it },
                     onSelectEdge = {},
@@ -203,7 +203,7 @@ class DagCanvasTest {
             MaterialTheme {
                 DagCanvas(
                     graph = graph,
-                    selectedBlockId = null,
+                    selectedBlockIds = emptySet(),
                     selectedEdgeIndex = null,
                     onSelectBlock = {},
                     onSelectEdge = {},
@@ -243,7 +243,7 @@ class DagCanvasTest {
             MaterialTheme {
                 DagCanvas(
                     graph = graph,
-                    selectedBlockId = null,
+                    selectedBlockIds = emptySet(),
                     selectedEdgeIndex = null,
                     onSelectBlock = {},
                     onSelectEdge = {},
@@ -283,7 +283,7 @@ class DagCanvasTest {
             MaterialTheme {
                 DagCanvas(
                     graph = graph,
-                    selectedBlockId = null,
+                    selectedBlockIds = emptySet(),
                     selectedEdgeIndex = null,
                     onSelectBlock = { selectedBlockId = it },
                     onSelectEdge = {},
@@ -331,7 +331,7 @@ class DagCanvasTest {
             MaterialTheme {
                 DagCanvas(
                     graph = graph,
-                    selectedBlockId = null,
+                    selectedBlockIds = emptySet(),
                     selectedEdgeIndex = null,
                     onSelectBlock = { selectedBlockId = it },
                     onSelectEdge = {},
@@ -373,7 +373,7 @@ class DagCanvasTest {
             MaterialTheme {
                 DagCanvas(
                     graph = graph,
-                    selectedBlockId = null,
+                    selectedBlockIds = emptySet(),
                     selectedEdgeIndex = null,
                     onSelectBlock = {},
                     onSelectEdge = { selectedEdgeIndex = it },
@@ -410,7 +410,7 @@ class DagCanvasTest {
             MaterialTheme {
                 DagCanvas(
                     graph = graph,
-                    selectedBlockId = null,
+                    selectedBlockIds = emptySet(),
                     selectedEdgeIndex = null,
                     onSelectBlock = { selectedBlockId = it },
                     onSelectEdge = {},
@@ -450,7 +450,7 @@ class DagCanvasTest {
             MaterialTheme {
                 DagCanvas(
                     graph = graph,
-                    selectedBlockId = null,
+                    selectedBlockIds = emptySet(),
                     selectedEdgeIndex = null,
                     onSelectBlock = {},
                     onSelectEdge = {},
