@@ -518,12 +518,12 @@ class InMemoryPendingWebhookRepository : PendingWebhookRepository {
  * Fake ConnectionsRepository for unit tests (not used by executors directly).
  */
 class FakeConnectionsRepository : ConnectionsRepository {
-    override suspend fun findAll(ownerId: String?, offset: Int, limit: Int, search: String?, type: ConnectionType?) = emptyList<Connection>()
-    override suspend fun countAll(ownerId: String?, search: String?, type: ConnectionType?) = 0L
-    override suspend fun findAllWithCount(ownerId: String?, offset: Int, limit: Int, search: String?, type: ConnectionType?) = emptyList<Connection>() to 0L
+    override suspend fun findAll(teamId: String?, teamIds: List<String>?, offset: Int, limit: Int, search: String?, type: ConnectionType?) = emptyList<Connection>()
+    override suspend fun countAll(teamId: String?, teamIds: List<String>?, search: String?, type: ConnectionType?) = 0L
+    override suspend fun findAllWithCount(teamId: String?, teamIds: List<String>?, offset: Int, limit: Int, search: String?, type: ConnectionType?) = emptyList<Connection>() to 0L
     override suspend fun findById(id: ConnectionId) = null
-    override suspend fun findOwner(id: ConnectionId): String? = null
-    override suspend fun create(name: String, type: ConnectionType, config: ConnectionConfig, ownerId: String) =
+    override suspend fun findTeamId(id: ConnectionId): String? = null
+    override suspend fun create(name: String, type: ConnectionType, config: ConnectionConfig, teamId: String) =
         throw UnsupportedOperationException()
     override suspend fun update(id: ConnectionId, name: String?, config: ConnectionConfig?) = null
     override suspend fun delete(id: ConnectionId) = false

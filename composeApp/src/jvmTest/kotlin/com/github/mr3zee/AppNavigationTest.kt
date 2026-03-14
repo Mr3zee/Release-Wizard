@@ -8,9 +8,11 @@ import com.github.mr3zee.api.AuthApiClient
 import com.github.mr3zee.api.ConnectionApiClient
 import com.github.mr3zee.api.ProjectApiClient
 import com.github.mr3zee.api.ReleaseApiClient
+import com.github.mr3zee.api.TeamApiClient
 import com.github.mr3zee.auth.AuthViewModel
 import com.github.mr3zee.auth.LoginScreen
 import com.github.mr3zee.connections.ConnectionsViewModel
+import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.navigation.AppNavigation
 import com.github.mr3zee.navigation.NavigationController
 import com.github.mr3zee.navigation.Screen
@@ -18,6 +20,7 @@ import com.github.mr3zee.projects.ProjectListViewModel
 import com.github.mr3zee.releases.ReleaseListViewModel
 import io.ktor.client.*
 import io.ktor.http.*
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.test.Test
 
 @OptIn(ExperimentalTestApi::class)
@@ -41,10 +44,12 @@ class AppNavigationTest {
         val projectApiClient = remember { ProjectApiClient(httpClient) }
         val connectionApiClient = remember { ConnectionApiClient(httpClient) }
         val releaseApiClient = remember { ReleaseApiClient(httpClient) }
+        val teamApiClient = remember { TeamApiClient(httpClient) }
         val authViewModel = remember { AuthViewModel(authApiClient) }
-        val projectListViewModel = remember { ProjectListViewModel(projectApiClient) }
-        val connectionsViewModel = remember { ConnectionsViewModel(connectionApiClient) }
-        val releaseListViewModel = remember { ReleaseListViewModel(releaseApiClient, projectApiClient) }
+        val activeTeamId = remember { MutableStateFlow<TeamId?>(TeamId("test-team")) }
+        val projectListViewModel = remember { ProjectListViewModel(projectApiClient, activeTeamId) }
+        val connectionsViewModel = remember { ConnectionsViewModel(connectionApiClient, activeTeamId) }
+        val releaseListViewModel = remember { ReleaseListViewModel(releaseApiClient, projectApiClient, activeTeamId) }
         val user by authViewModel.user.collectAsState()
         val isCheckingSession by authViewModel.isCheckingSession.collectAsState()
 
@@ -67,7 +72,12 @@ class AppNavigationTest {
                         releaseApiClient = releaseApiClient,
                         releaseListViewModel = releaseListViewModel,
                         connectionsViewModel = connectionsViewModel,
+                        teamApiClient = teamApiClient,
+                        activeTeamId = activeTeamId,
+                        userTeams = emptyList(),
                         onLogout = { authViewModel.logout(); navController.resetTo(Screen.ProjectList) },
+                        onTeamChanged = {},
+                        onRefreshUser = {},
                     )
                 }
             }

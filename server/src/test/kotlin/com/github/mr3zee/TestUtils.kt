@@ -1,9 +1,7 @@
 package com.github.mr3zee
 
-import com.github.mr3zee.api.ApiRoutes
-import com.github.mr3zee.api.ErrorResponse
-import com.github.mr3zee.api.LoginRequest
-import com.github.mr3zee.api.RegisterRequest
+import com.github.mr3zee.api.*
+import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.auth.authModule
 import com.github.mr3zee.connections.connectionsModule
@@ -17,11 +15,13 @@ import com.github.mr3zee.releases.releasesModule
 import com.github.mr3zee.notifications.notificationsModule
 import com.github.mr3zee.schedules.schedulesModule
 import com.github.mr3zee.tags.tagsModule
+import com.github.mr3zee.teams.teamsModule
 import com.github.mr3zee.triggers.triggersModule
 import com.github.mr3zee.webhooks.webhooksModule
 import com.github.mr3zee.execution.BlockExecutor
 import com.github.mr3zee.execution.StubBlockExecutor
 import io.ktor.client.HttpClient
+import io.ktor.client.call.*
 import io.ktor.client.plugins.api.*
 import io.ktor.client.request.*
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
@@ -116,6 +116,7 @@ fun Application.testModule(
             schedulesModule,
             triggersModule,
             tagsModule,
+            teamsModule,
             testOverrideModule,
         )
     }
@@ -286,6 +287,7 @@ fun ApplicationTestBuilder.jsonClient() = createClient {
 
 /**
  * Registers and logs in a test user. First user in a fresh DB is auto-promoted to ADMIN.
+ * Also creates a default team so that team-scoped operations work.
  */
 suspend fun HttpClient.login(
     username: String = "admin",
@@ -301,4 +303,27 @@ suspend fun HttpClient.login(
         contentType(ContentType.Application.Json)
         setBody(LoginRequest(username = username, password = password))
     }
+}
+
+/**
+ * Creates a test team and returns its ID. The logged-in user becomes TEAM_LEAD.
+ */
+suspend fun HttpClient.createTestTeam(name: String = "Test Team"): TeamId {
+    val response = post(ApiRoutes.Teams.BASE) {
+        contentType(ContentType.Application.Json)
+        setBody(CreateTeamRequest(name = name))
+    }
+    return response.body<TeamResponse>().team.id
+}
+
+/**
+ * Convenience: login + create team. Returns the team ID.
+ */
+suspend fun HttpClient.loginAndCreateTeam(
+    username: String = "admin",
+    password: String = "adminpass",
+    teamName: String = "Test Team",
+): TeamId {
+    login(username, password)
+    return createTestTeam(teamName)
 }

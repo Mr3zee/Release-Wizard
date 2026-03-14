@@ -131,7 +131,7 @@ class TriggerRoutesTest {
 private suspend fun io.ktor.client.HttpClient.createProject(name: String = "Test Project"): String {
     val response = post(ApiRoutes.Projects.BASE) {
         contentType(ContentType.Application.Json)
-        setBody(CreateProjectRequest(name = name))
+        setBody(CreateProjectRequest(name = name, teamId = TeamId("00000000-0000-0000-0000-000000000000")))
     }
     return response.body<ProjectResponse>().project.id.value
 }
@@ -145,6 +145,7 @@ private suspend fun io.ktor.client.HttpClient.createProjectWithBlocks(name: Stri
         setBody(
             CreateProjectRequest(
                 name = name,
+                teamId = TeamId("00000000-0000-0000-0000-000000000000"),
                 dagGraph = DagGraph(
                     blocks = listOf(
                         Block.ActionBlock(

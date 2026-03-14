@@ -2,6 +2,7 @@ package com.github.mr3zee.auth
 
 import com.github.mr3zee.*
 import com.github.mr3zee.api.*
+import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.model.UserRole
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -37,7 +38,7 @@ class SecurityHardeningTest {
 
         val response = noCsrfClient.post(ApiRoutes.Projects.BASE) {
             contentType(ContentType.Application.Json)
-            setBody(CreateProjectRequest(name = "Test"))
+            setBody(CreateProjectRequest(name = "Test", teamId = TeamId("00000000-0000-0000-0000-000000000000")))
         }
         assertEquals(HttpStatusCode.Forbidden, response.status)
         val error = response.body<ErrorResponse>()
@@ -52,7 +53,7 @@ class SecurityHardeningTest {
 
         val response = client.post(ApiRoutes.Projects.BASE) {
             contentType(ContentType.Application.Json)
-            setBody(CreateProjectRequest(name = "Test"))
+            setBody(CreateProjectRequest(name = "Test", teamId = TeamId("00000000-0000-0000-0000-000000000000")))
         }
         assertEquals(HttpStatusCode.Created, response.status)
     }
@@ -290,7 +291,7 @@ class SecurityHardeningTest {
 private suspend fun createTestProject(client: io.ktor.client.HttpClient): String {
     val response = client.post(ApiRoutes.Projects.BASE) {
         contentType(ContentType.Application.Json)
-        setBody(CreateProjectRequest(name = "Test Project"))
+        setBody(CreateProjectRequest(name = "Test Project", teamId = TeamId("00000000-0000-0000-0000-000000000000")))
     }
     return response.body<ProjectResponse>().project.id.value
 }
@@ -301,6 +302,7 @@ private suspend fun createTestProjectWithBlocks(client: io.ktor.client.HttpClien
         setBody(
             CreateProjectRequest(
                 name = "Test Project",
+                teamId = TeamId("00000000-0000-0000-0000-000000000000"),
                 dagGraph = com.github.mr3zee.model.DagGraph(
                     blocks = listOf(
                         com.github.mr3zee.model.Block.ActionBlock(

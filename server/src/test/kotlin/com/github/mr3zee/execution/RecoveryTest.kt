@@ -250,17 +250,17 @@ class InMemoryReleasesRepository : ReleasesRepository {
         releases[release.id] = release
     }
 
-    override suspend fun findAll(includeArchived: Boolean, ownerId: String?, offset: Int, limit: Int, search: String?, status: ReleaseStatus?, projectTemplateId: ProjectId?, releaseIds: Set<String>?) = releases.values.toList()
-    override suspend fun countAll(includeArchived: Boolean, ownerId: String?, search: String?, status: ReleaseStatus?, projectTemplateId: ProjectId?, releaseIds: Set<String>?) = releases.size.toLong()
-    override suspend fun findAllWithCount(includeArchived: Boolean, ownerId: String?, offset: Int, limit: Int, search: String?, status: ReleaseStatus?, projectTemplateId: ProjectId?, releaseIds: Set<String>?) = releases.values.toList() to releases.size.toLong()
+    override suspend fun findAll(includeArchived: Boolean, teamId: String?, teamIds: List<String>?, offset: Int, limit: Int, search: String?, status: ReleaseStatus?, projectTemplateId: ProjectId?, releaseIds: Set<String>?) = releases.values.toList()
+    override suspend fun countAll(includeArchived: Boolean, teamId: String?, teamIds: List<String>?, search: String?, status: ReleaseStatus?, projectTemplateId: ProjectId?, releaseIds: Set<String>?) = releases.size.toLong()
+    override suspend fun findAllWithCount(includeArchived: Boolean, teamId: String?, teamIds: List<String>?, offset: Int, limit: Int, search: String?, status: ReleaseStatus?, projectTemplateId: ProjectId?, releaseIds: Set<String>?) = releases.values.toList() to releases.size.toLong()
     override suspend fun findById(id: ReleaseId) = releases[id]
-    override suspend fun findOwner(id: ReleaseId): String? = null
+    override suspend fun findTeamId(id: ReleaseId): String? = null
     override suspend fun findByProjectId(projectId: ProjectId) =
         releases.values.filter { it.projectTemplateId == projectId }
     override suspend fun findByStatuses(statuses: Set<ReleaseStatus>) =
         releases.values.filter { it.status in statuses }
 
-    override suspend fun create(projectTemplateId: ProjectId, dagSnapshot: DagGraph, parameters: List<Parameter>, ownerId: String): Release {
+    override suspend fun create(projectTemplateId: ProjectId, dagSnapshot: DagGraph, parameters: List<Parameter>, teamId: String): Release {
         val release = Release(
             id = ReleaseId(java.util.UUID.randomUUID().toString()),
             projectTemplateId = projectTemplateId,

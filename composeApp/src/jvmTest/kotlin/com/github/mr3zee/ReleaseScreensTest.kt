@@ -8,6 +8,7 @@ import com.github.mr3zee.api.ReleaseApiClient
 import com.github.mr3zee.model.*
 import com.github.mr3zee.releases.*
 import io.ktor.http.*
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -34,7 +35,7 @@ class ReleaseScreensTest {
             {"id":"r2","projectTemplateId":"p1","status":"SUCCEEDED","dagSnapshot":{"blocks":[],"edges":[],"positions":{}},"parameters":[],"startedAt":"$now","finishedAt":"$now"}
         ]"""
         val client = releaseListClient(releases = releases)
-        val vm = ReleaseListViewModel(ReleaseApiClient(client), ProjectApiClient(client))
+        val vm = ReleaseListViewModel(ReleaseApiClient(client), ProjectApiClient(client), MutableStateFlow(TeamId("test-team")))
 
         setContent {
             MaterialTheme {
@@ -57,7 +58,7 @@ class ReleaseScreensTest {
     @Test
     fun `release list empty state`() = runComposeUiTest {
         val client = releaseListClient()
-        val vm = ReleaseListViewModel(ReleaseApiClient(client), ProjectApiClient(client))
+        val vm = ReleaseListViewModel(ReleaseApiClient(client), ProjectApiClient(client), MutableStateFlow(TeamId("test-team")))
 
         setContent {
             MaterialTheme {
@@ -78,7 +79,7 @@ class ReleaseScreensTest {
         val client = mockHttpClient(mapOf(
             "/releases" to json("Server error", HttpStatusCode.InternalServerError),
         ))
-        val vm = ReleaseListViewModel(ReleaseApiClient(client), ProjectApiClient(client))
+        val vm = ReleaseListViewModel(ReleaseApiClient(client), ProjectApiClient(client), MutableStateFlow(TeamId("test-team")))
 
         setContent {
             MaterialTheme {
@@ -100,7 +101,7 @@ class ReleaseScreensTest {
             {"id":"p1","name":"Pipeline A","description":"","dagGraph":{"blocks":[],"edges":[],"positions":{}},"parameters":[],"createdAt":"$now","updatedAt":"$now"}
         ]"""
         val client = releaseListClient(projects = projects)
-        val vm = ReleaseListViewModel(ReleaseApiClient(client), ProjectApiClient(client))
+        val vm = ReleaseListViewModel(ReleaseApiClient(client), ProjectApiClient(client), MutableStateFlow(TeamId("test-team")))
 
         setContent {
             MaterialTheme {
@@ -641,7 +642,7 @@ class ReleaseScreensTest {
             {"id":"r1","projectTemplateId":"p1","status":"SUCCEEDED","dagSnapshot":{"blocks":[],"edges":[],"positions":{}},"parameters":[],"startedAt":"$now","finishedAt":"$now"}
         ]"""
         val client = releaseListClient(releases = releases)
-        val vm = ReleaseListViewModel(ReleaseApiClient(client), ProjectApiClient(client))
+        val vm = ReleaseListViewModel(ReleaseApiClient(client), ProjectApiClient(client), MutableStateFlow(TeamId("test-team")))
         var viewedId: ReleaseId? = null
 
         setContent {
@@ -669,7 +670,7 @@ class ReleaseScreensTest {
             {"id":"r5","projectTemplateId":"p1","status":"CANCELLED","dagSnapshot":{"blocks":[],"edges":[],"positions":{}},"parameters":[],"startedAt":"$now","finishedAt":"$now"}
         ]"""
         val client = releaseListClient(releases = releases)
-        val vm = ReleaseListViewModel(ReleaseApiClient(client), ProjectApiClient(client))
+        val vm = ReleaseListViewModel(ReleaseApiClient(client), ProjectApiClient(client), MutableStateFlow(TeamId("test-team")))
 
         setContent {
             MaterialTheme {
@@ -1114,7 +1115,7 @@ class ReleaseScreensTest {
             {"id":"r1","projectTemplateId":"p1","status":"ARCHIVED","dagSnapshot":{"blocks":[],"edges":[],"positions":{}},"parameters":[],"startedAt":"$now","finishedAt":"$now"}
         ]"""
         val client = releaseListClient(releases = releases)
-        val vm = ReleaseListViewModel(ReleaseApiClient(client), ProjectApiClient(client))
+        val vm = ReleaseListViewModel(ReleaseApiClient(client), ProjectApiClient(client), MutableStateFlow(TeamId("test-team")))
 
         setContent {
             MaterialTheme {

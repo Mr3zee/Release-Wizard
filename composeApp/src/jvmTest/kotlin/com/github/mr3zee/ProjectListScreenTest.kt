@@ -4,6 +4,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.*
 import com.github.mr3zee.api.ProjectApiClient
 import com.github.mr3zee.model.ProjectId
+import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.projects.ProjectListScreen
 import com.github.mr3zee.projects.ProjectListViewModel
 import io.ktor.client.*
@@ -12,6 +13,7 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.cookies.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -32,7 +34,7 @@ class ProjectListScreenTest {
 
     @Test
     fun `shows projects from API`() = runComposeUiTest {
-        val vm = ProjectListViewModel(ProjectApiClient(projectClient()))
+        val vm = ProjectListViewModel(ProjectApiClient(projectClient()), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme {
                 ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = {}, onLogout = {})
@@ -49,7 +51,7 @@ class ProjectListScreenTest {
 
     @Test
     fun `shows empty state`() = runComposeUiTest {
-        val vm = ProjectListViewModel(ProjectApiClient(projectClient("""{"projects":[]}""")))
+        val vm = ProjectListViewModel(ProjectApiClient(projectClient("""{"projects":[]}""")), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme {
                 ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = {}, onLogout = {})
@@ -62,7 +64,7 @@ class ProjectListScreenTest {
 
     @Test
     fun `shows error state on API failure`() = runComposeUiTest {
-        val vm = ProjectListViewModel(ProjectApiClient(projectClient("Internal server error", HttpStatusCode.InternalServerError)))
+        val vm = ProjectListViewModel(ProjectApiClient(projectClient("Internal server error", HttpStatusCode.InternalServerError)), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme {
                 ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = {}, onLogout = {})
@@ -75,7 +77,7 @@ class ProjectListScreenTest {
 
     @Test
     fun `has connections and logout buttons`() = runComposeUiTest {
-        val vm = ProjectListViewModel(ProjectApiClient(projectClient("""{"projects":[]}""")))
+        val vm = ProjectListViewModel(ProjectApiClient(projectClient("""{"projects":[]}""")), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme {
                 ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = {}, onLogout = {})
@@ -89,7 +91,7 @@ class ProjectListScreenTest {
 
     @Test
     fun `connections button triggers callback`() = runComposeUiTest {
-        val vm = ProjectListViewModel(ProjectApiClient(projectClient("""{"projects":[]}""")))
+        val vm = ProjectListViewModel(ProjectApiClient(projectClient("""{"projects":[]}""")), MutableStateFlow(TeamId("test-team")))
         var clicked = false
         setContent {
             MaterialTheme {
@@ -103,7 +105,7 @@ class ProjectListScreenTest {
 
     @Test
     fun `fab opens create project dialog`() = runComposeUiTest {
-        val vm = ProjectListViewModel(ProjectApiClient(projectClient("""{"projects":[]}""")))
+        val vm = ProjectListViewModel(ProjectApiClient(projectClient("""{"projects":[]}""")), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme {
                 ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = {}, onLogout = {})
@@ -118,7 +120,7 @@ class ProjectListScreenTest {
 
     @Test
     fun `clicking project item triggers edit callback`() = runComposeUiTest {
-        val vm = ProjectListViewModel(ProjectApiClient(projectClient()))
+        val vm = ProjectListViewModel(ProjectApiClient(projectClient()), MutableStateFlow(TeamId("test-team")))
         var editedId: ProjectId? = null
         setContent {
             MaterialTheme {
@@ -133,7 +135,7 @@ class ProjectListScreenTest {
 
     @Test
     fun `delete button opens confirmation dialog`() = runComposeUiTest {
-        val vm = ProjectListViewModel(ProjectApiClient(projectClient()))
+        val vm = ProjectListViewModel(ProjectApiClient(projectClient()), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme {
                 ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = {}, onLogout = {})
@@ -148,7 +150,7 @@ class ProjectListScreenTest {
 
     @Test
     fun `delete confirmation dialog cancel dismisses`() = runComposeUiTest {
-        val vm = ProjectListViewModel(ProjectApiClient(projectClient()))
+        val vm = ProjectListViewModel(ProjectApiClient(projectClient()), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme {
                 ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = {}, onLogout = {})
@@ -164,7 +166,7 @@ class ProjectListScreenTest {
 
     @Test
     fun `releases button triggers callback`() = runComposeUiTest {
-        val vm = ProjectListViewModel(ProjectApiClient(projectClient("""{"projects":[]}""")))
+        val vm = ProjectListViewModel(ProjectApiClient(projectClient("""{"projects":[]}""")), MutableStateFlow(TeamId("test-team")))
         var clicked = false
         setContent {
             MaterialTheme {
@@ -199,7 +201,7 @@ class ProjectListScreenTest {
             expectSuccess = true
         }
 
-        val vm = ProjectListViewModel(ProjectApiClient(client))
+        val vm = ProjectListViewModel(ProjectApiClient(client), MutableStateFlow(TeamId("test-team")))
         var editedId: ProjectId? = null
 
         setContent {

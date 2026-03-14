@@ -2,6 +2,7 @@ package com.github.mr3zee.auth
 
 import com.github.mr3zee.api.*
 import com.github.mr3zee.jsonClient
+import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.model.UserRole
 import com.github.mr3zee.testModule
 import io.ktor.client.call.*
@@ -255,7 +256,7 @@ class AuthRoutesTest {
         // Admin creates a project
         adminClient.post(ApiRoutes.Projects.BASE) {
             contentType(ContentType.Application.Json)
-            setBody(CreateProjectRequest(name = "Admin Project"))
+            setBody(CreateProjectRequest(name = "Admin Project", teamId = TeamId("00000000-0000-0000-0000-000000000000")))
         }.also { assertEquals(HttpStatusCode.Created, it.status) }
 
         // Second user registers and logs in

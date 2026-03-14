@@ -7,7 +7,9 @@ import com.github.mr3zee.connections.ConnectionFormScreen
 import com.github.mr3zee.connections.ConnectionListScreen
 import com.github.mr3zee.connections.ConnectionsViewModel
 import com.github.mr3zee.model.ConnectionId
+import com.github.mr3zee.model.TeamId
 import io.ktor.http.*
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -26,7 +28,7 @@ class ConnectionScreensTest {
 
     @Test
     fun `connection list shows connections`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(connClient()))
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient()), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme { ConnectionListScreen(viewModel = vm, onCreateConnection = {}, onEditConnection = {}, onBack = {}) }
         }
@@ -41,7 +43,7 @@ class ConnectionScreensTest {
 
     @Test
     fun `connection list shows empty state`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")))
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme { ConnectionListScreen(viewModel = vm, onCreateConnection = {}, onEditConnection = {}, onBack = {}) }
         }
@@ -52,7 +54,7 @@ class ConnectionScreensTest {
 
     @Test
     fun `connection list has create fab and back button`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")))
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme { ConnectionListScreen(viewModel = vm, onCreateConnection = {}, onEditConnection = {}, onBack = {}) }
         }
@@ -63,7 +65,7 @@ class ConnectionScreensTest {
 
     @Test
     fun `connection items have test and delete buttons`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(connClient()))
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient()), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme { ConnectionListScreen(viewModel = vm, onCreateConnection = {}, onEditConnection = {}, onBack = {}) }
         }
@@ -75,7 +77,7 @@ class ConnectionScreensTest {
 
     @Test
     fun `connection form renders with GitHub fields by default`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")))
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = {}) }
         }
@@ -91,7 +93,7 @@ class ConnectionScreensTest {
 
     @Test
     fun `save button disabled when form incomplete`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")))
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = {}) }
         }
@@ -103,7 +105,7 @@ class ConnectionScreensTest {
 
     @Test
     fun `save button enables when form complete`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")))
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = {}) }
         }
@@ -117,7 +119,7 @@ class ConnectionScreensTest {
 
     @Test
     fun `back button triggers callback`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")))
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")), MutableStateFlow(TeamId("test-team")))
         var backClicked = false
         setContent {
             MaterialTheme { ConnectionListScreen(viewModel = vm, onCreateConnection = {}, onEditConnection = {}, onBack = { backClicked = true }) }
@@ -129,7 +131,7 @@ class ConnectionScreensTest {
 
     @Test
     fun `connection list delete opens confirmation dialog`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(connClient()))
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient()), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme { ConnectionListScreen(viewModel = vm, onCreateConnection = {}, onEditConnection = {}, onBack = {}) }
         }
@@ -142,7 +144,7 @@ class ConnectionScreensTest {
 
     @Test
     fun `connection list delete confirmation cancel dismisses`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(connClient()))
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient()), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme { ConnectionListScreen(viewModel = vm, onCreateConnection = {}, onEditConnection = {}, onBack = {}) }
         }
@@ -156,7 +158,7 @@ class ConnectionScreensTest {
 
     @Test
     fun `connection form Slack type shows webhook field`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")))
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = {}) }
         }
@@ -169,7 +171,7 @@ class ConnectionScreensTest {
 
     @Test
     fun `connection form TeamCity type shows server and token fields`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")))
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = {}) }
         }
@@ -182,7 +184,7 @@ class ConnectionScreensTest {
 
     @Test
     fun `connection form Maven Central type shows username and password`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")))
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = {}) }
         }
@@ -195,7 +197,7 @@ class ConnectionScreensTest {
 
     @Test
     fun `connection form Slack validation requires webhook URL`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")))
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = {}) }
         }
@@ -212,7 +214,7 @@ class ConnectionScreensTest {
 
     @Test
     fun `connection form TeamCity validation requires both fields`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")))
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = {}) }
         }
@@ -231,7 +233,7 @@ class ConnectionScreensTest {
 
     @Test
     fun `connection form Maven Central validation requires both fields`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")))
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = {}) }
         }
@@ -249,7 +251,7 @@ class ConnectionScreensTest {
 
     @Test
     fun `connection form back button triggers callback`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")))
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")), MutableStateFlow(TeamId("test-team")))
         var backClicked = false
         setContent {
             MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = { backClicked = true }) }
@@ -261,7 +263,7 @@ class ConnectionScreensTest {
 
     @Test
     fun `connection list error state shows snackbar`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("error", HttpStatusCode.InternalServerError)))
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("error", HttpStatusCode.InternalServerError)), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme { ConnectionListScreen(viewModel = vm, onCreateConnection = {}, onEditConnection = {}, onBack = {}) }
         }
@@ -272,7 +274,7 @@ class ConnectionScreensTest {
 
     @Test
     fun `connection form GitHub requires all three fields`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")))
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = {}) }
         }
@@ -309,7 +311,7 @@ class ConnectionScreensTest {
 
     @Test
     fun `edit form shows Edit Connection title`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(editClient(githubConnectionJson, "/connections/c1")))
+        val vm = ConnectionsViewModel(ConnectionApiClient(editClient(githubConnectionJson, "/connections/c1")), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme {
                 ConnectionFormScreen(viewModel = vm, connectionId = ConnectionId("c1"), onBack = {})
@@ -322,7 +324,7 @@ class ConnectionScreensTest {
 
     @Test
     fun `edit form pre-populates GitHub connection fields`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(editClient(githubConnectionJson, "/connections/c1")))
+        val vm = ConnectionsViewModel(ConnectionApiClient(editClient(githubConnectionJson, "/connections/c1")), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme {
                 ConnectionFormScreen(viewModel = vm, connectionId = ConnectionId("c1"), onBack = {})
@@ -340,7 +342,7 @@ class ConnectionScreensTest {
 
     @Test
     fun `edit form pre-populates Slack connection fields`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(editClient(slackConnectionJson, "/connections/c2")))
+        val vm = ConnectionsViewModel(ConnectionApiClient(editClient(slackConnectionJson, "/connections/c2")), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme {
                 ConnectionFormScreen(viewModel = vm, connectionId = ConnectionId("c2"), onBack = {})
@@ -356,7 +358,7 @@ class ConnectionScreensTest {
 
     @Test
     fun `edit form pre-populates TeamCity connection fields`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(editClient(teamCityConnectionJson, "/connections/c3")))
+        val vm = ConnectionsViewModel(ConnectionApiClient(editClient(teamCityConnectionJson, "/connections/c3")), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme {
                 ConnectionFormScreen(viewModel = vm, connectionId = ConnectionId("c3"), onBack = {})
@@ -372,7 +374,7 @@ class ConnectionScreensTest {
 
     @Test
     fun `edit form pre-populates Maven Central connection fields`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(editClient(mavenConnectionJson, "/connections/c4")))
+        val vm = ConnectionsViewModel(ConnectionApiClient(editClient(mavenConnectionJson, "/connections/c4")), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme {
                 ConnectionFormScreen(viewModel = vm, connectionId = ConnectionId("c4"), onBack = {})
@@ -389,7 +391,7 @@ class ConnectionScreensTest {
 
     @Test
     fun `edit form disables type selector`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(editClient(githubConnectionJson, "/connections/c1")))
+        val vm = ConnectionsViewModel(ConnectionApiClient(editClient(githubConnectionJson, "/connections/c1")), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme {
                 ConnectionFormScreen(viewModel = vm, connectionId = ConnectionId("c1"), onBack = {})
@@ -404,7 +406,7 @@ class ConnectionScreensTest {
 
     @Test
     fun `edit form save button enabled when loaded`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(editClient(githubConnectionJson, "/connections/c1")))
+        val vm = ConnectionsViewModel(ConnectionApiClient(editClient(githubConnectionJson, "/connections/c1")), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme {
                 ConnectionFormScreen(viewModel = vm, connectionId = ConnectionId("c1"), onBack = {})
@@ -419,7 +421,7 @@ class ConnectionScreensTest {
 
     @Test
     fun `edit form save triggers onBack`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(editClient(githubConnectionJson, "/connections/c1")))
+        val vm = ConnectionsViewModel(ConnectionApiClient(editClient(githubConnectionJson, "/connections/c1")), MutableStateFlow(TeamId("test-team")))
         var backCalled = false
         setContent {
             MaterialTheme {
@@ -436,7 +438,7 @@ class ConnectionScreensTest {
 
     @Test
     fun `edit form allows editing name`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(editClient(githubConnectionJson, "/connections/c1")))
+        val vm = ConnectionsViewModel(ConnectionApiClient(editClient(githubConnectionJson, "/connections/c1")), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme {
                 ConnectionFormScreen(viewModel = vm, connectionId = ConnectionId("c1"), onBack = {})
@@ -454,7 +456,7 @@ class ConnectionScreensTest {
 
     @Test
     fun `create form still shows New Connection title`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")))
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = {}) }
         }
@@ -464,7 +466,7 @@ class ConnectionScreensTest {
 
     @Test
     fun `create form type selector is enabled`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")))
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = {}) }
         }
@@ -474,7 +476,7 @@ class ConnectionScreensTest {
 
     @Test
     fun `clicking connection item triggers edit callback`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(connClient()))
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient()), MutableStateFlow(TeamId("test-team")))
         var editedId: ConnectionId? = null
         setContent {
             MaterialTheme {

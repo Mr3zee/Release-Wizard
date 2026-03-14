@@ -3,6 +3,7 @@ package com.github.mr3zee.projects
 import com.github.mr3zee.api.*
 import com.github.mr3zee.jsonClient
 import com.github.mr3zee.login
+import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.testModule
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -33,7 +34,7 @@ class ProjectsRoutesTest {
 
         val createResponse = client.post(ApiRoutes.Projects.BASE) {
             contentType(ContentType.Application.Json)
-            setBody(CreateProjectRequest(name = "Test Project", description = "A test"))
+            setBody(CreateProjectRequest(name = "Test Project", teamId = TeamId("00000000-0000-0000-0000-000000000000"), description = "A test"))
         }
         assertEquals(HttpStatusCode.Created, createResponse.status)
         val created = createResponse.body<ProjectResponse>()
@@ -55,7 +56,7 @@ class ProjectsRoutesTest {
 
         val response = client.post(ApiRoutes.Projects.BASE) {
             contentType(ContentType.Application.Json)
-            setBody(CreateProjectRequest(name = ""))
+            setBody(CreateProjectRequest(name = "", teamId = TeamId("00000000-0000-0000-0000-000000000000")))
         }
         assertEquals(HttpStatusCode.BadRequest, response.status)
     }
@@ -68,7 +69,7 @@ class ProjectsRoutesTest {
 
         val createResponse = client.post(ApiRoutes.Projects.BASE) {
             contentType(ContentType.Application.Json)
-            setBody(CreateProjectRequest(name = "Original"))
+            setBody(CreateProjectRequest(name = "Original", teamId = TeamId("00000000-0000-0000-0000-000000000000")))
         }
         val created = createResponse.body<ProjectResponse>()
 
@@ -104,7 +105,7 @@ class ProjectsRoutesTest {
 
         val createResponse = client.post(ApiRoutes.Projects.BASE) {
             contentType(ContentType.Application.Json)
-            setBody(CreateProjectRequest(name = "To Delete"))
+            setBody(CreateProjectRequest(name = "To Delete", teamId = TeamId("00000000-0000-0000-0000-000000000000")))
         }
         val created = createResponse.body<ProjectResponse>()
 
@@ -153,11 +154,11 @@ class ProjectsRoutesTest {
 
         client.post(ApiRoutes.Projects.BASE) {
             contentType(ContentType.Application.Json)
-            setBody(CreateProjectRequest(name = "Project A"))
+            setBody(CreateProjectRequest(name = "Project A", teamId = TeamId("00000000-0000-0000-0000-000000000000")))
         }
         client.post(ApiRoutes.Projects.BASE) {
             contentType(ContentType.Application.Json)
-            setBody(CreateProjectRequest(name = "Project B"))
+            setBody(CreateProjectRequest(name = "Project B", teamId = TeamId("00000000-0000-0000-0000-000000000000")))
         }
 
         val listResponse = client.get(ApiRoutes.Projects.BASE)

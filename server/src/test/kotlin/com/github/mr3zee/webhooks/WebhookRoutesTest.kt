@@ -5,6 +5,7 @@ import com.github.mr3zee.jsonClient
 import com.github.mr3zee.login
 import com.github.mr3zee.model.ConnectionConfig
 import com.github.mr3zee.model.ConnectionType
+import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.testModule
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -26,7 +27,7 @@ class WebhookRoutesTest {
     ): ConnectionResponse {
         val response = post(ApiRoutes.Connections.BASE) {
             contentType(ContentType.Application.Json)
-            setBody(CreateConnectionRequest(name = name, type = type, config = config))
+            setBody(CreateConnectionRequest(name = name, teamId = TeamId("00000000-0000-0000-0000-000000000000"), type = type, config = config))
         }
         return response.body()
     }

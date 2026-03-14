@@ -6,6 +6,7 @@ import com.github.mr3zee.login
 import com.github.mr3zee.testModule
 import com.github.mr3zee.model.ConnectionConfig
 import com.github.mr3zee.model.ConnectionType
+import com.github.mr3zee.model.TeamId
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
@@ -39,6 +40,7 @@ class ConnectionsRoutesTest {
             setBody(
                 CreateConnectionRequest(
                     name = "My GitHub",
+                    teamId = TeamId("00000000-0000-0000-0000-000000000000"),
                     type = ConnectionType.GITHUB,
                     config = ConnectionConfig.GitHubConfig(
                         token = "ghp_1234567890abcdef",
@@ -74,6 +76,7 @@ class ConnectionsRoutesTest {
             setBody(
                 CreateConnectionRequest(
                     name = "",
+                    teamId = TeamId("00000000-0000-0000-0000-000000000000"),
                     type = ConnectionType.SLACK,
                     config = ConnectionConfig.SlackConfig(webhookUrl = "https://hooks.slack.com/test"),
                 )
@@ -93,6 +96,7 @@ class ConnectionsRoutesTest {
             setBody(
                 CreateConnectionRequest(
                     name = "Original",
+                    teamId = TeamId("00000000-0000-0000-0000-000000000000"),
                     type = ConnectionType.TEAMCITY,
                     config = ConnectionConfig.TeamCityConfig(
                         serverUrl = "https://tc.example.com",
@@ -125,6 +129,7 @@ class ConnectionsRoutesTest {
             setBody(
                 CreateConnectionRequest(
                     name = "GitHub",
+                    teamId = TeamId("00000000-0000-0000-0000-000000000000"),
                     type = ConnectionType.GITHUB,
                     config = ConnectionConfig.GitHubConfig(
                         token = "ghp_old_token",
@@ -168,6 +173,7 @@ class ConnectionsRoutesTest {
             setBody(
                 CreateConnectionRequest(
                     name = "To Delete",
+                    teamId = TeamId("00000000-0000-0000-0000-000000000000"),
                     type = ConnectionType.SLACK,
                     config = ConnectionConfig.SlackConfig(webhookUrl = "https://hooks.slack.com/test"),
                 )
@@ -193,6 +199,7 @@ class ConnectionsRoutesTest {
             setBody(
                 CreateConnectionRequest(
                     name = "Test Conn",
+                    teamId = TeamId("00000000-0000-0000-0000-000000000000"),
                     type = ConnectionType.MAVEN_CENTRAL,
                     config = ConnectionConfig.MavenCentralConfig(
                         username = "user",
@@ -229,6 +236,7 @@ class ConnectionsRoutesTest {
             setBody(
                 CreateConnectionRequest(
                     name = "Encrypted Test",
+                    teamId = TeamId("00000000-0000-0000-0000-000000000000"),
                     type = ConnectionType.GITHUB,
                     config = ConnectionConfig.GitHubConfig(
                         token = "ghp_supersecret",

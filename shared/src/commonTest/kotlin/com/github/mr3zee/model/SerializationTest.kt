@@ -101,6 +101,7 @@ class SerializationTest {
     fun createProjectRequestRoundTrip() {
         val request = CreateProjectRequest(
             name = "New Project",
+            teamId = TeamId("test-team"),
             description = "Description",
             parameters = listOf(Parameter("key", "value")),
         )
@@ -161,6 +162,7 @@ class SerializationTest {
     fun connectionDtosRoundTrip() {
         val createRequest = CreateConnectionRequest(
             name = "My Slack",
+            teamId = TeamId("test-team"),
             type = ConnectionType.SLACK,
             config = ConnectionConfig.SlackConfig(webhookUrl = "https://hooks.slack.com/test"),
         )

@@ -38,6 +38,7 @@ class WebSocketLoadTest {
             setBody(
                 CreateProjectRequest(
                     name = "Test Project",
+                    teamId = TeamId("00000000-0000-0000-0000-000000000000"),
                     dagGraph = DagGraph(blocks = blocks, edges = edges),
                 )
             )

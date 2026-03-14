@@ -32,6 +32,7 @@ class ConcurrentReleasesTest {
             setBody(
                 CreateProjectRequest(
                     name = name,
+                    teamId = TeamId("00000000-0000-0000-0000-000000000000"),
                     dagGraph = DagGraph(blocks = blocks, edges = edges),
                     parameters = parameters,
                 )
