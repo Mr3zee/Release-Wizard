@@ -6,10 +6,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.model.BlockType
+import com.github.mr3zee.theme.LocalAppColors
 
 @Composable
 fun EditorToolbar(
@@ -23,6 +23,8 @@ fun EditorToolbar(
     hasSelection: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val appColors = LocalAppColors.current
+
     Column(
         modifier = modifier
             .width(200.dp)
@@ -44,7 +46,7 @@ fun EditorToolbar(
                     .fillMaxWidth()
                     .testTag("add_block_${type.name}"),
                 colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = blockTypeColor(type),
+                    contentColor = blockTypeColor(type, appColors),
                 ),
             ) {
                 Text(
@@ -60,7 +62,7 @@ fun EditorToolbar(
                 .fillMaxWidth()
                 .testTag("add_container"),
             colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = Color(0xFF6B7280),
+                contentColor = appColors.containerBlock,
             ),
         ) {
             Text("Container", style = MaterialTheme.typography.labelMedium)

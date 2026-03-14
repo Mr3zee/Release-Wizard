@@ -14,6 +14,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.unit.sp
 import com.github.mr3zee.model.*
+import com.github.mr3zee.theme.AppColors
 
 // Block dimensions in dp (logical coordinates)
 internal const val BLOCK_WIDTH = 180f
@@ -24,27 +25,18 @@ internal const val GRID_SIZE = 20f
 internal const val MIN_ZOOM = 0.25f
 internal const val MAX_ZOOM = 4f
 
-internal val CANVAS_BG = Color(0xFFF8F9FA)
-internal val GRID_DOT_COLOR = Color(0xFFD1D5DB)
-internal val EDGE_COLOR = Color(0xFF6B7280)
-internal val EDGE_SELECTED_COLOR = Color(0xFF3B82F6)
-internal val PORT_COLOR = Color(0xFF9CA3AF)
-internal val PORT_HOVER_COLOR = Color(0xFF3B82F6)
-internal val SELECTION_BORDER = Color(0xFF3B82F6)
-internal val DRAFT_EDGE_COLOR = Color(0xFF3B82F6)
-
-internal fun blockColor(block: Block): Color = when (block) {
-    is Block.ActionBlock -> blockTypeColor(block.type)
-    is Block.ContainerBlock -> Color(0xFF6B7280)
+internal fun blockColor(block: Block, colors: AppColors): Color = when (block) {
+    is Block.ActionBlock -> blockTypeColor(block.type, colors)
+    is Block.ContainerBlock -> colors.containerBlock
 }
 
-internal fun blockTypeColor(type: BlockType): Color = when (type) {
-    BlockType.TEAMCITY_BUILD -> Color(0xFF4A90D9)
-    BlockType.GITHUB_ACTION -> Color(0xFF8B5CF6)
-    BlockType.GITHUB_PUBLICATION -> Color(0xFF059669)
-    BlockType.MAVEN_CENTRAL_PUBLICATION -> Color(0xFFF59E0B)
-    BlockType.SLACK_MESSAGE -> Color(0xFFE11D48)
-    BlockType.USER_ACTION -> Color(0xFF0D9488)
+internal fun blockTypeColor(type: BlockType, colors: AppColors): Color = when (type) {
+    BlockType.TEAMCITY_BUILD -> colors.teamcityBuild
+    BlockType.GITHUB_ACTION -> colors.githubAction
+    BlockType.GITHUB_PUBLICATION -> colors.githubPublication
+    BlockType.MAVEN_CENTRAL_PUBLICATION -> colors.mavenCentral
+    BlockType.SLACK_MESSAGE -> colors.slackMessage
+    BlockType.USER_ACTION -> colors.userAction
 }
 
 internal fun blockTypeLabel(block: Block): String = when (block) {
@@ -115,7 +107,7 @@ internal fun handleScrollZoom(
     return newZoom to newPanOffset
 }
 
-internal fun DrawScope.drawGrid(transform: CanvasTransform) {
+internal fun DrawScope.drawGrid(transform: CanvasTransform, colors: AppColors) {
     val gridScreenSize = transform.toScreen(GRID_SIZE)
     if (gridScreenSize < 4f) return
 
@@ -126,7 +118,7 @@ internal fun DrawScope.drawGrid(transform: CanvasTransform) {
     while (x < size.width) {
         var y = startY
         while (y < size.height) {
-            drawCircle(GRID_DOT_COLOR, radius = 1.5f, center = Offset(x, y))
+            drawCircle(colors.canvasGridDots, radius = 1.5f, center = Offset(x, y))
             y += gridScreenSize
         }
         x += gridScreenSize
@@ -140,7 +132,8 @@ internal fun DrawScope.drawBlock(
     isSelected: Boolean,
     textMeasurer: TextMeasurer,
     zoom: Float,
-    fillColor: Color = blockColor(block),
+    colors: AppColors,
+    fillColor: Color = blockColor(block, colors),
 ) {
     val screenX = transform.toScreenX(position.x)
     val screenY = transform.toScreenY(position.y)
@@ -150,7 +143,7 @@ internal fun DrawScope.drawBlock(
 
     // Shadow
     drawRoundRect(
-        color = Color(0x20000000),
+        color = colors.blockShadow,
         topLeft = Offset(screenX + 2f, screenY + 2f),
         size = Size(screenW, screenH),
         cornerRadius = CornerRadius(cornerRadius),
@@ -167,7 +160,7 @@ internal fun DrawScope.drawBlock(
     // Selection border
     if (isSelected) {
         drawRoundRect(
-            color = SELECTION_BORDER,
+            color = colors.blockSelectionHighlight,
             topLeft = Offset(screenX, screenY),
             size = Size(screenW, screenH),
             cornerRadius = CornerRadius(cornerRadius),
@@ -179,7 +172,7 @@ internal fun DrawScope.drawBlock(
     val nameSize = (13f * zoom).coerceIn(6f, 40f)
     val nameLayout = textMeasurer.measure(
         block.name,
-        style = TextStyle(fontSize = nameSize.sp, color = Color.White),
+        style = TextStyle(fontSize = nameSize.sp, color = colors.blockText),
     )
     drawText(
         nameLayout,
@@ -190,7 +183,7 @@ internal fun DrawScope.drawBlock(
     val typeSize = (10f * zoom).coerceIn(5f, 30f)
     val typeLayout = textMeasurer.measure(
         blockTypeLabel(block),
-        style = TextStyle(fontSize = typeSize.sp, color = Color(0xCCFFFFFF)),
+        style = TextStyle(fontSize = typeSize.sp, color = colors.blockTextSecondary),
     )
     drawText(
         typeLayout,
@@ -203,13 +196,14 @@ internal fun DrawScope.drawPorts(
     position: BlockPosition,
     isInputHovered: Boolean,
     isOutputHovered: Boolean,
+    colors: AppColors,
 ) {
     val portScreenRadius = transform.toScreen(PORT_RADIUS)
 
     val inX = transform.toScreenX(position.x)
     val inY = transform.toScreenY(position.y + BLOCK_HEIGHT / 2)
     drawCircle(
-        color = if (isInputHovered) PORT_HOVER_COLOR else PORT_COLOR,
+        color = if (isInputHovered) colors.portHover else colors.portDefault,
         radius = portScreenRadius,
         center = Offset(inX, inY),
     )
@@ -217,7 +211,7 @@ internal fun DrawScope.drawPorts(
     val outX = transform.toScreenX(position.x + BLOCK_WIDTH)
     val outY = transform.toScreenY(position.y + BLOCK_HEIGHT / 2)
     drawCircle(
-        color = if (isOutputHovered) PORT_HOVER_COLOR else PORT_COLOR,
+        color = if (isOutputHovered) colors.portHover else colors.portDefault,
         radius = portScreenRadius,
         center = Offset(outX, outY),
     )
@@ -228,6 +222,7 @@ internal fun DrawScope.drawEdge(
     fromPos: BlockPosition,
     toPos: BlockPosition,
     isSelected: Boolean,
+    colors: AppColors,
 ) {
     val startX = transform.toScreenX(fromPos.x + BLOCK_WIDTH)
     val startY = transform.toScreenY(fromPos.y + BLOCK_HEIGHT / 2)
@@ -245,20 +240,20 @@ internal fun DrawScope.drawEdge(
 
     drawPath(
         path,
-        color = if (isSelected) EDGE_SELECTED_COLOR else EDGE_COLOR,
+        color = if (isSelected) colors.edgeSelected else colors.edgeDefault,
         style = Stroke(width = if (isSelected) 3f else 2f),
     )
 
     // Arrow dot at end
     val arrowSize = transform.toScreen(6f)
     drawCircle(
-        color = if (isSelected) EDGE_SELECTED_COLOR else EDGE_COLOR,
+        color = if (isSelected) colors.edgeSelected else colors.edgeDefault,
         radius = arrowSize,
         center = Offset(endX, endY),
     )
 }
 
-internal fun DrawScope.drawDraftEdge(start: Offset, end: Offset) {
+internal fun DrawScope.drawDraftEdge(start: Offset, end: Offset, colors: AppColors) {
     val dx = end.x - start.x
     val cp1x = start.x + dx * 0.4f
     val cp2x = end.x - dx * 0.4f
@@ -270,7 +265,7 @@ internal fun DrawScope.drawDraftEdge(start: Offset, end: Offset) {
 
     drawPath(
         path,
-        color = DRAFT_EDGE_COLOR,
+        color = colors.draftEdge,
         style = Stroke(
             width = 2f,
             pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(8f, 4f)),

@@ -15,13 +15,15 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.rememberTextMeasurer
 import com.github.mr3zee.editor.*
 import com.github.mr3zee.model.*
+import com.github.mr3zee.theme.AppColors
+import com.github.mr3zee.theme.LocalAppColors
 
-internal fun blockStatusColor(status: BlockStatus): Color = when (status) {
-    BlockStatus.SUCCEEDED -> Color(0xFF22C55E) // green
-    BlockStatus.RUNNING -> Color(0xFF3B82F6)   // blue
-    BlockStatus.FAILED -> Color(0xFFEF4444)    // red
-    BlockStatus.WAITING -> Color(0xFF9CA3AF)   // gray
-    BlockStatus.WAITING_FOR_INPUT -> Color(0xFFF59E0B) // amber
+internal fun blockStatusColor(status: BlockStatus, colors: AppColors): Color = when (status) {
+    BlockStatus.SUCCEEDED -> colors.blockStatusSucceeded
+    BlockStatus.RUNNING -> colors.blockStatusRunning
+    BlockStatus.FAILED -> colors.blockStatusFailed
+    BlockStatus.WAITING -> colors.blockStatusWaiting
+    BlockStatus.WAITING_FOR_INPUT -> colors.blockStatusWaitingForInput
 }
 
 @Composable
@@ -33,6 +35,7 @@ fun ExecutionDagCanvas(
 ) {
     val textMeasurer = rememberTextMeasurer()
     val density = LocalDensity.current.density
+    val appColors = LocalAppColors.current
 
     var zoom by remember { mutableFloatStateOf(1f) }
     var panOffset by remember { mutableStateOf(Offset.Zero) }
@@ -47,10 +50,10 @@ fun ExecutionDagCanvas(
         modifier = modifier
             .fillMaxSize()
             .clipToBounds()
-            .background(CANVAS_BG)
+            .background(appColors.canvasBackground)
             .testTag("execution_dag_canvas")
             // Scroll for zoom
-            .pointerInput(graph) {
+            .pointerInput(Unit) {
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent()
@@ -62,7 +65,7 @@ fun ExecutionDagCanvas(
                 }
             }
             // Pan and click
-            .pointerInput(graph) {
+            .pointerInput(Unit) {
                 awaitPointerEventScope {
                     while (true) {
                         val down = awaitPointerEvent()
@@ -106,13 +109,13 @@ fun ExecutionDagCanvas(
                 }
             }
     ) {
-        drawGrid(drawTransform)
+        drawGrid(drawTransform, appColors)
 
         // Edges
         for (edge in graph.edges) {
             val fromPos = graph.positions[edge.fromBlockId] ?: continue
             val toPos = graph.positions[edge.toBlockId] ?: continue
-            drawEdge(drawTransform, fromPos, toPos, isSelected = false)
+            drawEdge(drawTransform, fromPos, toPos, isSelected = false, appColors)
         }
 
         // Blocks with status-based colors
@@ -120,11 +123,11 @@ fun ExecutionDagCanvas(
             val pos = graph.positions[block.id] ?: continue
             val execution = executionMap[block.id]
             val fillColor = if (execution != null) {
-                blockStatusColor(execution.status)
+                blockStatusColor(execution.status, appColors)
             } else {
-                blockColor(block)
+                blockColor(block, appColors)
             }
-            drawBlock(drawTransform, block, pos, isSelected = false, textMeasurer, zoom, fillColor)
+            drawBlock(drawTransform, block, pos, isSelected = false, textMeasurer, zoom, appColors, fillColor)
         }
     }
 }
