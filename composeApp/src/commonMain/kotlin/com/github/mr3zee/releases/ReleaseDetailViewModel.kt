@@ -34,6 +34,9 @@ class ReleaseDetailViewModel(
     private val _reconnectAttempt = MutableStateFlow(0)
     val reconnectAttempt: StateFlow<Int> = _reconnectAttempt
 
+    /** Tracks the highest sequence number seen from the server for incremental replay on reconnect. */
+    private var lastSequenceNumber: Long = 0
+
     private var wsJob: Job? = null
 
     fun connect() {
@@ -48,6 +51,7 @@ class ReleaseDetailViewModel(
         wsJob = null
         _isConnected.value = false
         _reconnectAttempt.value = 0
+        lastSequenceNumber = 0
     }
 
     private suspend fun connectWithRetry() {
@@ -55,8 +59,11 @@ class ReleaseDetailViewModel(
             try {
                 _reconnectAttempt.value = 0
 
-                releaseApiClient.watchRelease(releaseId).collect { event ->
-                    // Mark connected on first event (the Snapshot)
+                // Pass lastSequenceNumber for incremental replay on reconnect.
+                // On first connect this is 0 so the server sends a full snapshot.
+                val seqToSend = lastSequenceNumber.takeIf { it > 0 }
+                releaseApiClient.watchRelease(releaseId, lastSeq = seqToSend).collect { event ->
+                    // Mark connected on first event (the Snapshot or first replayed event)
                     if (!_isConnected.value) {
                         _isConnected.value = true
                     }
@@ -85,6 +92,11 @@ class ReleaseDetailViewModel(
     }
 
     private fun handleEvent(event: ReleaseEvent) {
+        // Track highest sequence number for incremental replay on reconnect
+        if (event.sequenceNumber > lastSequenceNumber) {
+            lastSequenceNumber = event.sequenceNumber
+        }
+
         when (event) {
             is ReleaseEvent.Snapshot -> {
                 _release.value = event.release

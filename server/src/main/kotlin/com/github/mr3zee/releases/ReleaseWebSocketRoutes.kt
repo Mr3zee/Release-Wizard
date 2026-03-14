@@ -25,6 +25,17 @@ fun Route.releaseWebSocketRoutes() {
 
     route("${ApiRoutes.Releases.BASE}/{id}") {
         webSocket("/ws") {
+            // Validate Origin header to prevent cross-origin WebSocket hijacking
+            val origin = call.request.headers["Origin"]
+            val host = call.request.headers["Host"]
+            if (origin != null && host != null) {
+                val originHost = try { java.net.URI(origin).host } catch (_: Exception) { null }
+                if (originHost != null && originHost != host.substringBefore(":")) {
+                    close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Cross-origin WebSocket not allowed"))
+                    return@webSocket
+                }
+            }
+
             val idParam = call.parameters["id"]
             if (idParam == null) {
                 close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Missing release id"))
@@ -54,6 +65,9 @@ fun Route.releaseWebSocketRoutes() {
                 return@webSocket
             }
 
+            // Check for lastSeq query parameter for incremental replay
+            val lastSeqParam = call.request.queryParameters["lastSeq"]?.toLongOrNull()
+
             // Subscribe to events BEFORE querying snapshot to avoid race condition.
             // Use UNDISPATCHED start to ensure the collector begins immediately,
             // preventing events from being lost between subscription and snapshot.
@@ -64,28 +78,54 @@ fun Route.releaseWebSocketRoutes() {
                     .collect { eventBuffer.send(it) }
             }
 
-            // Send initial snapshot
-            val executions = service.getBlockExecutions(releaseId)
-            val currentRelease = service.getRelease(releaseId) ?: release
-            val snapshot = ReleaseEvent.Snapshot(
-                releaseId = releaseId,
-                release = currentRelease,
-                blockExecutions = executions,
-            )
-            send(Frame.Text(AppJson.encodeToString(ReleaseEvent.serializer(), snapshot)))
+            // Determine whether we can do incremental replay or need a full snapshot
+            var sentSnapshot = false
+            var lastReplayedSeq = 0L
+            // Track the latest release state for the terminal check below
+            var latestRelease = release
+            if (lastSeqParam != null && lastSeqParam > 0) {
+                val replayEvents = engine.getReplayEvents(releaseId, lastSeqParam)
+                if (replayEvents != null) {
+                    // Incremental replay: send only missed events
+                    for (replayEvent in replayEvents) {
+                        send(Frame.Text(AppJson.encodeToString(ReleaseEvent.serializer(), replayEvent)))
+                        if (replayEvent.sequenceNumber > lastReplayedSeq) {
+                            lastReplayedSeq = replayEvent.sequenceNumber
+                        }
+                    }
+                    sentSnapshot = true
+                }
+            }
+
+            if (!sentSnapshot) {
+                // Full snapshot fallback (original behavior)
+                val executions = service.getBlockExecutions(releaseId)
+                val currentRelease = service.getRelease(releaseId) ?: release
+                latestRelease = currentRelease
+                val snapshot = ReleaseEvent.Snapshot(
+                    releaseId = releaseId,
+                    release = currentRelease,
+                    blockExecutions = executions,
+                )
+                send(Frame.Text(AppJson.encodeToString(ReleaseEvent.serializer(), snapshot)))
+            }
 
             // If the release is already in a terminal state, the ReleaseCompleted event
             // may have been emitted before our subscription started. Close immediately.
-            if (currentRelease.status.isTerminal) {
+            if (latestRelease.status.isTerminal) {
                 close(CloseReason(CloseReason.Codes.NORMAL, "Release completed"))
                 collectJob.cancel()
                 eventBuffer.close()
                 return@webSocket
             }
 
-            // Forward buffered and subsequent events
+            // Forward buffered and subsequent events, skipping any already sent during replay
             try {
                 for (event in eventBuffer) {
+                    // Skip events that were already sent during incremental replay
+                    if (lastReplayedSeq > 0 && event.sequenceNumber > 0 && event.sequenceNumber <= lastReplayedSeq) {
+                        continue
+                    }
                     send(Frame.Text(AppJson.encodeToString(ReleaseEvent.serializer(), event)))
 
                     if (event is ReleaseEvent.ReleaseCompleted) {

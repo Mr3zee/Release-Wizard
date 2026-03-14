@@ -12,6 +12,7 @@ import kotlinx.serialization.json.JsonClassDiscriminator
 @JsonClassDiscriminator("type")
 sealed class ReleaseEvent {
     abstract val releaseId: ReleaseId
+    abstract val sequenceNumber: Long
 
     @Serializable
     @SerialName("snapshot")
@@ -19,6 +20,7 @@ sealed class ReleaseEvent {
         override val releaseId: ReleaseId,
         val release: Release,
         val blockExecutions: List<BlockExecution>,
+        override val sequenceNumber: Long = 0,
     ) : ReleaseEvent()
 
     @Serializable
@@ -28,6 +30,7 @@ sealed class ReleaseEvent {
         val status: ReleaseStatus,
         val startedAt: Instant? = null,
         val finishedAt: Instant? = null,
+        override val sequenceNumber: Long = 0,
     ) : ReleaseEvent()
 
     @Serializable
@@ -35,6 +38,7 @@ sealed class ReleaseEvent {
     data class BlockExecutionUpdated(
         override val releaseId: ReleaseId,
         val blockExecution: BlockExecution,
+        override val sequenceNumber: Long = 0,
     ) : ReleaseEvent()
 
     @Serializable
@@ -43,5 +47,16 @@ sealed class ReleaseEvent {
         override val releaseId: ReleaseId,
         val status: ReleaseStatus,
         val finishedAt: Instant,
+        override val sequenceNumber: Long = 0,
     ) : ReleaseEvent()
+}
+
+/**
+ * Returns a copy of this event with the given sequence number.
+ */
+fun ReleaseEvent.withSequenceNumber(seq: Long): ReleaseEvent = when (this) {
+    is ReleaseEvent.Snapshot -> copy(sequenceNumber = seq)
+    is ReleaseEvent.ReleaseStatusChanged -> copy(sequenceNumber = seq)
+    is ReleaseEvent.BlockExecutionUpdated -> copy(sequenceNumber = seq)
+    is ReleaseEvent.ReleaseCompleted -> copy(sequenceNumber = seq)
 }

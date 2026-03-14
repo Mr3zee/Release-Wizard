@@ -1,6 +1,7 @@
 package com.github.mr3zee.execution
 
 import com.github.mr3zee.api.ReleaseEvent
+import com.github.mr3zee.api.withSequenceNumber
 import com.github.mr3zee.connections.ConnectionsRepository
 import com.github.mr3zee.dag.DagTopologicalSort
 import com.github.mr3zee.dag.DagValidator
@@ -52,6 +53,13 @@ class ExecutionEngine(
     // Pending user action approvals: releaseId -> blockId -> CompletableDeferred
     private val pendingApprovals = ConcurrentHashMap<ReleaseId, ConcurrentHashMap<BlockId, CompletableDeferred<Map<String, String>>>>()
 
+    // Per-release sequence counter for replay support
+    private val sequenceCounters = ConcurrentHashMap<ReleaseId, java.util.concurrent.atomic.AtomicLong>()
+
+    // Per-release replay buffer (most recent events, capped at maxReplayBufferSize)
+    private val replayBuffers = ConcurrentHashMap<ReleaseId, java.util.ArrayDeque<ReleaseEvent>>()
+    private val maxReplayBufferSize = 1000
+
     // Event stream for WebSocket subscribers
     private val _events = MutableSharedFlow<ReleaseEvent>(
         replay = 0,
@@ -60,8 +68,41 @@ class ExecutionEngine(
     )
     val events: SharedFlow<ReleaseEvent> = _events.asSharedFlow()
 
+    /**
+     * Returns buffered events for [releaseId] with sequence number strictly greater than [afterSequence].
+     * Returns `null` if the replay buffer has no record for this release (e.g. buffer was evicted
+     * or the release never ran on this server instance), signalling that a full snapshot is needed.
+     * Returns an empty list if the buffer exists but all events are at or below [afterSequence]
+     * (i.e. the client is already up-to-date).
+     */
+    fun getReplayEvents(releaseId: ReleaseId, afterSequence: Long): List<ReleaseEvent>? {
+        val buffer = replayBuffers[releaseId] ?: return null
+        synchronized(buffer) {
+            // If the client's last sequence is older than the oldest buffered event,
+            // we cannot guarantee continuity — caller should fall back to a full snapshot.
+            val oldest = buffer.peekFirst() ?: return emptyList()
+            if (afterSequence > 0 && oldest.sequenceNumber > afterSequence + 1) {
+                return null
+            }
+            return buffer.filter { it.sequenceNumber > afterSequence }
+        }
+    }
+
     private fun emitEvent(event: ReleaseEvent) {
-        _events.tryEmit(event)
+        val releaseId = event.releaseId
+        val seq = sequenceCounters.getOrPut(releaseId) { java.util.concurrent.atomic.AtomicLong(0) }
+            .incrementAndGet()
+        val numberedEvent = event.withSequenceNumber(seq)
+
+        val buffer = replayBuffers.getOrPut(releaseId) { java.util.ArrayDeque() }
+        synchronized(buffer) {
+            buffer.addLast(numberedEvent)
+            while (buffer.size > maxReplayBufferSize) {
+                buffer.removeFirst()
+            }
+        }
+
+        _events.tryEmit(numberedEvent)
     }
 
     /**
@@ -89,6 +130,9 @@ class ExecutionEngine(
                 activeJobs.remove(release.id)
                 pendingApprovals.remove(release.id)
                 completionEmitted.remove(release.id)
+                replayBuffers.remove(release.id)
+                sequenceCounters.remove(release.id)
+                restartMutexes.remove(release.id)
             }
         }
         return job
@@ -121,6 +165,13 @@ class ExecutionEngine(
     }
 
     /**
+     * Emit a block execution update event (e.g. for partial approval tracking).
+     */
+    internal fun emitBlockUpdate(releaseId: ReleaseId, execution: BlockExecution) {
+        emitEvent(ReleaseEvent.BlockExecutionUpdated(releaseId, execution))
+    }
+
+    /**
      * Resume a previously RUNNING release after server restart.
      * Reconstructs the execution state from DB records and resumes blocks
      * based on their persisted status.
@@ -136,6 +187,9 @@ class ExecutionEngine(
                 activeJobs.remove(release.id)
                 pendingApprovals.remove(release.id)
                 completionEmitted.remove(release.id)
+                replayBuffers.remove(release.id)
+                sequenceCounters.remove(release.id)
+                restartMutexes.remove(release.id)
             }
         }
     }
@@ -169,7 +223,7 @@ class ExecutionEngine(
 
             coroutineScope {
                 runWaveLoop(this, release, graph, remaining, predecessors, statusMap) { block ->
-                    recoverBlock(release, block, statusMap, outputsMap, execMap)
+                    recoverBlock(release, block, statusMap, outputsMap, execMap, persistedExecutions)
                 }
             }
 
@@ -186,9 +240,10 @@ class ExecutionEngine(
         statusMap: MutableMap<BlockId, BlockStatus>,
         outputsMap: MutableMap<BlockId, Map<String, String>>,
         execMap: Map<BlockId, BlockExecution>,
+        persistedExecutions: List<BlockExecution>,
     ) {
         when (block) {
-            is Block.ContainerBlock -> recoverContainer(release, block, statusMap, outputsMap)
+            is Block.ContainerBlock -> recoverContainer(release, block, statusMap, outputsMap, persistedExecutions)
             is Block.ActionBlock -> recoverAction(release, block, statusMap, outputsMap, execMap[block.id])
         }
     }
@@ -198,10 +253,10 @@ class ExecutionEngine(
         container: Block.ContainerBlock,
         statusMap: MutableMap<BlockId, BlockStatus>,
         outputsMap: MutableMap<BlockId, Map<String, String>>,
+        persistedExecutions: List<BlockExecution>,
     ) {
-        // Load persisted child executions once, shared between init and wave execution
-        val persistedChildExecs = repository.findBlockExecutions(release.id)
-        val childExecMap = persistedChildExecs.associateBy { it.blockId }
+        // Reuse the already-loaded executions from the parent recovery instead of re-fetching from DB
+        val childExecMap = persistedExecutions.associateBy { it.blockId }
 
         runContainer(
             release = release,
@@ -214,7 +269,7 @@ class ExecutionEngine(
             runWaves = { wavesScope, childGraph, sorted, childPredecessors, childStatusMap, childOutputsMap ->
                 val remaining = sorted.filter { childStatusMap[it] != BlockStatus.SUCCEEDED }.toMutableList()
                 runWaveLoop(wavesScope, release, childGraph, remaining, childPredecessors, childStatusMap) { block ->
-                    recoverBlock(release, block, childStatusMap, childOutputsMap, childExecMap)
+                    recoverBlock(release, block, childStatusMap, childOutputsMap, childExecMap, persistedExecutions)
                 }
             },
         )
@@ -245,6 +300,13 @@ class ExecutionEngine(
 
                 val deferred = CompletableDeferred<Map<String, String>>()
                 pendingApprovals.getOrPut(release.id) { ConcurrentHashMap() }[block.id] = deferred
+
+                // Check if approvals already met threshold before crash — auto-complete
+                val actionBlock = findActionBlock(release.dagSnapshot, block.id)
+                val rule = actionBlock?.approvalRule
+                if (rule != null && rule.requiredCount > 0 && persistedExec.approvals.size >= rule.requiredCount) {
+                    deferred.complete(emptyMap())
+                }
 
                 val outputs = deferred.await()
                 pendingApprovals[release.id]?.remove(block.id)
@@ -311,6 +373,8 @@ class ExecutionEngine(
             activeJobs.remove(releaseId)
             pendingApprovals.remove(releaseId)
             completionEmitted.remove(releaseId)
+            replayBuffers.remove(releaseId)
+            sequenceCounters.remove(releaseId)
 
             // Reset the failed block in DB
             val resetExec = BlockExecution(
@@ -645,7 +709,7 @@ class ExecutionEngine(
                     it == BlockStatus.RUNNING || it == BlockStatus.WAITING_FOR_INPUT
                 }
                 if (anyRunning) {
-                    delay(50.milliseconds)
+                    delay(100.milliseconds)
                     continue
                 }
                 break
@@ -723,11 +787,15 @@ class ExecutionEngine(
     ) {
         outputsMap[blockId] = outputs
         statusMap[blockId] = BlockStatus.SUCCEEDED
+        // Preserve approvals from the WAITING_FOR_INPUT state when transitioning to SUCCEEDED
+        val existingExecution = repository.findBlockExecution(releaseId, blockId)
+        val approvals = existingExecution?.approvals ?: emptyList()
         persistAndEmit(releaseId, BlockExecution(
             blockId = blockId,
             releaseId = releaseId,
             status = BlockStatus.SUCCEEDED,
             outputs = outputs,
+            approvals = approvals,
             startedAt = startTime,
             finishedAt = Clock.System.now(),
         ))
@@ -776,6 +844,22 @@ class ExecutionEngine(
     private suspend fun persistAndEmit(releaseId: ReleaseId, execution: BlockExecution) {
         repository.upsertBlockExecution(execution)
         emitEvent(ReleaseEvent.BlockExecutionUpdated(releaseId, execution))
+    }
+
+    /**
+     * Recursively search for an [Block.ActionBlock] by [blockId] in the given [graph],
+     * including inside nested container blocks.
+     */
+    private fun findActionBlock(graph: DagGraph, blockId: BlockId): Block.ActionBlock? {
+        for (block in graph.blocks) {
+            when (block) {
+                is Block.ActionBlock -> if (block.id == blockId) return block
+                is Block.ContainerBlock -> {
+                    findActionBlock(block.children, blockId)?.let { return it }
+                }
+            }
+        }
+        return null
     }
 
     private fun buildPredecessorMap(graph: DagGraph): Map<BlockId, Set<BlockId>> {
