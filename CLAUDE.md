@@ -45,6 +45,7 @@ Blocks form a DAG. Each node is either a **Container** (holds a sub-graph) or an
 
 ## Key Constraints
 
+- **NEVER use `!!` (non-null assertion) in Kotlin.** Handle nulls gracefully (e.g., `?.`, `?:`, `let`, `when`) or throw an explicit exception with a descriptive message (e.g., `?: error("Expected non-null X because Y")`). No exceptions to this rule.
 - Compose code only in `commonMain` source sets
 - Add new dependencies through `gradle/libs.versions.toml`, never hardcode versions
 - Never use `delay()` in tests — use `waitUntil` or `awaitExecution` patterns
