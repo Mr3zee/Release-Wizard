@@ -48,7 +48,6 @@ fun Route.webhookRoutes() {
     }
 }
 
-// todo claude: duplicate function
 private suspend fun ApplicationCall.requireWebhookConnectionId(): ConnectionId? {
     val raw = parameters["connectionId"]
     if (raw == null) {

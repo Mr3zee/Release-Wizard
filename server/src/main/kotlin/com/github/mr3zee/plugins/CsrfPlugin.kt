@@ -1,6 +1,7 @@
 package com.github.mr3zee.plugins
 
 import com.github.mr3zee.ForbiddenException
+import com.github.mr3zee.api.ApiRoutes
 import com.github.mr3zee.auth.UserSession
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -31,12 +32,10 @@ val CsrfProtection = createApplicationPlugin(name = "CsrfProtection") {
 
         // Exempt unauthenticated webhook/trigger endpoints
         val path = call.request.path()
-        // todo claude: ApiRoutes not used
-        if (path.startsWith("/api/v1/webhooks/") || path.startsWith("/api/v1/triggers/webhook/")) return@onCall
+        if (path.startsWith(ApiRoutes.Webhooks.BASE + "/") || path.startsWith(ApiRoutes.Triggers.webhook(""))) return@onCall
 
-        // todo claude: ApiRoutes not used
         // Exempt auth endpoints (login, register) — no session exists yet
-        if (path == "/api/v1/auth/login" || path == "/api/v1/auth/register") return@onCall
+        if (path == ApiRoutes.Auth.LOGIN || path == ApiRoutes.Auth.REGISTER) return@onCall
 
         // Only enforce CSRF if there is an active session
         val session = call.sessions.get<UserSession>() ?: return@onCall

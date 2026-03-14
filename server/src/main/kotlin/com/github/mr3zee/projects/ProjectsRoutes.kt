@@ -71,7 +71,6 @@ fun Route.projectRoutes() {
     }
 }
 
-// todo claude: duplicate function
 private suspend fun ApplicationCall.requireProjectId(): ProjectId? {
     val raw = parameters["id"]
     if (raw == null) {

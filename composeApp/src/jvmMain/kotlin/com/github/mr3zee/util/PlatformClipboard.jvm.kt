@@ -7,8 +7,8 @@ actual fun copyToClipboard(text: String) {
     try {
         val clipboard = Toolkit.getDefaultToolkit().systemClipboard
         clipboard.setContents(StringSelection(text), null)
-    } catch (_: Exception) {
-        // todo claude: log error
+    } catch (e: Exception) {
+        println("Failed to copy to clipboard: ${e.message}")
         // Clipboard may be unavailable (headless, Wayland, etc.)
     }
 }

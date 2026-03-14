@@ -1,10 +1,12 @@
 package com.github.mr3zee.triggers
 
 import com.github.mr3zee.NotFoundException
+import com.github.mr3zee.api.ApiRoutes
 import com.github.mr3zee.api.CreateTriggerRequest
 import com.github.mr3zee.api.TriggerListResponse
 import com.github.mr3zee.auth.userSession
-import com.github.mr3zee.model.ProjectId
+import com.github.mr3zee.util.requireProjectId
+import com.github.mr3zee.util.requireUuidParam
 import io.ktor.http.*
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.request.*
@@ -19,8 +21,7 @@ import java.util.UUID
 fun Route.triggerRoutes() {
     val service by inject<TriggerService>()
 
-    // todo claude: ApiRoutes not used
-    route("/api/v1/projects/{projectId}/triggers") {
+    route(ApiRoutes.Triggers.byProject("{projectId}")) {
         get {
             val projectId = call.requireProjectId()
             val triggers = service.listByProject(projectId, call.userSession())
@@ -69,8 +70,7 @@ fun Route.triggerRoutes() {
 fun Route.triggerWebhookRoutes() {
     val service by inject<TriggerService>()
 
-    // todo claude: ApiRoutes not used
-    post("/api/v1/triggers/webhook/{triggerId}") {
+    post(ApiRoutes.Triggers.webhook("{triggerId}")) {
         val triggerId = call.parameters["triggerId"]
         if (triggerId == null) {
             call.respond(HttpStatusCode.BadRequest, "Missing triggerId")
@@ -102,26 +102,6 @@ fun Route.triggerWebhookRoutes() {
 @kotlinx.serialization.Serializable
 data class ToggleTriggerRequest(val enabled: Boolean)
 
-// todo claude: duplicate function
-private fun ApplicationCall.requireProjectId(): ProjectId {
-    val raw = parameters["projectId"]
-        ?: throw IllegalArgumentException("Missing projectId")
-    try {
-        UUID.fromString(raw)
-    } catch (_: IllegalArgumentException) {
-        throw IllegalArgumentException("Invalid project ID format")
-    }
-    return ProjectId(raw)
-}
-
-// todo claude: duplicate function
 private fun ApplicationCall.requireTriggerId(): String {
-    val raw = parameters["triggerId"]
-        ?: throw IllegalArgumentException("Missing triggerId")
-    try {
-        UUID.fromString(raw)
-    } catch (_: IllegalArgumentException) {
-        throw IllegalArgumentException("Invalid trigger ID format")
-    }
-    return raw
+    return requireUuidParam("triggerId")
 }
