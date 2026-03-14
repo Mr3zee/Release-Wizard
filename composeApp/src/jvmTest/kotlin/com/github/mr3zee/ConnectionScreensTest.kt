@@ -34,9 +34,9 @@ class ConnectionScreensTest {
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("My GitHub").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("connection_list_screen").assertExists()
         onNodeWithText("My GitHub").assertExists()
-        onNodeWithText("GITHUB").assertExists()
+        onNodeWithTag("connection_item_c1").assertExists()
         onNodeWithText("Team Slack").assertExists()
-        onNodeWithText("SLACK").assertExists()
+        onNodeWithTag("connection_item_c2").assertExists()
     }
 
     @Test

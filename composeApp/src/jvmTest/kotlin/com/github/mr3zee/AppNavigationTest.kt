@@ -12,6 +12,7 @@ import com.github.mr3zee.auth.AuthViewModel
 import com.github.mr3zee.auth.LoginScreen
 import com.github.mr3zee.connections.ConnectionsViewModel
 import com.github.mr3zee.navigation.AppNavigation
+import com.github.mr3zee.navigation.NavigationController
 import com.github.mr3zee.navigation.Screen
 import com.github.mr3zee.projects.ProjectListViewModel
 import com.github.mr3zee.releases.ReleaseListViewModel
@@ -49,7 +50,8 @@ class AppNavigationTest {
 
         LaunchedEffect(Unit) { authViewModel.checkSession() }
 
-        var currentScreen by remember { mutableStateOf<Screen>(Screen.ProjectList) }
+        val navController = remember { NavigationController() }
+        val currentScreen = navController.currentScreen
 
         MaterialTheme {
             Surface {
@@ -58,13 +60,15 @@ class AppNavigationTest {
                     user == null -> LoginScreen(viewModel = authViewModel)
                     else -> AppNavigation(
                         currentScreen = currentScreen,
-                        onNavigate = { currentScreen = it },
+                        onNavigate = { navController.navigate(it) },
+                        onGoBack = { navController.goBack() },
+                        navController = navController,
                         projectListViewModel = projectListViewModel,
                         projectApiClient = projectApiClient,
                         releaseApiClient = releaseApiClient,
                         releaseListViewModel = releaseListViewModel,
                         connectionsViewModel = connectionsViewModel,
-                        onLogout = { authViewModel.logout(); currentScreen = Screen.ProjectList },
+                        onLogout = { authViewModel.logout(); navController.resetTo(Screen.ProjectList) },
                     )
                 }
             }
@@ -77,7 +81,7 @@ class AppNavigationTest {
 
         waitUntil(timeoutMillis = 5000L) { onAllNodesWithTag("project_list_screen").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("project_list_screen").assertExists()
-        onNodeWithText("Pipeline A").assertExists()
+        waitUntil(timeoutMillis = 5000L) { onAllNodesWithText("Pipeline A", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
     }
 
     @Test
@@ -128,10 +132,11 @@ class AppNavigationTest {
         waitUntil(timeoutMillis = 5000L) { onAllNodesWithTag("project_list_screen").fetchSemanticsNodes().isNotEmpty() }
 
         // Click project to navigate to editor
+        waitUntil(timeoutMillis = 5000L) { onAllNodesWithTag("project_item_p1").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("project_item_p1").performClick()
         waitUntil(timeoutMillis = 5000L) { onAllNodesWithTag("dag_editor_screen").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("dag_editor_screen").assertExists()
-        onNodeWithText("Pipeline A").assertExists()
+        waitUntil(timeoutMillis = 5000L) { onAllNodesWithText("Pipeline A", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
 
         // Click Back to return
         onNodeWithText("Back").performClick()

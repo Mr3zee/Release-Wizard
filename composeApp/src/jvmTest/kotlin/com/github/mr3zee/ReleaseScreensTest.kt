@@ -538,8 +538,11 @@ class ReleaseScreensTest {
             click(Offset(190f, 135f))
         }
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("block_detail_panel").fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithTag("block_error_text").assertExists()
-        onNodeWithText("Error: Connection timeout", substring = true).assertExists()
+        onNodeWithTag("error_detail_section", useUnmergedTree = true).assertExists()
+        // Expand the error section to reveal the error text
+        onNodeWithTag("error_header", useUnmergedTree = true).performClick()
+        waitForIdle()
+        onNodeWithText("Connection timeout", substring = true, useUnmergedTree = true).assertExists()
     }
 
     @Test
