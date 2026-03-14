@@ -17,8 +17,20 @@ fun Route.releaseRoutes() {
 
     route(ApiRoutes.Releases.BASE) {
         get {
-            val releases = service.listReleases(call.userSession())
-            call.respond(ReleaseListResponse(releases))
+            val offset = call.request.queryParameters["offset"]?.toIntOrNull() ?: 0
+            val limit = (call.request.queryParameters["limit"]?.toIntOrNull() ?: 20).coerceIn(1, 200)
+            val search = call.request.queryParameters["q"]
+            val statusStr = call.request.queryParameters["status"]
+            val status = statusStr?.let { runCatching { com.github.mr3zee.model.ReleaseStatus.valueOf(it) }.getOrNull() }
+            val projectId = call.request.queryParameters["projectId"]?.let { com.github.mr3zee.model.ProjectId(it) }
+            val tag = call.request.queryParameters["tag"]
+            val (releases, totalCount) = service.listReleases(
+                call.userSession(), offset, limit, search, status, projectId, tag,
+            )
+            call.respond(ReleaseListResponse(
+                releases = releases,
+                pagination = PaginationInfo(totalCount = totalCount, offset = offset, limit = limit),
+            ))
         }
 
         post {

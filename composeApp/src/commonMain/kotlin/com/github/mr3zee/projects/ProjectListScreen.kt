@@ -12,6 +12,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.model.ProjectTemplate
+import com.github.mr3zee.theme.ThemePreference
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -21,14 +22,17 @@ fun ProjectListScreen(
     onConnections: (() -> Unit)? = null,
     onReleases: (() -> Unit)? = null,
     onLogout: (() -> Unit)? = null,
+    themePreference: ThemePreference = ThemePreference.SYSTEM,
+    onThemeChange: (ThemePreference) -> Unit = {},
 ) {
     val projects by viewModel.projects.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val isLoadingMore by viewModel.isLoadingMore.collectAsState()
+    val pagination by viewModel.pagination.collectAsState()
 
-    LaunchedEffect(Unit) {
-        viewModel.loadProjects()
-    }
+    // Initial load is handled by the ViewModel's init block (debounced search flow).
 
     var showCreateDialog by remember { mutableStateOf(false) }
     var projectToDelete by remember { mutableStateOf<ProjectTemplate?>(null) }
@@ -38,6 +42,24 @@ fun ProjectListScreen(
             TopAppBar(
                 title = { Text("Projects") },
                 actions = {
+                    TextButton(
+                        onClick = {
+                            val next = when (themePreference) {
+                                ThemePreference.SYSTEM -> ThemePreference.LIGHT
+                                ThemePreference.LIGHT -> ThemePreference.DARK
+                                ThemePreference.DARK -> ThemePreference.SYSTEM
+                            }
+                            onThemeChange(next)
+                        },
+                        modifier = Modifier.testTag("theme_toggle_button"),
+                    ) {
+                        val label = when (themePreference) {
+                            ThemePreference.SYSTEM -> "Auto"
+                            ThemePreference.LIGHT -> "Light"
+                            ThemePreference.DARK -> "Dark"
+                        }
+                        Text(label)
+                    }
                     if (onReleases != null) {
                         TextButton(
                             onClick = onReleases,
@@ -80,6 +102,16 @@ fun ProjectListScreen(
                 .fillMaxSize()
                 .padding(padding),
         ) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { viewModel.setSearchQuery(it) },
+                placeholder = { Text("Search projects...") },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .testTag("search_field"),
+            )
 
             if (isLoading) {
                 Box(
@@ -127,6 +159,20 @@ fun ProjectListScreen(
                             onClick = { onEditProject(project.id) },
                             onDelete = { projectToDelete = project },
                         )
+                    }
+                    val hasMore = pagination?.let { (it.offset + it.limit) < it.totalCount } ?: false
+                    if (hasMore) {
+                        item {
+                            LaunchedEffect(Unit) { viewModel.loadMore() }
+                            if (isLoadingMore) {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                }
+                            }
+                        }
                     }
                 }
             }

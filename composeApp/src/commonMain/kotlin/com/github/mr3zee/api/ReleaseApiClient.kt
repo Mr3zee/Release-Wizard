@@ -7,6 +7,7 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
+import io.ktor.client.request.parameter
 import io.ktor.http.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.flow.Flow
@@ -14,8 +15,20 @@ import kotlinx.coroutines.flow.flow
 
 class ReleaseApiClient(private val client: HttpClient) {
 
-    suspend fun listReleases(): ReleaseListResponse {
-        return client.get(serverUrl(ApiRoutes.Releases.BASE)).body()
+    suspend fun listReleases(
+        offset: Int = 0,
+        limit: Int = 20,
+        search: String? = null,
+        status: String? = null,
+        projectId: String? = null,
+    ): ReleaseListResponse {
+        return client.get(serverUrl(ApiRoutes.Releases.BASE)) {
+            parameter("offset", offset)
+            parameter("limit", limit)
+            search?.let { parameter("q", it) }
+            status?.let { parameter("status", it) }
+            projectId?.let { parameter("projectId", it) }
+        }.body()
     }
 
     suspend fun startRelease(request: CreateReleaseRequest): ReleaseResponse {
@@ -49,8 +62,14 @@ class ReleaseApiClient(private val client: HttpClient) {
         return response.status == HttpStatusCode.OK
     }
 
-    fun watchRelease(releaseId: ReleaseId): Flow<ReleaseEvent> = flow {
-        client.webSocket(wsServerUrl(ApiRoutes.Releases.ws(releaseId.value))) {
+    fun watchRelease(releaseId: ReleaseId, lastSeq: Long? = null): Flow<ReleaseEvent> = flow {
+        val wsUrl = buildString {
+            append(wsServerUrl(ApiRoutes.Releases.ws(releaseId.value)))
+            if (lastSeq != null && lastSeq > 0) {
+                append("?lastSeq=$lastSeq")
+            }
+        }
+        client.webSocket(wsUrl) {
             for (frame in incoming) {
                 if (frame is Frame.Text) {
                     val event = AppJson.decodeFromString(ReleaseEvent.serializer(), frame.readText())

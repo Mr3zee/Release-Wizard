@@ -28,6 +28,7 @@ data class ConnectionResponse(
 data class ConnectionListResponse(
     val connections: List<Connection>,
     val webhookUrls: Map<String, String> = emptyMap(),
+    val pagination: PaginationInfo? = null,
 )
 
 @Serializable

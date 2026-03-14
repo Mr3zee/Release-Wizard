@@ -8,10 +8,17 @@ import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.model.Connection
 import com.github.mr3zee.model.ConnectionConfig
 import com.github.mr3zee.model.ConnectionId
+import com.github.mr3zee.model.ConnectionType
 import com.github.mr3zee.model.UserRole
 
 interface ConnectionsService {
-    suspend fun listConnections(session: UserSession): List<Connection>
+    suspend fun listConnections(
+        session: UserSession,
+        offset: Int = 0,
+        limit: Int = 20,
+        search: String? = null,
+        type: ConnectionType? = null,
+    ): Pair<List<Connection>, Long>
     suspend fun getConnection(id: ConnectionId, session: UserSession): Connection?
     suspend fun createConnection(request: CreateConnectionRequest, session: UserSession): Connection
     suspend fun updateConnection(id: ConnectionId, request: UpdateConnectionRequest, session: UserSession): Connection?
@@ -24,9 +31,16 @@ class DefaultConnectionsService(
     private val connectionTester: ConnectionTester,
 ) : ConnectionsService {
 
-    override suspend fun listConnections(session: UserSession): List<Connection> {
+    override suspend fun listConnections(
+        session: UserSession,
+        offset: Int,
+        limit: Int,
+        search: String?,
+        type: ConnectionType?,
+    ): Pair<List<Connection>, Long> {
         val ownerId = if (session.role == UserRole.ADMIN) null else session.userId
-        return repository.findAll(ownerId = ownerId).map { it.masked() }
+        val (connections, totalCount) = repository.findAllWithCount(ownerId = ownerId, offset = offset, limit = limit, search = search, type = type)
+        return connections.map { it.masked() } to totalCount
     }
 
     override suspend fun getConnection(id: ConnectionId, session: UserSession): Connection? {

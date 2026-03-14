@@ -12,6 +12,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.model.Connection
 import com.github.mr3zee.model.ConnectionId
+import com.github.mr3zee.model.ConnectionType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,10 +26,12 @@ fun ConnectionListScreen(
     val webhookUrls by viewModel.webhookUrls.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val typeFilter by viewModel.typeFilter.collectAsState()
+    val isLoadingMore by viewModel.isLoadingMore.collectAsState()
+    val pagination by viewModel.pagination.collectAsState()
 
-    LaunchedEffect(Unit) {
-        viewModel.loadConnections()
-    }
+    // Initial load is handled by the ViewModel's init block (debounced search/filter flow).
 
     var connectionToDelete by remember { mutableStateOf<Connection?>(null) }
 
@@ -58,6 +61,38 @@ fun ConnectionListScreen(
                 .fillMaxSize()
                 .padding(padding),
         ) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { viewModel.setSearchQuery(it) },
+                placeholder = { Text("Search connections...") },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .testTag("search_field"),
+            )
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                FilterChip(
+                    selected = typeFilter == null,
+                    onClick = { viewModel.setTypeFilter(null) },
+                    label = { Text("All") },
+                )
+                for (type in ConnectionType.entries) {
+                    FilterChip(
+                        selected = typeFilter == type,
+                        onClick = {
+                            viewModel.setTypeFilter(if (typeFilter == type) null else type)
+                        },
+                        label = { Text(type.name.replace("_", " ")) },
+                        modifier = Modifier.testTag("filter_${type.name}"),
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+
             if (error != null) {
                 Snackbar(
                     modifier = Modifier.padding(16.dp),
@@ -103,6 +138,20 @@ fun ConnectionListScreen(
                             onDelete = { connectionToDelete = connection },
                             onTest = { viewModel.testConnection(connection.id) },
                         )
+                    }
+                    val hasMore = pagination?.let { (it.offset + it.limit) < it.totalCount } ?: false
+                    if (hasMore) {
+                        item {
+                            LaunchedEffect(Unit) { viewModel.loadMore() }
+                            if (isLoadingMore) {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                }
+                            }
+                        }
                     }
                 }
             }

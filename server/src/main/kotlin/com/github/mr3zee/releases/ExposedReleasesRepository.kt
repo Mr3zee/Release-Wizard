@@ -3,6 +3,8 @@ package com.github.mr3zee.releases
 import com.github.mr3zee.model.*
 import com.github.mr3zee.persistence.BlockExecutionTable
 import com.github.mr3zee.persistence.ReleaseTable
+import com.github.mr3zee.persistence.ReleaseTagTable
+import com.github.mr3zee.persistence.safeOffset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jetbrains.exposed.v1.core.*
@@ -37,25 +39,123 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
             error = this[BlockExecutionTable.error],
             startedAt = this[BlockExecutionTable.startedAt],
             finishedAt = this[BlockExecutionTable.finishedAt],
+            approvals = this[BlockExecutionTable.approvals],
         )
     }
 
-    override suspend fun findAll(includeArchived: Boolean, ownerId: String?): List<Release> = dbQuery {
-        val query = ReleaseTable.selectAll().run {
-            val conditions = mutableListOf<Op<Boolean>>()
-            if (!includeArchived) {
-                conditions.add(ReleaseTable.status neq ReleaseStatus.ARCHIVED.name)
-            }
-            if (ownerId != null) {
-                conditions.add(ReleaseTable.ownerId eq ownerId)
-            }
-            if (conditions.isNotEmpty()) {
-                where { conditions.reduce { acc, op -> acc and op } }
-            } else {
-                this
-            }
+    private fun loadTagsForRelease(releaseId: String): List<String> {
+        return ReleaseTagTable.select(ReleaseTagTable.tag)
+            .where { ReleaseTagTable.releaseId eq releaseId }
+            .orderBy(ReleaseTagTable.tag, SortOrder.ASC)
+            .map { it[ReleaseTagTable.tag] }
+    }
+
+    private fun loadTagsForReleases(releaseIds: List<String>): Map<String, List<String>> {
+        if (releaseIds.isEmpty()) return emptyMap()
+        return ReleaseTagTable.selectAll()
+            .where { ReleaseTagTable.releaseId inList releaseIds }
+            .groupBy({ it[ReleaseTagTable.releaseId] }, { it[ReleaseTagTable.tag] })
+    }
+
+    private fun buildReleaseConditions(
+        includeArchived: Boolean,
+        ownerId: String?,
+        search: String?,
+        status: ReleaseStatus?,
+        projectTemplateId: ProjectId?,
+        releaseIds: Set<String>? = null,
+    ): List<Op<Boolean>> {
+        val conditions = mutableListOf<Op<Boolean>>()
+        if (!includeArchived) {
+            conditions.add(ReleaseTable.status neq ReleaseStatus.ARCHIVED.name)
         }
-        query.orderBy(ReleaseTable.id, SortOrder.DESC).map { it.toRelease() }
+        if (ownerId != null) {
+            conditions.add(ReleaseTable.ownerId eq ownerId)
+        }
+        if (status != null) {
+            conditions.add(ReleaseTable.status eq status.name)
+        }
+        if (projectTemplateId != null) {
+            conditions.add(ReleaseTable.projectTemplateId eq projectTemplateId.value)
+        }
+        // Note: search is not applied at DB level for releases (no name column; UUID search is not useful).
+        // Filtering is done via projectTemplateId and tag filters instead.
+        if (releaseIds != null) {
+            val uuids = releaseIds.mapNotNull { runCatching { UUID.fromString(it) }.getOrNull() }
+            conditions.add(ReleaseTable.id inList uuids)
+        }
+        return conditions
+    }
+
+    override suspend fun findAll(
+        includeArchived: Boolean,
+        ownerId: String?,
+        offset: Int,
+        limit: Int,
+        search: String?,
+        status: ReleaseStatus?,
+        projectTemplateId: ProjectId?,
+        releaseIds: Set<String>?,
+    ): List<Release> = dbQuery {
+        val conditions = buildReleaseConditions(includeArchived, ownerId, search, status, projectTemplateId, releaseIds)
+        val query = ReleaseTable.selectAll()
+        if (conditions.isNotEmpty()) {
+            query.where { conditions.reduce { acc, op -> acc and op } }
+        }
+        val releases = query.orderBy(ReleaseTable.startedAt to SortOrder.DESC)
+            .limit(limit)
+            .offset(safeOffset(offset))
+            .map { it.toRelease() }
+        val tagsMap = loadTagsForReleases(releases.map { it.id.value })
+        releases.map { release -> release.copy(tags = tagsMap[release.id.value] ?: emptyList()) }
+    }
+
+    override suspend fun countAll(
+        includeArchived: Boolean,
+        ownerId: String?,
+        search: String?,
+        status: ReleaseStatus?,
+        projectTemplateId: ProjectId?,
+        releaseIds: Set<String>?,
+    ): Long = dbQuery {
+        val conditions = buildReleaseConditions(includeArchived, ownerId, search, status, projectTemplateId, releaseIds)
+        val query = ReleaseTable.selectAll()
+        if (conditions.isNotEmpty()) {
+            query.where { conditions.reduce { acc, op -> acc and op } }
+        }
+        query.count()
+    }
+
+    override suspend fun findAllWithCount(
+        includeArchived: Boolean,
+        ownerId: String?,
+        offset: Int,
+        limit: Int,
+        search: String?,
+        status: ReleaseStatus?,
+        projectTemplateId: ProjectId?,
+        releaseIds: Set<String>?,
+    ): Pair<List<Release>, Long> = dbQuery {
+        val conditions = buildReleaseConditions(includeArchived, ownerId, search, status, projectTemplateId, releaseIds)
+
+        val countQuery = ReleaseTable.selectAll()
+        if (conditions.isNotEmpty()) {
+            countQuery.where { conditions.reduce { acc, op -> acc and op } }
+        }
+        val totalCount = countQuery.count()
+
+        val dataQuery = ReleaseTable.selectAll()
+        if (conditions.isNotEmpty()) {
+            dataQuery.where { conditions.reduce { acc, op -> acc and op } }
+        }
+        val releases = dataQuery.orderBy(ReleaseTable.startedAt to SortOrder.DESC)
+            .limit(limit)
+            .offset(safeOffset(offset))
+            .map { it.toRelease() }
+        val tagsMap = loadTagsForReleases(releases.map { it.id.value })
+        val releasesWithTags = releases.map { release -> release.copy(tags = tagsMap[release.id.value] ?: emptyList()) }
+
+        releasesWithTags to totalCount
     }
 
     override suspend fun findOwner(id: ReleaseId): String? = dbQuery {
@@ -70,19 +170,24 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
             .where { ReleaseTable.id eq UUID.fromString(id.value) }
             .singleOrNull()
             ?.toRelease()
+            ?.let { release -> release.copy(tags = loadTagsForRelease(release.id.value)) }
     }
 
     override suspend fun findByStatuses(statuses: Set<ReleaseStatus>): List<Release> = dbQuery {
-        ReleaseTable.selectAll()
+        val releases = ReleaseTable.selectAll()
             .where { ReleaseTable.status inList statuses.map { it.name } }
             .map { it.toRelease() }
+        val tagMap = loadTagsForReleases(releases.map { it.id.value })
+        releases.map { it.copy(tags = tagMap[it.id.value] ?: emptyList()) }
     }
 
     override suspend fun findByProjectId(projectId: ProjectId): List<Release> = dbQuery {
-        ReleaseTable.selectAll()
+        val releases = ReleaseTable.selectAll()
             .where { ReleaseTable.projectTemplateId eq projectId.value }
-            .orderBy(ReleaseTable.id, SortOrder.DESC)
+            .orderBy(ReleaseTable.startedAt to SortOrder.DESC)
             .map { it.toRelease() }
+        val tagMap = loadTagsForReleases(releases.map { it.id.value })
+        releases.map { it.copy(tags = tagMap[it.id.value] ?: emptyList()) }
     }
 
     override suspend fun create(
@@ -141,6 +246,10 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
         BlockExecutionTable.deleteWhere {
             BlockExecutionTable.releaseId eq id.value
         }
+        // Delete tags
+        ReleaseTagTable.deleteWhere {
+            ReleaseTagTable.releaseId eq id.value
+        }
         val deleted = ReleaseTable.deleteWhere {
             ReleaseTable.id eq UUID.fromString(id.value)
         }
@@ -164,35 +273,26 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
     }
 
     override suspend fun upsertBlockExecution(execution: BlockExecution) = dbQuery {
-        val existing = BlockExecutionTable.selectAll()
-            .where {
-                (BlockExecutionTable.releaseId eq execution.releaseId.value) and
-                    (BlockExecutionTable.blockId eq execution.blockId.value)
-            }
-            .singleOrNull()
-
-        if (existing != null) {
-            BlockExecutionTable.update({
-                (BlockExecutionTable.releaseId eq execution.releaseId.value) and
-                    (BlockExecutionTable.blockId eq execution.blockId.value)
-            }) {
+        BlockExecutionTable.upsert(
+            keys = arrayOf(BlockExecutionTable.releaseId, BlockExecutionTable.blockId),
+            onUpdate = {
                 it[BlockExecutionTable.status] = execution.status.name
                 it[BlockExecutionTable.outputs] = execution.outputs
                 it[BlockExecutionTable.error] = execution.error
                 it[BlockExecutionTable.startedAt] = execution.startedAt
                 it[BlockExecutionTable.finishedAt] = execution.finishedAt
-            }
-        } else {
-            BlockExecutionTable.insert {
-                it[BlockExecutionTable.id] = UUID.randomUUID()
-                it[BlockExecutionTable.releaseId] = execution.releaseId.value
-                it[BlockExecutionTable.blockId] = execution.blockId.value
-                it[BlockExecutionTable.status] = execution.status.name
-                it[BlockExecutionTable.outputs] = execution.outputs
-                it[BlockExecutionTable.error] = execution.error
-                it[BlockExecutionTable.startedAt] = execution.startedAt
-                it[BlockExecutionTable.finishedAt] = execution.finishedAt
-            }
+                it[BlockExecutionTable.approvals] = execution.approvals
+            },
+        ) {
+            it[BlockExecutionTable.id] = UUID.randomUUID()
+            it[BlockExecutionTable.releaseId] = execution.releaseId.value
+            it[BlockExecutionTable.blockId] = execution.blockId.value
+            it[BlockExecutionTable.status] = execution.status.name
+            it[BlockExecutionTable.outputs] = execution.outputs
+            it[BlockExecutionTable.error] = execution.error
+            it[BlockExecutionTable.startedAt] = execution.startedAt
+            it[BlockExecutionTable.finishedAt] = execution.finishedAt
+            it[BlockExecutionTable.approvals] = execution.approvals
         }
         Unit
     }

@@ -9,7 +9,7 @@ import com.github.mr3zee.model.ProjectTemplate
 import com.github.mr3zee.model.UserRole
 
 interface ProjectsService {
-    suspend fun listProjects(session: UserSession): List<ProjectTemplate>
+    suspend fun listProjects(session: UserSession, offset: Int = 0, limit: Int = 20, search: String? = null): Pair<List<ProjectTemplate>, Long>
     suspend fun getProject(id: ProjectId, session: UserSession): ProjectTemplate?
     suspend fun createProject(request: CreateProjectRequest, session: UserSession): ProjectTemplate
     suspend fun updateProject(id: ProjectId, request: UpdateProjectRequest, session: UserSession): ProjectTemplate?
@@ -20,9 +20,9 @@ class DefaultProjectsService(
     private val repository: ProjectsRepository,
 ) : ProjectsService {
 
-    override suspend fun listProjects(session: UserSession): List<ProjectTemplate> {
+    override suspend fun listProjects(session: UserSession, offset: Int, limit: Int, search: String?): Pair<List<ProjectTemplate>, Long> {
         val ownerId = if (session.role == UserRole.ADMIN) null else session.userId
-        return repository.findAll(ownerId = ownerId)
+        return repository.findAllWithCount(ownerId = ownerId, offset = offset, limit = limit, search = search)
     }
 
     override suspend fun getProject(id: ProjectId, session: UserSession): ProjectTemplate? {
@@ -37,6 +37,7 @@ class DefaultProjectsService(
             dagGraph = request.dagGraph,
             parameters = request.parameters,
             ownerId = session.userId,
+            defaultTags = request.defaultTags,
         )
     }
 
@@ -48,6 +49,7 @@ class DefaultProjectsService(
             description = request.description,
             dagGraph = request.dagGraph,
             parameters = request.parameters,
+            defaultTags = request.defaultTags,
         )
     }
 

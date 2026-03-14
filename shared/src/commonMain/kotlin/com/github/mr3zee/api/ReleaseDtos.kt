@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
 data class CreateReleaseRequest(
     val projectTemplateId: ProjectId,
     val parameters: List<Parameter> = emptyList(),
+    val tags: List<String> = emptyList(),
 )
 
 @Serializable
@@ -18,6 +19,7 @@ data class ReleaseResponse(
 @Serializable
 data class ReleaseListResponse(
     val releases: List<Release>,
+    val pagination: PaginationInfo? = null,
 )
 
 @Serializable

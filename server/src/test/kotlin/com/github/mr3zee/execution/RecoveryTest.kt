@@ -244,7 +244,9 @@ class InMemoryReleasesRepository : ReleasesRepository {
         releases[release.id] = release
     }
 
-    override suspend fun findAll(includeArchived: Boolean, ownerId: String?) = releases.values.toList()
+    override suspend fun findAll(includeArchived: Boolean, ownerId: String?, offset: Int, limit: Int, search: String?, status: ReleaseStatus?, projectTemplateId: ProjectId?, releaseIds: Set<String>?) = releases.values.toList()
+    override suspend fun countAll(includeArchived: Boolean, ownerId: String?, search: String?, status: ReleaseStatus?, projectTemplateId: ProjectId?, releaseIds: Set<String>?) = releases.size.toLong()
+    override suspend fun findAllWithCount(includeArchived: Boolean, ownerId: String?, offset: Int, limit: Int, search: String?, status: ReleaseStatus?, projectTemplateId: ProjectId?, releaseIds: Set<String>?) = releases.values.toList() to releases.size.toLong()
     override suspend fun findById(id: ReleaseId) = releases[id]
     override suspend fun findOwner(id: ReleaseId): String? = null
     override suspend fun findByProjectId(projectId: ProjectId) =

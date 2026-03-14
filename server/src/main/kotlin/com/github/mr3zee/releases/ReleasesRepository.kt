@@ -3,7 +3,34 @@ package com.github.mr3zee.releases
 import com.github.mr3zee.model.*
 
 interface ReleasesRepository {
-    suspend fun findAll(includeArchived: Boolean = false, ownerId: String? = null): List<Release>
+    suspend fun findAll(
+        includeArchived: Boolean = false,
+        ownerId: String? = null,
+        offset: Int = 0,
+        limit: Int = 20,
+        search: String? = null,
+        status: ReleaseStatus? = null,
+        projectTemplateId: ProjectId? = null,
+        releaseIds: Set<String>? = null,
+    ): List<Release>
+    suspend fun countAll(
+        includeArchived: Boolean = false,
+        ownerId: String? = null,
+        search: String? = null,
+        status: ReleaseStatus? = null,
+        projectTemplateId: ProjectId? = null,
+        releaseIds: Set<String>? = null,
+    ): Long
+    suspend fun findAllWithCount(
+        includeArchived: Boolean = false,
+        ownerId: String? = null,
+        offset: Int = 0,
+        limit: Int = 20,
+        search: String? = null,
+        status: ReleaseStatus? = null,
+        projectTemplateId: ProjectId? = null,
+        releaseIds: Set<String>? = null,
+    ): Pair<List<Release>, Long>
     suspend fun findById(id: ReleaseId): Release?
     suspend fun findOwner(id: ReleaseId): String?
     suspend fun findByProjectId(projectId: ProjectId): List<Release>

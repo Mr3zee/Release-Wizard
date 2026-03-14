@@ -19,17 +19,28 @@ fun Route.connectionRoutes() {
 
     route(ApiRoutes.Connections.BASE) {
         get {
-            val connections = service.listConnections(call.userSession())
+            val offset = call.request.queryParameters["offset"]?.toIntOrNull() ?: 0
+            val limit = (call.request.queryParameters["limit"]?.toIntOrNull() ?: 20).coerceIn(1, 200)
+            val search = call.request.queryParameters["q"]
+            val typeStr = call.request.queryParameters["type"]
+            val type = typeStr?.let { runCatching { com.github.mr3zee.model.ConnectionType.valueOf(it) }.getOrNull() }
+            val (connections, totalCount) = service.listConnections(
+                call.userSession(), offset, limit, search, type,
+            )
             val webhookUrls = connections.mapNotNull { conn ->
                 webhookUrl(conn, webhookConfig)?.let { conn.id.value to it }
             }.toMap()
-            call.respond(ConnectionListResponse(connections, webhookUrls))
+            call.respond(ConnectionListResponse(
+                connections = connections,
+                webhookUrls = webhookUrls,
+                pagination = PaginationInfo(totalCount = totalCount, offset = offset, limit = limit),
+            ))
         }
 
         post {
             val request = call.receive<CreateConnectionRequest>()
             if (request.name.isBlank()) {
-                call.respond(HttpStatusCode.BadRequest, "Connection name must not be blank")
+                call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Connection name must not be blank", code = "VALIDATION_ERROR"))
                 return@post
             }
             val connection = service.createConnection(request, call.userSession())
@@ -43,7 +54,7 @@ fun Route.connectionRoutes() {
                 if (connection != null) {
                     call.respond(ConnectionResponse(connection, webhookUrl(connection, webhookConfig)))
                 } else {
-                    call.respond(HttpStatusCode.NotFound, "Connection not found")
+                    call.respond(HttpStatusCode.NotFound, ErrorResponse(error = "Connection not found", code = "NOT_FOUND"))
                 }
             }
 
@@ -54,7 +65,7 @@ fun Route.connectionRoutes() {
                 if (connection != null) {
                     call.respond(ConnectionResponse(connection, webhookUrl(connection, webhookConfig)))
                 } else {
-                    call.respond(HttpStatusCode.NotFound, "Connection not found")
+                    call.respond(HttpStatusCode.NotFound, ErrorResponse(error = "Connection not found", code = "NOT_FOUND"))
                 }
             }
 
@@ -64,7 +75,7 @@ fun Route.connectionRoutes() {
                 if (deleted) {
                     call.respond(HttpStatusCode.NoContent)
                 } else {
-                    call.respond(HttpStatusCode.NotFound, "Connection not found")
+                    call.respond(HttpStatusCode.NotFound, ErrorResponse(error = "Connection not found", code = "NOT_FOUND"))
                 }
             }
 
@@ -72,7 +83,7 @@ fun Route.connectionRoutes() {
                 val id = call.requireConnectionId() ?: return@post
                 val result = service.testConnection(id, call.userSession())
                 if (result == null) {
-                    call.respond(HttpStatusCode.NotFound, "Connection not found")
+                    call.respond(HttpStatusCode.NotFound, ErrorResponse(error = "Connection not found", code = "NOT_FOUND"))
                     return@post
                 }
                 call.respond(result)
@@ -92,14 +103,14 @@ private fun webhookUrl(connection: Connection, webhookConfig: WebhookConfig): St
 private suspend fun io.ktor.server.application.ApplicationCall.requireConnectionId(): ConnectionId? {
     val raw = parameters["id"]
     if (raw == null) {
-        respond(HttpStatusCode.BadRequest, "Missing id")
+        respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Missing id", code = "VALIDATION_ERROR"))
         return null
     }
     return try {
         UUID.fromString(raw)
         ConnectionId(raw)
     } catch (_: IllegalArgumentException) {
-        respond(HttpStatusCode.BadRequest, "Invalid connection ID format")
+        respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Invalid connection ID format", code = "VALIDATION_ERROR"))
         null
     }
 }

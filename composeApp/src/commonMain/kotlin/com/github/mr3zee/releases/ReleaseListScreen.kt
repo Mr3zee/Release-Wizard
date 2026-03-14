@@ -9,13 +9,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.model.Release
 import com.github.mr3zee.model.ReleaseId
 import com.github.mr3zee.model.ReleaseStatus
 import com.github.mr3zee.model.isTerminal
+import com.github.mr3zee.theme.LocalAppColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,11 +28,16 @@ fun ReleaseListScreen(
     val projects by viewModel.projects.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val statusFilter by viewModel.statusFilter.collectAsState()
+    val isLoadingMore by viewModel.isLoadingMore.collectAsState()
+    val pagination by viewModel.pagination.collectAsState()
 
     var showStartDialog by remember { mutableStateOf(false) }
 
+    // Initial release load is handled by the ViewModel's init block (debounced search/filter flow).
+    // Projects must still be loaded explicitly since they are not part of that flow.
     LaunchedEffect(Unit) {
-        viewModel.loadReleases()
         viewModel.loadProjects()
     }
 
@@ -62,6 +67,38 @@ fun ReleaseListScreen(
                 .fillMaxSize()
                 .padding(padding),
         ) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { viewModel.setSearchQuery(it) },
+                placeholder = { Text("Search releases...") },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .testTag("search_field"),
+            )
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                FilterChip(
+                    selected = statusFilter == null,
+                    onClick = { viewModel.setStatusFilter(null) },
+                    label = { Text("All") },
+                )
+                for (status in listOf(ReleaseStatus.RUNNING, ReleaseStatus.SUCCEEDED, ReleaseStatus.FAILED)) {
+                    FilterChip(
+                        selected = statusFilter == status,
+                        onClick = {
+                            viewModel.setStatusFilter(if (statusFilter == status) null else status)
+                        },
+                        label = { Text(status.name.lowercase().replaceFirstChar { it.uppercase() }) },
+                        modifier = Modifier.testTag("filter_${status.name}"),
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+
             if (isLoading) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -113,6 +150,20 @@ fun ReleaseListScreen(
                             onArchive = { viewModel.archiveRelease(release.id) },
                             onDelete = { viewModel.deleteRelease(release.id) },
                         )
+                    }
+                    val hasMore = pagination?.let { (it.offset + it.limit) < it.totalCount } ?: false
+                    if (hasMore) {
+                        item {
+                            LaunchedEffect(Unit) { viewModel.loadMore() }
+                            if (isLoadingMore) {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -231,13 +282,14 @@ private fun ReleaseListItem(
 
 @Composable
 internal fun StatusBadge(status: ReleaseStatus) {
+    val appColors = LocalAppColors.current
     val (color, label) = when (status) {
-        ReleaseStatus.PENDING -> Color(0xFF9CA3AF) to "Pending"
-        ReleaseStatus.RUNNING -> Color(0xFF3B82F6) to "Running"
-        ReleaseStatus.SUCCEEDED -> Color(0xFF22C55E) to "Succeeded"
-        ReleaseStatus.FAILED -> Color(0xFFEF4444) to "Failed"
-        ReleaseStatus.CANCELLED -> Color(0xFFF97316) to "Cancelled"
-        ReleaseStatus.ARCHIVED -> Color(0xFF6B7280) to "Archived"
+        ReleaseStatus.PENDING -> appColors.statusPending to "Pending"
+        ReleaseStatus.RUNNING -> appColors.statusRunning to "Running"
+        ReleaseStatus.SUCCEEDED -> appColors.statusSuccess to "Succeeded"
+        ReleaseStatus.FAILED -> appColors.statusFailed to "Failed"
+        ReleaseStatus.CANCELLED -> appColors.statusCancelled to "Cancelled"
+        ReleaseStatus.ARCHIVED -> appColors.statusArchived to "Archived"
     }
     Surface(
         color = color.copy(alpha = 0.15f),

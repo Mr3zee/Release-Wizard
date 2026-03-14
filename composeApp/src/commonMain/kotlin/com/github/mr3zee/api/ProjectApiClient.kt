@@ -5,13 +5,22 @@ import com.github.mr3zee.model.ProjectTemplate
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
+import io.ktor.client.request.parameter
 import io.ktor.http.*
 
 class ProjectApiClient(private val client: HttpClient) {
 
-    suspend fun listProjects(): List<ProjectTemplate> {
-        val response = client.get(serverUrl(ApiRoutes.Projects.BASE))
-        return response.body<ProjectListResponse>().projects
+    suspend fun listProjects(
+        offset: Int = 0,
+        limit: Int = 20,
+        search: String? = null,
+    ): ProjectListResponse {
+        val response = client.get(serverUrl(ApiRoutes.Projects.BASE)) {
+            parameter("offset", offset)
+            parameter("limit", limit)
+            search?.let { parameter("q", it) }
+        }
+        return response.body()
     }
 
     suspend fun getProject(id: ProjectId): ProjectTemplate {

@@ -11,6 +11,7 @@ data class CreateProjectRequest(
     val description: String = "",
     val dagGraph: DagGraph = DagGraph(),
     val parameters: List<Parameter> = emptyList(),
+    val defaultTags: List<String> = emptyList(),
 )
 
 @Serializable
@@ -19,6 +20,7 @@ data class UpdateProjectRequest(
     val description: String? = null,
     val dagGraph: DagGraph? = null,
     val parameters: List<Parameter>? = null,
+    val defaultTags: List<String>? = null,
 )
 
 @Serializable
@@ -29,4 +31,5 @@ data class ProjectResponse(
 @Serializable
 data class ProjectListResponse(
     val projects: List<ProjectTemplate>,
+    val pagination: PaginationInfo? = null,
 )

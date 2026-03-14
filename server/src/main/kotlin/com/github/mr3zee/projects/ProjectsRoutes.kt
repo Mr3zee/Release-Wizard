@@ -8,21 +8,27 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
-import java.util.UUID
+import java.util.*
 
 fun Route.projectRoutes() {
     val service by inject<ProjectsService>()
 
     route(ApiRoutes.Projects.BASE) {
         get {
-            val projects = service.listProjects(call.userSession())
-            call.respond(ProjectListResponse(projects))
+            val offset = call.request.queryParameters["offset"]?.toIntOrNull() ?: 0
+            val limit = (call.request.queryParameters["limit"]?.toIntOrNull() ?: 20).coerceIn(1, 200)
+            val search = call.request.queryParameters["q"]
+            val (projects, totalCount) = service.listProjects(call.userSession(), offset, limit, search)
+            call.respond(ProjectListResponse(
+                projects = projects,
+                pagination = PaginationInfo(totalCount = totalCount, offset = offset, limit = limit),
+            ))
         }
 
         post {
             val request = call.receive<CreateProjectRequest>()
             if (request.name.isBlank()) {
-                call.respond(HttpStatusCode.BadRequest, "Project name must not be blank")
+                call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Project name must not be blank", code = "VALIDATION_ERROR"))
                 return@post
             }
             val project = service.createProject(request, call.userSession())
@@ -36,7 +42,7 @@ fun Route.projectRoutes() {
                 if (project != null) {
                     call.respond(ProjectResponse(project))
                 } else {
-                    call.respond(HttpStatusCode.NotFound, "Project not found")
+                    call.respond(HttpStatusCode.NotFound, ErrorResponse(error = "Project not found", code = "NOT_FOUND"))
                 }
             }
 
@@ -47,7 +53,7 @@ fun Route.projectRoutes() {
                 if (project != null) {
                     call.respond(ProjectResponse(project))
                 } else {
-                    call.respond(HttpStatusCode.NotFound, "Project not found")
+                    call.respond(HttpStatusCode.NotFound, ErrorResponse(error = "Project not found", code = "NOT_FOUND"))
                 }
             }
 
@@ -57,7 +63,7 @@ fun Route.projectRoutes() {
                 if (deleted) {
                     call.respond(HttpStatusCode.NoContent)
                 } else {
-                    call.respond(HttpStatusCode.NotFound, "Project not found")
+                    call.respond(HttpStatusCode.NotFound, ErrorResponse(error = "Project not found", code = "NOT_FOUND"))
                 }
             }
         }
@@ -67,14 +73,14 @@ fun Route.projectRoutes() {
 private suspend fun io.ktor.server.application.ApplicationCall.requireProjectId(): ProjectId? {
     val raw = parameters["id"]
     if (raw == null) {
-        respond(HttpStatusCode.BadRequest, "Missing id")
+        respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Missing id", code = "VALIDATION_ERROR"))
         return null
     }
     return try {
         UUID.fromString(raw)
         ProjectId(raw)
     } catch (_: IllegalArgumentException) {
-        respond(HttpStatusCode.BadRequest, "Invalid project ID format")
+        respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Invalid project ID format", code = "VALIDATION_ERROR"))
         null
     }
 }

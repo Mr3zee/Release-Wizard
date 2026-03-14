@@ -5,15 +5,22 @@ import androidx.lifecycle.viewModelScope
 import com.github.mr3zee.api.ConnectionApiClient
 import com.github.mr3zee.api.toUserMessage
 import com.github.mr3zee.api.CreateConnectionRequest
+import com.github.mr3zee.api.PaginationInfo
 import com.github.mr3zee.api.UpdateConnectionRequest
 import com.github.mr3zee.model.Connection
 import com.github.mr3zee.model.ConnectionConfig
 import com.github.mr3zee.model.ConnectionId
 import com.github.mr3zee.model.ConnectionType
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
+@OptIn(FlowPreview::class)
 class ConnectionsViewModel(
     private val apiClient: ConnectionApiClient,
 ) : ViewModel() {
@@ -33,19 +40,99 @@ class ConnectionsViewModel(
     private val _editingConnection = MutableStateFlow<Connection?>(null)
     val editingConnection: StateFlow<Connection?> = _editingConnection
 
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery
+
+    private val _typeFilter = MutableStateFlow<ConnectionType?>(null)
+    val typeFilter: StateFlow<ConnectionType?> = _typeFilter
+
+    private val _pagination = MutableStateFlow<PaginationInfo?>(null)
+    val pagination: StateFlow<PaginationInfo?> = _pagination
+
+    private val _isLoadingMore = MutableStateFlow(false)
+    val isLoadingMore: StateFlow<Boolean> = _isLoadingMore
+
+    private val pageSize = 20
+
+    init {
+        viewModelScope.launch {
+            combine(
+                _searchQuery.debounce(300),
+                _typeFilter,
+            ) { search, type -> search to type }
+                .distinctUntilChanged()
+                .collectLatest {
+                    loadConnectionsInternal(reset = true)
+                }
+        }
+    }
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
+
+    fun setTypeFilter(type: ConnectionType?) {
+        _typeFilter.value = type
+    }
+
     fun loadConnections() {
         viewModelScope.launch {
-            _isLoading.value = true
-            _error.value = null
+            loadConnectionsInternal(reset = true)
+        }
+    }
+
+    fun loadMore() {
+        val pag = _pagination.value ?: return
+        if (_isLoadingMore.value) return
+        val nextOffset = pag.offset + pag.limit
+        if (nextOffset >= pag.totalCount) return
+
+        // Capture current filter state to detect changes during in-flight request
+        val currentSearch = _searchQuery.value
+        val currentType = _typeFilter.value
+
+        viewModelScope.launch {
+            _isLoadingMore.value = true
             try {
-                val response = apiClient.listConnections()
-                _connections.value = response.connections
-                _webhookUrls.value = response.webhookUrls
+                val response = apiClient.listConnections(
+                    offset = nextOffset,
+                    limit = pageSize,
+                    search = currentSearch.takeIf { it.isNotBlank() },
+                    type = currentType?.name,
+                )
+                // Only append if filters haven't changed while we were loading
+                if (_searchQuery.value == currentSearch && _typeFilter.value == currentType) {
+                    _connections.value = _connections.value + response.connections
+                    _webhookUrls.value = _webhookUrls.value + response.webhookUrls
+                    _pagination.value = response.pagination
+                }
             } catch (e: Exception) {
                 _error.value = e.toUserMessage()
             } finally {
-                _isLoading.value = false
+                _isLoadingMore.value = false
             }
+        }
+    }
+
+    private suspend fun loadConnectionsInternal(reset: Boolean) {
+        if (reset) {
+            _isLoading.value = true
+            _error.value = null
+        }
+        try {
+            val response = apiClient.listConnections(
+                offset = 0,
+                limit = pageSize,
+                search = _searchQuery.value.takeIf { it.isNotBlank() },
+                type = _typeFilter.value?.name,
+            )
+            _connections.value = response.connections
+            _webhookUrls.value = response.webhookUrls
+            _pagination.value = response.pagination
+        } catch (e: Exception) {
+            _error.value = e.toUserMessage()
+        } finally {
+            _isLoading.value = false
         }
     }
 

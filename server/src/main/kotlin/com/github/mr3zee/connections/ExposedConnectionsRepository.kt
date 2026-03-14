@@ -3,6 +3,8 @@ package com.github.mr3zee.connections
 import com.github.mr3zee.AppJson
 import com.github.mr3zee.model.*
 import com.github.mr3zee.persistence.ConnectionTable
+import com.github.mr3zee.persistence.escapeLikePattern
+import com.github.mr3zee.persistence.safeOffset
 import com.github.mr3zee.security.EncryptionService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -33,13 +35,80 @@ class ExposedConnectionsRepository(
         )
     }
 
-    override suspend fun findAll(ownerId: String?): List<Connection> = dbQuery {
-        val query = if (ownerId != null) {
-            ConnectionTable.selectAll().where { ConnectionTable.ownerId eq ownerId }
-        } else {
-            ConnectionTable.selectAll()
+    private fun buildConnectionConditions(
+        ownerId: String?,
+        search: String?,
+        type: ConnectionType?,
+    ): List<Op<Boolean>> {
+        val conditions = mutableListOf<Op<Boolean>>()
+        if (ownerId != null) {
+            conditions.add(ConnectionTable.ownerId eq ownerId)
         }
-        query.orderBy(ConnectionTable.updatedAt, SortOrder.DESC).map { it.toConnection() }
+        if (!search.isNullOrBlank()) {
+            conditions.add(ConnectionTable.name.lowerCase() like "%${escapeLikePattern(search.lowercase())}%")
+        }
+        if (type != null) {
+            conditions.add(ConnectionTable.type eq type)
+        }
+        return conditions
+    }
+
+    override suspend fun findAll(
+        ownerId: String?,
+        offset: Int,
+        limit: Int,
+        search: String?,
+        type: ConnectionType?,
+    ): List<Connection> = dbQuery {
+        val conditions = buildConnectionConditions(ownerId, search, type)
+        val query = ConnectionTable.selectAll()
+        if (conditions.isNotEmpty()) {
+            query.where { conditions.reduce { acc, op -> acc and op } }
+        }
+        query.orderBy(ConnectionTable.updatedAt, SortOrder.DESC)
+            .limit(limit)
+            .offset(safeOffset(offset))
+            .map { it.toConnection() }
+    }
+
+    override suspend fun countAll(
+        ownerId: String?,
+        search: String?,
+        type: ConnectionType?,
+    ): Long = dbQuery {
+        val conditions = buildConnectionConditions(ownerId, search, type)
+        val query = ConnectionTable.selectAll()
+        if (conditions.isNotEmpty()) {
+            query.where { conditions.reduce { acc, op -> acc and op } }
+        }
+        query.count()
+    }
+
+    override suspend fun findAllWithCount(
+        ownerId: String?,
+        offset: Int,
+        limit: Int,
+        search: String?,
+        type: ConnectionType?,
+    ): Pair<List<Connection>, Long> = dbQuery {
+        val conditions = buildConnectionConditions(ownerId, search, type)
+
+        val countQuery = ConnectionTable.selectAll()
+        if (conditions.isNotEmpty()) {
+            countQuery.where { conditions.reduce { acc, op -> acc and op } }
+        }
+        val totalCount = countQuery.count()
+
+        val dataQuery = ConnectionTable.selectAll()
+        if (conditions.isNotEmpty()) {
+            dataQuery.where { conditions.reduce { acc, op -> acc and op } }
+        }
+        val items = dataQuery.orderBy(ConnectionTable.updatedAt, SortOrder.DESC)
+            .limit(limit)
+            .offset(safeOffset(offset))
+            .map { it.toConnection() }
+
+        items to totalCount
     }
 
     override suspend fun findById(id: ConnectionId): Connection? = dbQuery {
