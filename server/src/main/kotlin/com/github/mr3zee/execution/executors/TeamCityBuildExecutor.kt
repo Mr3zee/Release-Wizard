@@ -3,6 +3,7 @@ package com.github.mr3zee.execution.executors
 import com.github.mr3zee.execution.BlockExecutor
 import com.github.mr3zee.execution.ExecutionContext
 import com.github.mr3zee.model.Block
+import com.github.mr3zee.model.BlockExecution
 import com.github.mr3zee.model.ConnectionConfig
 import com.github.mr3zee.model.Parameter
 import com.github.mr3zee.webhooks.*
@@ -16,6 +17,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -32,6 +34,7 @@ class TeamCityBuildExecutor(
     private val httpClient: HttpClient,
     private val webhookRepository: PendingWebhookRepository,
     private val webhookService: WebhookService,
+    private val artifactService: TeamCityArtifactService? = null,
 ) : BlockExecutor {
 
     private val log = LoggerFactory.getLogger(TeamCityBuildExecutor::class.java)
@@ -52,7 +55,8 @@ class TeamCityBuildExecutor(
         return when {
             webhook != null && webhook.status == WebhookStatus.COMPLETED && webhook.payload != null -> {
                 // Webhook already arrived — parse and return outputs
-                parseCompletionPayload(webhook.payload, webhook.externalId, config.serverUrl)
+                val baseOutputs = parseCompletionPayload(webhook.payload, webhook.externalId, config.serverUrl)
+                baseOutputs + fetchArtifactOutputs(parameters, config, webhook.externalId)
             }
             webhook != null && webhook.status == WebhookStatus.PENDING -> {
                 // Webhook registered but not yet received — subscribe and wait
@@ -64,7 +68,8 @@ class TeamCityBuildExecutor(
                     }
                     val completion = completionDeferred.await()
                         ?: throw RuntimeException("TeamCity webhook timed out after ${WEBHOOK_TIMEOUT_MS / 60_000}min")
-                    parseCompletionPayload(completion.payload, webhook.externalId, config.serverUrl)
+                    val baseOutputs = parseCompletionPayload(completion.payload, webhook.externalId, config.serverUrl)
+                    baseOutputs + fetchArtifactOutputs(parameters, config, webhook.externalId)
                 }
             }
             else -> {
@@ -135,7 +140,35 @@ class TeamCityBuildExecutor(
 
             val completion = completionDeferred.await()
                 ?: throw RuntimeException("TeamCity webhook timed out after ${WEBHOOK_TIMEOUT_MS / 60_000}min")
-            parseCompletionPayload(completion.payload, buildId, config.serverUrl)
+            val baseOutputs = parseCompletionPayload(completion.payload, buildId, config.serverUrl)
+            baseOutputs + fetchArtifactOutputs(parameters, config, buildId)
+        }
+    }
+
+    private suspend fun fetchArtifactOutputs(
+        parameters: List<Parameter>,
+        config: ConnectionConfig.TeamCityConfig,
+        buildId: String,
+    ): Map<String, String> {
+        if (artifactService == null) return emptyMap()
+        val artifactsGlob = parameters.find { it.key == "artifactsGlob" }?.value
+        if (artifactsGlob.isNullOrBlank()) return emptyMap()
+
+        val maxDepth = (parameters.find { it.key == "artifactsMaxDepth" }?.value?.toIntOrNull() ?: 10).coerceIn(1, 20)
+        val maxFiles = (parameters.find { it.key == "artifactsMaxFiles" }?.value?.toIntOrNull() ?: 1000).coerceIn(1, 5000)
+
+        return try {
+            val artifacts = artifactService.fetchMatchingArtifacts(
+                config.serverUrl, config.token, buildId, artifactsGlob, maxDepth, maxFiles,
+            )
+            if (artifacts.isNotEmpty()) {
+                mapOf(BlockExecution.ARTIFACTS_OUTPUT_KEY to Json.encodeToString(artifacts))
+            } else {
+                emptyMap()
+            }
+        } catch (e: Exception) {
+            log.warn("Failed to fetch artifacts for build $buildId", e)
+            emptyMap()
         }
     }
 

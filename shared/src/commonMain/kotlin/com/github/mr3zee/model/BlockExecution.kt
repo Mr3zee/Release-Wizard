@@ -12,4 +12,9 @@ data class BlockExecution(
     val error: String? = null,
     val startedAt: Instant? = null,
     val finishedAt: Instant? = null,
-)
+) {
+    companion object {
+        /** Key in [outputs] for JSON-encoded artifact paths list. */
+        const val ARTIFACTS_OUTPUT_KEY = "artifacts"
+    }
+}

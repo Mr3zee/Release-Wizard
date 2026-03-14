@@ -11,11 +11,12 @@ import org.koin.dsl.module
 
 val releasesModule = module {
     single<ReleasesRepository> { ExposedReleasesRepository(get()) }
+    single { TeamCityArtifactService(get<HttpClient>()) }
     single<BlockExecutor> {
         val httpClient = get<HttpClient>()
         DispatchingBlockExecutor(
             mapOf(
-                BlockType.TEAMCITY_BUILD to TeamCityBuildExecutor(httpClient, get(), get()),
+                BlockType.TEAMCITY_BUILD to TeamCityBuildExecutor(httpClient, get(), get(), get()),
                 BlockType.GITHUB_ACTION to GitHubActionExecutor(httpClient, get(), get()),
                 BlockType.GITHUB_PUBLICATION to GitHubPublicationExecutor(httpClient),
                 BlockType.MAVEN_CENTRAL_PUBLICATION to MavenCentralExecutor(httpClient),

@@ -1,6 +1,7 @@
 package com.github.mr3zee.execution
 
 import com.github.mr3zee.model.Block
+import com.github.mr3zee.model.BlockExecution
 import com.github.mr3zee.model.BlockType
 import com.github.mr3zee.model.Parameter
 import kotlinx.coroutines.delay
@@ -23,6 +24,7 @@ class StubBlockExecutor : BlockExecutor {
                 "buildNumber" to "42",
                 "buildUrl" to "https://tc.example.com/build/42",
                 "buildStatus" to "SUCCESS",
+                BlockExecution.ARTIFACTS_OUTPUT_KEY to """["lib/app.jar","lib/utils.jar","docs/readme.txt"]""",
             )
             BlockType.GITHUB_ACTION -> mapOf(
                 "runId" to "123456",

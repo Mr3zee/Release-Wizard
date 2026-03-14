@@ -188,18 +188,23 @@ private fun BlockDetailPanel(
                 )
             }
 
-            if (execution.outputs.isNotEmpty()) {
+            val genericOutputs = execution.outputs.filterKeys { it != BlockExecution.ARTIFACTS_OUTPUT_KEY }
+            if (genericOutputs.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "Outputs:",
                     style = MaterialTheme.typography.labelMedium,
                 )
-                execution.outputs.forEach { (key, value) ->
+                genericOutputs.forEach { (key, value) ->
                     Text(
                         text = "  $key: $value",
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
+            }
+
+            execution.outputs[BlockExecution.ARTIFACTS_OUTPUT_KEY]?.let { artifactsJson ->
+                ArtifactTreeView(artifactsJson = artifactsJson)
             }
 
             if (execution.status == BlockStatus.WAITING_FOR_INPUT) {

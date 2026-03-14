@@ -732,6 +732,260 @@ class ReleaseScreensTest {
         assertEquals(BlockId("approve1"), approvedBlockId)
     }
 
+    // ---- Artifact tree tests ----
+
+    @Test
+    fun `release detail block panel shows artifact tree when artifacts key present`() = runComposeUiTest {
+        val release = Release(
+            id = ReleaseId("r1"),
+            projectTemplateId = ProjectId("p1"),
+            status = ReleaseStatus.SUCCEEDED,
+            dagSnapshot = DagGraph(
+                blocks = listOf(
+                    Block.ActionBlock(id = BlockId("b1"), name = "Build", type = BlockType.TEAMCITY_BUILD),
+                ),
+                positions = mapOf(BlockId("b1") to BlockPosition(100f, 100f)),
+            ),
+        )
+        val executions = listOf(
+            BlockExecution(
+                blockId = BlockId("b1"),
+                releaseId = ReleaseId("r1"),
+                status = BlockStatus.SUCCEEDED,
+                outputs = mapOf(
+                    "buildNumber" to "42",
+                    "artifacts" to """["lib/app.jar","lib/utils.jar","docs/readme.txt"]""",
+                ),
+            ),
+        )
+
+        setContent {
+            MaterialTheme {
+                ReleaseDetailScreen(
+                    release = release,
+                    blockExecutions = executions,
+                    isConnected = true,
+                    onBack = {},
+                    onCancel = {},
+                    onRerun = {},
+                    onArchive = {},
+                    onApproveBlock = {},
+                    onBlockClick = {},
+                )
+            }
+        }
+
+        onNodeWithTag("execution_dag_canvas").performTouchInput {
+            click(Offset(190f, 135f))
+        }
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("block_detail_panel").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("artifact_tree_section", useUnmergedTree = true).assertExists()
+        onNodeWithTag("artifact_expand_all_button", useUnmergedTree = true).assertExists()
+        onNodeWithTag("artifact_collapse_all_button", useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun `release detail block panel artifact tree collapsed by default`() = runComposeUiTest {
+        val release = Release(
+            id = ReleaseId("r1"),
+            projectTemplateId = ProjectId("p1"),
+            status = ReleaseStatus.SUCCEEDED,
+            dagSnapshot = DagGraph(
+                blocks = listOf(
+                    Block.ActionBlock(id = BlockId("b1"), name = "Build", type = BlockType.TEAMCITY_BUILD),
+                ),
+                positions = mapOf(BlockId("b1") to BlockPosition(100f, 100f)),
+            ),
+        )
+        val executions = listOf(
+            BlockExecution(
+                blockId = BlockId("b1"),
+                releaseId = ReleaseId("r1"),
+                status = BlockStatus.SUCCEEDED,
+                outputs = mapOf(
+                    "buildNumber" to "42",
+                    "artifacts" to """["lib/app.jar","lib/utils.jar"]""",
+                ),
+            ),
+        )
+
+        setContent {
+            MaterialTheme {
+                ReleaseDetailScreen(
+                    release = release,
+                    blockExecutions = executions,
+                    isConnected = true,
+                    onBack = {},
+                    onCancel = {},
+                    onRerun = {},
+                    onArchive = {},
+                    onApproveBlock = {},
+                    onBlockClick = {},
+                )
+            }
+        }
+
+        onNodeWithTag("execution_dag_canvas").performTouchInput {
+            click(Offset(190f, 135f))
+        }
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("block_detail_panel").fetchSemanticsNodes().isNotEmpty() }
+        // Directory node exists
+        onNodeWithTag("artifact_node_lib", useUnmergedTree = true).assertExists()
+        // Children should NOT be visible (collapsed by default)
+        onNodeWithTag("artifact_node_lib/app.jar", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `release detail block panel expand all shows directory children`() = runComposeUiTest {
+        val release = Release(
+            id = ReleaseId("r1"),
+            projectTemplateId = ProjectId("p1"),
+            status = ReleaseStatus.SUCCEEDED,
+            dagSnapshot = DagGraph(
+                blocks = listOf(
+                    Block.ActionBlock(id = BlockId("b1"), name = "Build", type = BlockType.TEAMCITY_BUILD),
+                ),
+                positions = mapOf(BlockId("b1") to BlockPosition(100f, 100f)),
+            ),
+        )
+        val executions = listOf(
+            BlockExecution(
+                blockId = BlockId("b1"),
+                releaseId = ReleaseId("r1"),
+                status = BlockStatus.SUCCEEDED,
+                outputs = mapOf(
+                    "buildNumber" to "42",
+                    "artifacts" to """["lib/app.jar","docs/readme.txt"]""",
+                ),
+            ),
+        )
+
+        setContent {
+            MaterialTheme {
+                ReleaseDetailScreen(
+                    release = release,
+                    blockExecutions = executions,
+                    isConnected = true,
+                    onBack = {},
+                    onCancel = {},
+                    onRerun = {},
+                    onArchive = {},
+                    onApproveBlock = {},
+                    onBlockClick = {},
+                )
+            }
+        }
+
+        onNodeWithTag("execution_dag_canvas").performTouchInput {
+            click(Offset(190f, 135f))
+        }
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("block_detail_panel").fetchSemanticsNodes().isNotEmpty() }
+
+        // Click Expand All
+        onNodeWithTag("artifact_expand_all_button", useUnmergedTree = true).performClick()
+        waitForIdle()
+
+        // Now children should be visible
+        onNodeWithTag("artifact_node_lib/app.jar", useUnmergedTree = true).assertExists()
+        onNodeWithTag("artifact_node_docs/readme.txt", useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun `release detail block panel no artifact section when key absent`() = runComposeUiTest {
+        val release = Release(
+            id = ReleaseId("r1"),
+            projectTemplateId = ProjectId("p1"),
+            status = ReleaseStatus.SUCCEEDED,
+            dagSnapshot = DagGraph(
+                blocks = listOf(
+                    Block.ActionBlock(id = BlockId("b1"), name = "Build", type = BlockType.TEAMCITY_BUILD),
+                ),
+                positions = mapOf(BlockId("b1") to BlockPosition(100f, 100f)),
+            ),
+        )
+        val executions = listOf(
+            BlockExecution(
+                blockId = BlockId("b1"),
+                releaseId = ReleaseId("r1"),
+                status = BlockStatus.SUCCEEDED,
+                outputs = mapOf("buildNumber" to "42"),
+            ),
+        )
+
+        setContent {
+            MaterialTheme {
+                ReleaseDetailScreen(
+                    release = release,
+                    blockExecutions = executions,
+                    isConnected = true,
+                    onBack = {},
+                    onCancel = {},
+                    onRerun = {},
+                    onArchive = {},
+                    onApproveBlock = {},
+                    onBlockClick = {},
+                )
+            }
+        }
+
+        onNodeWithTag("execution_dag_canvas").performTouchInput {
+            click(Offset(190f, 135f))
+        }
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("block_detail_panel").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("artifact_tree_section", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `release detail block panel artifacts key filtered from generic outputs`() = runComposeUiTest {
+        val release = Release(
+            id = ReleaseId("r1"),
+            projectTemplateId = ProjectId("p1"),
+            status = ReleaseStatus.SUCCEEDED,
+            dagSnapshot = DagGraph(
+                blocks = listOf(
+                    Block.ActionBlock(id = BlockId("b1"), name = "Build", type = BlockType.TEAMCITY_BUILD),
+                ),
+                positions = mapOf(BlockId("b1") to BlockPosition(100f, 100f)),
+            ),
+        )
+        val executions = listOf(
+            BlockExecution(
+                blockId = BlockId("b1"),
+                releaseId = ReleaseId("r1"),
+                status = BlockStatus.SUCCEEDED,
+                outputs = mapOf(
+                    "buildNumber" to "42",
+                    "artifacts" to """["lib/app.jar"]""",
+                ),
+            ),
+        )
+
+        setContent {
+            MaterialTheme {
+                ReleaseDetailScreen(
+                    release = release,
+                    blockExecutions = executions,
+                    isConnected = true,
+                    onBack = {},
+                    onCancel = {},
+                    onRerun = {},
+                    onArchive = {},
+                    onApproveBlock = {},
+                    onBlockClick = {},
+                )
+            }
+        }
+
+        onNodeWithTag("execution_dag_canvas").performTouchInput {
+            click(Offset(190f, 135f))
+        }
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("block_detail_panel").fetchSemanticsNodes().isNotEmpty() }
+        // buildNumber should be in outputs
+        onNodeWithText("buildNumber: 42", substring = true).assertExists()
+        // Raw JSON artifacts should NOT appear in generic outputs
+        onNodeWithText("artifacts:", substring = true).assertDoesNotExist()
+    }
+
     // ---- Phase 1A: Rerun button tests ----
 
     @Test

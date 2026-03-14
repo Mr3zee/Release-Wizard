@@ -2,6 +2,7 @@ package com.github.mr3zee.execution
 
 import com.github.mr3zee.AppJson
 import com.github.mr3zee.execution.executors.GitHubActionExecutor
+import com.github.mr3zee.execution.executors.TeamCityArtifactService
 import com.github.mr3zee.execution.executors.TeamCityBuildExecutor
 import com.github.mr3zee.model.*
 import com.github.mr3zee.webhooks.*
@@ -126,6 +127,205 @@ class AsyncExecutorsTest {
         } catch (e: IllegalArgumentException) {
             assertTrue(e.message!!.contains("buildTypeId"))
         }
+    }
+
+    @Test
+    fun `teamcity executor includes artifacts in outputs when artifactsGlob parameter present`() = runBlocking {
+        val client = mockClient { request ->
+            val url = request.url.toString()
+            when {
+                url.contains("/app/rest/buildQueue") -> respond(
+                    """{"id":"42","buildTypeId":"bt1","state":"queued"}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                url.contains("/artifacts/children") -> respond(
+                    """{"file":[{"name":"app.jar","size":1024},{"name":"readme.txt","size":256}]}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                else -> respond("{}", HttpStatusCode.OK)
+            }
+        }
+
+        val webhookRepo = InMemoryPendingWebhookRepository()
+        val connectionsRepo = FakeConnectionsRepository()
+        val webhookService = WebhookService(webhookRepo, connectionsRepo)
+        val artifactService = TeamCityArtifactService(client)
+
+        val executor = TeamCityBuildExecutor(client, webhookRepo, webhookService, artifactService)
+
+        val block = Block.ActionBlock(
+            id = BlockId("tc-art"),
+            name = "Build",
+            type = BlockType.TEAMCITY_BUILD,
+            connectionId = ConnectionId("conn-1"),
+        )
+
+        val outputsDeferred = async {
+            executor.execute(
+                block = block,
+                parameters = listOf(
+                    Parameter(key = "buildTypeId", value = "bt1"),
+                    Parameter(key = "artifactsGlob", value = "**/*.jar"),
+                ),
+                context = context(
+                    config = ConnectionConfig.TeamCityConfig(
+                        serverUrl = "https://tc.example.com",
+                        token = "tc-token",
+                    ),
+                ),
+            )
+        }
+
+        waitUntil {
+            webhookRepo.findByConnectionIdAndType(ConnectionId("conn-1"), WebhookType.TEAMCITY).isNotEmpty()
+        }
+
+        val pendingWebhooks = webhookRepo.findByConnectionIdAndType(ConnectionId("conn-1"), WebhookType.TEAMCITY)
+        webhookService.emitCompletion(
+            WebhookCompletion(
+                webhookId = pendingWebhooks[0].id,
+                blockId = block.id,
+                releaseId = ReleaseId("release-1"),
+                type = WebhookType.TEAMCITY,
+                payload = """{"buildNumber":"42","buildStatus":"SUCCESS"}""",
+            )
+        )
+
+        val outputs = outputsDeferred.await()
+        assertEquals("42", outputs["buildNumber"])
+        assertEquals("SUCCESS", outputs["buildStatus"])
+        assertTrue(outputs.containsKey("artifacts"), "Should have artifacts key")
+        assertTrue(outputs["artifacts"]!!.contains("app.jar"), "Should contain app.jar")
+        assertTrue(!outputs["artifacts"]!!.contains("readme.txt"), "Should not contain readme.txt (filtered by glob)")
+    }
+
+    @Test
+    fun `teamcity executor skips artifacts when no artifactsGlob parameter`() = runBlocking {
+        val client = mockClient { respond(
+            """{"id":"42","buildTypeId":"bt1","state":"queued"}""",
+            HttpStatusCode.OK,
+            headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+        )}
+
+        val webhookRepo = InMemoryPendingWebhookRepository()
+        val connectionsRepo = FakeConnectionsRepository()
+        val webhookService = WebhookService(webhookRepo, connectionsRepo)
+        val artifactService = TeamCityArtifactService(client)
+
+        val executor = TeamCityBuildExecutor(client, webhookRepo, webhookService, artifactService)
+
+        val block = Block.ActionBlock(
+            id = BlockId("tc-no-art"),
+            name = "Build",
+            type = BlockType.TEAMCITY_BUILD,
+            connectionId = ConnectionId("conn-1"),
+        )
+
+        val outputsDeferred = async {
+            executor.execute(
+                block = block,
+                parameters = listOf(Parameter(key = "buildTypeId", value = "bt1")),
+                context = context(
+                    config = ConnectionConfig.TeamCityConfig(
+                        serverUrl = "https://tc.example.com",
+                        token = "tc-token",
+                    ),
+                ),
+            )
+        }
+
+        waitUntil {
+            webhookRepo.findByConnectionIdAndType(ConnectionId("conn-1"), WebhookType.TEAMCITY).isNotEmpty()
+        }
+
+        val pendingWebhooks = webhookRepo.findByConnectionIdAndType(ConnectionId("conn-1"), WebhookType.TEAMCITY)
+        webhookService.emitCompletion(
+            WebhookCompletion(
+                webhookId = pendingWebhooks[0].id,
+                blockId = block.id,
+                releaseId = ReleaseId("release-1"),
+                type = WebhookType.TEAMCITY,
+                payload = """{"buildNumber":"42","buildStatus":"SUCCESS"}""",
+            )
+        )
+
+        val outputs = outputsDeferred.await()
+        assertEquals("42", outputs["buildNumber"])
+        assertTrue(!outputs.containsKey("artifacts"), "Should not have artifacts key without glob parameter")
+    }
+
+    @Test
+    fun `teamcity executor respects custom maxDepth and maxFiles parameters`() = runBlocking {
+        val client = mockClient { request ->
+            val url = request.url.toString()
+            when {
+                url.contains("/app/rest/buildQueue") -> respond(
+                    """{"id":"42","buildTypeId":"bt1","state":"queued"}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                url.contains("/artifacts/children") -> respond(
+                    """{"file":[{"name":"a.jar","size":100},{"name":"b.jar","size":200},{"name":"c.jar","size":300}]}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                else -> respond("{}", HttpStatusCode.OK)
+            }
+        }
+
+        val webhookRepo = InMemoryPendingWebhookRepository()
+        val connectionsRepo = FakeConnectionsRepository()
+        val webhookService = WebhookService(webhookRepo, connectionsRepo)
+        val artifactService = TeamCityArtifactService(client)
+
+        val executor = TeamCityBuildExecutor(client, webhookRepo, webhookService, artifactService)
+
+        val block = Block.ActionBlock(
+            id = BlockId("tc-custom"),
+            name = "Build",
+            type = BlockType.TEAMCITY_BUILD,
+            connectionId = ConnectionId("conn-1"),
+        )
+
+        val outputsDeferred = async {
+            executor.execute(
+                block = block,
+                parameters = listOf(
+                    Parameter(key = "buildTypeId", value = "bt1"),
+                    Parameter(key = "artifactsGlob", value = "**/*.jar"),
+                    Parameter(key = "artifactsMaxDepth", value = "5"),
+                    Parameter(key = "artifactsMaxFiles", value = "2"),
+                ),
+                context = context(
+                    config = ConnectionConfig.TeamCityConfig(
+                        serverUrl = "https://tc.example.com",
+                        token = "tc-token",
+                    ),
+                ),
+            )
+        }
+
+        waitUntil {
+            webhookRepo.findByConnectionIdAndType(ConnectionId("conn-1"), WebhookType.TEAMCITY).isNotEmpty()
+        }
+
+        val pendingWebhooks = webhookRepo.findByConnectionIdAndType(ConnectionId("conn-1"), WebhookType.TEAMCITY)
+        webhookService.emitCompletion(
+            WebhookCompletion(
+                webhookId = pendingWebhooks[0].id,
+                blockId = block.id,
+                releaseId = ReleaseId("release-1"),
+                type = WebhookType.TEAMCITY,
+                payload = """{"buildNumber":"42","buildStatus":"SUCCESS"}""",
+            )
+        )
+
+        val outputs = outputsDeferred.await()
+        assertTrue(outputs.containsKey("artifacts"))
+        val artifacts = kotlinx.serialization.json.Json.decodeFromString<List<String>>(outputs["artifacts"]!!)
+        assertEquals(2, artifacts.size, "maxFiles=2 should limit to 2 artifacts")
     }
 
     // --- GitHub Action Executor ---
