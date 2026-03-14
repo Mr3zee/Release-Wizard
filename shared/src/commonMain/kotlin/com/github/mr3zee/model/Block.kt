@@ -31,5 +31,6 @@ sealed class Block {
         val outputs: List<String> = emptyList(),
         val timeoutSeconds: Long? = null,
         val connectionId: ConnectionId? = null,
+        val approvalRule: ApprovalRule? = null,
     ) : Block()
 }

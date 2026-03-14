@@ -12,6 +12,7 @@ data class BlockExecution(
     val error: String? = null,
     val startedAt: Instant? = null,
     val finishedAt: Instant? = null,
+    val approvals: List<BlockApproval> = emptyList(),
 ) {
     companion object {
         /** Key in [outputs] for JSON-encoded artifact paths list. */

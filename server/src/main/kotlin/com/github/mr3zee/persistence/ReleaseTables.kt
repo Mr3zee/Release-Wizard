@@ -1,6 +1,7 @@
 package com.github.mr3zee.persistence
 
 import com.github.mr3zee.AppJson
+import com.github.mr3zee.model.BlockApproval
 import com.github.mr3zee.model.DagGraph
 import com.github.mr3zee.model.Parameter
 import kotlinx.serialization.builtins.ListSerializer
@@ -18,6 +19,12 @@ object ReleaseTable : UUIDTable("releases") {
     val ownerId = varchar("owner_id", 36)
     val startedAt = timestamp("started_at").nullable()
     val finishedAt = timestamp("finished_at").nullable()
+
+    init {
+        index(false, status)
+        index(false, projectTemplateId)
+        index(false, ownerId)
+    }
 }
 
 object BlockExecutionTable : UUIDTable("block_executions") {
@@ -28,4 +35,10 @@ object BlockExecutionTable : UUIDTable("block_executions") {
     val error = text("error").nullable()
     val startedAt = timestamp("started_at").nullable()
     val finishedAt = timestamp("finished_at").nullable()
+    val approvals = jsonb("approvals", AppJson, ListSerializer(BlockApproval.serializer()))
+
+    init {
+        index(false, releaseId)
+        uniqueIndex(releaseId, blockId)
+    }
 }
