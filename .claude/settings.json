@@ -1,0 +1,5 @@
+{
+  "enabledPlugins": {
+    "teamcity-cli@JetBrains-teamcity-cli": true
+  }
+}
