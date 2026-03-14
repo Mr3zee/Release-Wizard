@@ -14,6 +14,7 @@ data class SlackTestConfig(
 ) {
     companion object {
         private fun findLocalProperties(): File {
+            // todo claude: duplicate 9 lines
             val cwd = File("local.properties")
             if (cwd.exists()) return cwd
             var dir = File(".").absoluteFile.parentFile

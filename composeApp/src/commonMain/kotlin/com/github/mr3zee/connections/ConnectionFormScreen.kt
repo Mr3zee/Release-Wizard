@@ -40,7 +40,7 @@ fun ConnectionFormScreen(
 
     if (isEditMode) {
         LaunchedEffect(connectionId) {
-            viewModel.loadConnection(connectionId!!)
+            viewModel.loadConnection(connectionId)
         }
 
         LaunchedEffect(editingConnection) {
@@ -94,7 +94,7 @@ fun ConnectionFormScreen(
                     Button(
                         onClick = {
                             if (isEditMode) {
-                                viewModel.updateConnection(connectionId!!, name, currentConfig)
+                                viewModel.updateConnection(connectionId, name, currentConfig)
                             } else {
                                 viewModel.createConnection(name, selectedType, currentConfig)
                             }

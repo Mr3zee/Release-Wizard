@@ -395,7 +395,7 @@ class WebSocketLoadTest {
                     .filter { it.blockExecution.status == BlockStatus.SUCCEEDED }
                     .map { it.blockExecution.blockId }
                     .toSet()
-                val fromSnapshot = events.filterIsInstance<ReleaseEvent.Snapshot>()
+                val fromSnapshot = events.asSequence().filterIsInstance<ReleaseEvent.Snapshot>()
                     .flatMap { it.blockExecutions }
                     .filter { it.status == BlockStatus.SUCCEEDED }
                     .map { it.blockId }

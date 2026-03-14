@@ -18,6 +18,7 @@ fun AppNavigation(
     currentScreen: Screen,
     onNavigate: (Screen) -> Unit,
     onGoBack: () -> Boolean,
+    // todo claude: unused
     navController: NavigationController,
     projectListViewModel: ProjectListViewModel,
     projectApiClient: ProjectApiClient,

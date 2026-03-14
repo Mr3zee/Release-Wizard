@@ -151,6 +151,7 @@ fun ReleaseListScreen(
                             onDelete = { viewModel.deleteRelease(release.id) },
                         )
                     }
+                    // todo claude: duplicate 14 lines
                     val hasMore = pagination?.let { (it.offset + it.limit) < it.totalCount } ?: false
                     if (hasMore) {
                         item {

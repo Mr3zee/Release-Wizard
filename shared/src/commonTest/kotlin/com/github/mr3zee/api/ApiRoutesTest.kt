@@ -9,6 +9,7 @@ class ApiRoutesTest {
     @Test
     fun `blockExecution builds correct path`() {
         assertEquals(
+            // todo claude: ApiRoutes not used
             "/api/v1/releases/r1/blocks/b1",
             ApiRoutes.Releases.blockExecution("r1", "b1"),
         )
@@ -17,6 +18,7 @@ class ApiRoutesTest {
     @Test
     fun `restartBlock builds correct path`() {
         assertEquals(
+            // todo claude: ApiRoutes not used
             "/api/v1/releases/r1/blocks/b1/restart",
             ApiRoutes.Releases.restartBlock("r1", "b1"),
         )
@@ -25,6 +27,7 @@ class ApiRoutesTest {
     @Test
     fun `approveBlock builds correct path`() {
         assertEquals(
+            // todo claude: ApiRoutes not used
             "/api/v1/releases/r1/blocks/b1/approve",
             ApiRoutes.Releases.approveBlock("r1", "b1"),
         )

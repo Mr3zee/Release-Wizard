@@ -6,6 +6,7 @@ import com.github.mr3zee.api.NotificationConfigListResponse
 import com.github.mr3zee.auth.userSession
 import com.github.mr3zee.model.ProjectId
 import io.ktor.http.*
+import io.ktor.server.application.ApplicationCall
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -15,6 +16,7 @@ import java.util.UUID
 fun Route.notificationRoutes() {
     val service by inject<NotificationService>()
 
+    // todo claude: ApiRoutes not used
     route("/api/v1/projects/{projectId}/notifications") {
         get {
             val projectId = call.requireProjectId()
@@ -45,7 +47,8 @@ fun Route.notificationRoutes() {
     }
 }
 
-private fun io.ktor.server.application.ApplicationCall.requireProjectId(): ProjectId {
+// todo claude: duplicate function
+private fun ApplicationCall.requireProjectId(): ProjectId {
     val raw = parameters["projectId"]
         ?: throw IllegalArgumentException("Missing projectId")
     try {
@@ -56,7 +59,8 @@ private fun io.ktor.server.application.ApplicationCall.requireProjectId(): Proje
     return ProjectId(raw)
 }
 
-private fun io.ktor.server.application.ApplicationCall.requireNotificationId(): String {
+// todo claude: duplicate function
+private fun ApplicationCall.requireNotificationId(): String {
     val raw = parameters["notificationId"]
         ?: throw IllegalArgumentException("Missing notificationId")
     try {

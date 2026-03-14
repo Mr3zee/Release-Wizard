@@ -7,6 +7,7 @@ import com.github.mr3zee.model.Connection
 import com.github.mr3zee.model.ConnectionId
 import com.github.mr3zee.model.ConnectionType
 import io.ktor.http.*
+import io.ktor.server.application.ApplicationCall
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -23,7 +24,7 @@ fun Route.connectionRoutes() {
             val limit = (call.request.queryParameters["limit"]?.toIntOrNull() ?: 20).coerceIn(1, 200)
             val search = call.request.queryParameters["q"]
             val typeStr = call.request.queryParameters["type"]
-            val type = typeStr?.let { runCatching { com.github.mr3zee.model.ConnectionType.valueOf(it) }.getOrNull() }
+            val type = typeStr?.let { runCatching { ConnectionType.valueOf(it) }.getOrNull() }
             val (connections, totalCount) = service.listConnections(
                 call.userSession(), offset, limit, search, type,
             )
@@ -100,7 +101,7 @@ private fun webhookUrl(connection: Connection, webhookConfig: WebhookConfig): St
     }?.let { path -> "${webhookConfig.baseUrl}$path" }
 }
 
-private suspend fun io.ktor.server.application.ApplicationCall.requireConnectionId(): ConnectionId? {
+private suspend fun ApplicationCall.requireConnectionId(): ConnectionId? {
     val raw = parameters["id"]
     if (raw == null) {
         respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Missing id", code = "VALIDATION_ERROR"))

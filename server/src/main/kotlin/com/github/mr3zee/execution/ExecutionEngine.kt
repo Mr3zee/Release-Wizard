@@ -124,6 +124,7 @@ class ExecutionEngine(
         val job = scope.launch {
             executeRelease(release)
         }
+        // todo claude: duplicate 11 lines
         activeJobs[release.id] = job
         job.invokeOnCompletion {
             if (!restartingReleases.contains(release.id)) {
@@ -181,6 +182,7 @@ class ExecutionEngine(
         val job = scope.launch {
             executeRecovery(release, persistedExecutions)
         }
+        // todo claude: duplicate 11 lines
         activeJobs[release.id] = job
         job.invokeOnCompletion {
             if (!restartingReleases.contains(release.id)) {
@@ -851,6 +853,7 @@ class ExecutionEngine(
      * including inside nested container blocks.
      */
     private fun findActionBlock(graph: DagGraph, blockId: BlockId): Block.ActionBlock? {
+        // todo claude: duplicate 9 lines
         for (block in graph.blocks) {
             when (block) {
                 is Block.ActionBlock -> if (block.id == blockId) return block

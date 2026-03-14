@@ -10,11 +10,13 @@ import org.slf4j.LoggerFactory
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 
 class SchedulerService(
     private val scheduleRepository: ScheduleRepository,
     private val releasesService: ReleasesService,
+    // todo claude: unused
     private val scheduleService: ScheduleService,
 ) {
     private val logger = LoggerFactory.getLogger(SchedulerService::class.java)
@@ -39,7 +41,7 @@ class SchedulerService(
                 } catch (e: Exception) {
                     logger.error("Scheduler poll error", e)
                 }
-                delay(30_000L)
+                delay(30_000L.milliseconds)
             }
         }
     }
@@ -106,6 +108,7 @@ class SchedulerService(
     }
 
     private fun computeNextRun(cronExpression: String): Instant? {
+        // todo claude: duplicate 12 lines
         return try {
             val cron = cronParser.parse(cronExpression)
             val executionTime = ExecutionTime.forCron(cron)

@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(FlowPreview::class)
 class ProjectListViewModel(
@@ -43,7 +44,7 @@ class ProjectListViewModel(
 
     init {
         viewModelScope.launch {
-            _searchQuery.debounce(300).distinctUntilChanged().collectLatest {
+            _searchQuery.debounce(300.milliseconds).distinctUntilChanged().collectLatest {
                 loadProjectsInternal(reset = true)
             }
         }
@@ -74,7 +75,7 @@ class ProjectListViewModel(
                 val response = apiClient.listProjects(offset = nextOffset, limit = pageSize, search = search)
                 // Only append if search hasn't changed while we were loading
                 if (_searchQuery.value == currentSearch) {
-                    _projects.value = _projects.value + response.projects
+                    _projects.value += response.projects
                     _pagination.value = response.pagination
                 }
             } catch (e: Exception) {

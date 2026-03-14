@@ -1,6 +1,7 @@
 package com.github.mr3zee.execution
 
 import com.github.mr3zee.AppJson
+import com.github.mr3zee.connections.ConnectionsRepository
 import com.github.mr3zee.execution.executors.GitHubActionExecutor
 import com.github.mr3zee.execution.executors.TeamCityArtifactService
 import com.github.mr3zee.execution.executors.TeamCityBuildExecutor
@@ -13,6 +14,7 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import com.github.mr3zee.waitUntil
 import kotlinx.coroutines.*
+import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -324,7 +326,7 @@ class AsyncExecutorsTest {
 
         val outputs = outputsDeferred.await()
         assertTrue(outputs.containsKey("artifacts"))
-        val artifacts = kotlinx.serialization.json.Json.decodeFromString<List<String>>(outputs["artifacts"]!!)
+        val artifacts = Json.decodeFromString<List<String>>(outputs["artifacts"]!!)
         assertEquals(2, artifacts.size, "maxFiles=2 should limit to 2 artifacts")
     }
 
@@ -508,7 +510,7 @@ class InMemoryPendingWebhookRepository : PendingWebhookRepository {
 /**
  * Fake ConnectionsRepository for unit tests (not used by executors directly).
  */
-class FakeConnectionsRepository : com.github.mr3zee.connections.ConnectionsRepository {
+class FakeConnectionsRepository : ConnectionsRepository {
     override suspend fun findAll(ownerId: String?, offset: Int, limit: Int, search: String?, type: ConnectionType?) = emptyList<Connection>()
     override suspend fun countAll(ownerId: String?, search: String?, type: ConnectionType?) = 0L
     override suspend fun findAllWithCount(ownerId: String?, offset: Int, limit: Int, search: String?, type: ConnectionType?) = emptyList<Connection>() to 0L

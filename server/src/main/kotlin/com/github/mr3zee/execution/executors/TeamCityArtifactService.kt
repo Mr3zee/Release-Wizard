@@ -7,6 +7,7 @@ import io.ktor.http.*
 import kotlinx.serialization.json.*
 import org.slf4j.LoggerFactory
 import java.nio.file.FileSystems
+import java.nio.file.PathMatcher
 
 /**
  * Fetches artifact file names from TeamCity REST API and filters them by glob pattern.
@@ -43,8 +44,8 @@ class TeamCityArtifactService(private val httpClient: HttpClient) {
         token: String,
         buildId: String,
         subpath: String,
-        matcher: java.nio.file.PathMatcher,
-        rootMatcher: java.nio.file.PathMatcher?,
+        matcher: PathMatcher,
+        rootMatcher: PathMatcher?,
         maxDepth: Int,
         maxFiles: Int,
         result: MutableList<String>,

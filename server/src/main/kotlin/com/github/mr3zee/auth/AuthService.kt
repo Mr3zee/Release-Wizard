@@ -11,6 +11,7 @@ import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 import org.slf4j.LoggerFactory
+import java.sql.Connection
 import java.util.UUID
 import kotlin.time.Clock
 
@@ -71,7 +72,7 @@ class DatabaseAuthService(private val db: Database) : AuthService {
 
     override suspend fun register(username: String, password: String): User? =
         withContext(Dispatchers.IO) {
-            suspendTransaction(db, transactionIsolation = java.sql.Connection.TRANSACTION_SERIALIZABLE) {
+            suspendTransaction(db, transactionIsolation = Connection.TRANSACTION_SERIALIZABLE) {
                 val existing = UserTable.selectAll()
                     .where { UserTable.username eq username }
                     .singleOrNull()
@@ -128,7 +129,7 @@ class DatabaseAuthService(private val db: Database) : AuthService {
 
     override suspend fun safeUpdateUserRole(id: UserId, role: UserRole): Result<Boolean> =
         withContext(Dispatchers.IO) {
-            suspendTransaction(db, transactionIsolation = java.sql.Connection.TRANSACTION_SERIALIZABLE) {
+            suspendTransaction(db, transactionIsolation = Connection.TRANSACTION_SERIALIZABLE) {
                 // Check last-admin constraint atomically within the same transaction
                 if (role != UserRole.ADMIN) {
                     val targetRow = UserTable.selectAll()

@@ -4,6 +4,8 @@ import com.github.mr3zee.*
 import com.github.mr3zee.api.*
 import com.github.mr3zee.model.UserRole
 import io.ktor.client.call.*
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.cookies.HttpCookies
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
@@ -25,10 +27,10 @@ class SecurityHardeningTest {
 
         // Create a client WITHOUT CSRF token plugin for this specific request
         val noCsrfClient = createClient {
-            install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) {
+            install(ContentNegotiation) {
                 json(AppJson)
             }
-            install(io.ktor.client.plugins.cookies.HttpCookies)
+            install(HttpCookies)
         }
         // Copy cookies by logging in with noCsrfClient
         noCsrfClient.login()
@@ -59,10 +61,10 @@ class SecurityHardeningTest {
     fun `GET requests do not require CSRF token`() = testApplication {
         application { testModule() }
         val client = createClient {
-            install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) {
+            install(ContentNegotiation) {
                 json(AppJson)
             }
-            install(io.ktor.client.plugins.cookies.HttpCookies)
+            install(HttpCookies)
         }
         client.login()
 
@@ -86,7 +88,7 @@ class SecurityHardeningTest {
 
         // Webhook endpoint should work without CSRF token
         val webhookClient = createClient {
-            install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) {
+            install(ContentNegotiation) {
                 json(AppJson)
             }
         }
@@ -101,10 +103,10 @@ class SecurityHardeningTest {
     fun `CSRF token is returned in response headers`() = testApplication {
         application { testModule() }
         val client = createClient {
-            install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) {
+            install(ContentNegotiation) {
                 json(AppJson)
             }
-            install(io.ktor.client.plugins.cookies.HttpCookies)
+            install(HttpCookies)
         }
         client.login()
 
@@ -120,6 +122,7 @@ class SecurityHardeningTest {
     @Test
     fun `session with expired TTL returns 401`() = testApplication {
         // Use a very short TTL for testing
+        // todo claude: unused
         val shortTtlAuthConfig = AuthConfig(
             sessionSignKey = testAuthConfig().sessionSignKey,
             sessionTtlSeconds = 0, // Immediately expired

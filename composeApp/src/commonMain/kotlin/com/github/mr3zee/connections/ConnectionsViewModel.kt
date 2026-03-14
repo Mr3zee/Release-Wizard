@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(FlowPreview::class)
 class ConnectionsViewModel(
@@ -57,7 +58,7 @@ class ConnectionsViewModel(
     init {
         viewModelScope.launch {
             combine(
-                _searchQuery.debounce(300),
+                _searchQuery.debounce(300.milliseconds),
                 _typeFilter,
             ) { search, type -> search to type }
                 .distinctUntilChanged()
@@ -82,6 +83,7 @@ class ConnectionsViewModel(
     }
 
     fun loadMore() {
+        // todo claude: duplicate 8 lines
         val pag = _pagination.value ?: return
         if (_isLoadingMore.value) return
         val nextOffset = pag.offset + pag.limit
@@ -102,8 +104,8 @@ class ConnectionsViewModel(
                 )
                 // Only append if filters haven't changed while we were loading
                 if (_searchQuery.value == currentSearch && _typeFilter.value == currentType) {
-                    _connections.value = _connections.value + response.connections
-                    _webhookUrls.value = _webhookUrls.value + response.webhookUrls
+                    _connections.value += response.connections
+                    _webhookUrls.value += response.webhookUrls
                     _pagination.value = response.pagination
                 }
             } catch (e: Exception) {

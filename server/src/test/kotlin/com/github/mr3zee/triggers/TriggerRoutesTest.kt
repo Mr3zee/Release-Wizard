@@ -7,7 +7,6 @@ import com.github.mr3zee.model.*
 import com.github.mr3zee.testModule
 import io.ktor.client.call.*
 import io.ktor.client.request.*
-import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
 import kotlin.test.Test

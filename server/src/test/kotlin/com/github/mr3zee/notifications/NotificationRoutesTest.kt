@@ -6,6 +6,7 @@ import com.github.mr3zee.login
 import com.github.mr3zee.model.NotificationConfig
 import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.testModule
+import io.ktor.client.HttpClient
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
@@ -138,7 +139,7 @@ class NotificationRoutesTest {
 /**
  * Helper: creates a project and returns its ID as a String.
  */
-private suspend fun io.ktor.client.HttpClient.createProject(name: String = "Test Project"): String {
+private suspend fun HttpClient.createProject(name: String = "Test Project"): String {
     val response = post(ApiRoutes.Projects.BASE) {
         contentType(ContentType.Application.Json)
         setBody(CreateProjectRequest(name = name))

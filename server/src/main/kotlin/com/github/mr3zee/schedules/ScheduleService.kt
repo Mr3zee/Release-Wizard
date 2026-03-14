@@ -93,6 +93,7 @@ class DefaultScheduleService(
     }
 
     fun computeNextRun(cronExpression: String): Instant? {
+        // todo claude: duplicate 12 lines
         return try {
             val cron = cronParser.parse(cronExpression)
             val executionTime = ExecutionTime.forCron(cron)

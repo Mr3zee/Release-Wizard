@@ -6,7 +6,6 @@ import com.github.mr3zee.login
 import com.github.mr3zee.testModule
 import com.github.mr3zee.model.ConnectionConfig
 import com.github.mr3zee.model.ConnectionType
-import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*

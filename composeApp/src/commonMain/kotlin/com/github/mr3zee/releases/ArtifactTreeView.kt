@@ -26,7 +26,7 @@ fun ArtifactTreeView(artifactsJson: String) {
         }
     }
 
-    if (paths == null || paths.isEmpty()) return
+    if (paths.isNullOrEmpty()) return
 
     val tree = remember(paths) { buildArtifactTree(paths) }
     val expandedState = remember { mutableStateMapOf<String, Boolean>() }

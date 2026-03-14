@@ -3,6 +3,7 @@ package com.github.mr3zee.webhooks
 import com.github.mr3zee.api.ApiRoutes
 import com.github.mr3zee.model.ConnectionId
 import io.ktor.http.*
+import io.ktor.server.application.ApplicationCall
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -47,7 +48,8 @@ fun Route.webhookRoutes() {
     }
 }
 
-private suspend fun io.ktor.server.application.ApplicationCall.requireWebhookConnectionId(): ConnectionId? {
+// todo claude: duplicate function
+private suspend fun ApplicationCall.requireWebhookConnectionId(): ConnectionId? {
     val raw = parameters["connectionId"]
     if (raw == null) {
         respond(HttpStatusCode.BadRequest, "Missing connectionId")

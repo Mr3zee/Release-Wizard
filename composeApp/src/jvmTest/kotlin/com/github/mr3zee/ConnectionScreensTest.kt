@@ -9,6 +9,7 @@ import com.github.mr3zee.connections.ConnectionsViewModel
 import com.github.mr3zee.model.ConnectionId
 import io.ktor.http.*
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalTestApi::class)
@@ -488,6 +489,6 @@ class ConnectionScreensTest {
 
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("My GitHub").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("connection_item_c1", useUnmergedTree = true).performClick()
-        assertTrue(editedId?.value == "c1")
+        assertEquals(editedId?.value, "c1")
     }
 }

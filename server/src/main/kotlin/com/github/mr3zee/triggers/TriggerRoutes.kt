@@ -6,6 +6,7 @@ import com.github.mr3zee.api.TriggerListResponse
 import com.github.mr3zee.auth.userSession
 import com.github.mr3zee.model.ProjectId
 import io.ktor.http.*
+import io.ktor.server.application.ApplicationCall
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -18,6 +19,7 @@ import java.util.UUID
 fun Route.triggerRoutes() {
     val service by inject<TriggerService>()
 
+    // todo claude: ApiRoutes not used
     route("/api/v1/projects/{projectId}/triggers") {
         get {
             val projectId = call.requireProjectId()
@@ -67,6 +69,7 @@ fun Route.triggerRoutes() {
 fun Route.triggerWebhookRoutes() {
     val service by inject<TriggerService>()
 
+    // todo claude: ApiRoutes not used
     post("/api/v1/triggers/webhook/{triggerId}") {
         val triggerId = call.parameters["triggerId"]
         if (triggerId == null) {
@@ -99,7 +102,8 @@ fun Route.triggerWebhookRoutes() {
 @kotlinx.serialization.Serializable
 data class ToggleTriggerRequest(val enabled: Boolean)
 
-private fun io.ktor.server.application.ApplicationCall.requireProjectId(): ProjectId {
+// todo claude: duplicate function
+private fun ApplicationCall.requireProjectId(): ProjectId {
     val raw = parameters["projectId"]
         ?: throw IllegalArgumentException("Missing projectId")
     try {
@@ -110,7 +114,8 @@ private fun io.ktor.server.application.ApplicationCall.requireProjectId(): Proje
     return ProjectId(raw)
 }
 
-private fun io.ktor.server.application.ApplicationCall.requireTriggerId(): String {
+// todo claude: duplicate function
+private fun ApplicationCall.requireTriggerId(): String {
     val raw = parameters["triggerId"]
         ?: throw IllegalArgumentException("Missing triggerId")
     try {

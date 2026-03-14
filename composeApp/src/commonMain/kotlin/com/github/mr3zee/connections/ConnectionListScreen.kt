@@ -139,6 +139,7 @@ fun ConnectionListScreen(
                             onTest = { viewModel.testConnection(connection.id) },
                         )
                     }
+                    // todo claude: duplicate 14 lines
                     val hasMore = pagination?.let { (it.offset + it.limit) < it.totalCount } ?: false
                     if (hasMore) {
                         item {

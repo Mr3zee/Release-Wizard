@@ -97,6 +97,7 @@ class DefaultReleasesService(
 
         // Set tags (merge default tags from project with request tags)
         val tags = (project.defaultTags + request.tags).map { it.trim().lowercase() }.distinct()
+        // todo claude: duplicate 3 lines
         if (tags.isNotEmpty()) {
             tagRepository.setTagsForRelease(release.id, tags)
         }
@@ -136,6 +137,7 @@ class DefaultReleasesService(
 
         // Apply project's default tags to scheduled releases
         val tags = project.defaultTags.map { it.trim().lowercase() }.distinct()
+        // todo claude: duplicate 3 lines
         if (tags.isNotEmpty()) {
             tagRepository.setTagsForRelease(release.id, tags)
         }
@@ -174,6 +176,7 @@ class DefaultReleasesService(
 
         // Copy tags from the original release
         val originalTags = original.tags
+        // todo claude: duplicate 3 lines
         if (originalTags.isNotEmpty()) {
             tagRepository.setTagsForRelease(release.id, originalTags)
         }
@@ -310,6 +313,7 @@ class DefaultReleasesService(
     }
 
     private fun findActionBlock(graph: DagGraph, blockId: BlockId): Block.ActionBlock? {
+        // todo claude: duplicate 9 lines
         for (block in graph.blocks) {
             when (block) {
                 is Block.ActionBlock -> if (block.id == blockId) return block

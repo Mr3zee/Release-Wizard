@@ -60,6 +60,7 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
     private fun buildReleaseConditions(
         includeArchived: Boolean,
         ownerId: String?,
+        // todo claude: unused
         search: String?,
         status: ReleaseStatus?,
         projectTemplateId: ProjectId?,
@@ -144,6 +145,7 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
         }
         val totalCount = countQuery.count()
 
+        // todo claude: duplicate 9 lines
         val dataQuery = ReleaseTable.selectAll()
         if (conditions.isNotEmpty()) {
             dataQuery.where { conditions.reduce { acc, op -> acc and op } }

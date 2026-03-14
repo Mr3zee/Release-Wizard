@@ -24,7 +24,6 @@ import com.github.mr3zee.navigation.Screen
 import com.github.mr3zee.projects.ProjectListViewModel
 import com.github.mr3zee.releases.ReleaseListViewModel
 import com.github.mr3zee.theme.AppTheme
-import com.github.mr3zee.theme.ThemePreference
 import com.github.mr3zee.theme.loadThemePreference
 import com.github.mr3zee.theme.saveThemePreference
 

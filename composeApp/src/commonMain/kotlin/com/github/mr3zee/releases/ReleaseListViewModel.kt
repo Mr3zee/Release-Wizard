@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(FlowPreview::class)
 class ReleaseListViewModel(
@@ -46,6 +47,7 @@ class ReleaseListViewModel(
     val statusFilter: StateFlow<ReleaseStatus?> = _statusFilter
 
     private val _projectFilter = MutableStateFlow<ProjectId?>(null)
+    // todo claude: unused
     val projectFilter: StateFlow<ProjectId?> = _projectFilter
 
     private val _pagination = MutableStateFlow<PaginationInfo?>(null)
@@ -59,7 +61,7 @@ class ReleaseListViewModel(
     init {
         viewModelScope.launch {
             combine(
-                _searchQuery.debounce(300),
+                _searchQuery.debounce(300.milliseconds),
                 _statusFilter,
                 _projectFilter,
             ) { search, status, project -> Triple(search, status, project) }
@@ -78,6 +80,7 @@ class ReleaseListViewModel(
         _statusFilter.value = status
     }
 
+    // todo claude: unused
     fun setProjectFilter(projectId: ProjectId?) {
         _projectFilter.value = projectId
     }
@@ -89,6 +92,7 @@ class ReleaseListViewModel(
     }
 
     fun loadMore() {
+        // todo claude: duplicate 8 lines
         val pag = _pagination.value ?: return
         if (_isLoadingMore.value) return
         val nextOffset = pag.offset + pag.limit
@@ -114,7 +118,7 @@ class ReleaseListViewModel(
                     _statusFilter.value == currentStatus &&
                     _projectFilter.value == currentProject
                 ) {
-                    _releases.value = _releases.value + response.releases
+                    _releases.value += response.releases
                     _pagination.value = response.pagination
                 }
             } catch (e: Exception) {

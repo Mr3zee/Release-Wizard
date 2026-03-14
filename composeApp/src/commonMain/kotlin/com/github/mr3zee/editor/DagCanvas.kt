@@ -101,6 +101,7 @@ fun DagCanvas(
     onAddEdge: (BlockId, BlockId) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // todo claude: duplicate 6 lines
     val textMeasurer = rememberTextMeasurer()
     val density = LocalDensity.current.density
     val appColors = LocalAppColors.current

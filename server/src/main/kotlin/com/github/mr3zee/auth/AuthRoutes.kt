@@ -5,6 +5,7 @@ import com.github.mr3zee.model.UserRole
 import com.github.mr3zee.model.UserId
 import com.github.mr3zee.plugins.CorrelationIdKey
 import io.ktor.http.*
+import io.ktor.server.application.ApplicationCall
 import io.ktor.server.auth.*
 import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.request.*
@@ -143,7 +144,7 @@ fun Route.authRoutes() {
     }
 }
 
-private suspend fun respondUnauthorized(call: io.ktor.server.application.ApplicationCall, message: String) {
+private suspend fun respondUnauthorized(call: ApplicationCall, message: String) {
     val correlationId = call.attributes.getOrNull(CorrelationIdKey)
     call.respond(
         HttpStatusCode.Unauthorized,

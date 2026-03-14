@@ -1,3 +1,5 @@
+@file:Suppress("FunctionName")
+
 package com.github.mr3zee.github
 
 import com.github.mr3zee.connections.ConnectionTester

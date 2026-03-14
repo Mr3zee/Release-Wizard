@@ -4,6 +4,7 @@ import com.github.mr3zee.api.*
 import com.github.mr3zee.auth.userSession
 import com.github.mr3zee.model.ProjectId
 import io.ktor.http.*
+import io.ktor.server.application.ApplicationCall
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -70,7 +71,8 @@ fun Route.projectRoutes() {
     }
 }
 
-private suspend fun io.ktor.server.application.ApplicationCall.requireProjectId(): ProjectId? {
+// todo claude: duplicate function
+private suspend fun ApplicationCall.requireProjectId(): ProjectId? {
     val raw = parameters["id"]
     if (raw == null) {
         respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Missing id", code = "VALIDATION_ERROR"))

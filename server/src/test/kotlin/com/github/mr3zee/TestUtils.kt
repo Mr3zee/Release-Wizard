@@ -1,6 +1,9 @@
 package com.github.mr3zee
 
+import com.github.mr3zee.api.ApiRoutes
 import com.github.mr3zee.api.ErrorResponse
+import com.github.mr3zee.api.LoginRequest
+import com.github.mr3zee.api.RegisterRequest
 import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.auth.authModule
 import com.github.mr3zee.connections.connectionsModule
@@ -9,7 +12,6 @@ import com.github.mr3zee.plugins.CorrelationIdKey
 import com.github.mr3zee.plugins.CsrfProtection
 import com.github.mr3zee.plugins.RequestSizeLimit
 import com.github.mr3zee.plugins.SessionTtl
-import com.github.mr3zee.plugins.healthRoute
 import com.github.mr3zee.projects.projectsModule
 import com.github.mr3zee.releases.releasesModule
 import com.github.mr3zee.notifications.notificationsModule
@@ -46,6 +48,7 @@ import kotlinx.serialization.SerializationException
 import org.koin.dsl.module
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 fun testDbConfig() = DatabaseConfig(
@@ -253,7 +256,7 @@ suspend fun waitUntil(
 ) {
     repeat(maxAttempts) {
         if (condition()) return
-        if (delayMillis > 0) delay(delayMillis) else yield()
+        if (delayMillis > 0) delay(delayMillis.milliseconds) else yield()
     }
     throw AssertionError("waitUntil timed out after $maxAttempts attempts")
 }
@@ -289,13 +292,13 @@ suspend fun HttpClient.login(
     password: String = "adminpass",
 ) {
     // Register (idempotent — 409 on duplicate is fine)
-    post(com.github.mr3zee.api.ApiRoutes.Auth.REGISTER) {
-        contentType(io.ktor.http.ContentType.Application.Json)
-        setBody(com.github.mr3zee.api.RegisterRequest(username = username, password = password))
+    post(ApiRoutes.Auth.REGISTER) {
+        contentType(ContentType.Application.Json)
+        setBody(RegisterRequest(username = username, password = password))
     }
     // Login to get a session cookie
-    post(com.github.mr3zee.api.ApiRoutes.Auth.LOGIN) {
-        contentType(io.ktor.http.ContentType.Application.Json)
-        setBody(com.github.mr3zee.api.LoginRequest(username = username, password = password))
+    post(ApiRoutes.Auth.LOGIN) {
+        contentType(ContentType.Application.Json)
+        setBody(LoginRequest(username = username, password = password))
     }
 }

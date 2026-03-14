@@ -18,6 +18,7 @@ data class GitHubTestConfig(
     companion object {
         private fun findLocalProperties(): File {
             // Check CWD first, then walk up to find the root project (where .git lives)
+            // todo claude: duplicate 9 lines
             val cwd = File("local.properties")
             if (cwd.exists()) return cwd
             var dir = File(".").absoluteFile.parentFile

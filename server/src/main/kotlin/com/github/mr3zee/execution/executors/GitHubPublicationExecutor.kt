@@ -56,6 +56,7 @@ class GitHubPublicationExecutor(
 
         return if (checkResponse.status.isSuccess()) {
             // Release already exists — extract outputs
+            // todo claude: duplicate 4 lines
             val responseBody = checkResponse.body<JsonObject>()
             val releaseUrl = responseBody["html_url"]?.jsonPrimitive?.content ?: ""
             val actualTag = responseBody["tag_name"]?.jsonPrimitive?.content ?: tagName
@@ -102,6 +103,7 @@ class GitHubPublicationExecutor(
             throw RuntimeException("GitHub release creation failed (HTTP ${response.status.value})")
         }
 
+        // todo claude: duplicate 5 lines
         val responseBody = response.body<JsonObject>()
         val releaseUrl = responseBody["html_url"]?.jsonPrimitive?.content ?: ""
         val actualTag = responseBody["tag_name"]?.jsonPrimitive?.content ?: tagName

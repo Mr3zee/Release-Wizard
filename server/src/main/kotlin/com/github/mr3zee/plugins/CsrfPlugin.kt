@@ -31,8 +31,10 @@ val CsrfProtection = createApplicationPlugin(name = "CsrfProtection") {
 
         // Exempt unauthenticated webhook/trigger endpoints
         val path = call.request.path()
+        // todo claude: ApiRoutes not used
         if (path.startsWith("/api/v1/webhooks/") || path.startsWith("/api/v1/triggers/webhook/")) return@onCall
 
+        // todo claude: ApiRoutes not used
         // Exempt auth endpoints (login, register) — no session exists yet
         if (path == "/api/v1/auth/login" || path == "/api/v1/auth/register") return@onCall
 
