@@ -15,7 +15,6 @@ import io.ktor.websocket.*
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.koin.ktor.ext.inject
 import java.util.UUID
@@ -62,8 +61,7 @@ fun Route.releaseWebSocketRoutes() {
             val collectJob = launch(start = CoroutineStart.UNDISPATCHED) {
                 engine.events
                     .filter { it.releaseId == releaseId }
-                    .onEach { eventBuffer.send(it) }
-                    .collect {}
+                    .collect { eventBuffer.send(it) }
             }
 
             // Send initial snapshot

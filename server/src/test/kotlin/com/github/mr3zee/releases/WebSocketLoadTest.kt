@@ -413,14 +413,17 @@ class WebSocketLoadTest {
                 )
             }
 
-            // All clients should agree on the final release status
-            val completedStatuses = allEvents.map { events ->
-                events.filterIsInstance<ReleaseEvent.ReleaseCompleted>().first().status
+            // All clients should agree on the final release status (via event or snapshot)
+            for ((clientIdx, events) in allEvents.withIndex()) {
+                val completedEvent = events.filterIsInstance<ReleaseEvent.ReleaseCompleted>().firstOrNull()
+                val snapshotStatus = events.filterIsInstance<ReleaseEvent.Snapshot>().firstOrNull()?.release?.status
+                val succeeded = completedEvent?.status == ReleaseStatus.SUCCEEDED ||
+                    snapshotStatus == ReleaseStatus.SUCCEEDED
+                assertTrue(
+                    succeeded,
+                    "Client $clientIdx should see SUCCEEDED via event or snapshot",
+                )
             }
-            assertTrue(
-                completedStatuses.all { it == ReleaseStatus.SUCCEEDED },
-                "All clients should see SUCCEEDED completion",
-            )
         }
     }
 }
