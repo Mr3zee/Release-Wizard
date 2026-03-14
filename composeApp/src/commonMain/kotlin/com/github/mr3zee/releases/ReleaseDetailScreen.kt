@@ -180,11 +180,9 @@ private fun BlockDetailPanel(
 
             if (execution.error != null) {
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Error: ${execution.error}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.testTag("block_error_text"),
+                ErrorDetailSection(
+                    error = execution.error!!,
+                    finishedAt = execution.finishedAt,
                 )
             }
 
