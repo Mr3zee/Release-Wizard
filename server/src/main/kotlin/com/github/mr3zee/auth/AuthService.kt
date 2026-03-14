@@ -21,6 +21,14 @@ interface AuthService {
     suspend fun getUserByUsername(username: String): User?
     suspend fun listUsers(): List<User>
     suspend fun updateUserRole(id: UserId, role: UserRole): Boolean
+
+    /**
+     * Atomically checks that demoting [id] would not remove the last admin,
+     * then applies the role change. Returns:
+     * - [Result.success] with `true` if updated, `false` if user not found
+     * - [Result.failure] with [IllegalStateException] if demoting the last admin
+     */
+    suspend fun safeUpdateUserRole(id: UserId, role: UserRole): Result<Boolean>
 }
 
 class DatabaseAuthService(private val db: Database) : AuthService {
@@ -61,41 +69,35 @@ class DatabaseAuthService(private val db: Database) : AuthService {
         }
     }
 
-    override suspend fun register(username: String, password: String): User? = dbQuery {
-        val existing = UserTable.selectAll()
-            .where { UserTable.username eq username }
-            .singleOrNull()
-        if (existing != null) return@dbQuery null
-
-        val isFirstUser = UserTable.selectAll().count() == 0L
-        val role = if (isFirstUser) UserRole.ADMIN else UserRole.USER
-
-        val id = UUID.randomUUID()
-        val now = Clock.System.now()
-        val hash = argon2.hash(3, 65536, 1, password.toCharArray())
-        UserTable.insert {
-            it[UserTable.id] = id
-            it[UserTable.username] = username
-            it[UserTable.passwordHash] = hash
-            it[UserTable.role] = role.name
-            it[UserTable.createdAt] = now
-        }
-
-        // Self-healing: if race condition produced multiple admins, demote this one
-        if (role == UserRole.ADMIN) {
-            val adminCount = UserTable.selectAll()
-                .where { UserTable.role eq UserRole.ADMIN.name }
-                .count()
-            if (adminCount > 1) {
-                UserTable.update({ UserTable.id eq id }) {
-                    it[UserTable.role] = UserRole.USER.name
+    override suspend fun register(username: String, password: String): User? =
+        withContext(Dispatchers.IO) {
+            suspendTransaction(db, transactionIsolation = java.sql.Connection.TRANSACTION_SERIALIZABLE) {
+                val existing = UserTable.selectAll()
+                    .where { UserTable.username eq username }
+                    .singleOrNull()
+                if (existing != null) {
+                    // Normalize timing so duplicate-username path takes roughly the same time as success path
+                    argon2.hash(3, 65536, 1, "dummy-timing-normalization".toCharArray())
+                    return@suspendTransaction null
                 }
-                return@dbQuery User(id = UserId(id.toString()), username = username, role = UserRole.USER)
+
+                val isFirstUser = UserTable.selectAll().count() == 0L
+                val role = if (isFirstUser) UserRole.ADMIN else UserRole.USER
+
+                val id = UUID.randomUUID()
+                val now = Clock.System.now()
+                val hash = argon2.hash(3, 65536, 1, password.toCharArray())
+                UserTable.insert {
+                    it[UserTable.id] = id
+                    it[UserTable.username] = username
+                    it[UserTable.passwordHash] = hash
+                    it[UserTable.role] = role.name
+                    it[UserTable.createdAt] = now
+                }
+
+                User(id = UserId(id.toString()), username = username, role = role)
             }
         }
-
-        User(id = UserId(id.toString()), username = username, role = role)
-    }
 
     override suspend fun getUserById(id: UserId): User? = dbQuery {
         UserTable.selectAll()
@@ -123,4 +125,33 @@ class DatabaseAuthService(private val db: Database) : AuthService {
         }
         updated > 0
     }
+
+    override suspend fun safeUpdateUserRole(id: UserId, role: UserRole): Result<Boolean> =
+        withContext(Dispatchers.IO) {
+            suspendTransaction(db, transactionIsolation = java.sql.Connection.TRANSACTION_SERIALIZABLE) {
+                // Check last-admin constraint atomically within the same transaction
+                if (role != UserRole.ADMIN) {
+                    val targetRow = UserTable.selectAll()
+                        .where { UserTable.id eq UUID.fromString(id.value) }
+                        .singleOrNull()
+                        ?: return@suspendTransaction Result.success(false)
+                    val isTargetCurrentlyAdmin = targetRow[UserTable.role] == UserRole.ADMIN.name
+                    if (isTargetCurrentlyAdmin) {
+                        val adminCount = UserTable.selectAll()
+                            .where { UserTable.role eq UserRole.ADMIN.name }
+                            .count()
+                        if (adminCount <= 1) {
+                            return@suspendTransaction Result.failure(
+                                IllegalStateException("Cannot demote the last admin")
+                            )
+                        }
+                    }
+                }
+
+                val updated = UserTable.update({ UserTable.id eq UUID.fromString(id.value) }) {
+                    it[UserTable.role] = role.name
+                }
+                Result.success(updated > 0)
+            }
+        }
 }

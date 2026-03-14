@@ -13,6 +13,8 @@ import com.github.mr3zee.notifications.notificationRoutes
 import com.github.mr3zee.notifications.notificationsModule
 import com.github.mr3zee.plugins.CorrelationId
 import com.github.mr3zee.plugins.CorrelationIdKey
+import com.github.mr3zee.plugins.CsrfProtection
+import com.github.mr3zee.plugins.SessionTtl
 import com.github.mr3zee.plugins.healthRoute
 import com.github.mr3zee.projects.projectRoutes
 import com.github.mr3zee.projects.projectsModule
@@ -22,6 +24,8 @@ import com.github.mr3zee.releases.releasesModule
 import com.github.mr3zee.schedules.SchedulerService
 import com.github.mr3zee.schedules.scheduleRoutes
 import com.github.mr3zee.schedules.schedulesModule
+import com.github.mr3zee.tags.tagRoutes
+import com.github.mr3zee.tags.tagsModule
 import com.github.mr3zee.triggers.triggerRoutes
 import com.github.mr3zee.triggers.triggerWebhookRoutes
 import com.github.mr3zee.triggers.triggersModule
@@ -62,13 +66,14 @@ fun Application.module() {
     val authConfig = environment.config.authConfig()
     val encryptionConfig = environment.config.encryptionConfig()
     val webhookConfig = environment.config.webhookConfig()
+    val passwordPolicyConfig = environment.config.passwordPolicyConfig()
 
     val executionScope = CoroutineScope(SupervisorJob(coroutineContext.job) + Dispatchers.Default)
 
     install(Koin) {
         slf4jLogger()
         modules(
-            appModule(dbConfig, encryptionConfig, authConfig, webhookConfig),
+            appModule(dbConfig, encryptionConfig, authConfig, webhookConfig, passwordPolicyConfig),
             authModule,
             projectsModule,
             connectionsModule,
@@ -77,6 +82,7 @@ fun Application.module() {
             notificationsModule,
             schedulesModule,
             triggersModule,
+            tagsModule,
             module { single { executionScope } },
         )
     }
@@ -106,8 +112,9 @@ fun Application.module() {
     install(Sessions) {
         cookie<UserSession>("SESSION") {
             cookie.path = "/"
-            cookie.maxAgeInSeconds = 86400
+            cookie.maxAgeInSeconds = authConfig.sessionTtlSeconds
             cookie.httpOnly = true
+            cookie.secure = this@module.environment.config.propertyOrNull("app.auth.secureCookie")?.getString()?.toBooleanStrictOrNull() ?: false
             cookie.extensions["SameSite"] = "Lax"
             transform(SessionTransportTransformerMessageAuthentication(hex(authConfig.sessionSignKey)))
         }
@@ -129,6 +136,12 @@ fun Application.module() {
             }
         }
     }
+
+    // Session TTL must be installed after Sessions (reads/writes session cookie)
+    install(SessionTtl)
+
+    // CSRF must be installed after Sessions (reads session for token validation)
+    install(CsrfProtection)
 
     install(ContentNegotiation) {
         json(AppJson)
@@ -274,6 +287,7 @@ fun Application.configureRouting() {
             notificationRoutes()
             scheduleRoutes()
             triggerRoutes()
+            tagRoutes()
         }
     }
 }

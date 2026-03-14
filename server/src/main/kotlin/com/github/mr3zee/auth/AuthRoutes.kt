@@ -12,16 +12,31 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import org.koin.ktor.ext.inject
+import java.security.SecureRandom
+import kotlin.time.Clock
 
 fun Route.authRoutes() {
     val authService by inject<AuthService>()
+    val passwordValidator by inject<PasswordValidator>()
 
     rateLimit(RateLimitName("login")) {
         post(ApiRoutes.Auth.LOGIN) {
             val request = call.receive<LoginRequest>()
             val user = authService.validate(request.username, request.password)
             if (user != null) {
-                call.sessions.set(UserSession(username = user.username, userId = user.id.value, role = user.role))
+                val now = Clock.System.now().toEpochMilliseconds()
+                val csrfToken = generateCsrfToken()
+                call.sessions.set(
+                    UserSession(
+                        username = user.username,
+                        userId = user.id.value,
+                        role = user.role,
+                        csrfToken = csrfToken,
+                        createdAt = now,
+                        lastAccessedAt = now,
+                    )
+                )
+
                 call.respond(UserInfo(username = user.username, id = user.id.value, role = user.role))
             } else {
                 respondUnauthorized(call, "Invalid credentials")
@@ -30,16 +45,43 @@ fun Route.authRoutes() {
 
         post(ApiRoutes.Auth.REGISTER) {
             val request = call.receive<RegisterRequest>()
-            if (request.username.isBlank() || request.password.length < 8) {
+            if (request.username.isBlank()) {
                 call.respond(
                     HttpStatusCode.BadRequest,
-                    ErrorResponse(error = "Username must not be blank and password must be at least 8 characters", code = "VALIDATION_ERROR"),
+                    ErrorResponse(error = "Username must not be blank", code = "VALIDATION_ERROR"),
+                )
+                return@post
+            }
+            if (request.username.length > 64) {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse(error = "Username must not exceed 64 characters", code = "VALIDATION_ERROR"),
+                )
+                return@post
+            }
+            val passwordErrors = passwordValidator.validate(request.password)
+            if (passwordErrors.isNotEmpty()) {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse(error = passwordErrors.joinToString("; "), code = "VALIDATION_ERROR"),
                 )
                 return@post
             }
             val user = authService.register(request.username, request.password)
             if (user != null) {
-                call.sessions.set(UserSession(username = user.username, userId = user.id.value, role = user.role))
+                val now = Clock.System.now().toEpochMilliseconds()
+                val csrfToken = generateCsrfToken()
+                call.sessions.set(
+                    UserSession(
+                        username = user.username,
+                        userId = user.id.value,
+                        role = user.role,
+                        csrfToken = csrfToken,
+                        createdAt = now,
+                        lastAccessedAt = now,
+                    )
+                )
+
                 call.respond(HttpStatusCode.Created, UserInfo(username = user.username, id = user.id.value, role = user.role))
             } else {
                 call.respond(
@@ -48,11 +90,6 @@ fun Route.authRoutes() {
                 )
             }
         }
-    }
-
-    post(ApiRoutes.Auth.LOGOUT) {
-        call.sessions.clear<UserSession>()
-        call.respond(HttpStatusCode.OK)
     }
 
     get(ApiRoutes.Auth.ME) {
@@ -64,8 +101,13 @@ fun Route.authRoutes() {
         }
     }
 
-    // Admin-only user management (requires auth)
+    // Authenticated endpoints (requires session)
     authenticate("session-auth") {
+        post(ApiRoutes.Auth.LOGOUT) {
+            call.sessions.clear<UserSession>()
+            call.respond(HttpStatusCode.OK)
+        }
+
         get(ApiRoutes.Auth.USERS) {
             val session = call.sessions.get<UserSession>()!!
             if (session.role != UserRole.ADMIN) {
@@ -84,22 +126,19 @@ fun Route.authRoutes() {
             }
             val userId = call.parameters["userId"] ?: throw IllegalArgumentException("Missing userId")
             val request = call.receive<UpdateUserRoleRequest>()
-            // Prevent demoting the last admin
-            if (request.role != UserRole.ADMIN) {
-                val users = authService.listUsers()
-                val adminCount = users.count { it.role == UserRole.ADMIN }
-                val isTargetCurrentlyAdmin = users.find { it.id.value == userId }?.role == UserRole.ADMIN
-                if (isTargetCurrentlyAdmin && adminCount <= 1) {
+            val result = authService.safeUpdateUserRole(UserId(userId), request.role)
+            result.fold(
+                onSuccess = { updated ->
+                    if (updated) {
+                        call.respond(HttpStatusCode.OK, mapOf("status" to "updated"))
+                    } else {
+                        call.respond(HttpStatusCode.NotFound, ErrorResponse(error = "User not found", code = "NOT_FOUND"))
+                    }
+                },
+                onFailure = {
                     call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Cannot demote the last admin", code = "LAST_ADMIN"))
-                    return@put
-                }
-            }
-            val updated = authService.updateUserRole(UserId(userId), request.role)
-            if (updated) {
-                call.respond(HttpStatusCode.OK, mapOf("status" to "updated"))
-            } else {
-                call.respond(HttpStatusCode.NotFound, ErrorResponse(error = "User not found", code = "NOT_FOUND"))
-            }
+                },
+            )
         }
     }
 }
@@ -114,4 +153,12 @@ private suspend fun respondUnauthorized(call: io.ktor.server.application.Applica
             correlationId = correlationId,
         ),
     )
+}
+
+private val csrfRandom = SecureRandom()
+
+private fun generateCsrfToken(): String {
+    val bytes = ByteArray(32)
+    csrfRandom.nextBytes(bytes)
+    return bytes.joinToString("") { "%02x".format(it) }
 }

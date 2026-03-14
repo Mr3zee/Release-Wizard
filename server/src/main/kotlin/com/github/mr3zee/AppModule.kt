@@ -17,11 +17,13 @@ fun appModule(
     encryptionConfig: EncryptionConfig,
     authConfig: AuthConfig,
     webhookConfig: WebhookConfig,
+    passwordPolicyConfig: PasswordPolicyConfig = PasswordPolicyConfig(),
 ) = module {
     single { dbConfig }
     single { encryptionConfig }
     single { authConfig }
     single { webhookConfig }
+    single { passwordPolicyConfig }
     single<DataSource> { dataSource(get()) }
     single<Database> { initDatabase(get()) }
     single { EncryptionService(get()) }

@@ -11,4 +11,8 @@ object ConnectionTable : UUIDTable("connections") {
     val ownerId = varchar("owner_id", 36)
     val createdAt = timestamp("created_at")
     val updatedAt = timestamp("updated_at")
+
+    init {
+        index(false, ownerId)
+    }
 }
