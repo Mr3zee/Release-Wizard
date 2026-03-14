@@ -33,15 +33,6 @@ class NavigationController(
         return true
     }
 
-    // todo claude: unused
-    fun replaceTop(screen: Screen) {
-        if (_backStack.isNotEmpty()) {
-            _backStack[_backStack.lastIndex] = screen
-        } else {
-            _backStack.add(screen)
-        }
-    }
-
     fun resetTo(screen: Screen) {
         _backStack.clear()
         _backStack.add(screen)

@@ -5,5 +5,5 @@ import org.koin.dsl.module
 val schedulesModule = module {
     single<ScheduleRepository> { ExposedScheduleRepository(get()) }
     single { DefaultScheduleService(get(), get()) as ScheduleService }
-    single { SchedulerService(get(), get(), get()) }
+    single { SchedulerService(get(), get()) }
 }

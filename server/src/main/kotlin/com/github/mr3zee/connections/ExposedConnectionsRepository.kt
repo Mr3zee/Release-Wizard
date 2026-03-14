@@ -3,7 +3,7 @@ package com.github.mr3zee.connections
 import com.github.mr3zee.AppJson
 import com.github.mr3zee.model.*
 import com.github.mr3zee.persistence.ConnectionTable
-import com.github.mr3zee.persistence.escapeLikePattern
+import com.github.mr3zee.persistence.likeContains
 import com.github.mr3zee.persistence.safeOffset
 import com.github.mr3zee.security.EncryptionService
 import kotlinx.coroutines.Dispatchers
@@ -45,7 +45,7 @@ class ExposedConnectionsRepository(
             conditions.add(ConnectionTable.ownerId eq ownerId)
         }
         if (!search.isNullOrBlank()) {
-            conditions.add(ConnectionTable.name.lowerCase() like "%${escapeLikePattern(search.lowercase())}%")
+            conditions.add(ConnectionTable.name.lowerCase() like likeContains(search))
         }
         if (type != null) {
             conditions.add(ConnectionTable.type eq type)

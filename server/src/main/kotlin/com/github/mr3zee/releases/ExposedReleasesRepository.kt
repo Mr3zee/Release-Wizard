@@ -2,8 +2,10 @@ package com.github.mr3zee.releases
 
 import com.github.mr3zee.model.*
 import com.github.mr3zee.persistence.BlockExecutionTable
+import com.github.mr3zee.persistence.ProjectTemplateTable
 import com.github.mr3zee.persistence.ReleaseTable
 import com.github.mr3zee.persistence.ReleaseTagTable
+import com.github.mr3zee.persistence.likeContains
 import com.github.mr3zee.persistence.safeOffset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -60,7 +62,6 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
     private fun buildReleaseConditions(
         includeArchived: Boolean,
         ownerId: String?,
-        // todo claude: unused
         search: String?,
         status: ReleaseStatus?,
         projectTemplateId: ProjectId?,
@@ -79,8 +80,22 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
         if (projectTemplateId != null) {
             conditions.add(ReleaseTable.projectTemplateId eq projectTemplateId.value)
         }
-        // Note: search is not applied at DB level for releases (no name column; UUID search is not useful).
-        // Filtering is done via projectTemplateId and tag filters instead.
+        if (!search.isNullOrBlank()) {
+            val pattern = likeContains(search)
+            val projectNameMatch = exists(
+                ProjectTemplateTable.selectAll().where {
+                    (ProjectTemplateTable.id.castTo<String>(VarCharColumnType(36)) eq ReleaseTable.projectTemplateId) and
+                        (ProjectTemplateTable.name.lowerCase() like pattern)
+                }
+            )
+            val tagMatch = exists(
+                ReleaseTagTable.selectAll().where {
+                    (ReleaseTagTable.releaseId eq ReleaseTable.id.castTo<String>(VarCharColumnType(36))) and
+                        (ReleaseTagTable.tag.lowerCase() like pattern)
+                }
+            )
+            conditions.add(projectNameMatch or tagMatch)
+        }
         if (releaseIds != null) {
             val uuids = releaseIds.mapNotNull { runCatching { UUID.fromString(it) }.getOrNull() }
             conditions.add(ReleaseTable.id inList uuids)

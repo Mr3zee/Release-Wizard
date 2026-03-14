@@ -27,6 +27,7 @@ fun DagEditorScreen(
     val canUndo by viewModel.canUndo.collectAsState()
     val canRedo by viewModel.canRedo.collectAsState()
     val validationErrors by viewModel.validationErrors.collectAsState()
+    val clipboard by viewModel.clipboard.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.loadProject()
@@ -171,9 +172,12 @@ fun DagEditorScreen(
                 },
                 onUndo = { viewModel.undo() },
                 onRedo = { viewModel.redo() },
+                onCopy = { viewModel.copySelected() },
+                onPaste = { viewModel.pasteClipboard() },
                 canUndo = canUndo,
                 canRedo = canRedo,
                 hasSelection = selectedBlockIds.isNotEmpty() || selectedEdgeIndex != null,
+                hasClipboard = clipboard != null,
             )
 
             VerticalDivider()

@@ -47,7 +47,6 @@ class ReleaseListViewModel(
     val statusFilter: StateFlow<ReleaseStatus?> = _statusFilter
 
     private val _projectFilter = MutableStateFlow<ProjectId?>(null)
-    // todo claude: unused
     val projectFilter: StateFlow<ProjectId?> = _projectFilter
 
     private val _pagination = MutableStateFlow<PaginationInfo?>(null)
@@ -80,7 +79,6 @@ class ReleaseListViewModel(
         _statusFilter.value = status
     }
 
-    // todo claude: unused
     fun setProjectFilter(projectId: ProjectId?) {
         _projectFilter.value = projectId
     }

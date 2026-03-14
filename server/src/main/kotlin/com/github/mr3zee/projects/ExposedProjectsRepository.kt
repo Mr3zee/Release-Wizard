@@ -2,7 +2,7 @@ package com.github.mr3zee.projects
 
 import com.github.mr3zee.model.*
 import com.github.mr3zee.persistence.ProjectTemplateTable
-import com.github.mr3zee.persistence.escapeLikePattern
+import com.github.mr3zee.persistence.likeContains
 import com.github.mr3zee.persistence.safeOffset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -39,7 +39,7 @@ class ExposedProjectsRepository(private val db: Database) : ProjectsRepository {
             conditions.add(ProjectTemplateTable.ownerId eq ownerId)
         }
         if (!search.isNullOrBlank()) {
-            conditions.add(ProjectTemplateTable.name.lowerCase() like "%${escapeLikePattern(search.lowercase())}%")
+            conditions.add(ProjectTemplateTable.name.lowerCase() like likeContains(search))
         }
         return conditions
     }

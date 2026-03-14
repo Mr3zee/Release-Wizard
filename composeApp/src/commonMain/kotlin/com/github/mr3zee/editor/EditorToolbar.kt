@@ -18,9 +18,12 @@ fun EditorToolbar(
     onDelete: () -> Unit,
     onUndo: () -> Unit,
     onRedo: () -> Unit,
+    onCopy: () -> Unit,
+    onPaste: () -> Unit,
     canUndo: Boolean,
     canRedo: Boolean,
     hasSelection: Boolean,
+    hasClipboard: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
@@ -93,6 +96,26 @@ fun EditorToolbar(
                 modifier = Modifier.weight(1f).testTag("redo_button"),
             ) {
                 Text("Redo")
+            }
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            OutlinedButton(
+                onClick = onCopy,
+                enabled = hasSelection,
+                modifier = Modifier.weight(1f).testTag("copy_button"),
+            ) {
+                Text("Copy")
+            }
+            OutlinedButton(
+                onClick = onPaste,
+                enabled = hasClipboard,
+                modifier = Modifier.weight(1f).testTag("paste_button"),
+            ) {
+                Text("Paste")
             }
         }
 

@@ -115,6 +115,18 @@ fun Route.authRoutes() {
             call.respond(UserListResponse(users))
         }
 
+        get(ApiRoutes.Auth.USERS + "/{userId}") {
+            requireAdminSession(call) ?: return@get
+            val userId = call.parameters["userId"]
+                ?: return@get call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Missing userId", code = "BAD_REQUEST"))
+            val user = authService.getUserById(UserId(userId))
+            if (user != null) {
+                call.respond(UserInfo(username = user.username, id = user.id.value, role = user.role))
+            } else {
+                call.respond(HttpStatusCode.NotFound, ErrorResponse(error = "User not found", code = "NOT_FOUND"))
+            }
+        }
+
         put(ApiRoutes.Auth.USERS + "/{userId}/role") {
             requireAdminSession(call) ?: return@put
             val userId = call.parameters["userId"] ?: throw IllegalArgumentException("Missing userId")

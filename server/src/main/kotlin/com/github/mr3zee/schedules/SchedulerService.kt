@@ -9,8 +9,6 @@ import kotlin.time.Duration.Companion.milliseconds
 class SchedulerService(
     private val scheduleRepository: ScheduleRepository,
     private val releasesService: ReleasesService,
-    // todo claude: unused
-    private val scheduleService: ScheduleService,
 ) {
     private val logger = LoggerFactory.getLogger(SchedulerService::class.java)
     private var pollingJob: Job? = null

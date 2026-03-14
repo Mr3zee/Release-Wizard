@@ -121,25 +121,19 @@ class SecurityHardeningTest {
 
     @Test
     fun `session with expired TTL returns 401`() = testApplication {
-        // Use a very short TTL for testing
-        // todo claude: unused
         val shortTtlAuthConfig = AuthConfig(
             sessionSignKey = testAuthConfig().sessionSignKey,
-            sessionTtlSeconds = 0, // Immediately expired
+            sessionTtlSeconds = 0,
             sessionRefreshThresholdSeconds = 0,
         )
         application {
-            testModule()
-            // Note: The session TTL is checked based on the authConfig injected at plugin install time.
-            // Since we can't easily override the installed plugin's config, we test the behavior
-            // by verifying that a valid session works.
+            testModule(authConfig = shortTtlAuthConfig)
         }
         val client = jsonClient()
         client.login()
 
-        // With default test TTL (86400s), session should still be valid
         val response = client.get(ApiRoutes.Auth.ME)
-        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(HttpStatusCode.Unauthorized, response.status)
     }
 
     @Test

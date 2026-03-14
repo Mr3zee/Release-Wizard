@@ -1,9 +1,11 @@
 package com.github.mr3zee.releases
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -12,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.loadMoreItem
+import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.model.Release
 import com.github.mr3zee.model.ReleaseId
 import com.github.mr3zee.model.ReleaseStatus
@@ -31,6 +34,7 @@ fun ReleaseListScreen(
     val error by viewModel.error.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val statusFilter by viewModel.statusFilter.collectAsState()
+    val projectFilter by viewModel.projectFilter.collectAsState()
     val isLoadingMore by viewModel.isLoadingMore.collectAsState()
     val pagination by viewModel.pagination.collectAsState()
 
@@ -96,6 +100,33 @@ fun ReleaseListScreen(
                         label = { Text(status.name.lowercase().replaceFirstChar { it.uppercase() }) },
                         modifier = Modifier.testTag("filter_${status.name}"),
                     )
+                }
+            }
+            if (projects.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    FilterChip(
+                        selected = projectFilter == null,
+                        onClick = { viewModel.setProjectFilter(null) },
+                        label = { Text("All Projects") },
+                        modifier = Modifier.testTag("filter_all_projects"),
+                    )
+                    for (project in projects) {
+                        FilterChip(
+                            selected = projectFilter == project.id,
+                            onClick = {
+                                viewModel.setProjectFilter(
+                                    if (projectFilter == project.id) null else project.id
+                                )
+                            },
+                            label = { Text(project.name) },
+                            modifier = Modifier.testTag("filter_project_${project.id.value}"),
+                        )
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(4.dp))

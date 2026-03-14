@@ -62,7 +62,6 @@ class AppNavigationTest {
                         currentScreen = currentScreen,
                         onNavigate = { navController.navigate(it) },
                         onGoBack = { navController.goBack() },
-                        navController = navController,
                         projectListViewModel = projectListViewModel,
                         projectApiClient = projectApiClient,
                         releaseApiClient = releaseApiClient,

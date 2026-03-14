@@ -100,8 +100,8 @@ fun Application.testModuleWithPasswordPolicy(
 fun Application.testModule(
     dbConfig: DatabaseConfig = testDbConfig(),
     passwordPolicyConfig: PasswordPolicyConfig = testPasswordPolicyConfig(),
+    authConfig: AuthConfig = testAuthConfig(),
 ) {
-    val authConfig = testAuthConfig()
     install(Koin) {
         slf4jLogger()
         allowOverride(true)

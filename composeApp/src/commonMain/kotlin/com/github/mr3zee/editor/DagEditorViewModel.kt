@@ -32,7 +32,6 @@ class DagEditorViewModel(
     val selectedEdgeIndex: StateFlow<Int?> = _selectedEdgeIndex
 
     private val _clipboard = MutableStateFlow<DagGraph?>(null)
-    // todo claude: unused
     val clipboard: StateFlow<DagGraph?> = _clipboard
 
     private val _isDirty = MutableStateFlow(false)
