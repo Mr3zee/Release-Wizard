@@ -7,9 +7,15 @@ import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.cookies.*
 import io.ktor.client.plugins.websocket.*
+import io.ktor.client.request.*
 import io.ktor.serialization.kotlinx.json.*
+import kotlinx.coroutines.flow.MutableStateFlow
+
+private const val CSRF_TOKEN_HEADER = "X-CSRF-Token"
 
 fun createHttpClient(): HttpClient {
+    val csrfToken = MutableStateFlow("")
+
     return HttpClient {
         install(ContentNegotiation) {
             json(AppJson)
@@ -18,6 +24,12 @@ fun createHttpClient(): HttpClient {
         install(HttpCookies)
         expectSuccess = true
         HttpResponseValidator {
+            validateResponse { response ->
+                // Capture CSRF token from any response
+                response.headers[CSRF_TOKEN_HEADER]?.let { token ->
+                    csrfToken.value = token
+                }
+            }
             handleResponseExceptionWithRequest { cause, request ->
                 if (cause is ClientRequestException && cause.response.status.value == 401) {
                     // Don't intercept login endpoint 401s — those mean "wrong credentials"
@@ -27,6 +39,13 @@ fun createHttpClient(): HttpClient {
                     }
                 }
                 throw cause
+            }
+        }
+        // Attach CSRF token to all outgoing requests
+        install(DefaultRequest) {
+            val token = csrfToken.value
+            if (token.isNotEmpty()) {
+                header(CSRF_TOKEN_HEADER, token)
             }
         }
     }

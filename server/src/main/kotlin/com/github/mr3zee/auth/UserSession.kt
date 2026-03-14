@@ -8,4 +8,7 @@ data class UserSession(
     val username: String,
     val userId: String,
     val role: UserRole,
+    val csrfToken: String = "",
+    val createdAt: Long = 0L,
+    val lastAccessedAt: Long = 0L,
 )

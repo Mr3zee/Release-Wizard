@@ -18,6 +18,14 @@ app:
     driver: "org.postgresql.Driver"
   auth:
     sessionSignKey: "$AUTH_SESSION_SIGN_KEY"
+    sessionTtlSeconds: "$SESSION_TTL_SECONDS:86400"
+    sessionRefreshThresholdSeconds: "$SESSION_REFRESH_THRESHOLD_SECONDS:3600"
+    secureCookie: "$SECURE_COOKIE:false"
+    password:
+      minLength: "$PASSWORD_MIN_LENGTH:12"
+      requireUppercase: "$PASSWORD_REQUIRE_UPPERCASE:true"
+      requireDigit: "$PASSWORD_REQUIRE_DIGIT:true"
+      requireSpecial: "$PASSWORD_REQUIRE_SPECIAL:false"
   encryption:
     key: "$ENCRYPTION_KEY"
   webhook:

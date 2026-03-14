@@ -6,17 +6,21 @@ import com.github.mr3zee.auth.authModule
 import com.github.mr3zee.connections.connectionsModule
 import com.github.mr3zee.plugins.CorrelationId
 import com.github.mr3zee.plugins.CorrelationIdKey
+import com.github.mr3zee.plugins.CsrfProtection
 import com.github.mr3zee.plugins.RequestSizeLimit
+import com.github.mr3zee.plugins.SessionTtl
 import com.github.mr3zee.plugins.healthRoute
 import com.github.mr3zee.projects.projectsModule
 import com.github.mr3zee.releases.releasesModule
 import com.github.mr3zee.notifications.notificationsModule
 import com.github.mr3zee.schedules.schedulesModule
+import com.github.mr3zee.tags.tagsModule
 import com.github.mr3zee.triggers.triggersModule
 import com.github.mr3zee.webhooks.webhooksModule
 import com.github.mr3zee.execution.BlockExecutor
 import com.github.mr3zee.execution.StubBlockExecutor
 import io.ktor.client.HttpClient
+import io.ktor.client.plugins.api.*
 import io.ktor.client.request.*
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 import io.ktor.client.plugins.cookies.*
@@ -63,6 +67,13 @@ fun testWebhookConfig() = WebhookConfig(
     baseUrl = "http://localhost:8080",
 )
 
+fun testPasswordPolicyConfig() = PasswordPolicyConfig(
+    minLength = 8,
+    requireUppercase = false,
+    requireDigit = false,
+    requireSpecial = false,
+)
+
 /**
  * Test override module:
  * - Replaces real executors with stubs (existing tests create blocks without connections)
@@ -78,13 +89,21 @@ val testOverrideModule = module {
     single { CoroutineScope(SupervisorJob()) }
 }
 
-fun Application.testModule(dbConfig: DatabaseConfig = testDbConfig()) {
+fun Application.testModuleWithPasswordPolicy(
+    passwordPolicyConfig: PasswordPolicyConfig,
+    dbConfig: DatabaseConfig = testDbConfig(),
+) = testModule(dbConfig, passwordPolicyConfig)
+
+fun Application.testModule(
+    dbConfig: DatabaseConfig = testDbConfig(),
+    passwordPolicyConfig: PasswordPolicyConfig = testPasswordPolicyConfig(),
+) {
     val authConfig = testAuthConfig()
     install(Koin) {
         slf4jLogger()
         allowOverride(true)
         modules(
-            appModule(dbConfig, testEncryptionConfig(), authConfig, testWebhookConfig()),
+            appModule(dbConfig, testEncryptionConfig(), authConfig, testWebhookConfig(), passwordPolicyConfig),
             authModule,
             projectsModule,
             connectionsModule,
@@ -93,6 +112,7 @@ fun Application.testModule(dbConfig: DatabaseConfig = testDbConfig()) {
             notificationsModule,
             schedulesModule,
             triggersModule,
+            tagsModule,
             testOverrideModule,
         )
     }
@@ -138,6 +158,8 @@ fun Application.testModule(dbConfig: DatabaseConfig = testDbConfig()) {
             }
         }
     }
+    install(SessionTtl)
+    install(CsrfProtection)
     install(WebSockets) {
         pingPeriod = 15.seconds
         timeout = 15.seconds
@@ -236,11 +258,27 @@ suspend fun waitUntil(
     throw AssertionError("waitUntil timed out after $maxAttempts attempts")
 }
 
+/**
+ * Ktor client plugin that captures X-CSRF-Token from responses and attaches it to subsequent requests.
+ */
+private val CsrfTokenTestPlugin = createClientPlugin("CsrfTokenTest") {
+    var csrfToken = ""
+    onRequest { request, _ ->
+        if (csrfToken.isNotEmpty()) {
+            request.header("X-CSRF-Token", csrfToken)
+        }
+    }
+    onResponse { response ->
+        response.headers["X-CSRF-Token"]?.let { csrfToken = it }
+    }
+}
+
 fun ApplicationTestBuilder.jsonClient() = createClient {
     install(ClientContentNegotiation) {
         json(AppJson)
     }
     install(HttpCookies)
+    install(CsrfTokenTestPlugin)
 }
 
 /**

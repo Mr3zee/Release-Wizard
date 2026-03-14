@@ -11,6 +11,15 @@ data class DatabaseConfig(
 
 data class AuthConfig(
     val sessionSignKey: String,
+    val sessionTtlSeconds: Long = 86400,
+    val sessionRefreshThresholdSeconds: Long = 3600,
+)
+
+data class PasswordPolicyConfig(
+    val minLength: Int = 12,
+    val requireUppercase: Boolean = true,
+    val requireDigit: Boolean = true,
+    val requireSpecial: Boolean = false,
 )
 
 data class EncryptionConfig(
@@ -38,7 +47,23 @@ fun ApplicationConfig.authConfig(): AuthConfig {
             "Set AUTH_SESSION_SIGN_KEY env var."
     }
 
-    return AuthConfig(sessionSignKey = sessionSignKey)
+    val sessionTtlSeconds = propertyOrNull("app.auth.sessionTtlSeconds")?.getString()?.toLongOrNull() ?: 86400L
+    val sessionRefreshThresholdSeconds = propertyOrNull("app.auth.sessionRefreshThresholdSeconds")?.getString()?.toLongOrNull() ?: 3600L
+
+    return AuthConfig(
+        sessionSignKey = sessionSignKey,
+        sessionTtlSeconds = sessionTtlSeconds,
+        sessionRefreshThresholdSeconds = sessionRefreshThresholdSeconds,
+    )
+}
+
+fun ApplicationConfig.passwordPolicyConfig(): PasswordPolicyConfig {
+    return PasswordPolicyConfig(
+        minLength = propertyOrNull("app.auth.password.minLength")?.getString()?.toIntOrNull() ?: 12,
+        requireUppercase = propertyOrNull("app.auth.password.requireUppercase")?.getString()?.toBooleanStrictOrNull() ?: true,
+        requireDigit = propertyOrNull("app.auth.password.requireDigit")?.getString()?.toBooleanStrictOrNull() ?: true,
+        requireSpecial = propertyOrNull("app.auth.password.requireSpecial")?.getString()?.toBooleanStrictOrNull() ?: false,
+    )
 }
 
 fun ApplicationConfig.encryptionConfig(): EncryptionConfig {

@@ -62,8 +62,7 @@ fun Route.triggerRoutes() {
 
 /**
  * Unauthenticated webhook endpoint.
- * Accepts the secret from the Authorization header (Bearer token) preferred,
- * or falls back to query parameter for backward compatibility (deprecated).
+ * Accepts the secret from the Authorization header (Bearer token) only.
  */
 fun Route.triggerWebhookRoutes() {
     val service by inject<TriggerService>()
@@ -82,11 +81,9 @@ fun Route.triggerWebhookRoutes() {
             return@post
         }
 
-        // Prefer Authorization header; fall back to query parameter (deprecated)
         val secret = call.request.header("Authorization")?.removePrefix("Bearer ")
-            ?: call.request.queryParameters["secret"]
         if (secret.isNullOrBlank()) {
-            call.respond(HttpStatusCode.Unauthorized, "Missing secret")
+            call.respond(HttpStatusCode.Unauthorized, "Missing secret — use Authorization: Bearer <secret> header")
             return@post
         }
 
