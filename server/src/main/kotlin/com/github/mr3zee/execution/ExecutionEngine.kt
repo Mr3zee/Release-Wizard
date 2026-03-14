@@ -405,6 +405,7 @@ class ExecutionEngine(
             repository.updateStatus(releaseId, ReleaseStatus.RUNNING)
 
             // Re-launch via recovery
+            // todo claude: proper null handling
             val updatedRelease = repository.findById(releaseId)!!
             val executions = repository.findBlockExecutions(releaseId)
             recoverRelease(updatedRelease, executions)
@@ -720,6 +721,7 @@ class ExecutionEngine(
             ready.forEach { remaining.remove(it) }
 
             val jobs = ready.map { blockId ->
+                // todo claude: proper null handling
                 val block = graph.blocks.find { it.id == blockId }!!
                 scope.async { executeBlock(block) }
             }

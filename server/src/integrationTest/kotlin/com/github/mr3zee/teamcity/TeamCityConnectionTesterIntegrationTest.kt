@@ -36,7 +36,9 @@ class TeamCityConnectionTesterIntegrationTest {
 
     @Test
     fun `valid token and server succeeds`() = runBlocking {
+        // todo claude: proper null handling
         val cfg = config!!
+        // todo claude: proper null handling
         val tester = ConnectionTester(client!!)
         val result = tester.test(
             ConnectionConfig.TeamCityConfig(
@@ -50,7 +52,9 @@ class TeamCityConnectionTesterIntegrationTest {
 
     @Test
     fun `invalid token fails`() = runBlocking {
+        // todo claude: proper null handling
         val cfg = config!!
+        // todo claude: proper null handling
         val tester = ConnectionTester(client!!)
         val result = tester.test(
             ConnectionConfig.TeamCityConfig(
@@ -64,6 +68,7 @@ class TeamCityConnectionTesterIntegrationTest {
 
     @Test
     fun `unreachable server fails`() = runBlocking {
+        // todo claude: proper null handling
         val tester = ConnectionTester(client!!)
         val result = tester.test(
             ConnectionConfig.TeamCityConfig(

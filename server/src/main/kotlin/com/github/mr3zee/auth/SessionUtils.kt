@@ -8,5 +8,5 @@ import io.ktor.server.sessions.sessions
  * Extracts the UserSession from an authenticated route.
  * Should only be called within authenticate("session-auth") blocks.
  */
-// todo claude: proper error message
+// todo claude: proper null handling
 fun ApplicationCall.userSession(): UserSession = sessions.get<UserSession>()!!

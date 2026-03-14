@@ -279,11 +279,16 @@ class ConcurrentReleasesTest {
         for (result in results) {
             val blocksByBlockId = result.blockExecutions.associateBy { it.blockId.value }
             // Find the chain blocks by suffix pattern
+            // todo claude: proper null handling
             val aBlock = blocksByBlockId.values.find { it.blockId.value.startsWith("a-") }!!
+            // todo claude: proper null handling
             val bBlock = blocksByBlockId.values.find { it.blockId.value.startsWith("b-") }!!
+            // todo claude: proper null handling
             val cBlock = blocksByBlockId.values.find { it.blockId.value.startsWith("c-") }!!
 
+            // todo claude: proper null handling
             assertTrue(bBlock.startedAt!! >= aBlock.finishedAt!!, "B should start after A finishes")
+            // todo claude: proper null handling
             assertTrue(cBlock.startedAt!! >= bBlock.finishedAt!!, "C should start after B finishes")
         }
     }

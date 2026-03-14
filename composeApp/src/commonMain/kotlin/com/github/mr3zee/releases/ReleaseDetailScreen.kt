@@ -181,6 +181,7 @@ private fun BlockDetailPanel(
             if (execution.error != null) {
                 Spacer(modifier = Modifier.height(4.dp))
                 ErrorDetailSection(
+                    // todo claude: proper null handling
                     error = execution.error!!,
                     finishedAt = execution.finishedAt,
                 )

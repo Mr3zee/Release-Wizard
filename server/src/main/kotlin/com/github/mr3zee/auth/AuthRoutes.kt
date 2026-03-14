@@ -110,6 +110,7 @@ fun Route.authRoutes() {
         }
 
         get(ApiRoutes.Auth.USERS) {
+            // todo claude: proper null handling
             val session = call.sessions.get<UserSession>()!!
             if (session.role != UserRole.ADMIN) {
                 call.respond(HttpStatusCode.Forbidden, ErrorResponse(error = "Admin access required", code = "FORBIDDEN"))
@@ -120,6 +121,7 @@ fun Route.authRoutes() {
         }
 
         put(ApiRoutes.Auth.USERS + "/{userId}/role") {
+            // todo claude: proper null handling
             val session = call.sessions.get<UserSession>()!!
             if (session.role != UserRole.ADMIN) {
                 call.respond(HttpStatusCode.Forbidden, ErrorResponse(error = "Admin access required", code = "FORBIDDEN"))

@@ -72,7 +72,7 @@ fun main() {
 **Entry point (JS — legacy browser support):**
 ```kotlin
 fun main() {
-    ComposeViewport(document.body!!) {
+    ComposeViewport(document.body) {
         App()
     }
 }

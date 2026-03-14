@@ -177,13 +177,18 @@ class ReleasesRoutesTest {
         assertTrue(result.blockExecutions.all { it.status == BlockStatus.SUCCEEDED })
 
         // D should have started after both B and C
+        // todo claude: proper null handling
         val dExec = result.blockExecutions.find { it.blockId == BlockId("d") }!!
+        // todo claude: proper null handling
         val bExec = result.blockExecutions.find { it.blockId == BlockId("b") }!!
+        // todo claude: proper null handling
         val cExec = result.blockExecutions.find { it.blockId == BlockId("c") }!!
         assertNotNull(dExec.startedAt)
         assertNotNull(bExec.finishedAt)
         assertNotNull(cExec.finishedAt)
+        // todo claude: proper null handling
         assertTrue(dExec.startedAt!! >= bExec.finishedAt!!)
+        // todo claude: proper null handling
         assertTrue(dExec.startedAt!! >= cExec.finishedAt!!)
     }
 
@@ -308,6 +313,7 @@ class ReleasesRoutesTest {
         val project = client.createTestProject(blocks = blocks)
         val result = client.startAndAwaitRelease(project.id)
 
+        // todo claude: proper null handling
         val buildExec = result.blockExecutions.find { it.blockId == BlockId("build") }!!
         assertEquals(BlockStatus.SUCCEEDED, buildExec.status)
         assertTrue(buildExec.outputs.containsKey("buildNumber"))

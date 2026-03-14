@@ -67,5 +67,6 @@ suspend fun HttpClient.findSlackMessageByText(
         found = messages.find { textSubstring in it.text }
         found != null
     }
+    // todo claude: proper null handling
     return found!!
 }

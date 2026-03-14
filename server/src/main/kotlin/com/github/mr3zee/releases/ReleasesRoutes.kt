@@ -67,6 +67,7 @@ fun Route.releaseRoutes() {
                 if (!cancelled) {
                     throw IllegalArgumentException("Cannot cancel release: ${id.value}")
                 }
+                // todo claude: proper null handling
                 val release = service.getRelease(id)!!
                 val executions = service.getBlockExecutions(id)
                 call.respond(ReleaseResponse(release, executions))
@@ -85,6 +86,7 @@ fun Route.releaseRoutes() {
                 if (!archived) {
                     throw IllegalArgumentException("Cannot archive release: ${id.value}")
                 }
+                // todo claude: proper null handling
                 val release = service.getRelease(id)!!
                 val executions = service.getBlockExecutions(id)
                 call.respond(ReleaseResponse(release, executions))

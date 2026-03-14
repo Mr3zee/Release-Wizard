@@ -75,6 +75,7 @@ class ExecutorsTest {
         assertEquals("https://hooks.slack.com/test", capturedUrl)
         assertEquals("sent", outputs["messageTs"])
         assertEquals("#releases", outputs["channel"])
+        // todo claude: proper null handling
         assertTrue(capturedBody!!.contains("Deploy complete!"))
     }
 
@@ -105,6 +106,7 @@ class ExecutorsTest {
             )
             assertTrue(false, "Should have thrown")
         } catch (e: IllegalArgumentException) {
+            // todo claude: proper null handling
             assertTrue(e.message!!.contains("text"))
         }
     }
@@ -122,6 +124,7 @@ class ExecutorsTest {
             )
             assertTrue(false, "Should have thrown")
         } catch (e: RuntimeException) {
+            // todo claude: proper null handling
             assertTrue(e.message!!.contains("Slack webhook failed"))
         }
     }
@@ -168,6 +171,7 @@ class ExecutorsTest {
         assertEquals("v1.0", outputs["tagName"])
 
         // Verify request body
+        // todo claude: proper null handling
         val body = Json.decodeFromString<JsonObject>(capturedBody!!)
         assertEquals("v1.0", body["tag_name"]?.jsonPrimitive?.content)
         assertEquals("Release 1.0", body["name"]?.jsonPrimitive?.content)
@@ -189,6 +193,7 @@ class ExecutorsTest {
             )
             assertTrue(false, "Should have thrown")
         } catch (e: IllegalArgumentException) {
+            // todo claude: proper null handling
             assertTrue(e.message!!.contains("tagName"))
         }
     }
@@ -214,6 +219,7 @@ class ExecutorsTest {
             )
             assertTrue(false, "Should have thrown")
         } catch (e: RuntimeException) {
+            // todo claude: proper null handling
             assertTrue(e.message!!.contains("GitHub release creation failed"))
         }
     }
@@ -240,6 +246,7 @@ class ExecutorsTest {
             ),
         )
 
+        // todo claude: proper null handling
         val body = Json.decodeFromString<JsonObject>(capturedBody!!)
         assertEquals("v2.0", body["name"]?.jsonPrimitive?.content)
     }
@@ -279,6 +286,7 @@ class ExecutorsTest {
             context = context(config = mavenConfig),
         )
 
+        // todo claude: proper null handling
         assertTrue(capturedUrl!!.contains("/api/v1/publisher/deployment/deploy-123"))
         assertEquals("deploy-123", outputs["repositoryId"])
         assertEquals("PUBLISHED", outputs["status"])
@@ -308,6 +316,7 @@ class ExecutorsTest {
             context = context(config = mavenConfig),
         )
 
+        // todo claude: proper null handling
         assertTrue(capturedUrl!!.contains("/api/v1/publisher/published"))
         assertEquals("com.example:mylib:1.0.0", outputs["repositoryId"])
         assertEquals("PUBLISHED", outputs["status"])
@@ -326,6 +335,7 @@ class ExecutorsTest {
             )
             assertTrue(false, "Should have thrown")
         } catch (e: IllegalArgumentException) {
+            // todo claude: proper null handling
             assertTrue(e.message!!.contains("deploymentId"))
         }
     }
@@ -357,6 +367,7 @@ class ExecutorsTest {
             )
             assertTrue(false, "Should have thrown")
         } catch (e: IllegalStateException) {
+            // todo claude: proper null handling
             assertTrue(e.message!!.contains("requires a connection"))
         }
     }

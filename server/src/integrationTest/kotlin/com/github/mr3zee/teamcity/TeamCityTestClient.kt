@@ -51,6 +51,7 @@ suspend fun HttpClient.waitForBuildCompletion(
             false
         }
     }
+    // todo claude: proper null handling
     return result!!
 }
 

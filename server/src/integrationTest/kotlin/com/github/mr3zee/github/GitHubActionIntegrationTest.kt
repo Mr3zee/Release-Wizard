@@ -47,6 +47,7 @@ class GitHubActionIntegrationTest {
     )
 
     private fun context(): ExecutionContext {
+        // todo claude: proper null handling
         val cfg = config!!
         return ExecutionContext(
             releaseId = ReleaseId("integ-release-1"),
@@ -65,10 +66,12 @@ class GitHubActionIntegrationTest {
 
     @Test
     fun `execute triggers dispatch and discovers run ID`() = runBlocking {
+        // todo claude: proper null handling
         val cfg = config!!
         val webhookRepo = InMemoryPendingWebhookRepository()
         val connectionsRepo = FakeConnectionsRepository()
         val webhookService = WebhookService(webhookRepo, connectionsRepo)
+        // todo claude: proper null handling
         val executor = GitHubActionExecutor(client!!, webhookRepo, webhookService)
 
         val outputsDeferred = async {
@@ -103,16 +106,20 @@ class GitHubActionIntegrationTest {
         )
 
         val outputs = outputsDeferred.await()
+        // todo claude: proper null handling
         assertTrue(outputs["runId"]!!.isNotEmpty(), "runId should not be empty")
+        // todo claude: proper null handling
         assertTrue(outputs["runUrl"]!!.isNotEmpty(), "runUrl should not be empty")
     }
 
     @Test
     fun `dispatch with invalid workflow file throws`() = runBlocking {
+        // todo claude: proper null handling
         val cfg = config!!
         val webhookRepo = InMemoryPendingWebhookRepository()
         val connectionsRepo = FakeConnectionsRepository()
         val webhookService = WebhookService(webhookRepo, connectionsRepo)
+        // todo claude: proper null handling
         val executor = GitHubActionExecutor(client!!, webhookRepo, webhookService)
 
         try {
@@ -127,6 +134,7 @@ class GitHubActionIntegrationTest {
             fail("Should have thrown RuntimeException")
         } catch (e: RuntimeException) {
             assertTrue(
+                // todo claude: proper null handling
                 e.message!!.contains("GitHub workflow dispatch failed"),
                 "Message should indicate dispatch failure: ${e.message}"
             )

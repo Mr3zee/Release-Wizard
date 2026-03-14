@@ -294,6 +294,7 @@ class DagEditorViewModel(
 
         // todo claude: duplicate 13 lines
         val newBlocks = clip.blocks.map { block ->
+            // todo claude: proper null handling
             val newId = idMapping[block.id]!!
             when (block) {
                 is Block.ActionBlock -> block.copy(id = newId)
@@ -307,6 +308,7 @@ class DagEditorViewModel(
             Edge(fromBlockId = newFrom, toBlockId = newTo)
         }
 
+        // todo claude: proper null handling
         val newPositions = clip.positions.mapKeys { (oldId, _) -> idMapping[oldId]!! }
             .mapValues { (_, pos) -> BlockPosition(pos.x + 30f, pos.y + 30f) }
 
@@ -397,6 +399,7 @@ class DagEditorViewModel(
             Edge(fromBlockId = newFrom, toBlockId = newTo)
         }
 
+        // todo claude: proper null handling
         val newPositions = graph.positions.mapKeys { (oldId, _) -> childMapping[oldId]!! }
 
         return DagGraph(blocks = newBlocks, edges = newEdges, positions = newPositions)

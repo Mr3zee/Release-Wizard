@@ -24,6 +24,7 @@ fun Route.tagRoutes() {
 
         route("/{name}") {
             put {
+                // todo claude: proper null handling
                 val session = call.sessions.get<UserSession>()!!
                 if (session.role != UserRole.ADMIN) {
                     throw ForbiddenException("Admin access required for tag management")
@@ -35,6 +36,7 @@ fun Route.tagRoutes() {
             }
 
             delete {
+                // todo claude: proper null handling
                 val session = call.sessions.get<UserSession>()!!
                 if (session.role != UserRole.ADMIN) {
                     throw ForbiddenException("Admin access required for tag management")

@@ -67,13 +67,16 @@ class RecoveryTest {
         // Wait for execution to complete
         setup.engine.awaitExecution(release.id)
 
+        // todo claude: proper null handling
         // Verify the release completed successfully
         val finalRelease = setup.releasesRepo.findById(release.id)!!
         assertEquals(ReleaseStatus.SUCCEEDED, finalRelease.status)
 
         // Verify block A was skipped (still SUCCEEDED) and B was executed
         val executions = setup.releasesRepo.findBlockExecutions(release.id)
+        // todo claude: proper null handling
         val aExec = executions.find { it.blockId == BlockId("a") }!!
+        // todo claude: proper null handling
         val bExec = executions.find { it.blockId == BlockId("b") }!!
         assertEquals(BlockStatus.SUCCEEDED, aExec.status)
         assertEquals(BlockStatus.SUCCEEDED, bExec.status)
@@ -116,6 +119,7 @@ class RecoveryTest {
         setup.recoveryService.recover()
         setup.engine.awaitExecution(release.id)
 
+        // todo claude: proper null handling
         val finalRelease = setup.releasesRepo.findById(release.id)!!
         assertEquals(ReleaseStatus.FAILED, finalRelease.status)
     }
@@ -142,6 +146,7 @@ class RecoveryTest {
         setup.recoveryService.recover()
 
         // Should remain SUCCEEDED, no recovery job started
+        // todo claude: proper null handling
         val finalRelease = setup.releasesRepo.findById(release.id)!!
         assertEquals(ReleaseStatus.SUCCEEDED, finalRelease.status)
     }
@@ -218,6 +223,7 @@ class RecoveryTest {
 
         setup.engine.awaitExecution(release.id)
 
+        // todo claude: proper null handling
         val finalRelease = setup.releasesRepo.findById(release.id)!!
         assertEquals(ReleaseStatus.SUCCEEDED, finalRelease.status)
     }

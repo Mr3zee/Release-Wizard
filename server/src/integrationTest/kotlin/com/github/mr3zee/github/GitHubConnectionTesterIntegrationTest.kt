@@ -36,7 +36,9 @@ class GitHubConnectionTesterIntegrationTest {
 
     @Test
     fun `valid token and repo succeeds`() = runBlocking {
+        // todo claude: proper null handling
         val cfg = config!!
+        // todo claude: proper null handling
         val tester = ConnectionTester(client!!)
         val result = tester.test(
             ConnectionConfig.GitHubConfig(
@@ -51,7 +53,9 @@ class GitHubConnectionTesterIntegrationTest {
 
     @Test
     fun `invalid token fails`() = runBlocking {
+        // todo claude: proper null handling
         val cfg = config!!
+        // todo claude: proper null handling
         val tester = ConnectionTester(client!!)
         val result = tester.test(
             ConnectionConfig.GitHubConfig(
@@ -66,7 +70,9 @@ class GitHubConnectionTesterIntegrationTest {
 
     @Test
     fun `nonexistent repo fails`() = runBlocking {
+        // todo claude: proper null handling
         val cfg = config!!
+        // todo claude: proper null handling
         val tester = ConnectionTester(client!!)
         val result = tester.test(
             ConnectionConfig.GitHubConfig(

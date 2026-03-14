@@ -65,6 +65,7 @@ class GitHubPublicationIntegrationTest {
     )
 
     private fun context(): ExecutionContext {
+        // todo claude: proper null handling
         val cfg = config!!
         return ExecutionContext(
             releaseId = ReleaseId("integ-release-1"),
@@ -89,6 +90,7 @@ class GitHubPublicationIntegrationTest {
     @Test
     fun `execute creates release and returns outputs`() = runBlocking {
         val tag = uniqueTag()
+        // todo claude: proper null handling
         val executor = GitHubPublicationExecutor(client!!)
 
         val outputs = executor.execute(
@@ -99,7 +101,9 @@ class GitHubPublicationIntegrationTest {
 
         trackRelease(outputs)
 
+        // todo claude: proper null handling
         assertTrue(outputs["releaseUrl"]!!.isNotEmpty(), "releaseUrl should not be empty")
+        // todo claude: proper null handling
         assertTrue(outputs["releaseUrl"]!!.contains("github.com"), "releaseUrl should contain github.com")
         assertEquals(tag, outputs["tagName"])
     }
@@ -107,6 +111,7 @@ class GitHubPublicationIntegrationTest {
     @Test
     fun `resume returns existing release`() = runBlocking {
         val tag = uniqueTag()
+        // todo claude: proper null handling
         val executor = GitHubPublicationExecutor(client!!)
         val params = listOf(Parameter(key = "tagName", value = tag))
         val ctx = context()
@@ -125,6 +130,7 @@ class GitHubPublicationIntegrationTest {
     @Test
     fun `execute with all optional params`() = runBlocking {
         val tag = uniqueTag()
+        // todo claude: proper null handling
         val executor = GitHubPublicationExecutor(client!!)
 
         val outputs = executor.execute(
@@ -145,6 +151,7 @@ class GitHubPublicationIntegrationTest {
         // Verify via raw GET that fields match
         // Note: draft releases may not be findable via /releases/tags/ endpoint,
         // but cleanup is already tracked above via releaseId from executor output.
+        // todo claude: proper null handling
         val release = client!!.findGitHubReleaseByTag(config!!, tag)
         if (release != null) {
             assertEquals(true, release["draft"]?.jsonPrimitive?.boolean)
@@ -160,6 +167,7 @@ class GitHubPublicationIntegrationTest {
     @Test
     fun `execute with invalid token throws`() = runBlocking {
         val tag = uniqueTag()
+        // todo claude: proper null handling
         val executor = GitHubPublicationExecutor(client!!)
 
         val invalidContext = ExecutionContext(
@@ -169,7 +177,9 @@ class GitHubPublicationIntegrationTest {
             connections = mapOf(
                 ConnectionId("conn-1") to ConnectionConfig.GitHubConfig(
                     token = "ghp_invalid_token_000000000000000000",
+                    // todo claude: proper null handling
                     owner = config!!.owner,
+                    // todo claude: proper null handling
                     repo = config!!.repo,
                 )
             ),
@@ -183,6 +193,7 @@ class GitHubPublicationIntegrationTest {
             )
             fail("Should have thrown RuntimeException")
         } catch (e: RuntimeException) {
+            // todo claude: proper null handling
             assertTrue(e.message!!.contains("GitHub release creation failed"), "Message: ${e.message}")
         }
     }

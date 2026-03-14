@@ -101,8 +101,10 @@ class AsyncExecutorsTest {
 
         val outputs = outputsDeferred.await()
         assertEquals("42", outputs["buildNumber"])
+        // todo claude: proper null handling
         assertTrue(outputs["buildUrl"]!!.contains("tc.example.com"))
         assertEquals("SUCCESS", outputs["buildStatus"])
+        // todo claude: proper null handling
         assertTrue(capturedUrl!!.contains("/app/rest/buildQueue"))
     }
 
@@ -127,6 +129,7 @@ class AsyncExecutorsTest {
             )
             assertTrue(false, "Should have thrown")
         } catch (e: IllegalArgumentException) {
+            // todo claude: proper null handling
             assertTrue(e.message!!.contains("buildTypeId"))
         }
     }
@@ -199,7 +202,9 @@ class AsyncExecutorsTest {
         assertEquals("42", outputs["buildNumber"])
         assertEquals("SUCCESS", outputs["buildStatus"])
         assertTrue(outputs.containsKey("artifacts"), "Should have artifacts key")
+        // todo claude: proper null handling
         assertTrue(outputs["artifacts"]!!.contains("app.jar"), "Should contain app.jar")
+        // todo claude: proper null handling
         assertTrue(!outputs["artifacts"]!!.contains("readme.txt"), "Should not contain readme.txt (filtered by glob)")
     }
 
@@ -326,6 +331,7 @@ class AsyncExecutorsTest {
 
         val outputs = outputsDeferred.await()
         assertTrue(outputs.containsKey("artifacts"))
+        // todo claude: proper null handling
         val artifacts = Json.decodeFromString<List<String>>(outputs["artifacts"]!!)
         assertEquals(2, artifacts.size, "maxFiles=2 should limit to 2 artifacts")
     }
@@ -404,6 +410,7 @@ class AsyncExecutorsTest {
 
         val outputs = outputsDeferred.await()
         assertEquals("789", outputs["runId"])
+        // todo claude: proper null handling
         assertTrue(outputs["runUrl"]!!.contains("actions/runs/789"))
         assertEquals("success", outputs["runStatus"])
     }
@@ -429,6 +436,7 @@ class AsyncExecutorsTest {
             )
             assertTrue(false, "Should have thrown")
         } catch (e: IllegalArgumentException) {
+            // todo claude: proper null handling
             assertTrue(e.message!!.contains("workflowFile"))
         }
     }
