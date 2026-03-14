@@ -51,8 +51,7 @@ suspend fun HttpClient.waitForBuildCompletion(
             false
         }
     }
-    // todo claude: proper null handling
-    return result!!
+    return result ?: error("Build id:$buildId did not finish after $maxAttempts attempts")
 }
 
 /**

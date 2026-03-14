@@ -65,8 +65,7 @@ class GitHubPublicationIntegrationTest {
     )
 
     private fun context(): ExecutionContext {
-        // todo claude: proper null handling
-        val cfg = config!!
+        val cfg = config ?: error("GitHubTestConfig not loaded — setUp should have skipped this test")
         return ExecutionContext(
             releaseId = ReleaseId("integ-release-1"),
             parameters = emptyList(),
@@ -90,8 +89,7 @@ class GitHubPublicationIntegrationTest {
     @Test
     fun `execute creates release and returns outputs`() = runBlocking {
         val tag = uniqueTag()
-        // todo claude: proper null handling
-        val executor = GitHubPublicationExecutor(client!!)
+        val executor = GitHubPublicationExecutor(client ?: error("HttpClient not initialized"))
 
         val outputs = executor.execute(
             block = block(),
@@ -101,18 +99,16 @@ class GitHubPublicationIntegrationTest {
 
         trackRelease(outputs)
 
-        // todo claude: proper null handling
-        assertTrue(outputs["releaseUrl"]!!.isNotEmpty(), "releaseUrl should not be empty")
-        // todo claude: proper null handling
-        assertTrue(outputs["releaseUrl"]!!.contains("github.com"), "releaseUrl should contain github.com")
+        val releaseUrl = outputs["releaseUrl"] ?: error("Expected 'releaseUrl' in executor outputs")
+        assertTrue(releaseUrl.isNotEmpty(), "releaseUrl should not be empty")
+        assertTrue(releaseUrl.contains("github.com"), "releaseUrl should contain github.com")
         assertEquals(tag, outputs["tagName"])
     }
 
     @Test
     fun `resume returns existing release`() = runBlocking {
         val tag = uniqueTag()
-        // todo claude: proper null handling
-        val executor = GitHubPublicationExecutor(client!!)
+        val executor = GitHubPublicationExecutor(client ?: error("HttpClient not initialized"))
         val params = listOf(Parameter(key = "tagName", value = tag))
         val ctx = context()
 
@@ -130,8 +126,7 @@ class GitHubPublicationIntegrationTest {
     @Test
     fun `execute with all optional params`() = runBlocking {
         val tag = uniqueTag()
-        // todo claude: proper null handling
-        val executor = GitHubPublicationExecutor(client!!)
+        val executor = GitHubPublicationExecutor(client ?: error("HttpClient not initialized"))
 
         val outputs = executor.execute(
             block = block(),
@@ -151,8 +146,7 @@ class GitHubPublicationIntegrationTest {
         // Verify via raw GET that fields match
         // Note: draft releases may not be findable via /releases/tags/ endpoint,
         // but cleanup is already tracked above via releaseId from executor output.
-        // todo claude: proper null handling
-        val release = client!!.findGitHubReleaseByTag(config!!, tag)
+        val release = (client ?: error("HttpClient not initialized")).findGitHubReleaseByTag(config ?: error("GitHubTestConfig not loaded"), tag)
         if (release != null) {
             assertEquals(true, release["draft"]?.jsonPrimitive?.boolean)
             assertEquals(true, release["prerelease"]?.jsonPrimitive?.boolean)
@@ -167,8 +161,7 @@ class GitHubPublicationIntegrationTest {
     @Test
     fun `execute with invalid token throws`() = runBlocking {
         val tag = uniqueTag()
-        // todo claude: proper null handling
-        val executor = GitHubPublicationExecutor(client!!)
+        val executor = GitHubPublicationExecutor(client ?: error("HttpClient not initialized"))
 
         val invalidContext = ExecutionContext(
             releaseId = ReleaseId("integ-release-1"),
@@ -177,10 +170,8 @@ class GitHubPublicationIntegrationTest {
             connections = mapOf(
                 ConnectionId("conn-1") to ConnectionConfig.GitHubConfig(
                     token = "ghp_invalid_token_000000000000000000",
-                    // todo claude: proper null handling
-                    owner = config!!.owner,
-                    // todo claude: proper null handling
-                    repo = config!!.repo,
+                    owner = (config ?: error("GitHubTestConfig not loaded")).owner,
+                    repo = (config ?: error("GitHubTestConfig not loaded")).repo,
                 )
             ),
         )
@@ -193,8 +184,8 @@ class GitHubPublicationIntegrationTest {
             )
             fail("Should have thrown RuntimeException")
         } catch (e: RuntimeException) {
-            // todo claude: proper null handling
-            assertTrue(e.message!!.contains("GitHub release creation failed"), "Message: ${e.message}")
+            val msg = e.message ?: error("RuntimeException should have a message")
+            assertTrue(msg.contains("GitHub release creation failed"), "Message: $msg")
         }
     }
 }

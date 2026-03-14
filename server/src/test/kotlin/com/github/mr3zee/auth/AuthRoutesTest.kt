@@ -233,8 +233,7 @@ class AuthRoutesTest {
         val adminInfo = registerResponse.body<UserInfo>()
         adminClient.login(username = "onlyadmin", password = "password1234")
 
-        // todo claude: proper null handling
-        val response = adminClient.put(ApiRoutes.Auth.userRole(adminInfo.id!!)) {
+        val response = adminClient.put(ApiRoutes.Auth.userRole(adminInfo.id ?: error("Admin user ID should not be null after registration"))) {
             contentType(ContentType.Application.Json)
             setBody(UpdateUserRoleRequest(role = UserRole.USER))
         }

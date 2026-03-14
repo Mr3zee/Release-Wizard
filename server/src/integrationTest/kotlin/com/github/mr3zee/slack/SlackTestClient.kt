@@ -67,6 +67,5 @@ suspend fun HttpClient.findSlackMessageByText(
         found = messages.find { textSubstring in it.text }
         found != null
     }
-    // todo claude: proper null handling
-    return found!!
+    return found ?: error("Slack message containing '$textSubstring' not found after $maxAttempts attempts")
 }

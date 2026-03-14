@@ -36,10 +36,8 @@ class TeamCityConnectionTesterIntegrationTest {
 
     @Test
     fun `valid token and server succeeds`() = runBlocking {
-        // todo claude: proper null handling
-        val cfg = config!!
-        // todo claude: proper null handling
-        val tester = ConnectionTester(client!!)
+        val cfg = config ?: error("TeamCityTestConfig not loaded — setUp should have skipped this test")
+        val tester = ConnectionTester(client ?: error("HttpClient not initialized"))
         val result = tester.test(
             ConnectionConfig.TeamCityConfig(
                 serverUrl = cfg.serverUrl,
@@ -52,10 +50,8 @@ class TeamCityConnectionTesterIntegrationTest {
 
     @Test
     fun `invalid token fails`() = runBlocking {
-        // todo claude: proper null handling
-        val cfg = config!!
-        // todo claude: proper null handling
-        val tester = ConnectionTester(client!!)
+        val cfg = config ?: error("TeamCityTestConfig not loaded — setUp should have skipped this test")
+        val tester = ConnectionTester(client ?: error("HttpClient not initialized"))
         val result = tester.test(
             ConnectionConfig.TeamCityConfig(
                 serverUrl = cfg.serverUrl,
@@ -68,8 +64,7 @@ class TeamCityConnectionTesterIntegrationTest {
 
     @Test
     fun `unreachable server fails`() = runBlocking {
-        // todo claude: proper null handling
-        val tester = ConnectionTester(client!!)
+        val tester = ConnectionTester(client ?: error("HttpClient not initialized"))
         val result = tester.test(
             ConnectionConfig.TeamCityConfig(
                 serverUrl = "https://nonexistent-tc-server-${System.currentTimeMillis()}.example.com",

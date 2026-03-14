@@ -49,8 +49,7 @@ class TeamCityBuildExecutorIntegrationTest {
         val buildId = triggeredBuildId ?: return
         triggeredBuildId = null
         runBlocking {
-            // todo claude: proper null handling
-            client?.cancelBuild(config!!, buildId)
+            client?.cancelBuild(config ?: error("TeamCityTestConfig not loaded"), buildId)
         }
     }
 
@@ -62,8 +61,7 @@ class TeamCityBuildExecutorIntegrationTest {
     )
 
     private fun context(): ExecutionContext {
-        // todo claude: proper null handling
-        val cfg = config!!
+        val cfg = config ?: error("TeamCityTestConfig not loaded — setUp should have skipped this test")
         return ExecutionContext(
             releaseId = ReleaseId("integ-release-tc"),
             parameters = emptyList(),
@@ -79,13 +77,11 @@ class TeamCityBuildExecutorIntegrationTest {
 
     @Test
     fun `execute triggers build and returns outputs on webhook completion`() = runBlocking {
-        // todo claude: proper null handling
-        val cfg = config!!
+        val cfg = config ?: error("TeamCityTestConfig not loaded — setUp should have skipped this test")
         val webhookRepo = InMemoryPendingWebhookRepository()
         val connectionsRepo = FakeConnectionsRepository()
         val webhookService = WebhookService(webhookRepo, connectionsRepo)
-        // todo claude: proper null handling
-        val executor = TeamCityBuildExecutor(client!!, webhookRepo, webhookService)
+        val executor = TeamCityBuildExecutor(client ?: error("HttpClient not initialized"), webhookRepo, webhookService)
 
         val outputsDeferred = async {
             executor.execute(
@@ -108,8 +104,7 @@ class TeamCityBuildExecutorIntegrationTest {
         triggeredBuildId = buildId
 
         // Wait for the real build to finish so we can get actual outputs
-        // todo claude: proper null handling
-        val buildResult = client!!.waitForBuildCompletion(cfg, buildId)
+        val buildResult = (client ?: error("HttpClient not initialized")).waitForBuildCompletion(cfg, buildId)
         val buildNumber = buildResult["number"]?.jsonPrimitive?.content ?: buildId
         val buildStatus = buildResult["status"]?.jsonPrimitive?.content ?: "UNKNOWN"
 
@@ -126,8 +121,8 @@ class TeamCityBuildExecutorIntegrationTest {
 
         val outputs = outputsDeferred.await()
         assertEquals(buildNumber, outputs["buildNumber"])
-        // todo claude: proper null handling
-        assertTrue(outputs["buildUrl"]!!.contains(cfg.serverUrl), "buildUrl should contain server URL")
+        val buildUrl = outputs["buildUrl"] ?: error("Expected 'buildUrl' in executor outputs")
+        assertTrue(buildUrl.contains(cfg.serverUrl), "buildUrl should contain server URL")
         assertEquals(buildStatus, outputs["buildStatus"])
     }
 
@@ -136,8 +131,7 @@ class TeamCityBuildExecutorIntegrationTest {
         val webhookRepo = InMemoryPendingWebhookRepository()
         val connectionsRepo = FakeConnectionsRepository()
         val webhookService = WebhookService(webhookRepo, connectionsRepo)
-        // todo claude: proper null handling
-        val executor = TeamCityBuildExecutor(client!!, webhookRepo, webhookService)
+        val executor = TeamCityBuildExecutor(client ?: error("HttpClient not initialized"), webhookRepo, webhookService)
 
         try {
             executor.execute(
@@ -149,10 +143,10 @@ class TeamCityBuildExecutorIntegrationTest {
             )
             fail("Should have thrown RuntimeException")
         } catch (e: RuntimeException) {
+            val msg = e.message ?: error("RuntimeException should have a message")
             assertTrue(
-                // todo claude: proper null handling
-                e.message!!.contains("TeamCity build trigger failed"),
-                "Message should indicate trigger failure: ${e.message}"
+                msg.contains("TeamCity build trigger failed"),
+                "Message should indicate trigger failure: $msg"
             )
         }
     }

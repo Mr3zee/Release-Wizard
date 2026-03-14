@@ -57,8 +57,10 @@ fun Route.releaseWebSocketRoutes() {
             }
 
             // Check ownership — session is available since WS routes are inside authenticate("session-auth")
-            // todo claude: proper null handling
-            val session = call.sessions.get<UserSession>()!!
+            val session = call.sessions.get<UserSession>() ?: run {
+                close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Not authenticated"))
+                return@webSocket
+            }
             try {
                 service.checkAccess(releaseId, session)
             } catch (_: ForbiddenException) {

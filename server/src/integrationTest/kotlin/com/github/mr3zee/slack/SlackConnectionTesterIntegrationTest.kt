@@ -36,10 +36,8 @@ class SlackConnectionTesterIntegrationTest {
 
     @Test
     fun `valid webhook URL format succeeds`() = runBlocking {
-        // todo claude: proper null handling
-        val cfg = config!!
-        // todo claude: proper null handling
-        val tester = ConnectionTester(client!!)
+        val cfg = config ?: error("SlackTestConfig not loaded — setUp should have skipped this test")
+        val tester = ConnectionTester(client ?: error("HttpClient not initialized"))
         val result = tester.test(
             ConnectionConfig.SlackConfig(webhookUrl = cfg.webhookUrl)
         )
@@ -49,8 +47,7 @@ class SlackConnectionTesterIntegrationTest {
 
     @Test
     fun `invalid webhook URL format fails`() = runBlocking {
-        // todo claude: proper null handling
-        val tester = ConnectionTester(client!!)
+        val tester = ConnectionTester(client ?: error("HttpClient not initialized"))
         val result = tester.test(
             ConnectionConfig.SlackConfig(webhookUrl = "https://example.com/not-a-slack-webhook")
         )

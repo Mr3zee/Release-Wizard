@@ -178,11 +178,10 @@ private fun BlockDetailPanel(
                 modifier = Modifier.testTag("block_status_text"),
             )
 
-            if (execution.error != null) {
+            execution.error?.let { error ->
                 Spacer(modifier = Modifier.height(4.dp))
                 ErrorDetailSection(
-                    // todo claude: proper null handling
-                    error = execution.error!!,
+                    error = error,
                     finishedAt = execution.finishedAt,
                 )
             }

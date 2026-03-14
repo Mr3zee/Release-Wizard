@@ -177,19 +177,20 @@ class ReleasesRoutesTest {
         assertTrue(result.blockExecutions.all { it.status == BlockStatus.SUCCEEDED })
 
         // D should have started after both B and C
-        // todo claude: proper null handling
-        val dExec = result.blockExecutions.find { it.blockId == BlockId("d") }!!
-        // todo claude: proper null handling
-        val bExec = result.blockExecutions.find { it.blockId == BlockId("b") }!!
-        // todo claude: proper null handling
-        val cExec = result.blockExecutions.find { it.blockId == BlockId("c") }!!
+        val dExec = result.blockExecutions.find { it.blockId == BlockId("d") }
+            ?: error("Block execution for 'd' should exist")
+        val bExec = result.blockExecutions.find { it.blockId == BlockId("b") }
+            ?: error("Block execution for 'b' should exist")
+        val cExec = result.blockExecutions.find { it.blockId == BlockId("c") }
+            ?: error("Block execution for 'c' should exist")
         assertNotNull(dExec.startedAt)
         assertNotNull(bExec.finishedAt)
         assertNotNull(cExec.finishedAt)
-        // todo claude: proper null handling
-        assertTrue(dExec.startedAt!! >= bExec.finishedAt!!)
-        // todo claude: proper null handling
-        assertTrue(dExec.startedAt!! >= cExec.finishedAt!!)
+        val dStartedAt = dExec.startedAt ?: error("dExec.startedAt should not be null")
+        val bFinishedAt = bExec.finishedAt ?: error("bExec.finishedAt should not be null")
+        val cFinishedAt = cExec.finishedAt ?: error("cExec.finishedAt should not be null")
+        assertTrue(dStartedAt >= bFinishedAt)
+        assertTrue(dStartedAt >= cFinishedAt)
     }
 
     @Test
@@ -313,8 +314,8 @@ class ReleasesRoutesTest {
         val project = client.createTestProject(blocks = blocks)
         val result = client.startAndAwaitRelease(project.id)
 
-        // todo claude: proper null handling
-        val buildExec = result.blockExecutions.find { it.blockId == BlockId("build") }!!
+        val buildExec = result.blockExecutions.find { it.blockId == BlockId("build") }
+            ?: error("Block execution for 'build' should exist")
         assertEquals(BlockStatus.SUCCEEDED, buildExec.status)
         assertTrue(buildExec.outputs.containsKey("buildNumber"))
         assertTrue(buildExec.outputs.containsKey("buildUrl"))

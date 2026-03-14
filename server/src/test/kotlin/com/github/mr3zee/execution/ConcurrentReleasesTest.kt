@@ -279,17 +279,19 @@ class ConcurrentReleasesTest {
         for (result in results) {
             val blocksByBlockId = result.blockExecutions.associateBy { it.blockId.value }
             // Find the chain blocks by suffix pattern
-            // todo claude: proper null handling
-            val aBlock = blocksByBlockId.values.find { it.blockId.value.startsWith("a-") }!!
-            // todo claude: proper null handling
-            val bBlock = blocksByBlockId.values.find { it.blockId.value.startsWith("b-") }!!
-            // todo claude: proper null handling
-            val cBlock = blocksByBlockId.values.find { it.blockId.value.startsWith("c-") }!!
+            val aBlock = blocksByBlockId.values.find { it.blockId.value.startsWith("a-") }
+                ?: error("Block execution starting with 'a-' should exist")
+            val bBlock = blocksByBlockId.values.find { it.blockId.value.startsWith("b-") }
+                ?: error("Block execution starting with 'b-' should exist")
+            val cBlock = blocksByBlockId.values.find { it.blockId.value.startsWith("c-") }
+                ?: error("Block execution starting with 'c-' should exist")
 
-            // todo claude: proper null handling
-            assertTrue(bBlock.startedAt!! >= aBlock.finishedAt!!, "B should start after A finishes")
-            // todo claude: proper null handling
-            assertTrue(cBlock.startedAt!! >= bBlock.finishedAt!!, "C should start after B finishes")
+            val bStartedAt = bBlock.startedAt ?: error("bBlock.startedAt should not be null")
+            val aFinishedAt = aBlock.finishedAt ?: error("aBlock.finishedAt should not be null")
+            val cStartedAt = cBlock.startedAt ?: error("cBlock.startedAt should not be null")
+            val bFinishedAt = bBlock.finishedAt ?: error("bBlock.finishedAt should not be null")
+            assertTrue(bStartedAt >= aFinishedAt, "B should start after A finishes")
+            assertTrue(cStartedAt >= bFinishedAt, "C should start after B finishes")
         }
     }
 }

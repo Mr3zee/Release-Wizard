@@ -48,14 +48,14 @@ class TimeoutTest {
         engine.startExecution(release)
         engine.awaitExecution(release.id)
 
-        // todo claude: proper null handling
-        val finalRelease = repo.findById(release.id)!!
+        val finalRelease = repo.findById(release.id)
+            ?: error("Release '${release.id}' should exist after execution")
         assertEquals(ReleaseStatus.FAILED, finalRelease.status)
 
-        // todo claude: proper null handling
-        val blockExec = repo.findBlockExecution(release.id, BlockId("slow"))!!
+        val blockExec = repo.findBlockExecution(release.id, BlockId("slow"))
+            ?: error("Block execution for 'slow' should exist after execution")
         assertEquals(BlockStatus.FAILED, blockExec.status)
-        // todo claude: proper null handling
-        assertTrue(blockExec.error!!.contains("timed out"), "Error should mention timeout: ${blockExec.error}")
+        val errorMessage = blockExec.error ?: error("Block execution error should not be null for a failed/timed-out block")
+        assertTrue(errorMessage.contains("timed out"), "Error should mention timeout: $errorMessage")
     }
 }

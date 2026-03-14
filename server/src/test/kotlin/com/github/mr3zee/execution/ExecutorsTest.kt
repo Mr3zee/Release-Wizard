@@ -75,8 +75,8 @@ class ExecutorsTest {
         assertEquals("https://hooks.slack.com/test", capturedUrl)
         assertEquals("sent", outputs["messageTs"])
         assertEquals("#releases", outputs["channel"])
-        // todo claude: proper null handling
-        assertTrue(capturedBody!!.contains("Deploy complete!"))
+        val body = capturedBody ?: error("capturedBody should have been set by the mock client")
+        assertTrue(body.contains("Deploy complete!"))
     }
 
     @Test
@@ -106,8 +106,8 @@ class ExecutorsTest {
             )
             assertTrue(false, "Should have thrown")
         } catch (e: IllegalArgumentException) {
-            // todo claude: proper null handling
-            assertTrue(e.message!!.contains("text"))
+            val message = e.message ?: error("IllegalArgumentException should have a message")
+            assertTrue(message.contains("text"))
         }
     }
 
@@ -124,8 +124,8 @@ class ExecutorsTest {
             )
             assertTrue(false, "Should have thrown")
         } catch (e: RuntimeException) {
-            // todo claude: proper null handling
-            assertTrue(e.message!!.contains("Slack webhook failed"))
+            val message = e.message ?: error("RuntimeException should have a message")
+            assertTrue(message.contains("Slack webhook failed"))
         }
     }
 
@@ -171,8 +171,7 @@ class ExecutorsTest {
         assertEquals("v1.0", outputs["tagName"])
 
         // Verify request body
-        // todo claude: proper null handling
-        val body = Json.decodeFromString<JsonObject>(capturedBody!!)
+        val body = Json.decodeFromString<JsonObject>(capturedBody ?: error("capturedBody should have been set by the mock client"))
         assertEquals("v1.0", body["tag_name"]?.jsonPrimitive?.content)
         assertEquals("Release 1.0", body["name"]?.jsonPrimitive?.content)
         assertEquals("Changelog here", body["body"]?.jsonPrimitive?.content)
@@ -193,8 +192,8 @@ class ExecutorsTest {
             )
             assertTrue(false, "Should have thrown")
         } catch (e: IllegalArgumentException) {
-            // todo claude: proper null handling
-            assertTrue(e.message!!.contains("tagName"))
+            val message = e.message ?: error("IllegalArgumentException should have a message")
+            assertTrue(message.contains("tagName"))
         }
     }
 
@@ -219,8 +218,8 @@ class ExecutorsTest {
             )
             assertTrue(false, "Should have thrown")
         } catch (e: RuntimeException) {
-            // todo claude: proper null handling
-            assertTrue(e.message!!.contains("GitHub release creation failed"))
+            val message = e.message ?: error("RuntimeException should have a message")
+            assertTrue(message.contains("GitHub release creation failed"))
         }
     }
 
@@ -246,8 +245,7 @@ class ExecutorsTest {
             ),
         )
 
-        // todo claude: proper null handling
-        val body = Json.decodeFromString<JsonObject>(capturedBody!!)
+        val body = Json.decodeFromString<JsonObject>(capturedBody ?: error("capturedBody should have been set by the mock client"))
         assertEquals("v2.0", body["name"]?.jsonPrimitive?.content)
     }
 
@@ -286,8 +284,8 @@ class ExecutorsTest {
             context = context(config = mavenConfig),
         )
 
-        // todo claude: proper null handling
-        assertTrue(capturedUrl!!.contains("/api/v1/publisher/deployment/deploy-123"))
+        val requestUrl = capturedUrl ?: error("capturedUrl should have been set by the mock client")
+        assertTrue(requestUrl.contains("/api/v1/publisher/deployment/deploy-123"))
         assertEquals("deploy-123", outputs["repositoryId"])
         assertEquals("PUBLISHED", outputs["status"])
     }
@@ -316,8 +314,8 @@ class ExecutorsTest {
             context = context(config = mavenConfig),
         )
 
-        // todo claude: proper null handling
-        assertTrue(capturedUrl!!.contains("/api/v1/publisher/published"))
+        val requestUrl = capturedUrl ?: error("capturedUrl should have been set by the mock client")
+        assertTrue(requestUrl.contains("/api/v1/publisher/published"))
         assertEquals("com.example:mylib:1.0.0", outputs["repositoryId"])
         assertEquals("PUBLISHED", outputs["status"])
     }
@@ -335,8 +333,8 @@ class ExecutorsTest {
             )
             assertTrue(false, "Should have thrown")
         } catch (e: IllegalArgumentException) {
-            // todo claude: proper null handling
-            assertTrue(e.message!!.contains("deploymentId"))
+            val message = e.message ?: error("IllegalArgumentException should have a message")
+            assertTrue(message.contains("deploymentId"))
         }
     }
 
@@ -367,8 +365,8 @@ class ExecutorsTest {
             )
             assertTrue(false, "Should have thrown")
         } catch (e: IllegalStateException) {
-            // todo claude: proper null handling
-            assertTrue(e.message!!.contains("requires a connection"))
+            val message = e.message ?: error("IllegalStateException should have a message")
+            assertTrue(message.contains("requires a connection"))
         }
     }
 }

@@ -27,8 +27,7 @@ class TeamCityArtifactServiceIntegrationTest {
         fun setUp() {
             config = TeamCityTestConfig.loadOrNull()
             Assume.assumeNotNull(config)
-            // todo claude: proper null handling
-            artifactBuildId = config!!.artifactBuildId
+            artifactBuildId = (config ?: error("TeamCityTestConfig not loaded")).artifactBuildId
             Assume.assumeNotNull(artifactBuildId)
             client = createTeamCityTestHttpClient()
         }
@@ -42,16 +41,14 @@ class TeamCityArtifactServiceIntegrationTest {
 
     @Test
     fun `broad glob returns non-empty artifact list`() = runBlocking {
-        // todo claude: proper null handling
-        val cfg = config!!
-        // todo claude: proper null handling
-        val service = TeamCityArtifactService(client!!)
+        // todo claude: duplicate 11 lines
+        val cfg = config ?: error("TeamCityTestConfig not loaded — setUp should have skipped this test")
+        val service = TeamCityArtifactService(client ?: error("HttpClient not initialized"))
 
         val artifacts = service.fetchMatchingArtifacts(
             serverUrl = cfg.serverUrl,
             token = cfg.token,
-            // todo claude: proper null handling
-            buildId = artifactBuildId!!,
+            buildId = artifactBuildId ?: error("artifactBuildId not configured"),
             globPattern = "**/*",
             maxDepth = 10,
             maxFiles = 1000,
@@ -62,17 +59,15 @@ class TeamCityArtifactServiceIntegrationTest {
 
     @Test
     fun `specific glob pattern filters correctly`() = runBlocking {
-        // todo claude: proper null handling
-        val cfg = config!!
-        // todo claude: proper null handling
-        val service = TeamCityArtifactService(client!!)
+        // todo claude: duplicate 12 lines
+        val cfg = config ?: error("TeamCityTestConfig not loaded — setUp should have skipped this test")
+        val service = TeamCityArtifactService(client ?: error("HttpClient not initialized"))
 
         // Fetch all artifacts first to find a real extension to filter by
         val all = service.fetchMatchingArtifacts(
             serverUrl = cfg.serverUrl,
             token = cfg.token,
-            // todo claude: proper null handling
-            buildId = artifactBuildId!!,
+            buildId = artifactBuildId ?: error("artifactBuildId not configured"),
             globPattern = "**/*",
             maxDepth = 10,
             maxFiles = 1000,
@@ -86,8 +81,7 @@ class TeamCityArtifactServiceIntegrationTest {
         val filtered = service.fetchMatchingArtifacts(
             serverUrl = cfg.serverUrl,
             token = cfg.token,
-            // todo claude: proper null handling
-            buildId = artifactBuildId!!,
+            buildId = artifactBuildId ?: error("artifactBuildId not configured"),
             globPattern = "**/*.$firstExt",
             maxDepth = 10,
             maxFiles = 1000,
@@ -106,16 +100,14 @@ class TeamCityArtifactServiceIntegrationTest {
 
     @Test
     fun `maxFiles limits returned results`() = runBlocking {
-        // todo claude: proper null handling
-        val cfg = config!!
-        // todo claude: proper null handling
-        val service = TeamCityArtifactService(client!!)
+        // todo claude: duplicate 11 lines
+        val cfg = config ?: error("TeamCityTestConfig not loaded — setUp should have skipped this test")
+        val service = TeamCityArtifactService(client ?: error("HttpClient not initialized"))
 
         val all = service.fetchMatchingArtifacts(
             serverUrl = cfg.serverUrl,
             token = cfg.token,
-            // todo claude: proper null handling
-            buildId = artifactBuildId!!,
+            buildId = artifactBuildId ?: error("artifactBuildId not configured"),
             globPattern = "**/*",
             maxDepth = 10,
             maxFiles = 1000,
@@ -125,8 +117,7 @@ class TeamCityArtifactServiceIntegrationTest {
         val limited = service.fetchMatchingArtifacts(
             serverUrl = cfg.serverUrl,
             token = cfg.token,
-            // todo claude: proper null handling
-            buildId = artifactBuildId!!,
+            buildId = artifactBuildId ?: error("artifactBuildId not configured"),
             globPattern = "**/*",
             maxDepth = 10,
             maxFiles = 1,
@@ -138,16 +129,13 @@ class TeamCityArtifactServiceIntegrationTest {
 
     @Test
     fun `non-matching glob returns empty list`() = runBlocking {
-        // todo claude: proper null handling
-        val cfg = config!!
-        // todo claude: proper null handling
-        val service = TeamCityArtifactService(client!!)
+        val cfg = config ?: error("TeamCityTestConfig not loaded — setUp should have skipped this test")
+        val service = TeamCityArtifactService(client ?: error("HttpClient not initialized"))
 
         val result = service.fetchMatchingArtifacts(
             serverUrl = cfg.serverUrl,
             token = cfg.token,
-            // todo claude: proper null handling
-            buildId = artifactBuildId!!,
+            buildId = artifactBuildId ?: error("artifactBuildId not configured"),
             globPattern = "**/*.nonexistent_extension_xyz",
             maxDepth = 10,
             maxFiles = 1000,

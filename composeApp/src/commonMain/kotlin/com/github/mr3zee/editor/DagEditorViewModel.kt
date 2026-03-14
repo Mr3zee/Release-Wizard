@@ -294,8 +294,7 @@ class DagEditorViewModel(
 
         // todo claude: duplicate 13 lines
         val newBlocks = clip.blocks.map { block ->
-            // todo claude: proper null handling
-            val newId = idMapping[block.id]!!
+            val newId = idMapping[block.id] ?: error("Missing ID mapping for block ${block.id}")
             when (block) {
                 is Block.ActionBlock -> block.copy(id = newId)
                 is Block.ContainerBlock -> block.copy(id = newId, children = remapDagGraph(block.children, idMapping))
@@ -308,9 +307,9 @@ class DagEditorViewModel(
             Edge(fromBlockId = newFrom, toBlockId = newTo)
         }
 
-        // todo claude: proper null handling
-        val newPositions = clip.positions.mapKeys { (oldId, _) -> idMapping[oldId]!! }
-            .mapValues { (_, pos) -> BlockPosition(pos.x + 30f, pos.y + 30f) }
+        val newPositions = clip.positions.mapKeys { (oldId, _) ->
+            idMapping[oldId] ?: error("Missing ID mapping for position $oldId")
+        }.mapValues { (_, pos) -> BlockPosition(pos.x + 30f, pos.y + 30f) }
 
         updateGraph(
             g.copy(
@@ -399,8 +398,9 @@ class DagEditorViewModel(
             Edge(fromBlockId = newFrom, toBlockId = newTo)
         }
 
-        // todo claude: proper null handling
-        val newPositions = graph.positions.mapKeys { (oldId, _) -> childMapping[oldId]!! }
+        val newPositions = graph.positions.mapKeys { (oldId, _) ->
+            childMapping[oldId] ?: error("Missing ID mapping for position $oldId")
+        }
 
         return DagGraph(blocks = newBlocks, edges = newEdges, positions = newPositions)
     }

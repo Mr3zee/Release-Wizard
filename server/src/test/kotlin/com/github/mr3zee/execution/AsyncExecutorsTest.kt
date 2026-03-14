@@ -101,11 +101,11 @@ class AsyncExecutorsTest {
 
         val outputs = outputsDeferred.await()
         assertEquals("42", outputs["buildNumber"])
-        // todo claude: proper null handling
-        assertTrue(outputs["buildUrl"]!!.contains("tc.example.com"))
+        val buildUrl = outputs["buildUrl"] ?: error("outputs should contain 'buildUrl'")
+        assertTrue(buildUrl.contains("tc.example.com"))
         assertEquals("SUCCESS", outputs["buildStatus"])
-        // todo claude: proper null handling
-        assertTrue(capturedUrl!!.contains("/app/rest/buildQueue"))
+        val requestUrl = capturedUrl ?: error("capturedUrl should have been set by the mock client")
+        assertTrue(requestUrl.contains("/app/rest/buildQueue"))
     }
 
     @Test
@@ -129,8 +129,8 @@ class AsyncExecutorsTest {
             )
             assertTrue(false, "Should have thrown")
         } catch (e: IllegalArgumentException) {
-            // todo claude: proper null handling
-            assertTrue(e.message!!.contains("buildTypeId"))
+            val message = e.message ?: error("IllegalArgumentException should have a message")
+            assertTrue(message.contains("buildTypeId"))
         }
     }
 
@@ -202,10 +202,9 @@ class AsyncExecutorsTest {
         assertEquals("42", outputs["buildNumber"])
         assertEquals("SUCCESS", outputs["buildStatus"])
         assertTrue(outputs.containsKey("artifacts"), "Should have artifacts key")
-        // todo claude: proper null handling
-        assertTrue(outputs["artifacts"]!!.contains("app.jar"), "Should contain app.jar")
-        // todo claude: proper null handling
-        assertTrue(!outputs["artifacts"]!!.contains("readme.txt"), "Should not contain readme.txt (filtered by glob)")
+        val artifacts = outputs["artifacts"] ?: error("outputs should contain 'artifacts'")
+        assertTrue(artifacts.contains("app.jar"), "Should contain app.jar")
+        assertTrue(!artifacts.contains("readme.txt"), "Should not contain readme.txt (filtered by glob)")
     }
 
     @Test
@@ -331,8 +330,8 @@ class AsyncExecutorsTest {
 
         val outputs = outputsDeferred.await()
         assertTrue(outputs.containsKey("artifacts"))
-        // todo claude: proper null handling
-        val artifacts = Json.decodeFromString<List<String>>(outputs["artifacts"]!!)
+        val artifactsJson = outputs["artifacts"] ?: error("outputs should contain 'artifacts'")
+        val artifacts = Json.decodeFromString<List<String>>(artifactsJson)
         assertEquals(2, artifacts.size, "maxFiles=2 should limit to 2 artifacts")
     }
 
@@ -410,8 +409,8 @@ class AsyncExecutorsTest {
 
         val outputs = outputsDeferred.await()
         assertEquals("789", outputs["runId"])
-        // todo claude: proper null handling
-        assertTrue(outputs["runUrl"]!!.contains("actions/runs/789"))
+        val runUrl = outputs["runUrl"] ?: error("outputs should contain 'runUrl'")
+        assertTrue(runUrl.contains("actions/runs/789"))
         assertEquals("success", outputs["runStatus"])
     }
 
@@ -436,8 +435,8 @@ class AsyncExecutorsTest {
             )
             assertTrue(false, "Should have thrown")
         } catch (e: IllegalArgumentException) {
-            // todo claude: proper null handling
-            assertTrue(e.message!!.contains("workflowFile"))
+            val message = e.message ?: error("IllegalArgumentException should have a message")
+            assertTrue(message.contains("workflowFile"))
         }
     }
 }

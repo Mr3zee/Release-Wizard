@@ -36,10 +36,8 @@ class GitHubConnectionTesterIntegrationTest {
 
     @Test
     fun `valid token and repo succeeds`() = runBlocking {
-        // todo claude: proper null handling
-        val cfg = config!!
-        // todo claude: proper null handling
-        val tester = ConnectionTester(client!!)
+        val cfg = config ?: error("GitHubTestConfig not loaded — setUp should have skipped this test")
+        val tester = ConnectionTester(client ?: error("HttpClient not initialized"))
         val result = tester.test(
             ConnectionConfig.GitHubConfig(
                 token = cfg.token,
@@ -53,10 +51,8 @@ class GitHubConnectionTesterIntegrationTest {
 
     @Test
     fun `invalid token fails`() = runBlocking {
-        // todo claude: proper null handling
-        val cfg = config!!
-        // todo claude: proper null handling
-        val tester = ConnectionTester(client!!)
+        val cfg = config ?: error("GitHubTestConfig not loaded — setUp should have skipped this test")
+        val tester = ConnectionTester(client ?: error("HttpClient not initialized"))
         val result = tester.test(
             ConnectionConfig.GitHubConfig(
                 token = "ghp_invalid_token_000000000000000000",
@@ -70,10 +66,8 @@ class GitHubConnectionTesterIntegrationTest {
 
     @Test
     fun `nonexistent repo fails`() = runBlocking {
-        // todo claude: proper null handling
-        val cfg = config!!
-        // todo claude: proper null handling
-        val tester = ConnectionTester(client!!)
+        val cfg = config ?: error("GitHubTestConfig not loaded — setUp should have skipped this test")
+        val tester = ConnectionTester(client ?: error("HttpClient not initialized"))
         val result = tester.test(
             ConnectionConfig.GitHubConfig(
                 token = cfg.token,

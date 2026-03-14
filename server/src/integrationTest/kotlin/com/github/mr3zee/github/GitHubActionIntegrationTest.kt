@@ -47,8 +47,7 @@ class GitHubActionIntegrationTest {
     )
 
     private fun context(): ExecutionContext {
-        // todo claude: proper null handling
-        val cfg = config!!
+        val cfg = config ?: error("GitHubTestConfig not loaded — setUp should have skipped this test")
         return ExecutionContext(
             releaseId = ReleaseId("integ-release-1"),
             parameters = emptyList(),
@@ -66,13 +65,11 @@ class GitHubActionIntegrationTest {
 
     @Test
     fun `execute triggers dispatch and discovers run ID`() = runBlocking {
-        // todo claude: proper null handling
-        val cfg = config!!
+        val cfg = config ?: error("GitHubTestConfig not loaded — setUp should have skipped this test")
         val webhookRepo = InMemoryPendingWebhookRepository()
         val connectionsRepo = FakeConnectionsRepository()
         val webhookService = WebhookService(webhookRepo, connectionsRepo)
-        // todo claude: proper null handling
-        val executor = GitHubActionExecutor(client!!, webhookRepo, webhookService)
+        val executor = GitHubActionExecutor(client ?: error("HttpClient not initialized"), webhookRepo, webhookService)
 
         val outputsDeferred = async {
             executor.execute(
@@ -106,21 +103,19 @@ class GitHubActionIntegrationTest {
         )
 
         val outputs = outputsDeferred.await()
-        // todo claude: proper null handling
-        assertTrue(outputs["runId"]!!.isNotEmpty(), "runId should not be empty")
-        // todo claude: proper null handling
-        assertTrue(outputs["runUrl"]!!.isNotEmpty(), "runUrl should not be empty")
+        val runId = outputs["runId"] ?: error("Expected 'runId' in executor outputs")
+        assertTrue(runId.isNotEmpty(), "runId should not be empty")
+        val runUrl = outputs["runUrl"] ?: error("Expected 'runUrl' in executor outputs")
+        assertTrue(runUrl.isNotEmpty(), "runUrl should not be empty")
     }
 
     @Test
     fun `dispatch with invalid workflow file throws`() = runBlocking {
-        // todo claude: proper null handling
-        val cfg = config!!
+        val cfg = config ?: error("GitHubTestConfig not loaded — setUp should have skipped this test")
         val webhookRepo = InMemoryPendingWebhookRepository()
         val connectionsRepo = FakeConnectionsRepository()
         val webhookService = WebhookService(webhookRepo, connectionsRepo)
-        // todo claude: proper null handling
-        val executor = GitHubActionExecutor(client!!, webhookRepo, webhookService)
+        val executor = GitHubActionExecutor(client ?: error("HttpClient not initialized"), webhookRepo, webhookService)
 
         try {
             executor.execute(
@@ -133,10 +128,10 @@ class GitHubActionIntegrationTest {
             )
             fail("Should have thrown RuntimeException")
         } catch (e: RuntimeException) {
+            val msg = e.message ?: error("RuntimeException should have a message")
             assertTrue(
-                // todo claude: proper null handling
-                e.message!!.contains("GitHub workflow dispatch failed"),
-                "Message should indicate dispatch failure: ${e.message}"
+                msg.contains("GitHub workflow dispatch failed"),
+                "Message should indicate dispatch failure: $msg"
             )
         }
     }
