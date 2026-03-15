@@ -20,6 +20,8 @@ fun BlockPropertiesPanel(
     onUpdateType: (BlockId, BlockType) -> Unit,
     onUpdateParameters: (BlockId, List<Parameter>) -> Unit,
     onUpdateTimeout: (BlockId, Long?) -> Unit,
+    onUpdatePreGate: (BlockId, Gate?) -> Unit,
+    onUpdatePostGate: (BlockId, Gate?) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
@@ -70,6 +72,8 @@ fun BlockPropertiesPanel(
                     onUpdateType = onUpdateType,
                     onUpdateParameters = onUpdateParameters,
                     onUpdateTimeout = onUpdateTimeout,
+                    onUpdatePreGate = onUpdatePreGate,
+                    onUpdatePostGate = onUpdatePostGate,
                     enabled = enabled,
                 )
             }
@@ -97,10 +101,12 @@ private fun ActionBlockProperties(
     onUpdateType: (BlockId, BlockType) -> Unit,
     onUpdateParameters: (BlockId, List<Parameter>) -> Unit,
     onUpdateTimeout: (BlockId, Long?) -> Unit,
+    onUpdatePreGate: (BlockId, Gate?) -> Unit,
+    onUpdatePostGate: (BlockId, Gate?) -> Unit,
     enabled: Boolean = true,
 ) {
     // Type selector
-    var typeExpanded by remember { mutableStateOf(false) }
+    var typeExpanded by remember(block.id) { mutableStateOf(false) }
     Text("Type", style = MaterialTheme.typography.labelMedium)
     Box {
         OutlinedButton(
@@ -147,18 +153,31 @@ private fun ActionBlockProperties(
 
     Spacer(Modifier.height(12.dp))
 
-    // Parameters
-    Text("Parameters", style = MaterialTheme.typography.labelMedium)
-    Spacer(Modifier.height(4.dp))
-
-    var params by remember(block.id) { mutableStateOf(block.parameters) }
-
-    // Compute predecessors for template picker
+    // Compute predecessors for template picker (shared by gates and parameters)
     val predecessors = remember(graph, block.id) {
         com.github.mr3zee.dag.findPredecessors(graph, block.id)
     }
 
+    // Approval Gates
+    GateConfigSection(
+        block = block,
+        projectParameters = projectParameters,
+        predecessors = predecessors,
+        onUpdatePreGate = onUpdatePreGate,
+        onUpdatePostGate = onUpdatePostGate,
+        enabled = enabled,
+    )
+
+    Spacer(Modifier.height(12.dp))
+
+    // Parameters
+    Text("Parameters", style = MaterialTheme.typography.labelMedium)
+    Spacer(Modifier.height(4.dp))
+
+    var params by remember(block.id, block.parameters) { mutableStateOf(block.parameters) }
+
     params.forEachIndexed { index, param ->
+        key(block.id, index) {
         ParameterRow(
             parameter = param,
             projectParameters = projectParameters,
@@ -174,6 +193,7 @@ private fun ActionBlockProperties(
             enabled = enabled,
         )
         Spacer(Modifier.height(4.dp))
+        }
     }
 
     OutlinedButton(
@@ -185,6 +205,157 @@ private fun ActionBlockProperties(
         modifier = Modifier.fillMaxWidth().testTag("add_parameter_button"),
     ) {
         Text("+ Add Parameter")
+    }
+}
+
+@Composable
+private fun GateConfigSection(
+    block: Block.ActionBlock,
+    projectParameters: List<Parameter>,
+    predecessors: List<Block>,
+    onUpdatePreGate: (BlockId, Gate?) -> Unit,
+    onUpdatePostGate: (BlockId, Gate?) -> Unit,
+    enabled: Boolean,
+) {
+    var expanded by remember(block.id) { mutableStateOf(false) }
+    val gateCount = listOfNotNull(block.preGate, block.postGate).size
+    val label = buildString {
+        append("Approval Gates")
+        if (gateCount > 0) append(" ($gateCount)")
+        append(if (expanded) " \u25BE" else " \u25B8")
+    }
+
+    OutlinedButton(
+        onClick = { expanded = !expanded },
+        enabled = enabled,
+        modifier = Modifier.fillMaxWidth().testTag("gate_section_toggle"),
+    ) {
+        Text(label, style = MaterialTheme.typography.labelMedium)
+    }
+
+    if (expanded) {
+        Spacer(Modifier.height(8.dp))
+        Column(modifier = Modifier.testTag("gate_section_content")) {
+            SingleGateEditor(
+                label = "Pre-gate",
+                gate = block.preGate,
+                blockId = block.id,
+                projectParameters = projectParameters,
+                predecessors = predecessors,
+                onUpdate = { onUpdatePreGate(block.id, it) },
+                enabled = enabled,
+                testTagPrefix = "pre_gate",
+            )
+
+            Spacer(Modifier.height(8.dp))
+            SingleGateEditor(
+                label = "Post-gate",
+                gate = block.postGate,
+                blockId = block.id,
+                projectParameters = projectParameters,
+                predecessors = predecessors,
+                onUpdate = { onUpdatePostGate(block.id, it) },
+                enabled = enabled,
+                testTagPrefix = "post_gate",
+            )
+        }
+    }
+}
+
+@Composable
+private fun SingleGateEditor(
+    label: String,
+    gate: Gate?,
+    blockId: BlockId,
+    projectParameters: List<Parameter>,
+    predecessors: List<Block>,
+    onUpdate: (Gate?) -> Unit,
+    enabled: Boolean,
+    testTagPrefix: String,
+) {
+    val isEnabled = gate != null
+    var message by remember(blockId, isEnabled) { mutableStateOf(gate?.message ?: "") }
+    var requiredCount by remember(blockId, isEnabled) { mutableStateOf(gate?.approvalRule?.requiredCount?.toString() ?: "1") }
+    var showTemplatePicker by remember(blockId) { mutableStateOf(false) }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Checkbox(
+            checked = isEnabled,
+            onCheckedChange = { checked ->
+                if (checked) {
+                    onUpdate(Gate())
+                } else {
+                    onUpdate(null)
+                }
+            },
+            enabled = enabled,
+            modifier = Modifier.testTag("${testTagPrefix}_checkbox"),
+        )
+        Text(label, style = MaterialTheme.typography.labelMedium)
+    }
+
+    if (isEnabled) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OutlinedTextField(
+                value = message,
+                onValueChange = { text ->
+                    message = text
+                    onUpdate(gate.copy(message = text))
+                },
+                label = { Text("Message") },
+                singleLine = true,
+                enabled = enabled,
+                modifier = Modifier.weight(1f).testTag("${testTagPrefix}_message_field"),
+                textStyle = MaterialTheme.typography.bodySmall,
+            )
+            TextButton(
+                onClick = { showTemplatePicker = true },
+                enabled = enabled,
+                contentPadding = PaddingValues(4.dp),
+                modifier = Modifier.testTag("${testTagPrefix}_template_button"),
+            ) {
+                Text("{}", style = MaterialTheme.typography.bodySmall)
+            }
+        }
+
+        val countValue = requiredCount.toIntOrNull()
+        val isCountError = countValue == null || countValue < 1
+        OutlinedTextField(
+            value = requiredCount,
+            onValueChange = { text ->
+                requiredCount = text
+                val count = text.toIntOrNull()?.coerceAtLeast(1) ?: 1
+                onUpdate(gate.copy(approvalRule = gate.approvalRule.copy(requiredCount = count)))
+            },
+            label = { Text("Required approvals") },
+            supportingText = if (isCountError) {{ Text("Must be 1 or more") }} else null,
+            isError = isCountError,
+            singleLine = true,
+            enabled = enabled,
+            modifier = Modifier.fillMaxWidth().testTag("${testTagPrefix}_count_field"),
+            textStyle = MaterialTheme.typography.bodySmall,
+        )
+    }
+
+    if (showTemplatePicker) {
+        TemplatePickerDialog(
+            parameters = projectParameters,
+            predecessors = predecessors,
+            onSelect = { expr ->
+                message += expr
+                val currentGate = gate ?: Gate()
+                onUpdate(currentGate.copy(message = message))
+                showTemplatePicker = false
+            },
+            onDismiss = { showTemplatePicker = false },
+        )
     }
 }
 

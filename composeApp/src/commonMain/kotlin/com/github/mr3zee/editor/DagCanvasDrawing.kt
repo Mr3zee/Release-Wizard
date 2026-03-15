@@ -36,7 +36,6 @@ internal fun blockTypeColor(type: BlockType, colors: AppColors): Color = when (t
     BlockType.GITHUB_PUBLICATION -> colors.githubPublication
     BlockType.MAVEN_CENTRAL_PUBLICATION -> colors.mavenCentral
     BlockType.SLACK_MESSAGE -> colors.slackMessage
-    BlockType.USER_ACTION -> colors.userAction
 }
 
 internal fun blockTypeLabel(block: Block): String = when (block) {
@@ -189,6 +188,29 @@ internal fun DrawScope.drawBlock(
         typeLayout,
         topLeft = Offset(screenX + transform.toScreen(10f), screenY + transform.toScreen(36f)),
     )
+
+    // Gate badge indicators
+    if (block is Block.ActionBlock) {
+        val badgeRadius = transform.toScreen(5f)
+        val strokeWidth = transform.toScreen(1.5f)
+        if (block.preGate != null) {
+            // Pre-gate: filled circle at top-left corner
+            drawCircle(
+                color = colors.gateIndicator,
+                radius = badgeRadius,
+                center = Offset(screenX + badgeRadius * 2, screenY),
+            )
+        }
+        if (block.postGate != null) {
+            // Post-gate: ring at top-right corner (visually distinct from pre-gate)
+            drawCircle(
+                color = colors.gateIndicator,
+                radius = badgeRadius,
+                center = Offset(screenX + screenW - badgeRadius * 2, screenY),
+                style = Stroke(width = strokeWidth),
+            )
+        }
+    }
 }
 
 internal fun DrawScope.drawPorts(

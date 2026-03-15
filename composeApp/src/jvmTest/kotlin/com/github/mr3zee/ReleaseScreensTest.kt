@@ -359,7 +359,7 @@ class ReleaseScreensTest {
             status = ReleaseStatus.RUNNING,
             dagSnapshot = DagGraph(
                 blocks = listOf(
-                    Block.ActionBlock(id = BlockId("b1"), name = "Approve Step", type = BlockType.USER_ACTION),
+                    Block.ActionBlock(id = BlockId("b1"), name = "Approve Step", type = BlockType.SLACK_MESSAGE, preGate = Gate()),
                 ),
                 positions = mapOf(BlockId("b1") to BlockPosition(100f, 100f)),
             ),
@@ -369,6 +369,8 @@ class ReleaseScreensTest {
                 blockId = BlockId("b1"),
                 releaseId = ReleaseId("r1"),
                 status = BlockStatus.WAITING_FOR_INPUT,
+                gatePhase = GatePhase.PRE,
+                gateMessage = "Approve to start 'Approve Step'",
             ),
         )
 
@@ -707,7 +709,7 @@ class ReleaseScreensTest {
             status = ReleaseStatus.RUNNING,
             dagSnapshot = DagGraph(
                 blocks = listOf(
-                    Block.ActionBlock(id = BlockId("approve1"), name = "Manual Approve", type = BlockType.USER_ACTION),
+                    Block.ActionBlock(id = BlockId("approve1"), name = "Manual Approve", type = BlockType.SLACK_MESSAGE, preGate = Gate()),
                 ),
                 positions = mapOf(BlockId("approve1") to BlockPosition(100f, 100f)),
             ),
@@ -717,6 +719,8 @@ class ReleaseScreensTest {
                 blockId = BlockId("approve1"),
                 releaseId = ReleaseId("r1"),
                 status = BlockStatus.WAITING_FOR_INPUT,
+                gatePhase = GatePhase.PRE,
+                gateMessage = "Approve to start 'Manual Approve'",
             ),
         )
         var approvedBlockId: BlockId? = null

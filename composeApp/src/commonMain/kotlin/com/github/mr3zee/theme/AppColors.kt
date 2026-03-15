@@ -28,7 +28,7 @@ data class AppColors(
     val githubPublication: Color,
     val mavenCentral: Color,
     val slackMessage: Color,
-    val userAction: Color,
+    val gateIndicator: Color,
     val containerBlock: Color,
 
     // Status colors (release-level)
@@ -66,7 +66,7 @@ val LightAppColors = AppColors(
     githubPublication = Color(0xFF059669),
     mavenCentral = Color(0xFFF59E0B),
     slackMessage = Color(0xFFE11D48),
-    userAction = Color(0xFF0D9488),
+    gateIndicator = Color(0xFF0891B2),
     containerBlock = Color(0xFF6B7280),
     blockShadow = Color(0x20000000),
     blockText = Color.White,
@@ -98,7 +98,7 @@ val DarkAppColors = AppColors(
     githubPublication = Color(0xFF34D399),
     mavenCentral = Color(0xFFFBBF24),
     slackMessage = Color(0xFFFB7185),
-    userAction = Color(0xFF22D3EE),
+    gateIndicator = Color(0xFF22D3EE),
     containerBlock = Color(0xFF94A3B8),
     blockShadow = Color(0x30FFFFFF),
     blockText = Color.White,

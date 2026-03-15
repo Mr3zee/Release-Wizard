@@ -9,5 +9,4 @@ enum class BlockType {
     GITHUB_PUBLICATION,
     MAVEN_CENTRAL_PUBLICATION,
     SLACK_MESSAGE,
-    USER_ACTION,
 }

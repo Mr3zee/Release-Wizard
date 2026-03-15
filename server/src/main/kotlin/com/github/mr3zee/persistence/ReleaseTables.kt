@@ -4,6 +4,7 @@ import com.github.mr3zee.AppJson
 import com.github.mr3zee.model.BlockApproval
 import com.github.mr3zee.model.BlockStatus
 import com.github.mr3zee.model.DagGraph
+import com.github.mr3zee.model.GatePhase
 import com.github.mr3zee.model.Parameter
 import com.github.mr3zee.model.ReleaseStatus
 import kotlinx.serialization.builtins.ListSerializer
@@ -40,6 +41,8 @@ object BlockExecutionTable : UUIDTable("block_executions") {
     val startedAt = timestamp("started_at").nullable()
     val finishedAt = timestamp("finished_at").nullable()
     val approvals = jsonb("approvals", AppJson, ListSerializer(BlockApproval.serializer()))
+    val gatePhase = enumerationByName<GatePhase>("gate_phase", 32).nullable()
+    val gateMessage = text("gate_message").nullable()
 
     init {
         index(false, releaseId)

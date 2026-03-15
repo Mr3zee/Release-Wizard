@@ -42,6 +42,8 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
             startedAt = this[BlockExecutionTable.startedAt],
             finishedAt = this[BlockExecutionTable.finishedAt],
             approvals = this[BlockExecutionTable.approvals],
+            gatePhase = this[BlockExecutionTable.gatePhase],
+            gateMessage = this[BlockExecutionTable.gateMessage],
         )
     }
 
@@ -149,6 +151,7 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
         projectTemplateId: ProjectId?,
         releaseIds: Set<String>?,
     ): Long = dbQuery {
+        // todo claude: duplicate 5 lines
         val conditions = buildReleaseConditions(includeArchived, teamId, teamIds, search, status, projectTemplateId, releaseIds)
         val query = ReleaseTable.selectAll()
         if (conditions.isNotEmpty()) {
@@ -168,6 +171,7 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
         projectTemplateId: ProjectId?,
         releaseIds: Set<String>?,
     ): Pair<List<Release>, Long> = dbQuery {
+        // todo claude: duplicate 6 lines
         val conditions = buildReleaseConditions(includeArchived, teamId, teamIds, search, status, projectTemplateId, releaseIds)
 
         val countQuery = ReleaseTable.selectAll()
@@ -305,6 +309,8 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
                 it[BlockExecutionTable.startedAt] = execution.startedAt
                 it[BlockExecutionTable.finishedAt] = execution.finishedAt
                 it[BlockExecutionTable.approvals] = execution.approvals
+                it[BlockExecutionTable.gatePhase] = execution.gatePhase
+                it[BlockExecutionTable.gateMessage] = execution.gateMessage
             },
         ) {
             it[BlockExecutionTable.id] = UUID.randomUUID()
@@ -316,6 +322,8 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
             it[BlockExecutionTable.startedAt] = execution.startedAt
             it[BlockExecutionTable.finishedAt] = execution.finishedAt
             it[BlockExecutionTable.approvals] = execution.approvals
+            it[BlockExecutionTable.gatePhase] = execution.gatePhase
+            it[BlockExecutionTable.gateMessage] = execution.gateMessage
         }
         Unit
     }
@@ -332,6 +340,8 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
                 it[BlockExecutionTable.startedAt] = null
                 it[BlockExecutionTable.finishedAt] = null
                 it[BlockExecutionTable.approvals] = emptyList()
+                it[BlockExecutionTable.gatePhase] = null
+                it[BlockExecutionTable.gateMessage] = null
             },
         ) { block ->
             this[BlockExecutionTable.id] = UUID.randomUUID()
@@ -343,6 +353,8 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
             this[BlockExecutionTable.startedAt] = null
             this[BlockExecutionTable.finishedAt] = null
             this[BlockExecutionTable.approvals] = emptyList()
+            this[BlockExecutionTable.gatePhase] = null
+            this[BlockExecutionTable.gateMessage] = null
         }
         Unit
     }

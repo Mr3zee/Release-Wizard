@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -33,6 +34,7 @@ sealed interface LockState {
 class DagEditorViewModel(
     private val projectId: ProjectId,
     private val apiClient: ProjectApiClient,
+    // todo claude: unused
     private val currentUserId: String? = null,
     private val canForceUnlock: Boolean = false,
 ) : ViewModel() {
@@ -99,6 +101,7 @@ class DagEditorViewModel(
             _isLoading.value = true
             _error.value = null
             try {
+                // todo claude: duplicate 10 lines
                 val p = apiClient.getProject(projectId)
                 _project.value = p
                 _graph.value = p.dagGraph
@@ -139,7 +142,7 @@ class DagEditorViewModel(
         heartbeatJob?.cancel()
         heartbeatJob = viewModelScope.launch {
             while (true) {
-                delay(HEARTBEAT_INTERVAL_MS)
+                delay(HEARTBEAT_INTERVAL_MS.milliseconds)
                 var success = false
                 for (retry in 0 until HEARTBEAT_MAX_RETRIES) {
                     try {
@@ -149,7 +152,7 @@ class DagEditorViewModel(
                         break
                     } catch (_: Exception) {
                         if (retry < HEARTBEAT_MAX_RETRIES - 1) {
-                            delay(2000L) // Wait before retry
+                            delay(2000L.milliseconds) // Wait before retry
                         }
                     }
                 }
@@ -178,6 +181,7 @@ class DagEditorViewModel(
             try {
                 apiClient.forceReleaseLock(projectId)
                 // Re-acquire after force release
+                // todo claude: duplicate 8 lines
                 val p = apiClient.getProject(projectId)
                 _project.value = p
                 _graph.value = p.dagGraph
@@ -196,6 +200,7 @@ class DagEditorViewModel(
         viewModelScope.launch {
             try {
                 // Reload project to get latest state
+                // todo claude: duplicate 8 lines
                 val p = apiClient.getProject(projectId)
                 _project.value = p
                 _graph.value = p.dagGraph
@@ -402,6 +407,7 @@ class DagEditorViewModel(
     }
 
     fun updateBlockParameters(blockId: BlockId, parameters: List<Parameter>) {
+        // todo claude: duplicate 11 lines
         if (isReadOnly.value) return
         val g = _graph.value
         updateGraphSilent(
@@ -416,6 +422,7 @@ class DagEditorViewModel(
     }
 
     fun updateBlockTimeout(blockId: BlockId, timeoutSeconds: Long?) {
+        // todo claude: duplicate 11 lines
         if (isReadOnly.value) return
         val g = _graph.value
         updateGraphSilent(
@@ -423,6 +430,35 @@ class DagEditorViewModel(
                 blocks = g.blocks.map { block ->
                     if (block.id == blockId && block is Block.ActionBlock) {
                         block.copy(timeoutSeconds = timeoutSeconds)
+                    } else block
+                }
+            )
+        )
+    }
+
+    fun updateBlockPreGate(blockId: BlockId, gate: Gate?) {
+        // todo claude: duplicate 11 lines
+        if (isReadOnly.value) return
+        val g = _graph.value
+        updateGraphSilent(
+            g.copy(
+                blocks = g.blocks.map { block ->
+                    if (block.id == blockId && block is Block.ActionBlock) {
+                        block.copy(preGate = gate)
+                    } else block
+                }
+            )
+        )
+    }
+
+    fun updateBlockPostGate(blockId: BlockId, gate: Gate?) {
+        if (isReadOnly.value) return
+        val g = _graph.value
+        updateGraphSilent(
+            g.copy(
+                blocks = g.blocks.map { block ->
+                    if (block.id == blockId && block is Block.ActionBlock) {
+                        block.copy(postGate = gate)
                     } else block
                 }
             )

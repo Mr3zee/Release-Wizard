@@ -2,6 +2,7 @@ package com.github.mr3zee.releases
 
 import com.github.mr3zee.api.*
 import com.github.mr3zee.jsonClient
+import com.github.mr3zee.login
 import com.github.mr3zee.loginAndCreateTeam
 import com.github.mr3zee.testModule
 import com.github.mr3zee.model.*
@@ -19,6 +20,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.milliseconds
 
 class ReleasesRoutesTest {
 
@@ -70,6 +72,7 @@ class ReleasesRoutesTest {
     fun `list releases returns empty list initially`() = testApplication {
         application { testModule() }
         val client = jsonClient()
+        // todo claude: unused
         val teamId = client.loginAndCreateTeam()
 
         val response = client.get(ApiRoutes.Releases.BASE)
@@ -103,6 +106,7 @@ class ReleasesRoutesTest {
     fun `start release with nonexistent project returns 400`() = testApplication {
         application { testModule() }
         val client = jsonClient()
+        // todo claude: unused
         val teamId = client.loginAndCreateTeam()
 
         val response = client.post(ApiRoutes.Releases.BASE) {
@@ -201,7 +205,7 @@ class ReleasesRoutesTest {
         val teamId = client.loginAndCreateTeam()
 
         val blocks = listOf(
-            Block.ActionBlock(id = BlockId("action"), name = "Approve", type = BlockType.USER_ACTION),
+            Block.ActionBlock(id = BlockId("action"), name = "Approve", type = BlockType.SLACK_MESSAGE, preGate = Gate()),
         )
         val project = client.createTestProject(teamId, blocks = blocks)
 
@@ -218,7 +222,8 @@ class ReleasesRoutesTest {
             }
 
             // Retry approval until the engine reaches WAITING_FOR_INPUT
-            withTimeout(10_000) {
+            // todo claude: withTimeoutOrNull
+            withTimeout(10_000.milliseconds) {
                 while (true) {
                     val resp = client.post(ApiRoutes.Releases.approveBlock(created.release.id.value, "action")) {
                         contentType(ContentType.Application.Json)
@@ -241,7 +246,7 @@ class ReleasesRoutesTest {
         val teamId = client.loginAndCreateTeam()
 
         val blocks = listOf(
-            Block.ActionBlock(id = BlockId("action"), name = "Wait", type = BlockType.USER_ACTION),
+            Block.ActionBlock(id = BlockId("action"), name = "Wait", type = BlockType.SLACK_MESSAGE, preGate = Gate()),
         )
         val project = client.createTestProject(teamId, blocks = blocks)
 
@@ -263,6 +268,7 @@ class ReleasesRoutesTest {
     fun `get nonexistent release returns 404`() = testApplication {
         application { testModule() }
         val client = jsonClient()
+        // todo claude: unused
         val teamId = client.loginAndCreateTeam()
 
         val response = client.get(ApiRoutes.Releases.byId("00000000-0000-0000-0000-000000000000"))
@@ -362,7 +368,7 @@ class ReleasesRoutesTest {
         val teamId = client.loginAndCreateTeam()
 
         val blocks = listOf(
-            Block.ActionBlock(id = BlockId("action"), name = "Wait", type = BlockType.USER_ACTION),
+            Block.ActionBlock(id = BlockId("action"), name = "Wait", type = BlockType.SLACK_MESSAGE, preGate = Gate()),
         )
         val project = client.createTestProject(teamId, blocks = blocks)
 
@@ -408,7 +414,7 @@ class ReleasesRoutesTest {
         val teamId = client.loginAndCreateTeam()
 
         val blocks = listOf(
-            Block.ActionBlock(id = BlockId("action"), name = "Wait", type = BlockType.USER_ACTION),
+            Block.ActionBlock(id = BlockId("action"), name = "Wait", type = BlockType.SLACK_MESSAGE, preGate = Gate()),
         )
         val project = client.createTestProject(teamId, blocks = blocks)
 
@@ -449,7 +455,7 @@ class ReleasesRoutesTest {
         val teamId = client.loginAndCreateTeam()
 
         val blocks = listOf(
-            Block.ActionBlock(id = BlockId("action"), name = "Wait", type = BlockType.USER_ACTION),
+            Block.ActionBlock(id = BlockId("action"), name = "Wait", type = BlockType.SLACK_MESSAGE, preGate = Gate()),
         )
         val project = client.createTestProject(teamId, blocks = blocks)
 
@@ -486,5 +492,272 @@ class ReleasesRoutesTest {
         // Verify the release is NOT in the list after archiving
         val listAfter = client.get(ApiRoutes.Releases.BASE).body<ReleaseListResponse>()
         assertTrue(listAfter.releases.none { it.id == result.release.id })
+    }
+
+    // ---- Gate tests ----
+
+    @Test
+    fun `post-gate only - block executes then waits for approval`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        val teamId = client.loginAndCreateTeam()
+
+        val blocks = listOf(
+            Block.ActionBlock(id = BlockId("build"), name = "Build", type = BlockType.TEAMCITY_BUILD, postGate = Gate()),
+        )
+        val project = client.createTestProject(teamId, blocks = blocks)
+
+        val created = client.post(ApiRoutes.Releases.BASE) {
+            contentType(ContentType.Application.Json)
+            setBody(CreateReleaseRequest(projectTemplateId = project.id))
+        }.body<ReleaseResponse>()
+
+        val result = coroutineScope {
+            val awaitDeferred = async {
+                client.post(ApiRoutes.Releases.await(created.release.id.value))
+                    .body<ReleaseResponse>()
+            }
+
+            // Wait for post-gate WAITING_FOR_INPUT with outputs already present
+            // todo claude: withTimeoutOrNull
+            withTimeout(10_000.milliseconds) {
+                while (true) {
+                    val resp = client.post(ApiRoutes.Releases.approveBlock(created.release.id.value, "build")) {
+                        contentType(ContentType.Application.Json)
+                        setBody(ApproveBlockRequest())
+                    }
+                    if (resp.status == HttpStatusCode.OK) break
+                    yield()
+                }
+            }
+
+            awaitDeferred.await()
+        }
+        assertEquals(ReleaseStatus.SUCCEEDED, result.release.status)
+        // Block should have outputs from execution (build ran before post-gate)
+        val buildExec = result.blockExecutions.find { it.blockId == BlockId("build") }
+        assertNotNull(buildExec)
+        assertEquals(BlockStatus.SUCCEEDED, buildExec.status)
+        assertTrue(buildExec.outputs.isNotEmpty(), "Post-gated block should have outputs after approval")
+    }
+
+    @Test
+    fun `both gates - pre-gate then execute then post-gate`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        val teamId = client.loginAndCreateTeam()
+
+        val blocks = listOf(
+            Block.ActionBlock(
+                id = BlockId("build"),
+                name = "Build",
+                type = BlockType.TEAMCITY_BUILD,
+                preGate = Gate(),
+                postGate = Gate(),
+            ),
+        )
+        val project = client.createTestProject(teamId, blocks = blocks)
+
+        val created = client.post(ApiRoutes.Releases.BASE) {
+            contentType(ContentType.Application.Json)
+            setBody(CreateReleaseRequest(projectTemplateId = project.id))
+        }.body<ReleaseResponse>()
+
+        val result = coroutineScope {
+            val awaitDeferred = async {
+                client.post(ApiRoutes.Releases.await(created.release.id.value))
+                    .body<ReleaseResponse>()
+            }
+
+            // Approve pre-gate
+            // todo claude: withTimeoutOrNull
+            withTimeout(10_000.milliseconds) {
+                while (true) {
+                    val resp = client.post(ApiRoutes.Releases.approveBlock(created.release.id.value, "build")) {
+                        contentType(ContentType.Application.Json)
+                        setBody(ApproveBlockRequest())
+                    }
+                    if (resp.status == HttpStatusCode.OK) break
+                    yield()
+                }
+            }
+
+            // Approve post-gate (block must execute first, then enter post-gate)
+            // todo claude: withTimeoutOrNull
+            withTimeout(10_000.milliseconds) {
+                while (true) {
+                    val resp = client.post(ApiRoutes.Releases.approveBlock(created.release.id.value, "build")) {
+                        contentType(ContentType.Application.Json)
+                        setBody(ApproveBlockRequest())
+                    }
+                    if (resp.status == HttpStatusCode.OK) break
+                    yield()
+                }
+            }
+
+            awaitDeferred.await()
+        }
+        assertEquals(ReleaseStatus.SUCCEEDED, result.release.status)
+    }
+
+    @Test
+    fun `pre-gate with requiredCount 2 needs two approvals from different users`() = testApplication {
+        application { testModule() }
+        val adminClient = jsonClient()
+        val teamId = adminClient.loginAndCreateTeam()
+
+        val blocks = listOf(
+            Block.ActionBlock(
+                id = BlockId("action"),
+                name = "Approve",
+                type = BlockType.SLACK_MESSAGE,
+                preGate = Gate(approvalRule = ApprovalRule(requiredCount = 2)),
+            ),
+        )
+        val project = adminClient.createTestProject(teamId, blocks = blocks)
+
+        // Register user2 and invite them to the team
+        val user2Client = jsonClient()
+        user2Client.login("user2", "user2pass")
+        val user2Info = user2Client.get(ApiRoutes.Auth.ME).body<UserInfo>()
+        val user2Id = user2Info.id ?: error("No user2 ID")
+        adminClient.post(ApiRoutes.Teams.invites(teamId.value)) {
+            contentType(ContentType.Application.Json)
+            setBody(CreateInviteRequest(userId = UserId(user2Id)))
+        }
+        val invites = user2Client.get(ApiRoutes.Auth.MyInvites.BASE).body<InviteListResponse>()
+        user2Client.post(ApiRoutes.Auth.MyInvites.accept(invites.invites.first().id))
+
+        val created = adminClient.post(ApiRoutes.Releases.BASE) {
+            contentType(ContentType.Application.Json)
+            setBody(CreateReleaseRequest(projectTemplateId = project.id))
+        }.body<ReleaseResponse>()
+
+        // First approval from admin
+        // todo claude: withTimeoutOrNull
+        withTimeout(10_000.milliseconds) {
+            while (true) {
+                val resp = adminClient.post(ApiRoutes.Releases.approveBlock(created.release.id.value, "action")) {
+                    contentType(ContentType.Application.Json)
+                    setBody(ApproveBlockRequest())
+                }
+                if (resp.status == HttpStatusCode.OK) break
+                yield()
+            }
+        }
+
+        // Release should still be running (only 1 of 2 approvals)
+        val midCheck = adminClient.get(ApiRoutes.Releases.byId(created.release.id.value))
+            .body<ReleaseResponse>()
+        assertEquals(ReleaseStatus.RUNNING, midCheck.release.status)
+        val actionExec = midCheck.blockExecutions.find { it.blockId == BlockId("action") }
+        assertNotNull(actionExec)
+        assertEquals(BlockStatus.WAITING_FOR_INPUT, actionExec.status)
+        assertEquals(1, actionExec.approvals.size)
+
+        // Second approval from user2 completes the gate
+        val result = coroutineScope {
+            val awaitDeferred = async {
+                adminClient.post(ApiRoutes.Releases.await(created.release.id.value))
+                    .body<ReleaseResponse>()
+            }
+
+            // todo claude: withTimeoutOrNull
+            withTimeout(10_000.milliseconds) {
+                while (true) {
+                    val resp = user2Client.post(ApiRoutes.Releases.approveBlock(created.release.id.value, "action")) {
+                        contentType(ContentType.Application.Json)
+                        setBody(ApproveBlockRequest())
+                    }
+                    if (resp.status == HttpStatusCode.OK) break
+                    yield()
+                }
+            }
+
+            awaitDeferred.await()
+        }
+        assertEquals(ReleaseStatus.SUCCEEDED, result.release.status)
+    }
+
+    @Test
+    fun `cancel during pre-gate marks block as failed`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        val teamId = client.loginAndCreateTeam()
+
+        val blocks = listOf(
+            Block.ActionBlock(id = BlockId("action"), name = "Wait", type = BlockType.SLACK_MESSAGE, preGate = Gate()),
+        )
+        val project = client.createTestProject(teamId, blocks = blocks)
+
+        val created = client.post(ApiRoutes.Releases.BASE) {
+            contentType(ContentType.Application.Json)
+            setBody(CreateReleaseRequest(projectTemplateId = project.id))
+        }.body<ReleaseResponse>()
+
+        // Wait until block enters WAITING_FOR_INPUT
+        // todo claude: withTimeoutOrNull
+        withTimeout(10_000.milliseconds) {
+            while (true) {
+                val resp = client.get(ApiRoutes.Releases.byId(created.release.id.value))
+                    .body<ReleaseResponse>()
+                val exec = resp.blockExecutions.find { it.blockId == BlockId("action") }
+                if (exec?.status == BlockStatus.WAITING_FOR_INPUT) break
+                yield()
+            }
+        }
+
+        // Cancel the release
+        client.post(ApiRoutes.Releases.cancel(created.release.id.value))
+
+        val fetched = client.get(ApiRoutes.Releases.byId(created.release.id.value))
+            .body<ReleaseResponse>()
+        assertEquals(ReleaseStatus.CANCELLED, fetched.release.status)
+        val actionExec = fetched.blockExecutions.find { it.blockId == BlockId("action") }
+        assertNotNull(actionExec)
+        assertEquals(BlockStatus.FAILED, actionExec.status)
+    }
+
+    @Test
+    fun `parallel blocks with pre-gates wait independently`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        val teamId = client.loginAndCreateTeam()
+
+        val blocks = listOf(
+            Block.ActionBlock(id = BlockId("a"), name = "Gate A", type = BlockType.SLACK_MESSAGE, preGate = Gate()),
+            Block.ActionBlock(id = BlockId("b"), name = "Gate B", type = BlockType.SLACK_MESSAGE, preGate = Gate()),
+        )
+        val project = client.createTestProject(teamId, blocks = blocks)
+
+        val created = client.post(ApiRoutes.Releases.BASE) {
+            contentType(ContentType.Application.Json)
+            setBody(CreateReleaseRequest(projectTemplateId = project.id))
+        }.body<ReleaseResponse>()
+
+        val result = coroutineScope {
+            val awaitDeferred = async {
+                client.post(ApiRoutes.Releases.await(created.release.id.value))
+                    .body<ReleaseResponse>()
+            }
+
+            // Approve both gates
+            for (blockId in listOf("a", "b")) {
+                // todo claude: withTimeoutOrNull
+                withTimeout(10_000.milliseconds) {
+                    while (true) {
+                        val resp = client.post(ApiRoutes.Releases.approveBlock(created.release.id.value, blockId)) {
+                            contentType(ContentType.Application.Json)
+                            setBody(ApproveBlockRequest())
+                        }
+                        if (resp.status == HttpStatusCode.OK) break
+                        yield()
+                    }
+                }
+            }
+
+            awaitDeferred.await()
+        }
+        assertEquals(ReleaseStatus.SUCCEEDED, result.release.status)
     }
 }

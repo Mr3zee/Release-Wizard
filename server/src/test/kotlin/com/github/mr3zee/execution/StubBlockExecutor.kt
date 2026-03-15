@@ -42,7 +42,6 @@ class StubBlockExecutor : BlockExecutor {
                 "messageTs" to "1234567890.123456",
                 "channel" to "#releases",
             )
-            BlockType.USER_ACTION -> emptyMap() // Handled separately by ExecutionEngine
         }
     }
 }

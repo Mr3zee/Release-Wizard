@@ -69,6 +69,7 @@ class DispatchingBlockExecutorTest {
         val ghPubExecutor = FakeExecutor(mapOf("releaseUrl" to "https://github.com"))
         val dispatcher = DispatchingBlockExecutor(mapOf(BlockType.GITHUB_PUBLICATION to ghPubExecutor))
 
+        // todo claude: unused
         val outputs = dispatcher.execute(block(BlockType.GITHUB_PUBLICATION), emptyList(), context)
         assertTrue(ghPubExecutor.executeCalled)
     }
@@ -81,15 +82,6 @@ class DispatchingBlockExecutorTest {
         val outputs = dispatcher.execute(block(BlockType.MAVEN_CENTRAL_PUBLICATION), emptyList(), context)
         assertTrue(mavenExecutor.executeCalled)
         assertEquals("PUBLISHED", outputs["status"])
-    }
-
-    @Test
-    fun `routes to correct executor for USER_ACTION`() = runBlocking {
-        val userActionExecutor = FakeExecutor(emptyMap())
-        val dispatcher = DispatchingBlockExecutor(mapOf(BlockType.USER_ACTION to userActionExecutor))
-
-        dispatcher.execute(block(BlockType.USER_ACTION), emptyList(), context)
-        assertTrue(userActionExecutor.executeCalled)
     }
 
     @Test

@@ -82,4 +82,41 @@ class TemplateEngineTest {
         )
         assertEquals("URL: https://github.com/run/123", result)
     }
+
+    @Test
+    fun `gate message with parameter interpolation`() {
+        val result = TemplateEngine.resolve(
+            $$"Release ${param.version} ready for review",
+            listOf(Parameter("version", "2.5.0")),
+        )
+        assertEquals("Release 2.5.0 ready for review", result)
+    }
+
+    @Test
+    fun `gate message with block output interpolation`() {
+        val result = TemplateEngine.resolve(
+            $$"Build #${block.build.buildNumber} completed. Approve to continue.",
+            emptyList(),
+            mapOf(BlockId("build") to mapOf("buildNumber" to "99")),
+        )
+        assertEquals("Build #99 completed. Approve to continue.", result)
+    }
+
+    @Test
+    fun `gate message pre-gate cannot reference own outputs`() {
+        // Pre-gate message referencing block's own output — output not available yet
+        val result = TemplateEngine.resolve(
+            $$"Build result: ${block.self.buildNumber}",
+            emptyList(),
+            emptyMap(), // self outputs not in map during pre-gate
+        )
+        // Unresolved expression preserved as-is
+        assertEquals($$"Build result: ${block.self.buildNumber}", result)
+    }
+
+    @Test
+    fun `empty string passes through unchanged`() {
+        val result = TemplateEngine.resolve("", emptyList())
+        assertEquals("", result)
+    }
 }

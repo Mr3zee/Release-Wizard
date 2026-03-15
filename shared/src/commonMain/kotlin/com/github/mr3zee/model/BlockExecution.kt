@@ -13,6 +13,8 @@ data class BlockExecution(
     val startedAt: Instant? = null,
     val finishedAt: Instant? = null,
     val approvals: List<BlockApproval> = emptyList(),
+    val gatePhase: GatePhase? = null,
+    val gateMessage: String? = null,
 ) {
     companion object {
         /** Key in [outputs] for JSON-encoded artifact paths list. */

@@ -2,7 +2,6 @@ package com.github.mr3zee.model
 
 import com.github.mr3zee.AppJson
 import com.github.mr3zee.api.*
-import com.github.mr3zee.model.*
 import kotlin.time.Clock
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -441,5 +440,75 @@ class SerializationTest {
         val encoded = json.encodeToString(ReleaseResponse.serializer(), response)
         val decoded = json.decodeFromString(ReleaseResponse.serializer(), encoded)
         assertEquals(response, decoded)
+    }
+
+    @Test
+    fun `gate round trip`() {
+        val gate = Gate(
+            message = $$"Approve release ${param.version}",
+            approvalRule = ApprovalRule(
+                requiredRole = UserRole.ADMIN,
+                requiredUserIds = listOf("user1", "user2"),
+                requiredCount = 2,
+            ),
+        )
+        val encoded = json.encodeToString(Gate.serializer(), gate)
+        val decoded = json.decodeFromString(Gate.serializer(), encoded)
+        assertEquals(gate, decoded)
+    }
+
+    @Test
+    fun `gate with defaults round trip`() {
+        val gate = Gate()
+        val encoded = json.encodeToString(Gate.serializer(), gate)
+        val decoded = json.decodeFromString(Gate.serializer(), encoded)
+        assertEquals(gate, decoded)
+        assertEquals("", decoded.message)
+        assertEquals(1, decoded.approvalRule.requiredCount)
+    }
+
+    @Test
+    fun `gate phase round trip`() {
+        for (phase in GatePhase.entries) {
+            val encoded = json.encodeToString(GatePhase.serializer(), phase)
+            val decoded = json.decodeFromString(GatePhase.serializer(), encoded)
+            assertEquals(phase, decoded)
+        }
+    }
+
+    @Test
+    fun `action block with gates round trip`() {
+        val block = Block.ActionBlock(
+            id = BlockId("gated"),
+            name = "Gated Build",
+            type = BlockType.TEAMCITY_BUILD,
+            preGate = Gate(message = "Ready to build?"),
+            postGate = Gate(message = "Build OK?", approvalRule = ApprovalRule(requiredCount = 2)),
+        )
+        val encoded = json.encodeToString(Block.serializer(), block)
+        val decoded = json.decodeFromString(Block.serializer(), encoded)
+        assertEquals(block, decoded)
+        assertTrue(decoded is Block.ActionBlock)
+        assertEquals("Ready to build?", decoded.preGate?.message)
+        assertEquals(2, decoded.postGate?.approvalRule?.requiredCount)
+    }
+
+    @Test
+    fun `block execution with gate fields round trip`() {
+        val exec = BlockExecution(
+            blockId = BlockId("b1"),
+            releaseId = ReleaseId("r1"),
+            status = BlockStatus.WAITING_FOR_INPUT,
+            gatePhase = GatePhase.PRE,
+            gateMessage = "Approve to start 'Build'",
+            approvals = listOf(
+                BlockApproval(userId = "admin", username = "admin", approvedAt = 1234567890L),
+            ),
+        )
+        val encoded = json.encodeToString(BlockExecution.serializer(), exec)
+        val decoded = json.decodeFromString(BlockExecution.serializer(), encoded)
+        assertEquals(exec, decoded)
+        assertEquals(GatePhase.PRE, decoded.gatePhase)
+        assertEquals("Approve to start 'Build'", decoded.gateMessage)
     }
 }

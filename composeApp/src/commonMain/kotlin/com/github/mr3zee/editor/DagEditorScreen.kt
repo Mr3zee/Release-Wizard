@@ -257,6 +257,8 @@ fun DagEditorScreen(
                     onUpdateType = { id, type -> viewModel.updateBlockType(id, type) },
                     onUpdateParameters = { id, params -> viewModel.updateBlockParameters(id, params) },
                     onUpdateTimeout = { id, timeout -> viewModel.updateBlockTimeout(id, timeout) },
+                    onUpdatePreGate = { id, gate -> viewModel.updateBlockPreGate(id, gate) },
+                    onUpdatePostGate = { id, gate -> viewModel.updateBlockPostGate(id, gate) },
                     enabled = !isReadOnly,
                 )
             }

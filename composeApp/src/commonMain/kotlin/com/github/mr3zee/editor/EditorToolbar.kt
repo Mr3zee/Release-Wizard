@@ -162,7 +162,6 @@ private fun blockTypeDisplayName(type: BlockType): String = when (type) {
     BlockType.GITHUB_PUBLICATION -> "GitHub Publication"
     BlockType.MAVEN_CENTRAL_PUBLICATION -> "Maven Central"
     BlockType.SLACK_MESSAGE -> "Slack Message"
-    BlockType.USER_ACTION -> "User Action"
 }
 
 private fun defaultBlockName(type: BlockType): String = when (type) {
@@ -171,7 +170,6 @@ private fun defaultBlockName(type: BlockType): String = when (type) {
     BlockType.GITHUB_PUBLICATION -> "Publish"
     BlockType.MAVEN_CENTRAL_PUBLICATION -> "Maven Central"
     BlockType.SLACK_MESSAGE -> "Notify"
-    BlockType.USER_ACTION -> "Approve"
 }
 
 // Uses blockTypeColor from DagCanvas.kt

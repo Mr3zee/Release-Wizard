@@ -6,7 +6,6 @@ import com.github.mr3zee.connections.ConnectionsRepository
 import com.github.mr3zee.dag.DagTopologicalSort
 import com.github.mr3zee.dag.DagValidator
 import com.github.mr3zee.model.*
-import com.github.mr3zee.model.findActionBlock
 import com.github.mr3zee.releases.ReleasesRepository
 import com.github.mr3zee.template.TemplateEngine
 import kotlinx.coroutines.*
@@ -29,7 +28,7 @@ import kotlin.time.Instant
  *
  * For each release, traverses the DAG in topological order, launching blocks
  * whose predecessors have all SUCCEEDED. Container blocks recursively execute
- * their sub-DAG. User Action blocks suspend on CompletableDeferred until approved.
+ * their sub-DAG. Blocks with pre/post gates suspend on CompletableDeferred until approved.
  */
 class ExecutionEngine(
     private val repository: ReleasesRepository,
@@ -51,7 +50,7 @@ class ExecutionEngine(
     // Per-release mutex to prevent concurrent restarts
     private val restartMutexes = ConcurrentHashMap<ReleaseId, Mutex>()
 
-    // Pending user action approvals: releaseId -> blockId -> CompletableDeferred
+    // Pending gate approvals: releaseId -> blockId -> CompletableDeferred
     private val pendingApprovals = ConcurrentHashMap<ReleaseId, ConcurrentHashMap<BlockId, CompletableDeferred<Map<String, String>>>>()
 
     // Per-release sequence counter for replay support
@@ -270,29 +269,74 @@ class ExecutionEngine(
                 statusMap[block.id] = BlockStatus.SUCCEEDED
             }
             BlockStatus.RUNNING -> {
-                // Was running when server died -- call resume()
+                // Was running when server died -- call resume(), then check for post-gate
                 resumeAction(release, block, statusMap, outputsMap)
             }
             BlockStatus.WAITING_FOR_INPUT -> {
-                // User action -- re-register CompletableDeferred and wait
                 val startTime = persistedExec.startedAt ?: Clock.System.now()
                 statusMap[block.id] = BlockStatus.WAITING_FOR_INPUT
                 emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, persistedExec))
 
-                val deferred = CompletableDeferred<Map<String, String>>()
-                pendingApprovals.getOrPut(release.id) { ConcurrentHashMap() }[block.id] = deferred
+                // Resolve the gate and check if approvals already met threshold before crash
+                val gatePhase = persistedExec.gatePhase
+                    ?: error("Block ${block.id.value} has WAITING_FOR_INPUT status but no gatePhase recorded")
+                val gate = when (gatePhase) {
+                    GatePhase.PRE -> block.preGate
+                    GatePhase.POST -> block.postGate
+                }
 
-                // Check if approvals already met threshold before crash — auto-complete
-                val actionBlock = release.dagSnapshot.findActionBlock(block.id)
-                val rule = actionBlock?.approvalRule
+                val deferred = registerDeferred(release.id, block.id)
+                val rule = gate?.approvalRule
                 if (rule != null && rule.requiredCount > 0 && persistedExec.approvals.size >= rule.requiredCount) {
                     deferred.complete(emptyMap())
                 }
+                try {
+                    deferred.await()
+                } finally {
+                    pendingApprovals[release.id]?.remove(block.id)
+                }
 
-                val outputs = deferred.await()
-                pendingApprovals[release.id]?.remove(block.id)
+                when (gatePhase) {
+                    GatePhase.PRE -> {
+                        // Pre-gate resolved — now execute the block (with potential post-gate)
+                        // todo claude: duplicate 31 lines
+                        statusMap[block.id] = BlockStatus.RUNNING
+                        persistAndEmit(release.id, BlockExecution(
+                            blockId = block.id,
+                            releaseId = release.id,
+                            status = BlockStatus.RUNNING,
+                            startedAt = startTime,
+                        ))
 
-                completeBlockSuccess(release.id, block.id, outputs, startTime, statusMap, outputsMap)
+                        val postGate = block.postGate
+                        executeWithBlockErrorHandling(release.id, block.id, startTime, statusMap, outputsMap) {
+                            val outputs = resolveAndExecute(release, block, outputsMap, BlockExecutor::execute)
+
+                            if (postGate != null) {
+                                outputsMap[block.id] = outputs
+                                val msg = resolveGateMessage(postGate, block.name, GatePhase.POST, release, outputsMap)
+                                statusMap[block.id] = BlockStatus.WAITING_FOR_INPUT
+                                persistAndEmit(release.id, BlockExecution(
+                                    blockId = block.id,
+                                    releaseId = release.id,
+                                    status = BlockStatus.WAITING_FOR_INPUT,
+                                    outputs = outputs,
+                                    startedAt = startTime,
+                                    gatePhase = GatePhase.POST,
+                                    gateMessage = msg,
+                                ))
+
+                                awaitGateApproval(release.id, block.id)
+                            }
+
+                            outputs
+                        }
+                    }
+                    GatePhase.POST -> {
+                        // Post-gate resolved — complete with stored outputs
+                        completeBlockSuccess(release.id, block.id, persistedExec.outputs, startTime, statusMap, outputsMap)
+                    }
+                }
             }
             BlockStatus.FAILED -> {
                 // Already failed -- keep it
@@ -320,8 +364,30 @@ class ExecutionEngine(
             startedAt = startTime,
         ))
 
+        // todo claude: duplicate 24 lines
+        val postGate = block.postGate
         executeWithBlockErrorHandling(release.id, block.id, startTime, statusMap, outputsMap) {
-            resolveAndExecute(release, block, outputsMap, BlockExecutor::resume)
+            val outputs = resolveAndExecute(release, block, outputsMap, BlockExecutor::resume)
+
+            // Post-gate after resume if configured
+            if (postGate != null) {
+                outputsMap[block.id] = outputs
+                val msg = resolveGateMessage(postGate, block.name, GatePhase.POST, release, outputsMap)
+                statusMap[block.id] = BlockStatus.WAITING_FOR_INPUT
+                persistAndEmit(release.id, BlockExecution(
+                    blockId = block.id,
+                    releaseId = release.id,
+                    status = BlockStatus.WAITING_FOR_INPUT,
+                    outputs = outputs,
+                    startedAt = startTime,
+                    gatePhase = GatePhase.POST,
+                    gateMessage = msg,
+                ))
+
+                awaitGateApproval(release.id, block.id)
+            }
+
+            outputs
         }
     }
 
@@ -587,35 +653,100 @@ class ExecutionEngine(
         outputsMap: MutableMap<BlockId, Map<String, String>>,
     ) {
         val startTime = Clock.System.now()
-        statusMap[block.id] = BlockStatus.RUNNING
-        persistAndEmit(release.id, BlockExecution(
-            blockId = block.id,
-            releaseId = release.id,
-            status = BlockStatus.RUNNING,
-            startedAt = startTime,
-        ))
+
+        val preGate = block.preGate
+        val postGate = block.postGate
 
         executeWithBlockErrorHandling(release.id, block.id, startTime, statusMap, outputsMap) {
-            if (block.type == BlockType.USER_ACTION) {
+            // 1. Pre-gate (if configured)
+            if (preGate != null) {
+                val msg = resolveGateMessage(preGate, block.name, GatePhase.PRE, release, outputsMap)
                 statusMap[block.id] = BlockStatus.WAITING_FOR_INPUT
                 persistAndEmit(release.id, BlockExecution(
                     blockId = block.id,
                     releaseId = release.id,
                     status = BlockStatus.WAITING_FOR_INPUT,
                     startedAt = startTime,
+                    gatePhase = GatePhase.PRE,
+                    gateMessage = msg,
                 ))
 
-                val deferred = CompletableDeferred<Map<String, String>>()
-                pendingApprovals
-                    .getOrPut(release.id) { ConcurrentHashMap() }[block.id] = deferred
+                awaitGateApproval(release.id, block.id)
 
-                val outputs = deferred.await()
-                pendingApprovals[release.id]?.remove(block.id)
-                outputs
+                // Transition to RUNNING, clear gate state and approvals
+                statusMap[block.id] = BlockStatus.RUNNING
+                persistAndEmit(release.id, BlockExecution(
+                    blockId = block.id,
+                    releaseId = release.id,
+                    status = BlockStatus.RUNNING,
+                    startedAt = startTime,
+                ))
             } else {
-                resolveAndExecute(release, block, outputsMap, BlockExecutor::execute)
+                statusMap[block.id] = BlockStatus.RUNNING
+                persistAndEmit(release.id, BlockExecution(
+                    blockId = block.id,
+                    releaseId = release.id,
+                    status = BlockStatus.RUNNING,
+                    startedAt = startTime,
+                ))
+            }
+
+            // 2. Execute the block
+            // todo claude: duplicate 21 lines
+            val outputs = resolveAndExecute(release, block, outputsMap, BlockExecutor::execute)
+
+            // 3. Post-gate (if configured)
+            if (postGate != null) {
+                outputsMap[block.id] = outputs
+                val msg = resolveGateMessage(postGate, block.name, GatePhase.POST, release, outputsMap)
+                statusMap[block.id] = BlockStatus.WAITING_FOR_INPUT
+                persistAndEmit(release.id, BlockExecution(
+                    blockId = block.id,
+                    releaseId = release.id,
+                    status = BlockStatus.WAITING_FOR_INPUT,
+                    outputs = outputs,
+                    startedAt = startTime,
+                    gatePhase = GatePhase.POST,
+                    gateMessage = msg,
+                ))
+
+                awaitGateApproval(release.id, block.id)
+            }
+
+            outputs
+        }
+    }
+
+    private suspend fun awaitGateApproval(releaseId: ReleaseId, blockId: BlockId) {
+        val deferred = CompletableDeferred<Map<String, String>>()
+        pendingApprovals.getOrPut(releaseId) { ConcurrentHashMap() }[blockId] = deferred
+        try {
+            deferred.await()
+        } finally {
+            pendingApprovals[releaseId]?.remove(blockId)
+        }
+    }
+
+    private fun registerDeferred(releaseId: ReleaseId, blockId: BlockId): CompletableDeferred<Map<String, String>> {
+        val deferred = CompletableDeferred<Map<String, String>>()
+        pendingApprovals.getOrPut(releaseId) { ConcurrentHashMap() }[blockId] = deferred
+        return deferred
+    }
+
+    private fun resolveGateMessage(
+        gate: Gate,
+        blockName: String,
+        phase: GatePhase,
+        release: Release,
+        outputsMap: Map<BlockId, Map<String, String>>,
+    ): String {
+        val template = gate.message.ifEmpty {
+            when (phase) {
+                GatePhase.PRE -> "Approve to start '$blockName'"
+                GatePhase.POST -> "'$blockName' completed. Review output and approve to continue."
             }
         }
+        return TemplateEngine.resolve(template, release.parameters, outputsMap)
     }
 
     // ── Shared helpers ──────────────────────────────────────────────────
@@ -647,18 +778,21 @@ class ExecutionEngine(
             action()
         } catch (_: CancellationException) {
             if (restartingReleases.contains(release.id)) return
-            val executions = repository.findBlockExecutions(release.id)
-            for (exec in executions) {
-                if (exec.status == BlockStatus.RUNNING || exec.status == BlockStatus.WAITING) {
-                    persistAndEmit(release.id, exec.copy(
-                        status = BlockStatus.FAILED,
-                        error = "Release cancelled",
-                        finishedAt = Clock.System.now(),
-                    ))
+            // Must use NonCancellable to ensure cleanup suspend calls complete in a cancelled scope
+            withContext(NonCancellable) {
+                val executions = repository.findBlockExecutions(release.id)
+                for (exec in executions) {
+                    if (exec.status == BlockStatus.RUNNING || exec.status == BlockStatus.WAITING || exec.status == BlockStatus.WAITING_FOR_INPUT) {
+                        persistAndEmit(release.id, exec.copy(
+                            status = BlockStatus.FAILED,
+                            error = "Release cancelled",
+                            finishedAt = Clock.System.now(),
+                        ))
+                    }
                 }
+                repository.setFinished(release.id, ReleaseStatus.CANCELLED)
+                emitCompletionOnce(release.id, ReleaseStatus.CANCELLED, Clock.System.now())
             }
-            repository.setFinished(release.id, ReleaseStatus.CANCELLED)
-            emitCompletionOnce(release.id, ReleaseStatus.CANCELLED, Clock.System.now())
         } catch (_: Exception) {
             repository.setFinished(release.id, ReleaseStatus.FAILED)
             emitCompletionOnce(release.id, ReleaseStatus.FAILED, Clock.System.now())
@@ -691,6 +825,7 @@ class ExecutionEngine(
                     it == BlockStatus.RUNNING || it == BlockStatus.WAITING_FOR_INPUT
                 }
                 if (anyRunning) {
+                    log.debug("Wave loop polling: {} blocks running/waiting, {} remaining", statusMap.values.count { it == BlockStatus.RUNNING || it == BlockStatus.WAITING_FOR_INPUT }, remaining.size)
                     delay(100.milliseconds)
                     continue
                 }

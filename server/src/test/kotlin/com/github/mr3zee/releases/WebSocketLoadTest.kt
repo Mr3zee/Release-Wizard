@@ -26,6 +26,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.milliseconds
 
 class WebSocketLoadTest {
 
@@ -67,12 +68,12 @@ class WebSocketLoadTest {
 
         val m = 3
 
-        // Create a project with a USER_ACTION block so the release stays running
+        // Create a project with a gated block so the release stays running
         // while we connect WebSocket clients, followed by a regular block
         val project = httpClient.createTestProject(
             teamId,
             blocks = listOf(
-                Block.ActionBlock(id = BlockId("approval"), name = "Approve", type = BlockType.USER_ACTION),
+                Block.ActionBlock(id = BlockId("approval"), name = "Approve", type = BlockType.SLACK_MESSAGE, preGate = Gate()),
                 Block.ActionBlock(id = BlockId("build"), name = "Build", type = BlockType.TEAMCITY_BUILD),
             ),
             edges = listOf(Edge(fromBlockId = BlockId("approval"), toBlockId = BlockId("build"))),
@@ -126,7 +127,8 @@ class WebSocketLoadTest {
             // Wait a bit for all WS connections to be established, then approve
             // Retry approval until the engine reaches WAITING_FOR_INPUT
             yield()
-            withTimeout(10_000) {
+            // todo claude: withTimeoutOrNull
+            withTimeout(10_000.milliseconds) {
                 while (true) {
                     val resp = httpClient.post(ApiRoutes.Releases.approveBlock(releaseId.value, "approval")) {
                         contentType(ContentType.Application.Json)
@@ -262,11 +264,11 @@ class WebSocketLoadTest {
         val httpClient = jsonClient()
         val teamId = httpClient.loginAndCreateTeam()
 
-        // Use USER_ACTION so release stays running until we approve
+        // Use gated block so release stays running until we approve
         val project = httpClient.createTestProject(
             teamId,
             blocks = listOf(
-                Block.ActionBlock(id = BlockId("approval"), name = "Approve", type = BlockType.USER_ACTION),
+                Block.ActionBlock(id = BlockId("approval"), name = "Approve", type = BlockType.SLACK_MESSAGE, preGate = Gate()),
             ),
         )
 
@@ -309,7 +311,8 @@ class WebSocketLoadTest {
 
             // Approve after WS clients are connected
             yield()
-            withTimeout(10_000) {
+            // todo claude: withTimeoutOrNull
+            withTimeout(10_000.milliseconds) {
                 while (true) {
                     val resp = httpClient.post(ApiRoutes.Releases.approveBlock(releaseId.value, "approval")) {
                         contentType(ContentType.Application.Json)
@@ -340,12 +343,12 @@ class WebSocketLoadTest {
         val httpClient = jsonClient()
         val teamId = httpClient.loginAndCreateTeam()
 
-        // Use USER_ACTION first so release stays running while WS clients connect,
+        // Use gated block first so release stays running while WS clients connect,
         // then A -> B -> C chain for block execution events
         val project = httpClient.createTestProject(
             teamId,
             blocks = listOf(
-                Block.ActionBlock(id = BlockId("gate"), name = "Gate", type = BlockType.USER_ACTION),
+                Block.ActionBlock(id = BlockId("gate"), name = "Gate", type = BlockType.SLACK_MESSAGE, preGate = Gate()),
                 Block.ActionBlock(id = BlockId("a"), name = "A", type = BlockType.TEAMCITY_BUILD),
                 Block.ActionBlock(id = BlockId("b"), name = "B", type = BlockType.GITHUB_ACTION),
                 Block.ActionBlock(id = BlockId("c"), name = "C", type = BlockType.SLACK_MESSAGE),
@@ -389,7 +392,8 @@ class WebSocketLoadTest {
 
             // Approve the gate after WS clients connect
             yield()
-            withTimeout(10_000) {
+            // todo claude: withTimeoutOrNull
+            withTimeout(10_000.milliseconds) {
                 while (true) {
                     val resp = httpClient.post(ApiRoutes.Releases.approveBlock(releaseId.value, "gate")) {
                         contentType(ContentType.Application.Json)

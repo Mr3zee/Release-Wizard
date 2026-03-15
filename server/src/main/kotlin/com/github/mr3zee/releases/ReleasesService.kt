@@ -11,7 +11,6 @@ import com.github.mr3zee.execution.ExecutionEngine
 import com.github.mr3zee.model.*
 import com.github.mr3zee.model.collectConnectionIds
 import com.github.mr3zee.model.findActionBlock
-import com.github.mr3zee.model.isTerminal
 import com.github.mr3zee.projects.ProjectsRepository
 import com.github.mr3zee.tags.TagRepository
 import com.github.mr3zee.teams.TeamAccessService
@@ -252,57 +251,82 @@ class DefaultReleasesService(
         return executionEngine.restartBlock(releaseId, blockId)
     }
 
+    /**
+     * Approval result from the mutex-protected section.
+     * - [Recorded]: approval saved but threshold not yet met — return true to caller without completing the deferred.
+     * - [ThresholdMet]: threshold met — proceed to complete the deferred via the engine.
+     * - [Rejected]: block not in expected state — return false to caller.
+     */
+    private enum class ApprovalResult { Recorded, ThresholdMet, Rejected }
+
     override suspend fun approveBlock(releaseId: ReleaseId, blockId: BlockId, request: ApproveBlockRequest, session: UserSession): Boolean {
         val release = repository.findById(releaseId) ?: return false
         checkAccess(releaseId, session)
         if (release.status != ReleaseStatus.RUNNING) return false
 
-        val block = release.dagSnapshot.findActionBlock(blockId)
-        val rule = block?.approvalRule
+        // Resolve gate from execution state
+        val execution = repository.findBlockExecution(releaseId, blockId) ?: return false
+        if (execution.status != BlockStatus.WAITING_FOR_INPUT) return false
 
-        if (rule != null) {
-            if (rule.requiredCount < 1) {
-                return executionEngine.approveBlock(releaseId, blockId, request.input)
+        val block = release.dagSnapshot.findActionBlock(blockId) ?: return false
+
+        // Serialize concurrent approvals for the same (release, block) to prevent read-modify-write races.
+        // Gate and rule are resolved inside the mutex using the freshest execution read.
+        val mutexKey = releaseId.value to blockId.value
+        val mutex = approvalMutexes.getOrPut(mutexKey) { Mutex() }
+        val result = mutex.withLock {
+            val currentExecution = repository.findBlockExecution(releaseId, blockId)
+                ?: return@withLock ApprovalResult.Rejected
+            if (currentExecution.status != BlockStatus.WAITING_FOR_INPUT) {
+                return@withLock ApprovalResult.Rejected
             }
 
-            // Serialize concurrent approvals for the same (release, block) to prevent read-modify-write races
-            val mutex = approvalMutexes.getOrPut(releaseId.value to blockId.value) { Mutex() }
-            val shouldProceed = mutex.withLock {
-                val execution = repository.findBlockExecution(releaseId, blockId) ?: return false
-                if (execution.status != BlockStatus.WAITING_FOR_INPUT) return false
-
-                if (rule.requiredRole != null && session.role != rule.requiredRole) {
-                    throw ForbiddenException("Approval requires ${rule.requiredRole} role")
-                }
-                if (rule.requiredUserIds.isNotEmpty() && session.userId !in rule.requiredUserIds) {
-                    throw ForbiddenException("You are not authorized to approve this block")
-                }
-                if (execution.approvals.any { it.userId == session.userId }) {
-                    throw IllegalArgumentException("You have already approved this block")
-                }
-
-                val newApproval = BlockApproval(
-                    userId = session.userId,
-                    username = session.username,
-                    approvedAt = Clock.System.now().toEpochMilliseconds(),
-                )
-                val updatedApprovals = execution.approvals + newApproval
-                val updatedExecution = execution.copy(approvals = updatedApprovals)
-                repository.upsertBlockExecution(updatedExecution)
-
-                if (updatedApprovals.size < rule.requiredCount) {
-                    executionEngine.emitBlockUpdate(releaseId, updatedExecution)
-                    return true
-                }
-                true
+            val currentGatePhase = currentExecution.gatePhase
+                ?: return@withLock ApprovalResult.Rejected
+            val gate = when (currentGatePhase) {
+                GatePhase.PRE -> block.preGate
+                GatePhase.POST -> block.postGate
             }
-            if (!shouldProceed) return false
-        } else {
-            val execution = repository.findBlockExecution(releaseId, blockId) ?: return false
-            if (execution.status != BlockStatus.WAITING_FOR_INPUT) return false
+            val rule = gate?.approvalRule
+
+            if (rule == null || rule.requiredCount < 1) {
+                return@withLock ApprovalResult.ThresholdMet
+            }
+
+            if (rule.requiredRole != null && session.role != rule.requiredRole) {
+                throw ForbiddenException("Approval requires ${rule.requiredRole} role")
+            }
+            if (rule.requiredUserIds.isNotEmpty() && session.userId !in rule.requiredUserIds) {
+                throw ForbiddenException("You are not authorized to approve this block")
+            }
+            if (currentExecution.approvals.any { it.userId == session.userId }) {
+                throw IllegalArgumentException("You have already approved this block")
+            }
+
+            val newApproval = BlockApproval(
+                userId = session.userId,
+                username = session.username,
+                approvedAt = Clock.System.now().toEpochMilliseconds(),
+            )
+            val updatedApprovals = currentExecution.approvals + newApproval
+            val updatedExecution = currentExecution.copy(approvals = updatedApprovals)
+            repository.upsertBlockExecution(updatedExecution)
+
+            if (updatedApprovals.size < rule.requiredCount) {
+                executionEngine.emitBlockUpdate(releaseId, updatedExecution)
+                return@withLock ApprovalResult.Recorded
+            }
+            ApprovalResult.ThresholdMet
         }
 
-        return executionEngine.approveBlock(releaseId, blockId, request.input)
+        return when (result) {
+            ApprovalResult.Recorded -> true
+            ApprovalResult.Rejected -> false
+            ApprovalResult.ThresholdMet -> {
+                approvalMutexes.remove(mutexKey)
+                executionEngine.approveBlock(releaseId, blockId, request.input)
+            }
+        }
     }
 
     private suspend fun applyTags(releaseId: ReleaseId, tags: List<String>, teamId: String) {
@@ -330,6 +354,7 @@ class DefaultReleasesService(
      * Uses batch fetching to avoid N+1 queries.
      */
     private suspend fun validateConnectionTeamConsistency(dagGraph: DagGraph, expectedTeamId: String) {
+        // todo claude: duplicate 8 lines
         val connectionIds = dagGraph.collectConnectionIds()
         if (connectionIds.isEmpty()) return
         val teamIdMap = connectionsRepository.findTeamIds(connectionIds)

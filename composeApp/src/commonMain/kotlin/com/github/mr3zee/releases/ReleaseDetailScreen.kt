@@ -29,7 +29,7 @@ fun ReleaseDetailScreen(
     onBlockClick: (BlockId) -> Unit,
     onDismissError: () -> Unit = {},
 ) {
-    var selectedBlockId by remember { mutableStateOf<BlockId?>(null) }
+    var selectedBlockId by remember(release?.id) { mutableStateOf<BlockId?>(null) }
     var showCancelConfirmation by remember { mutableStateOf(false) }
     var showApproveConfirmation by remember { mutableStateOf<BlockId?>(null) }
 
@@ -76,10 +76,13 @@ fun ReleaseDetailScreen(
 
     // Approve block confirmation dialog
     showApproveConfirmation?.let { blockId ->
+        val approveBlock = release?.dagSnapshot?.blocks?.find { it.id == blockId }
+        val approveExec = blockExecutions.find { it.blockId == blockId }
+        val approveMessage = approveExec?.gateMessage
         AlertDialog(
             onDismissRequest = { showApproveConfirmation = null },
-            title = { Text("Approve Step") },
-            text = { Text("Approve this step? The pipeline will continue.") },
+            title = { Text("Approve: ${approveBlock?.name ?: "Step"}") },
+            text = { Text(approveMessage ?: "Approve this step? The pipeline will continue.") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -294,6 +297,47 @@ private fun BlockDetailPanel(
 
             if (execution.status == BlockStatus.WAITING_FOR_INPUT) {
                 Spacer(modifier = Modifier.height(8.dp))
+
+                // Gate context
+                execution.gateMessage?.let { msg ->
+                    Text(
+                        text = msg,
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.testTag("gate_message_text"),
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+
+                val phaseContext = when (execution.gatePhase) {
+                    GatePhase.PRE -> "Waiting for approval before execution"
+                    GatePhase.POST -> "Execution complete — waiting for approval"
+                    null -> "Waiting for approval"
+                }
+                Text(
+                    text = phaseContext,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag("gate_phase_text"),
+                )
+
+                // Approval progress
+                val actionBlock = block as? Block.ActionBlock
+                val gate = when (execution.gatePhase) {
+                    GatePhase.PRE -> actionBlock?.preGate
+                    GatePhase.POST -> actionBlock?.postGate
+                    null -> null // gatePhase should always be set; don't guess
+                }
+                gate?.let { g ->
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "${execution.approvals.size} of ${g.approvalRule.requiredCount} approvals",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testTag("gate_approval_progress"),
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
                 Button(
                     onClick = onApprove,
                     modifier = Modifier.testTag("approve_block_button"),

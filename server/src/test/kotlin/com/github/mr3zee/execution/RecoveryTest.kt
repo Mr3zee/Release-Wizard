@@ -6,11 +6,14 @@ import com.github.mr3zee.webhooks.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.yield
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.milliseconds
 
 class RecoveryTest {
 
@@ -184,7 +187,7 @@ class RecoveryTest {
     }
 
     @Test
-    fun `recovery re-registers user action approvals`() = runBlocking {
+    fun `recovery re-registers gate approvals`() = runBlocking {
         val setup = createTestSetup()
 
         val release = Release(
@@ -193,7 +196,7 @@ class RecoveryTest {
             status = ReleaseStatus.RUNNING,
             dagSnapshot = DagGraph(
                 blocks = listOf(
-                    Block.ActionBlock(id = BlockId("approval"), name = "Approve", type = BlockType.USER_ACTION),
+                    Block.ActionBlock(id = BlockId("approval"), name = "Approve", type = BlockType.SLACK_MESSAGE, preGate = Gate()),
                 ),
             ),
             startedAt = Clock.System.now(),
@@ -205,27 +208,182 @@ class RecoveryTest {
                 releaseId = release.id,
                 status = BlockStatus.WAITING_FOR_INPUT,
                 startedAt = Clock.System.now(),
+                gatePhase = GatePhase.PRE,
+                gateMessage = "Approve to start 'Approve'",
             )
         )
 
         setup.recoveryService.recover()
 
         // The block should be waiting for approval — retry until the deferred is registered
-        var approved = false
-        repeat(50) {
-            kotlinx.coroutines.yield()
-            if (setup.engine.approveBlock(release.id, BlockId("approval"), mapOf("ok" to "true"))) {
-                approved = true
-                return@repeat
+        // Engine runs on Dispatchers.Default thread pool, so use withTimeoutOrNull polling
+        val approved = withTimeoutOrNull(5_000.milliseconds) {
+            while (!setup.engine.approveBlock(release.id, BlockId("approval"), mapOf("ok" to "true"))) {
+                yield()
             }
+            true
         }
-        assertTrue(approved, "Should be able to approve recovered user action block")
+        assertEquals(approved, true, "Should be able to approve recovered gated block")
 
         setup.engine.awaitExecution(release.id)
 
         val finalRelease = setup.releasesRepo.findById(release.id)
             ?: error("Release '${release.id}' should exist after recovery")
         assertEquals(ReleaseStatus.SUCCEEDED, finalRelease.status)
+    }
+
+    @Test
+    fun `recovery re-registers post-gate approvals and completes with stored outputs`() = runBlocking {
+        val setup = createTestSetup()
+
+        val storedOutputs = mapOf("messageTs" to "123", "channel" to "#releases")
+        val release = Release(
+            id = ReleaseId("release-5"),
+            projectTemplateId = ProjectId("proj-1"),
+            status = ReleaseStatus.RUNNING,
+            dagSnapshot = DagGraph(
+                blocks = listOf(
+                    Block.ActionBlock(id = BlockId("build"), name = "Build", type = BlockType.SLACK_MESSAGE, postGate = Gate()),
+                ),
+            ),
+            startedAt = Clock.System.now(),
+        )
+        setup.releasesRepo.insertRelease(release)
+        setup.releasesRepo.upsertBlockExecution(
+            BlockExecution(
+                blockId = BlockId("build"),
+                releaseId = release.id,
+                status = BlockStatus.WAITING_FOR_INPUT,
+                outputs = storedOutputs,
+                startedAt = Clock.System.now(),
+                gatePhase = GatePhase.POST,
+                gateMessage = "'Build' completed. Review output and approve to continue.",
+            )
+        )
+
+        setup.recoveryService.recover()
+
+        // Approve the post-gate
+        val approved = withTimeoutOrNull(5_000.milliseconds) {
+            while (!setup.engine.approveBlock(release.id, BlockId("build"), emptyMap())) {
+                yield()
+            }
+            true
+        }
+        assertEquals(approved, true, "Should be able to approve recovered post-gate block")
+
+        setup.engine.awaitExecution(release.id)
+
+        val finalRelease = setup.releasesRepo.findById(release.id)
+            ?: error("Release should exist after recovery")
+        assertEquals(ReleaseStatus.SUCCEEDED, finalRelease.status)
+
+        // Outputs should be preserved from before crash, not re-executed
+        val finalExec = setup.releasesRepo.findBlockExecution(release.id, BlockId("build"))
+            ?: error("Block execution should exist")
+        assertEquals(storedOutputs, finalExec.outputs)
+    }
+
+    @Test
+    fun `recovery auto-completes gate when threshold already met before crash`() = runBlocking {
+        val setup = createTestSetup()
+
+        val release = Release(
+            id = ReleaseId("release-6"),
+            projectTemplateId = ProjectId("proj-1"),
+            status = ReleaseStatus.RUNNING,
+            dagSnapshot = DagGraph(
+                blocks = listOf(
+                    Block.ActionBlock(id = BlockId("action"), name = "Approve", type = BlockType.SLACK_MESSAGE, preGate = Gate()),
+                ),
+            ),
+            startedAt = Clock.System.now(),
+        )
+        setup.releasesRepo.insertRelease(release)
+        setup.releasesRepo.upsertBlockExecution(
+            BlockExecution(
+                blockId = BlockId("action"),
+                releaseId = release.id,
+                status = BlockStatus.WAITING_FOR_INPUT,
+                startedAt = Clock.System.now(),
+                gatePhase = GatePhase.PRE,
+                gateMessage = "Approve to start 'Approve'",
+                approvals = listOf(
+                    BlockApproval(userId = "admin", username = "admin", approvedAt = Clock.System.now().toEpochMilliseconds()),
+                ),
+            )
+        )
+
+        setup.recoveryService.recover()
+
+        // Should auto-complete because threshold (1) is already met — no manual approval needed
+        setup.engine.awaitExecution(release.id)
+
+        val finalRelease = setup.releasesRepo.findById(release.id)
+            ?: error("Release should exist after recovery")
+        assertEquals(ReleaseStatus.SUCCEEDED, finalRelease.status)
+    }
+
+    @Test
+    fun `restart failed block re-executes it and dependents`() = runBlocking {
+        val setup = createTestSetup()
+
+        val release = Release(
+            id = ReleaseId("release-7"),
+            projectTemplateId = ProjectId("proj-1"),
+            status = ReleaseStatus.RUNNING,
+            dagSnapshot = DagGraph(
+                blocks = listOf(
+                    Block.ActionBlock(id = BlockId("a"), name = "A", type = BlockType.TEAMCITY_BUILD),
+                    Block.ActionBlock(id = BlockId("b"), name = "B", type = BlockType.SLACK_MESSAGE),
+                ),
+                edges = listOf(Edge(fromBlockId = BlockId("a"), toBlockId = BlockId("b"))),
+            ),
+            startedAt = Clock.System.now(),
+        )
+        setup.releasesRepo.insertRelease(release)
+        // A succeeded, B failed
+        setup.releasesRepo.upsertBlockExecution(
+            BlockExecution(
+                blockId = BlockId("a"),
+                releaseId = release.id,
+                status = BlockStatus.SUCCEEDED,
+                outputs = mapOf("buildNumber" to "42"),
+                startedAt = Clock.System.now(),
+                finishedAt = Clock.System.now(),
+            )
+        )
+        setup.releasesRepo.upsertBlockExecution(
+            BlockExecution(
+                blockId = BlockId("b"),
+                releaseId = release.id,
+                status = BlockStatus.FAILED,
+                error = "Slack API error",
+                startedAt = Clock.System.now(),
+                finishedAt = Clock.System.now(),
+            )
+        )
+
+        // Restart block B
+        val restarted = setup.engine.restartBlock(release.id, BlockId("b"))
+        assertTrue(restarted, "restartBlock should return true")
+
+        setup.engine.awaitExecution(release.id)
+
+        val finalRelease = setup.releasesRepo.findById(release.id)
+            ?: error("Release should exist after restart")
+        assertEquals(ReleaseStatus.SUCCEEDED, finalRelease.status)
+
+        // B should now be succeeded
+        val bExec = setup.releasesRepo.findBlockExecution(release.id, BlockId("b"))
+            ?: error("Block B execution should exist")
+        assertEquals(BlockStatus.SUCCEEDED, bExec.status)
+
+        // A should still have its original outputs (not re-executed)
+        val aExec = setup.releasesRepo.findBlockExecution(release.id, BlockId("a"))
+            ?: error("Block A execution should exist")
+        assertEquals(BlockStatus.SUCCEEDED, aExec.status)
+        assertEquals("42", aExec.outputs["buildNumber"])
     }
 
     // --- Test helpers ---

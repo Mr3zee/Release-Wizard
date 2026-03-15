@@ -38,7 +38,7 @@ fun TemplatePickerDialog(
                             modifier = Modifier.padding(vertical = 4.dp),
                         )
                     }
-                    items(parameters) { param ->
+                    items(parameters, key = { it.key }) { param ->
                         val expr = $$"${param.$${param.key}}"
                         TemplateItem(
                             label = param.key,
@@ -59,7 +59,7 @@ fun TemplatePickerDialog(
                         )
                     }
                     actionPredecessors.forEach { block ->
-                        items(block.outputs) { output ->
+                        items(block.outputs, key = { output -> "${block.id.value}/$output" }) { output ->
                             val expr = $$"${block.$${block.id.value}.$$output}"
                             TemplateItem(
                                 label = "${block.name} / $output",
