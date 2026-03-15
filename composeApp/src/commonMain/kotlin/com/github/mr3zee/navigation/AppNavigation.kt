@@ -32,6 +32,8 @@ fun AppNavigation(
     teamApiClient: TeamApiClient,
     activeTeamId: StateFlow<TeamId?>,
     userTeams: List<UserTeamInfo>,
+    currentUserId: String? = null,
+    currentUserRole: com.github.mr3zee.model.UserRole? = null,
     onLogout: () -> Unit,
     onTeamChanged: (TeamId) -> Unit,
     onRefreshUser: () -> Unit,
@@ -55,9 +57,21 @@ fun AppNavigation(
         is Screen.ProjectEditor -> {
             val projectId = currentScreen.projectId
             if (projectId != null) {
+                val canForceUnlock = currentUserRole == com.github.mr3zee.model.UserRole.ADMIN ||
+                    userTeams.any { it.role == TeamRole.TEAM_LEAD }
                 val viewModel = remember(projectId) {
-                    DagEditorViewModel(projectId, projectApiClient)
+                    DagEditorViewModel(
+                        projectId = projectId,
+                        apiClient = projectApiClient,
+                        currentUserId = currentUserId,
+                        canForceUnlock = canForceUnlock,
+                    )
                 }
+
+                DisposableEffect(viewModel) {
+                    onDispose { viewModel.releaseLock() }
+                }
+
                 DagEditorScreen(
                     viewModel = viewModel,
                     onBack = {

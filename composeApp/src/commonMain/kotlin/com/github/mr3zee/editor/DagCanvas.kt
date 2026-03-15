@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -99,6 +100,7 @@ fun DagCanvas(
     onMoveBlock: (BlockId, Float, Float) -> Unit,
     onCommitMove: () -> Unit,
     onAddEdge: (BlockId, BlockId) -> Unit,
+    isReadOnly: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val textMeasurer = rememberTextMeasurer()
@@ -117,6 +119,7 @@ fun DagCanvas(
         modifier = modifier
             .fillMaxSize()
             .clipToBounds()
+            .alpha(if (isReadOnly) 0.6f else 1f)
             .background(appColors.canvasBackground)
             // Scroll for zoom + hover tracking
             .pointerInput(graph) {
@@ -139,7 +142,7 @@ fun DagCanvas(
                 }
             }
             // Click and drag
-            .pointerInput(graph) {
+            .pointerInput(graph, isReadOnly) {
                 awaitPointerEventScope {
                     while (true) {
                         val down = awaitPointerEvent()
@@ -207,14 +210,22 @@ fun DagCanvas(
                                 val moveTransform = CanvasTransform(zoom, panOffset, density)
                                 when (hit) {
                                     is HitTarget.BlockHit -> {
-                                        val logicalDelta = moveTransform.toLogicalDelta(delta)
-                                        onMoveBlock(hit.blockId, logicalDelta.x, logicalDelta.y)
+                                        if (!isReadOnly) {
+                                            val logicalDelta = moveTransform.toLogicalDelta(delta)
+                                            onMoveBlock(hit.blockId, logicalDelta.x, logicalDelta.y)
+                                        } else {
+                                            panOffset += delta
+                                        }
                                     }
                                     is HitTarget.OutputPort -> {
-                                        connectionDraft = ConnectionDraft(
-                                            fromBlockId = hit.blockId,
-                                            currentScreenPos = moveChange.position,
-                                        )
+                                        if (!isReadOnly) {
+                                            connectionDraft = ConnectionDraft(
+                                                fromBlockId = hit.blockId,
+                                                currentScreenPos = moveChange.position,
+                                            )
+                                        } else {
+                                            panOffset += delta
+                                        }
                                     }
                                     is HitTarget.None, is HitTarget.EdgeHit,
                                     is HitTarget.InputPort -> {

@@ -119,6 +119,8 @@ fun App() {
                         teamApiClient = teamApiClient,
                         activeTeamId = activeTeamId,
                         userTeams = user?.teams ?: emptyList(),
+                        currentUserId = user?.id,
+                        currentUserRole = user?.role,
                         onLogout = {
                             authViewModel.logout()
                             activeTeamId.value = null

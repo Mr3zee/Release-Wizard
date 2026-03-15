@@ -47,4 +47,39 @@ class ProjectApiClient(private val client: HttpClient) {
     suspend fun deleteProject(id: ProjectId) {
         client.delete(serverUrl(ApiRoutes.Projects.byId(id.value)))
     }
+
+    suspend fun acquireLock(projectId: ProjectId): ProjectLockInfo {
+        val response = client.post(serverUrl(ApiRoutes.Projects.lock(projectId.value)))
+        return response.body()
+    }
+
+    suspend fun releaseLock(projectId: ProjectId) {
+        try {
+            client.delete(serverUrl(ApiRoutes.Projects.lock(projectId.value)))
+        } catch (_: io.ktor.client.plugins.ClientRequestException) {
+            // Fire-and-forget — TTL handles cleanup
+        } catch (_: java.io.IOException) {
+            // Network failure — TTL handles cleanup
+        }
+    }
+
+    suspend fun heartbeatLock(projectId: ProjectId): ProjectLockInfo {
+        val response = client.put(serverUrl(ApiRoutes.Projects.lockHeartbeat(projectId.value)))
+        return response.body()
+    }
+
+    suspend fun getLockInfo(projectId: ProjectId): ProjectLockInfo? {
+        return try {
+            val response = client.get(serverUrl(ApiRoutes.Projects.lock(projectId.value)))
+            response.body()
+        } catch (e: io.ktor.client.plugins.ClientRequestException) {
+            if (e.response.status.value == 404) null else throw e
+        }
+    }
+
+    suspend fun forceReleaseLock(projectId: ProjectId) {
+        client.delete(serverUrl(ApiRoutes.Projects.lock(projectId.value))) {
+            parameter("force", true)
+        }
+    }
 }

@@ -24,6 +24,7 @@ class DefaultProjectsService(
     private val teamAccessService: TeamAccessService,
     private val auditService: AuditService,
     private val connectionsRepository: ConnectionsRepository,
+    private val lockRepository: ProjectLockRepository,
 ) : ProjectsService {
 
     override suspend fun listProjects(session: UserSession, teamId: TeamId?, offset: Int, limit: Int, search: String?): Pair<List<ProjectTemplate>, Long> {
@@ -64,6 +65,11 @@ class DefaultProjectsService(
 
     override suspend fun updateProject(id: ProjectId, request: UpdateProjectRequest, session: UserSession): ProjectTemplate? {
         checkAccess(id, session)
+        // Enforce lock ownership — reject update if another user holds the lock
+        val activeLock = lockRepository.findActiveLock(id.value)
+        if (activeLock != null && activeLock.userId != session.userId) {
+            throw LockConflictException(activeLock)
+        }
         return repository.update(
             id = id,
             name = request.name,

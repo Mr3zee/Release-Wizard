@@ -16,6 +16,9 @@ import com.github.mr3zee.plugins.CorrelationIdKey
 import com.github.mr3zee.plugins.CsrfProtection
 import com.github.mr3zee.plugins.SessionTtl
 import com.github.mr3zee.plugins.healthRoute
+import com.github.mr3zee.projects.LockConflictException
+import com.github.mr3zee.projects.projectLockModule
+import com.github.mr3zee.projects.projectLockRoutes
 import com.github.mr3zee.projects.projectRoutes
 import com.github.mr3zee.projects.projectsModule
 import com.github.mr3zee.releases.releaseRoutes
@@ -83,6 +86,7 @@ fun Application.module() {
             appModule(dbConfig, encryptionConfig, authConfig, webhookConfig, passwordPolicyConfig),
             authModule,
             projectsModule,
+            projectLockModule,
             connectionsModule,
             webhooksModule,
             releasesModule,
@@ -252,6 +256,16 @@ fun Application.module() {
                 ),
             )
         }
+        exception<LockConflictException> { call, cause ->
+            call.respond(
+                HttpStatusCode.Conflict,
+                com.github.mr3zee.api.ProjectLockConflictResponse(
+                    error = cause.message ?: "Project is locked",
+                    code = "LOCK_CONFLICT",
+                    lock = cause.lock,
+                ),
+            )
+        }
         exception<Throwable> { call, cause ->
             call.application.environment.log.error("Unhandled exception", cause)
             val correlationId = call.attributes.getOrNull(CorrelationIdKey)
@@ -329,6 +343,7 @@ fun Application.configureRouting(appVersion: String = "dev") {
             teamRoutes()
             myInviteRoutes()
             projectRoutes()
+            projectLockRoutes()
             connectionRoutes()
             releaseRoutes()
             releaseWebSocketRoutes()

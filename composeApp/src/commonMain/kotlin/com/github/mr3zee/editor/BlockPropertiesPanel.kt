@@ -21,6 +21,7 @@ fun BlockPropertiesPanel(
     onUpdateParameters: (BlockId, List<Parameter>) -> Unit,
     onUpdateTimeout: (BlockId, Long?) -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     Column(
         modifier = modifier
@@ -54,6 +55,7 @@ fun BlockPropertiesPanel(
             },
             label = { Text("Name") },
             singleLine = true,
+            enabled = enabled,
             modifier = Modifier.fillMaxWidth().testTag("block_name_field"),
         )
 
@@ -68,6 +70,7 @@ fun BlockPropertiesPanel(
                     onUpdateType = onUpdateType,
                     onUpdateParameters = onUpdateParameters,
                     onUpdateTimeout = onUpdateTimeout,
+                    enabled = enabled,
                 )
             }
             is Block.ContainerBlock -> {
@@ -94,6 +97,7 @@ private fun ActionBlockProperties(
     onUpdateType: (BlockId, BlockType) -> Unit,
     onUpdateParameters: (BlockId, List<Parameter>) -> Unit,
     onUpdateTimeout: (BlockId, Long?) -> Unit,
+    enabled: Boolean = true,
 ) {
     // Type selector
     var typeExpanded by remember { mutableStateOf(false) }
@@ -101,6 +105,7 @@ private fun ActionBlockProperties(
     Box {
         OutlinedButton(
             onClick = { typeExpanded = true },
+            enabled = enabled,
             modifier = Modifier.fillMaxWidth().testTag("block_type_selector"),
         ) {
             Text(block.type.name.lowercase().replace("_", " "))
@@ -136,6 +141,7 @@ private fun ActionBlockProperties(
         },
         label = { Text("Timeout (seconds)") },
         singleLine = true,
+        enabled = enabled,
         modifier = Modifier.fillMaxWidth().testTag("block_timeout_field"),
     )
 
@@ -165,6 +171,7 @@ private fun ActionBlockProperties(
                 params = params.toMutableList().apply { removeAt(index) }
                 onUpdateParameters(block.id, params)
             },
+            enabled = enabled,
         )
         Spacer(Modifier.height(4.dp))
     }
@@ -174,6 +181,7 @@ private fun ActionBlockProperties(
             params = params + Parameter(key = "", value = "")
             onUpdateParameters(block.id, params)
         },
+        enabled = enabled,
         modifier = Modifier.fillMaxWidth().testTag("add_parameter_button"),
     ) {
         Text("+ Add Parameter")
@@ -187,6 +195,7 @@ private fun ParameterRow(
     predecessors: List<Block>,
     onUpdate: (Parameter) -> Unit,
     onRemove: () -> Unit,
+    enabled: Boolean = true,
 ) {
     var showTemplatePicker by remember { mutableStateOf(false) }
 
@@ -200,6 +209,7 @@ private fun ParameterRow(
             onValueChange = { onUpdate(parameter.copy(key = it)) },
             label = { Text("Key") },
             singleLine = true,
+            enabled = enabled,
             modifier = Modifier.weight(1f),
             textStyle = MaterialTheme.typography.bodySmall,
         )
@@ -208,11 +218,13 @@ private fun ParameterRow(
             onValueChange = { onUpdate(parameter.copy(value = it)) },
             label = { Text("Value") },
             singleLine = true,
+            enabled = enabled,
             modifier = Modifier.weight(1f),
             textStyle = MaterialTheme.typography.bodySmall,
         )
         TextButton(
             onClick = { showTemplatePicker = true },
+            enabled = enabled,
             contentPadding = PaddingValues(4.dp),
             modifier = Modifier.testTag("insert_template_button"),
         ) {
@@ -220,6 +232,7 @@ private fun ParameterRow(
         }
         TextButton(
             onClick = onRemove,
+            enabled = enabled,
             contentPadding = PaddingValues(4.dp),
         ) {
             Text("x", color = MaterialTheme.colorScheme.error)

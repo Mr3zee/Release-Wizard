@@ -2,15 +2,12 @@ package com.github.mr3zee.projects
 
 import com.github.mr3zee.api.*
 import com.github.mr3zee.auth.userSession
-import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.model.TeamId
 import io.ktor.http.*
-import io.ktor.server.application.ApplicationCall
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
-import java.util.*
 
 fun Route.projectRoutes() {
     val service by inject<ProjectsService>()
@@ -73,17 +70,4 @@ fun Route.projectRoutes() {
     }
 }
 
-private suspend fun ApplicationCall.requireProjectId(): ProjectId? {
-    val raw = parameters["id"]
-    if (raw == null) {
-        respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Missing id", code = "VALIDATION_ERROR"))
-        return null
-    }
-    return try {
-        UUID.fromString(raw)
-        ProjectId(raw)
-    } catch (_: IllegalArgumentException) {
-        respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Invalid project ID format", code = "VALIDATION_ERROR"))
-        null
-    }
-}
+// requireProjectId is in ProjectLockRoutes.kt (internal visibility, shared by both route files)

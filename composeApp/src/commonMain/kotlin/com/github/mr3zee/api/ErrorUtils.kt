@@ -5,6 +5,20 @@ import io.ktor.client.plugins.*
 import io.ktor.client.statement.*
 
 /**
+ * Try to parse lock conflict response from a 409 response.
+ * Returns null if parsing fails or status is not 409.
+ */
+suspend fun ClientRequestException.parseLockConflict(): ProjectLockConflictResponse? {
+    if (response.status.value != 409) return null
+    return try {
+        val body = response.bodyAsText()
+        AppJson.decodeFromString<ProjectLockConflictResponse>(body)
+    } catch (_: Exception) {
+        null
+    }
+}
+
+/**
  * Try to parse ErrorResponse from the server's JSON response body.
  * Returns null if parsing fails.
  */

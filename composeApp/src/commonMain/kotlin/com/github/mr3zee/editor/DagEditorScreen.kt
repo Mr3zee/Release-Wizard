@@ -3,10 +3,12 @@ package com.github.mr3zee.editor
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -30,8 +32,12 @@ fun DagEditorScreen(
     val canRedo by viewModel.canRedo.collectAsState()
     val validationErrors by viewModel.validationErrors.collectAsState()
     val clipboard by viewModel.clipboard.collectAsState()
+    val lockState by viewModel.lockState.collectAsState()
+    val isReadOnly by viewModel.isReadOnly.collectAsState()
 
     var showDiscardDialog by remember { mutableStateOf(false) }
+    var showForceUnlockDialog by remember { mutableStateOf(false) }
+    var showLockLostDiscardDialog by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -57,10 +63,16 @@ fun DagEditorScreen(
     }
 
     val handleBack: () -> Unit = {
-        if (isDirty) {
-            showDiscardDialog = true
-        } else {
-            onBack()
+        when {
+            lockState is LockState.LockLost && isDirty -> {
+                showLockLostDiscardDialog = true
+            }
+            isDirty -> {
+                showDiscardDialog = true
+            }
+            else -> {
+                onBack()
+            }
         }
     }
 
@@ -70,7 +82,13 @@ fun DagEditorScreen(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(project?.name ?: "Loading...")
-                        if (isDirty) {
+                        if (isReadOnly) {
+                            Text(
+                                " (read-only)",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        } else if (isDirty) {
                             Text(
                                 " *",
                                 color = MaterialTheme.colorScheme.error,
@@ -90,7 +108,7 @@ fun DagEditorScreen(
                     }
                     TextButton(
                         onClick = { viewModel.save() },
-                        enabled = isDirty && !isSaving,
+                        enabled = isDirty && !isSaving && !isReadOnly,
                         modifier = Modifier.testTag("save_button"),
                     ) {
                         Text(if (isSaving) "Saving..." else "Save")
@@ -106,20 +124,20 @@ fun DagEditorScreen(
                     // Support both Ctrl (Windows/Linux) and Cmd (macOS)
                     val isModifier = event.isCtrlPressed || event.isMetaPressed
                     when {
-                        event.key == Key.Delete || event.key == Key.Backspace -> {
+                        !isReadOnly && (event.key == Key.Delete || event.key == Key.Backspace) -> {
                             if (selectedBlockIds.isNotEmpty()) viewModel.removeSelectedBlocks()
                             else if (selectedEdgeIndex != null) viewModel.removeSelectedEdge()
                             true
                         }
-                        isModifier && event.key == Key.Z && !event.isShiftPressed -> {
+                        !isReadOnly && isModifier && event.key == Key.Z && !event.isShiftPressed -> {
                             viewModel.undo()
                             true
                         }
-                        isModifier && event.key == Key.Z && event.isShiftPressed -> {
+                        !isReadOnly && isModifier && event.key == Key.Z && event.isShiftPressed -> {
                             viewModel.redo()
                             true
                         }
-                        isModifier && event.key == Key.S -> {
+                        !isReadOnly && isModifier && event.key == Key.S -> {
                             if (isDirty) viewModel.save()
                             true
                         }
@@ -127,7 +145,7 @@ fun DagEditorScreen(
                             viewModel.copySelected()
                             true
                         }
-                        isModifier && event.key == Key.V -> {
+                        !isReadOnly && isModifier && event.key == Key.V -> {
                             viewModel.pasteClipboard()
                             true
                         }
@@ -164,66 +182,84 @@ fun DagEditorScreen(
             return@Scaffold
         }
 
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            // Left: toolbar / block palette
-            EditorToolbar(
-                onAddBlock = { type, name ->
-                    val (x, y) = viewModel.nextPlacementPosition()
-                    viewModel.addBlock(type, name, x, y)
-                },
-                onAddContainer = { name ->
-                    val (x, y) = viewModel.nextPlacementPosition()
-                    viewModel.addContainerBlock(name, x, y)
-                },
-                onDelete = {
-                    if (selectedBlockIds.isNotEmpty()) viewModel.removeSelectedBlocks()
-                    else if (selectedEdgeIndex != null) viewModel.removeSelectedEdge()
-                },
-                onUndo = { viewModel.undo() },
-                onRedo = { viewModel.redo() },
-                onCopy = { viewModel.copySelected() },
-                onPaste = { viewModel.pasteClipboard() },
-                canUndo = canUndo,
-                canRedo = canRedo,
-                hasSelection = selectedBlockIds.isNotEmpty() || selectedEdgeIndex != null,
-                hasClipboard = clipboard != null,
+            // Lock banners
+            EditLockBanner(
+                lockState = lockState,
+                showForceUnlock = viewModel.showForceUnlock,
+                onForceUnlock = { showForceUnlockDialog = true },
+                onRetry = { viewModel.retryAcquireLock() },
+                onReacquireAndSave = { viewModel.reacquireAndSave() },
             )
 
-            VerticalDivider()
-
-            // Center: canvas
-            DagCanvas(
-                graph = graph,
-                selectedBlockIds = selectedBlockIds,
-                selectedEdgeIndex = selectedEdgeIndex,
-                onSelectBlock = { viewModel.selectBlock(it) },
-                onToggleBlockSelection = { viewModel.toggleBlockSelection(it) },
-                onSelectEdge = { viewModel.selectEdge(it) },
-                onMoveBlock = { id, dx, dy -> viewModel.moveBlock(id, dx, dy) },
-                onCommitMove = { viewModel.commitMove() },
-                onAddEdge = { from, to -> viewModel.addEdge(from, to) },
+            Row(
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .testTag("dag_canvas"),
-            )
+                    .fillMaxSize()
+                    .weight(1f),
+            ) {
+                // Left: toolbar / block palette
+                EditorToolbar(
+                    onAddBlock = { type, name ->
+                        val (x, y) = viewModel.nextPlacementPosition()
+                        viewModel.addBlock(type, name, x, y)
+                    },
+                    onAddContainer = { name ->
+                        val (x, y) = viewModel.nextPlacementPosition()
+                        viewModel.addContainerBlock(name, x, y)
+                    },
+                    onDelete = {
+                        if (selectedBlockIds.isNotEmpty()) viewModel.removeSelectedBlocks()
+                        else if (selectedEdgeIndex != null) viewModel.removeSelectedEdge()
+                    },
+                    onUndo = { viewModel.undo() },
+                    onRedo = { viewModel.redo() },
+                    onCopy = { viewModel.copySelected() },
+                    onPaste = { viewModel.pasteClipboard() },
+                    canUndo = canUndo,
+                    canRedo = canRedo,
+                    hasSelection = selectedBlockIds.isNotEmpty() || selectedEdgeIndex != null,
+                    hasClipboard = clipboard != null,
+                    enabled = !isReadOnly,
+                )
 
-            VerticalDivider()
+                VerticalDivider()
 
-            // Right: properties panel
-            BlockPropertiesPanel(
-                block = selectedBlock,
-                graph = graph,
-                projectParameters = project?.parameters ?: emptyList(),
-                onUpdateName = { id, name -> viewModel.updateBlockName(id, name) },
-                onUpdateType = { id, type -> viewModel.updateBlockType(id, type) },
-                onUpdateParameters = { id, params -> viewModel.updateBlockParameters(id, params) },
-                onUpdateTimeout = { id, timeout -> viewModel.updateBlockTimeout(id, timeout) },
-            )
+                // Center: canvas
+                DagCanvas(
+                    graph = graph,
+                    selectedBlockIds = selectedBlockIds,
+                    selectedEdgeIndex = selectedEdgeIndex,
+                    onSelectBlock = { viewModel.selectBlock(it) },
+                    onToggleBlockSelection = { viewModel.toggleBlockSelection(it) },
+                    onSelectEdge = { viewModel.selectEdge(it) },
+                    onMoveBlock = { id, dx, dy -> viewModel.moveBlock(id, dx, dy) },
+                    onCommitMove = { viewModel.commitMove() },
+                    onAddEdge = { from, to -> viewModel.addEdge(from, to) },
+                    isReadOnly = isReadOnly,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .testTag("dag_canvas"),
+                )
+
+                VerticalDivider()
+
+                // Right: properties panel
+                BlockPropertiesPanel(
+                    block = selectedBlock,
+                    graph = graph,
+                    projectParameters = project?.parameters ?: emptyList(),
+                    onUpdateName = { id, name -> viewModel.updateBlockName(id, name) },
+                    onUpdateType = { id, type -> viewModel.updateBlockType(id, type) },
+                    onUpdateParameters = { id, params -> viewModel.updateBlockParameters(id, params) },
+                    onUpdateTimeout = { id, timeout -> viewModel.updateBlockTimeout(id, timeout) },
+                    enabled = !isReadOnly,
+                )
+            }
         }
     }
 
@@ -234,10 +270,15 @@ fun DagEditorScreen(
             title = { Text("Unsaved Changes") },
             text = { Text("You have unsaved changes. Discard them?") },
             confirmButton = {
-                TextButton(onClick = {
-                    showDiscardDialog = false
-                    onBack()
-                }) {
+                TextButton(
+                    onClick = {
+                        showDiscardDialog = false
+                        onBack()
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
+                ) {
                     Text("Discard")
                 }
             },
@@ -247,6 +288,169 @@ fun DagEditorScreen(
                 }
             },
         )
+    }
+
+    // Lock-lost discard dialog
+    if (showLockLostDiscardDialog) {
+        AlertDialog(
+            onDismissRequest = { showLockLostDiscardDialog = false },
+            title = { Text("Editing Lock Expired") },
+            text = {
+                Column {
+                    Text("You have unsaved changes that cannot be saved because your editing lock expired.")
+                    Spacer(Modifier.height(12.dp))
+                    TextButton(
+                        onClick = {
+                            showLockLostDiscardDialog = false
+                            onBack()
+                        },
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error,
+                        ),
+                    ) {
+                        Text("Discard changes and leave")
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showLockLostDiscardDialog = false
+                    viewModel.reacquireAndSave()
+                }) {
+                    Text("Re-acquire and Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLockLostDiscardDialog = false }) {
+                    Text("Cancel")
+                }
+            },
+        )
+    }
+
+    // Force unlock confirmation dialog
+    if (showForceUnlockDialog) {
+        val lockedByName = (lockState as? LockState.LockedByOther)?.info?.username ?: "another user"
+        AlertDialog(
+            onDismissRequest = { showForceUnlockDialog = false },
+            title = { Text("Force Unlock") },
+            text = { Text("Force unlock will end $lockedByName's editing session. They may lose unsaved changes. Continue?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showForceUnlockDialog = false
+                        viewModel.forceUnlock()
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
+                ) {
+                    Text("Force Unlock")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showForceUnlockDialog = false }) {
+                    Text("Cancel")
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun EditLockBanner(
+    lockState: LockState,
+    showForceUnlock: Boolean,
+    onForceUnlock: () -> Unit,
+    onRetry: () -> Unit,
+    onReacquireAndSave: () -> Unit,
+) {
+    when (lockState) {
+        is LockState.LockedByOther -> {
+            val username = lockState.info?.username
+            val isNetworkError = lockState.info == null
+            val containerColor = if (isNetworkError) MaterialTheme.colorScheme.errorContainer
+                else MaterialTheme.colorScheme.tertiaryContainer
+            val contentColor = if (isNetworkError) MaterialTheme.colorScheme.onErrorContainer
+                else MaterialTheme.colorScheme.onTertiaryContainer
+            Surface(
+                color = containerColor,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("edit_lock_banner"),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Default.Lock,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = contentColor,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        if (username != null) "This project is being edited by $username"
+                        else "Could not acquire editing lock",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = contentColor,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(
+                        onClick = onRetry,
+                        colors = ButtonDefaults.textButtonColors(contentColor = contentColor),
+                    ) {
+                        Text("Retry")
+                    }
+                    if (showForceUnlock) {
+                        TextButton(
+                            onClick = onForceUnlock,
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = if (isNetworkError) contentColor
+                                    else MaterialTheme.colorScheme.error,
+                            ),
+                            modifier = Modifier.testTag("force_unlock_button"),
+                        ) {
+                            Text("Force Unlock")
+                        }
+                    }
+                }
+            }
+        }
+        is LockState.LockLost -> {
+            Surface(
+                color = MaterialTheme.colorScheme.errorContainer,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("lock_lost_banner"),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Default.Lock,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "Your editing session was interrupted. Changes preserved locally.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = onReacquireAndSave) {
+                        Text("Re-acquire and Save")
+                    }
+                }
+            }
+        }
+        else -> {
+            // No banner for Acquiring, Acquired, Released
+        }
     }
 }
 

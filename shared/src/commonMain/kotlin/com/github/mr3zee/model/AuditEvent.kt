@@ -56,6 +56,9 @@ enum class AuditAction {
     TAG_RENAMED,
     TAG_DELETED,
 
+    // Locks
+    LOCK_FORCE_RELEASED,
+
     // Auth
     USER_LOGIN,
     USER_REGISTER,

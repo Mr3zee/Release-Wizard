@@ -10,6 +10,8 @@ import com.github.mr3zee.plugins.CorrelationIdKey
 import com.github.mr3zee.plugins.CsrfProtection
 import com.github.mr3zee.plugins.RequestSizeLimit
 import com.github.mr3zee.plugins.SessionTtl
+import com.github.mr3zee.projects.LockConflictException
+import com.github.mr3zee.projects.projectLockModule
 import com.github.mr3zee.projects.projectsModule
 import com.github.mr3zee.releases.releasesModule
 import com.github.mr3zee.notifications.notificationsModule
@@ -109,6 +111,7 @@ fun Application.testModule(
             appModule(dbConfig, testEncryptionConfig(), authConfig, testWebhookConfig(), passwordPolicyConfig),
             authModule,
             projectsModule,
+            projectLockModule,
             connectionsModule,
             webhooksModule,
             releasesModule,
@@ -226,6 +229,16 @@ fun Application.testModule(
                     error = cause.message ?: "Not found",
                     code = "NOT_FOUND",
                     correlationId = correlationId,
+                ),
+            )
+        }
+        exception<LockConflictException> { call, cause ->
+            call.respond(
+                HttpStatusCode.Conflict,
+                com.github.mr3zee.api.ProjectLockConflictResponse(
+                    error = cause.message ?: "Project is locked",
+                    code = "LOCK_CONFLICT",
+                    lock = cause.lock,
                 ),
             )
         }

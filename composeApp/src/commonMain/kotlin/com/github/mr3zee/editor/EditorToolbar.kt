@@ -31,6 +31,7 @@ fun EditorToolbar(
     hasSelection: Boolean,
     hasClipboard: Boolean,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     val appColors = LocalAppColors.current
 
@@ -51,6 +52,7 @@ fun EditorToolbar(
         BlockType.entries.forEach { type ->
             OutlinedButton(
                 onClick = { onAddBlock(type, defaultBlockName(type)) },
+                enabled = enabled,
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("add_block_${type.name}"),
@@ -67,6 +69,7 @@ fun EditorToolbar(
 
         OutlinedButton(
             onClick = { onAddContainer("Container") },
+            enabled = enabled,
             modifier = Modifier
                 .fillMaxWidth()
                 .testTag("add_container"),
@@ -91,7 +94,7 @@ fun EditorToolbar(
         ) {
             OutlinedButton(
                 onClick = onUndo,
-                enabled = canUndo,
+                enabled = enabled && canUndo,
                 modifier = Modifier.weight(1f).testTag("undo_button"),
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
             ) {
@@ -101,7 +104,7 @@ fun EditorToolbar(
             }
             OutlinedButton(
                 onClick = onRedo,
-                enabled = canRedo,
+                enabled = enabled && canRedo,
                 modifier = Modifier.weight(1f).testTag("redo_button"),
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
             ) {
@@ -117,7 +120,7 @@ fun EditorToolbar(
         ) {
             OutlinedButton(
                 onClick = onCopy,
-                enabled = hasSelection,
+                enabled = hasSelection, // Copy always allowed
                 modifier = Modifier.weight(1f).testTag("copy_button"),
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
             ) {
@@ -127,7 +130,7 @@ fun EditorToolbar(
             }
             OutlinedButton(
                 onClick = onPaste,
-                enabled = hasClipboard,
+                enabled = enabled && hasClipboard,
                 modifier = Modifier.weight(1f).testTag("paste_button"),
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
             ) {
@@ -139,7 +142,7 @@ fun EditorToolbar(
 
         OutlinedButton(
             onClick = onDelete,
-            enabled = hasSelection,
+            enabled = enabled && hasSelection,
             modifier = Modifier.fillMaxWidth().testTag("delete_button"),
             colors = ButtonDefaults.outlinedButtonColors(
                 contentColor = MaterialTheme.colorScheme.error,

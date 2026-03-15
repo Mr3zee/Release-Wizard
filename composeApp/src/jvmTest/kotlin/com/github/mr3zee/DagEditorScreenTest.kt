@@ -7,10 +7,12 @@ import androidx.compose.ui.test.*
 import com.github.mr3zee.api.ProjectApiClient
 import com.github.mr3zee.editor.DagEditorScreen
 import com.github.mr3zee.editor.DagEditorViewModel
+import com.github.mr3zee.editor.LockState
 import com.github.mr3zee.model.BlockType
 import com.github.mr3zee.model.ProjectId
 import io.ktor.http.*
 import kotlin.test.Test
+import kotlin.test.assertIs
 
 @OptIn(ExperimentalTestApi::class)
 class DagEditorScreenTest {
@@ -19,12 +21,16 @@ class DagEditorScreenTest {
         {"kind":"action","id":"b1","name":"Build","type":"TEAMCITY_BUILD","parameters":[],"outputs":[],"timeoutSeconds":null,"connectionId":null}
     ],"edges":[],"positions":{"b1":{"x":100,"y":100}}},"parameters":[],"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}}"""
 
+    private val lockJson = """{"userId":"u1","username":"testuser","acquiredAt":"2026-03-13T00:00:00Z","expiresAt":"2026-03-13T00:05:00Z"}"""
+
     private fun editorClient(
         getJson: String = projectJson,
         getStatus: HttpStatusCode = HttpStatusCode.OK,
     ) = mockHttpClient(
         mapOf(
             "/projects/p1" to json(getJson, getStatus, method = null),
+            "/projects/p1/lock" to json(lockJson, HttpStatusCode.OK, method = HttpMethod.Post),
+            "/projects/p1/lock/heartbeat" to json(lockJson, HttpStatusCode.OK, method = HttpMethod.Put),
         )
     )
 
@@ -538,5 +544,316 @@ class DagEditorScreenTest {
         }
         onNodeWithText("Container block").assertExists()
         onNodeWithText("0 child blocks").assertExists()
+    }
+
+    // ---- Lock UI tests ----
+
+    private val lockConflictJson = """{"error":"Project is locked by otheruser","code":"LOCK_CONFLICT","lock":{"userId":"u2","username":"otheruser","acquiredAt":"2026-03-13T00:00:00Z","expiresAt":"2026-03-13T00:05:00Z"}}"""
+
+    private fun lockedByOtherClient() = mockHttpClient(
+        mapOf(
+            "/projects/p1" to json(projectJson, HttpStatusCode.OK, method = null),
+            "/projects/p1/lock" to json(lockConflictJson, HttpStatusCode.Conflict, method = HttpMethod.Post),
+        )
+    )
+
+    private fun lockedByOtherViewModel(canForceUnlock: Boolean = false): DagEditorViewModel {
+        val client = lockedByOtherClient()
+        return DagEditorViewModel(
+            projectId = ProjectId("p1"),
+            apiClient = ProjectApiClient(client),
+            currentUserId = "u1",
+            canForceUnlock = canForceUnlock,
+        )
+    }
+
+    @Test
+    fun `read-only banner visible when locked by another user`() = runComposeUiTest {
+        val vm = lockedByOtherViewModel()
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("edit_lock_banner").fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithTag("edit_lock_banner").assertExists()
+        onNodeWithText("This project is being edited by otheruser", substring = true).assertExists()
+    }
+
+    @Test
+    fun `save button disabled in read-only mode`() = runComposeUiTest {
+        val vm = lockedByOtherViewModel()
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("edit_lock_banner").fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithTag("save_button").assertIsNotEnabled()
+    }
+
+    @Test
+    fun `toolbar buttons disabled in read-only mode`() = runComposeUiTest {
+        val vm = lockedByOtherViewModel()
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("edit_lock_banner").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Add block buttons should be disabled
+        onNodeWithTag("add_block_TEAMCITY_BUILD").assertIsNotEnabled()
+        onNodeWithTag("add_container").assertIsNotEnabled()
+        onNodeWithTag("paste_button").assertIsNotEnabled()
+        onNodeWithTag("delete_button").assertIsNotEnabled()
+        onNodeWithTag("undo_button").assertIsNotEnabled()
+        onNodeWithTag("redo_button").assertIsNotEnabled()
+    }
+
+    @Test
+    fun `force unlock button visible only for admin or team lead`() = runComposeUiTest {
+        val vm = lockedByOtherViewModel(canForceUnlock = true)
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("edit_lock_banner").fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithTag("force_unlock_button").assertExists()
+    }
+
+    @Test
+    fun `force unlock button hidden for regular collaborator`() = runComposeUiTest {
+        val vm = lockedByOtherViewModel(canForceUnlock = false)
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("edit_lock_banner").fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithTag("force_unlock_button").assertDoesNotExist()
+    }
+
+    @Test
+    fun `read-only suffix visible in top bar when locked`() = runComposeUiTest {
+        val vm = lockedByOtherViewModel()
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("read-only", substring = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithText("(read-only)", substring = true).assertExists()
+    }
+
+    @Test
+    fun `banner not visible when user holds lock`() = runComposeUiTest {
+        val vm = editorViewModel()
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithTag("edit_lock_banner").assertDoesNotExist()
+        onNodeWithTag("lock_lost_banner").assertDoesNotExist()
+    }
+
+    @Test
+    fun `force unlock confirmation dialog appears on click`() = runComposeUiTest {
+        val vm = lockedByOtherViewModel(canForceUnlock = true)
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("force_unlock_button").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        onNodeWithTag("force_unlock_button").performClick()
+        waitForIdle()
+
+        // Confirmation dialog should appear with warning text
+        onNodeWithText("Force unlock will end otheruser's editing session", substring = true).assertExists()
+    }
+
+    @Test
+    fun `lock state is LockedByOther on 409`() = runComposeUiTest {
+        val vm = lockedByOtherViewModel()
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("edit_lock_banner").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        assertIs<LockState.LockedByOther>(vm.lockState.value)
+    }
+
+    @Test
+    fun `lock state is Acquired on success`() = runComposeUiTest {
+        val vm = editorViewModel()
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Wait for lock to be acquired
+        waitUntil(timeoutMillis = 3000L) {
+            vm.lockState.value is LockState.Acquired
+        }
+        assertIs<LockState.Acquired>(vm.lockState.value)
+    }
+
+    @Test
+    fun `Ctrl+S is no-op in read-only mode`() = runComposeUiTest {
+        val vm = lockedByOtherViewModel()
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("edit_lock_banner").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Press Ctrl+S — should not crash or trigger save
+        onNodeWithTag("dag_editor_screen").performKeyInput {
+            keyDown(Key.CtrlLeft)
+            pressKey(Key.S)
+            keyUp(Key.CtrlLeft)
+        }
+        waitForIdle()
+
+        // Still read-only, no error
+        onNodeWithTag("edit_lock_banner").assertExists()
+    }
+
+    @Test
+    fun `Ctrl+C still works in read-only mode`() = runComposeUiTest {
+        val vm = lockedByOtherViewModel()
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("edit_lock_banner").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Press Ctrl+C — should not crash (copy is allowed in read-only)
+        onNodeWithTag("dag_editor_screen").performKeyInput {
+            keyDown(Key.CtrlLeft)
+            pressKey(Key.C)
+            keyUp(Key.CtrlLeft)
+        }
+        waitForIdle()
+
+        // No crash, still showing
+        onNodeWithTag("dag_editor_screen").assertExists()
+    }
+
+    @Test
+    fun `Delete key is no-op in read-only mode`() = runComposeUiTest {
+        val vm = lockedByOtherViewModel()
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("edit_lock_banner").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Press Delete — should not crash or delete anything
+        onNodeWithTag("dag_editor_screen").performKeyInput {
+            pressKey(Key.Delete)
+        }
+        waitForIdle()
+
+        onNodeWithTag("dag_editor_screen").assertExists()
+    }
+
+    @Test
+    fun `Ctrl+V is no-op in read-only mode`() = runComposeUiTest {
+        val vm = lockedByOtherViewModel()
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("edit_lock_banner").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Press Ctrl+V — should not crash or paste anything
+        onNodeWithTag("dag_editor_screen").performKeyInput {
+            keyDown(Key.CtrlLeft)
+            pressKey(Key.V)
+            keyUp(Key.CtrlLeft)
+        }
+        waitForIdle()
+
+        onNodeWithTag("dag_editor_screen").assertExists()
+    }
+
+    @Test
+    fun `Ctrl+A still works in read-only mode`() = runComposeUiTest {
+        val vm = lockedByOtherViewModel()
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("edit_lock_banner").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Press Ctrl+A — should not crash (select all is allowed in read-only)
+        onNodeWithTag("dag_editor_screen").performKeyInput {
+            keyDown(Key.CtrlLeft)
+            pressKey(Key.A)
+            keyUp(Key.CtrlLeft)
+        }
+        waitForIdle()
+
+        onNodeWithTag("dag_editor_screen").assertExists()
     }
 }

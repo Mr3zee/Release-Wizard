@@ -6,6 +6,8 @@ object ApiRoutes {
     object Projects {
         const val BASE = "$API_V1/projects"
         fun byId(id: String) = "$BASE/$id"
+        fun lock(id: String) = "$BASE/$id/lock"
+        fun lockHeartbeat(id: String) = "$BASE/$id/lock/heartbeat"
     }
 
     object Releases {

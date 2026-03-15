@@ -39,6 +39,7 @@ fun initDatabase(ds: DataSource): Database {
             ScheduleTable,
             TriggerTable,
             ReleaseTagTable,
+            ProjectLockTable,
         )
     }
     return database

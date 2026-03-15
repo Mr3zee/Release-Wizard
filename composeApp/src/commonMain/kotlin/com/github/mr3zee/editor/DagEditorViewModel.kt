@@ -3,21 +3,44 @@ package com.github.mr3zee.editor
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.mr3zee.api.ProjectApiClient
+import com.github.mr3zee.api.ProjectLockInfo
 import com.github.mr3zee.api.UpdateProjectRequest
+import com.github.mr3zee.api.parseLockConflict
 import com.github.mr3zee.api.toUserMessage
 import com.github.mr3zee.dag.DagValidator
 import com.github.mr3zee.dag.ValidationError
 import com.github.mr3zee.model.*
+import io.ktor.client.plugins.*
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.launch
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
+sealed interface LockState {
+    data object Acquiring : LockState
+    data class Acquired(val info: ProjectLockInfo) : LockState
+    data class LockedByOther(val info: ProjectLockInfo?) : LockState
+    data object Released : LockState
+    data object LockLost : LockState
+}
+
 class DagEditorViewModel(
     private val projectId: ProjectId,
     private val apiClient: ProjectApiClient,
+    private val currentUserId: String? = null,
+    private val canForceUnlock: Boolean = false,
 ) : ViewModel() {
+
+    companion object {
+        private const val HEARTBEAT_INTERVAL_MS = 2 * 60 * 1000L // 2 minutes
+        private const val HEARTBEAT_MAX_RETRIES = 3
+    }
 
     private val _project = MutableStateFlow<ProjectTemplate?>(null)
     val project: StateFlow<ProjectTemplate?> = _project
@@ -59,6 +82,18 @@ class DagEditorViewModel(
     private val _canRedo = MutableStateFlow(false)
     val canRedo: StateFlow<Boolean> = _canRedo
 
+    // Lock state
+    private val _lockState = MutableStateFlow<LockState>(LockState.Acquiring)
+    val lockState: StateFlow<LockState> = _lockState
+
+    val isReadOnly: StateFlow<Boolean> = _lockState.map { state ->
+        state is LockState.LockedByOther || state is LockState.LockLost || state is LockState.Acquiring
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, true)
+
+    val showForceUnlock: Boolean get() = canForceUnlock
+
+    private var heartbeatJob: Job? = null
+
     fun loadProject() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -72,6 +107,8 @@ class DagEditorViewModel(
                 undoIndex = -1
                 pushUndoState(p.dagGraph)
                 _isDirty.value = false
+                // Attempt lock acquisition after successful load
+                attemptAcquireLock()
             } catch (e: Exception) {
                 _error.value = e.toUserMessage()
             } finally {
@@ -80,7 +117,101 @@ class DagEditorViewModel(
         }
     }
 
+    private suspend fun attemptAcquireLock() {
+        _lockState.value = LockState.Acquiring
+        try {
+            val lock = apiClient.acquireLock(projectId)
+            _lockState.value = LockState.Acquired(lock)
+            startHeartbeat()
+        } catch (e: ClientRequestException) {
+            if (e.response.status.value == 409) {
+                val conflict = e.parseLockConflict()
+                _lockState.value = LockState.LockedByOther(conflict?.lock)
+            } else {
+                _lockState.value = LockState.LockedByOther(null)
+            }
+        } catch (_: Exception) {
+            _lockState.value = LockState.LockedByOther(null)
+        }
+    }
+
+    private fun startHeartbeat() {
+        heartbeatJob?.cancel()
+        heartbeatJob = viewModelScope.launch {
+            while (true) {
+                delay(HEARTBEAT_INTERVAL_MS)
+                var success = false
+                for (retry in 0 until HEARTBEAT_MAX_RETRIES) {
+                    try {
+                        val updated = apiClient.heartbeatLock(projectId)
+                        _lockState.value = LockState.Acquired(updated)
+                        success = true
+                        break
+                    } catch (_: Exception) {
+                        if (retry < HEARTBEAT_MAX_RETRIES - 1) {
+                            delay(2000L) // Wait before retry
+                        }
+                    }
+                }
+                if (!success) {
+                    _lockState.value = LockState.LockLost
+                    return@launch
+                }
+            }
+        }
+    }
+
+    fun releaseLock() {
+        val wasAcquired = _lockState.value is LockState.Acquired
+        heartbeatJob?.cancel()
+        heartbeatJob = null
+        _lockState.value = LockState.Released
+        if (wasAcquired) {
+            viewModelScope.launch {
+                apiClient.releaseLock(projectId)
+            }
+        }
+    }
+
+    fun forceUnlock() {
+        viewModelScope.launch {
+            try {
+                apiClient.forceReleaseLock(projectId)
+                // Re-acquire after force release
+                val p = apiClient.getProject(projectId)
+                _project.value = p
+                _graph.value = p.dagGraph
+                undoStack.clear()
+                undoIndex = -1
+                pushUndoState(p.dagGraph)
+                _isDirty.value = false
+                attemptAcquireLock()
+            } catch (e: Exception) {
+                _error.value = e.toUserMessage()
+            }
+        }
+    }
+
+    fun retryAcquireLock() {
+        viewModelScope.launch {
+            try {
+                // Reload project to get latest state
+                val p = apiClient.getProject(projectId)
+                _project.value = p
+                _graph.value = p.dagGraph
+                undoStack.clear()
+                undoIndex = -1
+                pushUndoState(p.dagGraph)
+                _isDirty.value = false
+                attemptAcquireLock()
+            } catch (e: Exception) {
+                _error.value = e.toUserMessage()
+            }
+        }
+    }
+
     fun save() {
+        if (isReadOnly.value) return
         val p = _project.value ?: return
         viewModelScope.launch {
             _isSaving.value = true
@@ -92,10 +223,43 @@ class DagEditorViewModel(
                 )
                 _project.value = updated
                 _isDirty.value = false
+            } catch (e: ClientRequestException) {
+                if (e.response.status.value == 409) {
+                    val conflict = e.parseLockConflict()
+                    if (conflict != null) {
+                        _lockState.value = LockState.LockLost
+                        heartbeatJob?.cancel()
+                    }
+                }
+                _error.value = e.toUserMessage()
             } catch (e: Exception) {
                 _error.value = e.toUserMessage()
             } finally {
                 _isSaving.value = false
+            }
+        }
+    }
+
+    fun reacquireAndSave() {
+        viewModelScope.launch {
+            _lockState.value = LockState.Acquiring
+            try {
+                val lock = apiClient.acquireLock(projectId)
+                _lockState.value = LockState.Acquired(lock)
+                startHeartbeat()
+                // Now save with the re-acquired lock
+                save()
+            } catch (e: ClientRequestException) {
+                if (e.response.status.value == 409) {
+                    val conflict = e.parseLockConflict()
+                    _lockState.value = LockState.LockedByOther(conflict?.lock)
+                } else {
+                    _lockState.value = LockState.LockLost
+                }
+                _error.value = "Could not re-acquire lock: ${e.toUserMessage()}"
+            } catch (e: Exception) {
+                _lockState.value = LockState.LockLost
+                _error.value = "Could not re-acquire lock: ${e.toUserMessage()}"
             }
         }
     }
@@ -108,6 +272,7 @@ class DagEditorViewModel(
 
     @OptIn(ExperimentalUuidApi::class)
     fun addBlock(type: BlockType, name: String, x: Float, y: Float) {
+        if (isReadOnly.value) return
         val blockId = BlockId(Uuid.random().toString())
         val block = Block.ActionBlock(id = blockId, name = name, type = type)
         val position = BlockPosition(x, y)
@@ -123,6 +288,7 @@ class DagEditorViewModel(
 
     @OptIn(ExperimentalUuidApi::class)
     fun addContainerBlock(name: String, x: Float, y: Float) {
+        if (isReadOnly.value) return
         val blockId = BlockId(Uuid.random().toString())
         val block = Block.ContainerBlock(id = blockId, name = name)
         val position = BlockPosition(x, y)
@@ -137,6 +303,7 @@ class DagEditorViewModel(
     }
 
     fun removeSelectedBlocks() {
+        if (isReadOnly.value) return
         val blockIds = _selectedBlockIds.value
         if (blockIds.isEmpty()) return
         val g = _graph.value
@@ -152,6 +319,7 @@ class DagEditorViewModel(
     }
 
     fun removeSelectedEdge() {
+        if (isReadOnly.value) return
         val idx = _selectedEdgeIndex.value ?: return
         val g = _graph.value
         if (idx in g.edges.indices) {
@@ -161,6 +329,7 @@ class DagEditorViewModel(
     }
 
     fun moveBlock(blockId: BlockId, dx: Float, dy: Float) {
+        if (isReadOnly.value) return
         val g = _graph.value
         val current = g.positions[blockId] ?: return
         val newPos = BlockPosition(current.x + dx, current.y + dy)
@@ -175,6 +344,7 @@ class DagEditorViewModel(
     }
 
     fun addEdge(fromBlockId: BlockId, toBlockId: BlockId) {
+        if (isReadOnly.value) return
         val g = _graph.value
         // Don't add duplicate or self-loop edges
         if (g.edges.any { it.fromBlockId == fromBlockId && it.toBlockId == toBlockId }) return
@@ -202,6 +372,7 @@ class DagEditorViewModel(
     // Undo tracks structural changes (add/remove blocks/edges, moves).
 
     fun updateBlockName(blockId: BlockId, name: String) {
+        if (isReadOnly.value) return
         val g = _graph.value
         updateGraphSilent(
             g.copy(
@@ -217,6 +388,7 @@ class DagEditorViewModel(
     }
 
     fun updateBlockType(blockId: BlockId, type: BlockType) {
+        if (isReadOnly.value) return
         val g = _graph.value
         updateGraph(
             g.copy(
@@ -230,6 +402,7 @@ class DagEditorViewModel(
     }
 
     fun updateBlockParameters(blockId: BlockId, parameters: List<Parameter>) {
+        if (isReadOnly.value) return
         val g = _graph.value
         updateGraphSilent(
             g.copy(
@@ -243,6 +416,7 @@ class DagEditorViewModel(
     }
 
     fun updateBlockTimeout(blockId: BlockId, timeoutSeconds: Long?) {
+        if (isReadOnly.value) return
         val g = _graph.value
         updateGraphSilent(
             g.copy(
@@ -256,6 +430,7 @@ class DagEditorViewModel(
     }
 
     fun undo() {
+        if (isReadOnly.value) return
         if (undoIndex <= 0) return
         undoIndex--
         _graph.value = undoStack[undoIndex]
@@ -265,6 +440,7 @@ class DagEditorViewModel(
     }
 
     fun redo() {
+        if (isReadOnly.value) return
         if (undoIndex >= undoStack.lastIndex) return
         undoIndex++
         _graph.value = undoStack[undoIndex]
@@ -285,6 +461,7 @@ class DagEditorViewModel(
 
     @OptIn(ExperimentalUuidApi::class)
     fun pasteClipboard() {
+        if (isReadOnly.value) return
         val clip = _clipboard.value ?: return
         val g = _graph.value
 
