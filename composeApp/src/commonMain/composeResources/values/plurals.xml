@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="blocks">
+        <item quantity="one">%1$d block</item>
+        <item quantity="other">%1$d blocks</item>
+    </plurals>
+    <plurals name="members">
+        <item quantity="one">%1$d member</item>
+        <item quantity="other">%1$d members</item>
+    </plurals>
+    <plurals name="child_blocks">
+        <item quantity="one">%1$d child block</item>
+        <item quantity="other">%1$d child blocks</item>
+    </plurals>
+    <plurals name="issues">
+        <item quantity="one">%1$d issue</item>
+        <item quantity="other">%1$d issues</item>
+    </plurals>
+    <plurals name="releases_updated_seconds_ago">
+        <item quantity="one">Updated %1$d second ago</item>
+        <item quantity="other">Updated %1$d seconds ago</item>
+    </plurals>
+    <plurals name="releases_updated_minutes_ago">
+        <item quantity="one">Updated %1$d minute ago</item>
+        <item quantity="other">Updated %1$d minutes ago</item>
+    </plurals>
+    <plurals name="releases_updated_hours_ago">
+        <item quantity="one">Updated %1$d hour ago</item>
+        <item quantity="other">Updated %1$d hours ago</item>
+    </plurals>
+</resources>

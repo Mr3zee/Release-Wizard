@@ -14,7 +14,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.ListItemCard
 import com.github.mr3zee.model.TeamMembership
-import com.github.mr3zee.model.TeamRole
+import com.github.mr3zee.util.displayName
+import com.github.mr3zee.util.resolve
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
+import releasewizard.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,15 +41,15 @@ fun TeamDetailScreen(
             TopAppBar(
                 title = {
                     Text(
-                        team?.name ?: "Team",
+                        team?.name ?: stringResource(Res.string.teams_team_fallback),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                 },
                 navigationIcon = {
                     TextButton(onClick = onBack, modifier = Modifier.testTag("back_button")) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Navigate back")
-                        Text("Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.common_navigate_back))
+                        Text(stringResource(Res.string.common_back))
                     }
                 },
                 actions = {
@@ -53,20 +57,20 @@ fun TeamDetailScreen(
                         onClick = { showLeaveDialog = true },
                         modifier = Modifier.testTag("leave_team_button"),
                     ) {
-                        Text("Leave", color = MaterialTheme.colorScheme.error)
+                        Text(stringResource(Res.string.teams_leave), color = MaterialTheme.colorScheme.error)
                     }
                     TextButton(
                         onClick = onAuditLog,
                         modifier = Modifier.testTag("audit_log_button"),
                     ) {
-                        Text("Audit Log")
+                        Text(stringResource(Res.string.teams_audit_log))
                     }
                     if (isTeamLead) {
                         TextButton(
                             onClick = onManage,
                             modifier = Modifier.testTag("manage_team_button"),
                         ) {
-                            Text("Manage")
+                            Text(stringResource(Res.string.teams_manage))
                         }
                     }
                 },
@@ -81,9 +85,9 @@ fun TeamDetailScreen(
         } else if (error != null) {
             Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(error ?: "", color = MaterialTheme.colorScheme.error)
+                    Text(error?.resolve() ?: stringResource(Res.string.common_unknown_error), color = MaterialTheme.colorScheme.error)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Button(onClick = { viewModel.loadDetail() }) { Text("Retry") }
+                    Button(onClick = { viewModel.loadDetail() }) { Text(stringResource(Res.string.common_retry)) }
                 }
             }
         } else {
@@ -118,7 +122,7 @@ fun TeamDetailScreen(
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    "${members.size} members",
+                                    pluralStringResource(Res.plurals.members, members.size, members.size),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -129,7 +133,7 @@ fun TeamDetailScreen(
 
                 item {
                     Text(
-                        "Members",
+                        stringResource(Res.string.teams_members_section),
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier
                             .widthIn(max = 900.dp)
@@ -151,18 +155,18 @@ fun TeamDetailScreen(
     if (showLeaveDialog) {
         AlertDialog(
             onDismissRequest = { showLeaveDialog = false },
-            title = { Text("Leave Team") },
-            text = { Text("Are you sure you want to leave \"${team?.name ?: "this team"}\"?") },
+            title = { Text(stringResource(Res.string.teams_leave_title)) },
+            text = { Text(stringResource(Res.string.teams_leave_confirmation, team?.name ?: stringResource(Res.string.teams_leave_fallback))) },
             confirmButton = {
                 TextButton(onClick = {
                     showLeaveDialog = false
                     viewModel.leaveTeam { onBack() }
                 }) {
-                    Text("Leave", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(Res.string.teams_leave), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showLeaveDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showLeaveDialog = false }) { Text(stringResource(Res.string.common_cancel)) }
             },
         )
     }
@@ -185,10 +189,7 @@ private fun MemberItem(
             modifier = Modifier.weight(1f),
         )
         Text(
-            when (member.role) {
-                TeamRole.TEAM_LEAD -> "Lead"
-                TeamRole.COLLABORATOR -> "Collaborator"
-            },
+            member.role.displayName(),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

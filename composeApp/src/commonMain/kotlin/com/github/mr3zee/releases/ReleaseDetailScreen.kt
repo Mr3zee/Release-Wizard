@@ -12,6 +12,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.model.*
 import com.github.mr3zee.model.isTerminal
+import com.github.mr3zee.util.UiMessage
+import com.github.mr3zee.util.displayName
+import com.github.mr3zee.util.resolve
+import org.jetbrains.compose.resources.stringResource
+import releasewizard.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -20,7 +25,7 @@ fun ReleaseDetailScreen(
     blockExecutions: List<BlockExecution>,
     isConnected: Boolean,
     reconnectAttempt: Int = 0,
-    error: String? = null,
+    error: UiMessage? = null,
     onBack: () -> Unit,
     onCancel: () -> Unit,
     onRerun: () -> Unit,
@@ -34,10 +39,11 @@ fun ReleaseDetailScreen(
     var showApproveConfirmation by remember { mutableStateOf<BlockId?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
+    val resolvedError = error?.resolve()
 
     // Show errors via snackbar
     LaunchedEffect(error) {
-        val msg = error ?: return@LaunchedEffect
+        val msg = resolvedError ?: return@LaunchedEffect
         snackbarHostState.showSnackbar(
             message = msg,
             duration = SnackbarDuration.Long,
@@ -49,8 +55,8 @@ fun ReleaseDetailScreen(
     if (showCancelConfirmation) {
         AlertDialog(
             onDismissRequest = { showCancelConfirmation = false },
-            title = { Text("Cancel Release") },
-            text = { Text("Cancel this release? In-progress blocks will be interrupted.") },
+            title = { Text(stringResource(Res.string.releases_cancel_title)) },
+            text = { Text(stringResource(Res.string.releases_cancel_body)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -59,7 +65,7 @@ fun ReleaseDetailScreen(
                     },
                     modifier = Modifier.testTag("confirm_cancel_button"),
                 ) {
-                    Text("Cancel Release", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(Res.string.releases_cancel_confirm), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
@@ -67,7 +73,7 @@ fun ReleaseDetailScreen(
                     onClick = { showCancelConfirmation = false },
                     modifier = Modifier.testTag("dismiss_cancel_button"),
                 ) {
-                    Text("Keep Running")
+                    Text(stringResource(Res.string.releases_keep_running))
                 }
             },
             modifier = Modifier.testTag("cancel_confirmation_dialog"),
@@ -81,8 +87,8 @@ fun ReleaseDetailScreen(
         val approveMessage = approveExec?.gateMessage
         AlertDialog(
             onDismissRequest = { showApproveConfirmation = null },
-            title = { Text("Approve: ${approveBlock?.name ?: "Step"}") },
-            text = { Text(approveMessage ?: "Approve this step? The pipeline will continue.") },
+            title = { Text(stringResource(Res.string.releases_approve_title, approveBlock?.name ?: stringResource(Res.string.releases_approve_fallback_name))) },
+            text = { Text(approveMessage ?: stringResource(Res.string.releases_approve_default_message)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -91,7 +97,7 @@ fun ReleaseDetailScreen(
                     },
                     modifier = Modifier.testTag("confirm_approve_button"),
                 ) {
-                    Text("Approve")
+                    Text(stringResource(Res.string.common_approve))
                 }
             },
             dismissButton = {
@@ -99,7 +105,7 @@ fun ReleaseDetailScreen(
                     onClick = { showApproveConfirmation = null },
                     modifier = Modifier.testTag("dismiss_approve_button"),
                 ) {
-                    Text("Go Back")
+                    Text(stringResource(Res.string.common_cancel))
                 }
             },
             modifier = Modifier.testTag("approve_confirmation_dialog"),
@@ -115,7 +121,7 @@ fun ReleaseDetailScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Text(
-                            "Release",
+                            stringResource(Res.string.releases_detail_title),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -126,16 +132,16 @@ fun ReleaseDetailScreen(
                 },
                 navigationIcon = {
                     TextButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Navigate back")
-                        Text("Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.common_navigate_back))
+                        Text(stringResource(Res.string.common_back))
                     }
                 },
                 actions = {
                     if (!isConnected) {
                         val disconnectedText = if (reconnectAttempt > 0) {
-                            "Reconnecting (attempt $reconnectAttempt)..."
+                            stringResource(Res.string.releases_reconnecting, reconnectAttempt)
                         } else {
-                            "Disconnected"
+                            stringResource(Res.string.releases_disconnected)
                         }
                         Text(
                             text = disconnectedText,
@@ -151,7 +157,7 @@ fun ReleaseDetailScreen(
                             onClick = { showCancelConfirmation = true },
                             modifier = Modifier.testTag("cancel_release_button"),
                         ) {
-                            Text("Cancel", color = MaterialTheme.colorScheme.error)
+                            Text(stringResource(Res.string.common_cancel), color = MaterialTheme.colorScheme.error)
                         }
                     }
                     if (release != null && release.status.isTerminal) {
@@ -159,14 +165,14 @@ fun ReleaseDetailScreen(
                             onClick = onRerun,
                             modifier = Modifier.testTag("rerun_release_button"),
                         ) {
-                            Text("Re-run")
+                            Text(stringResource(Res.string.releases_rerun))
                         }
                         if (release.status != ReleaseStatus.ARCHIVED) {
                             TextButton(
                                 onClick = onArchive,
                                 modifier = Modifier.testTag("archive_release_button"),
                             ) {
-                                Text("Archive")
+                                Text(stringResource(Res.string.releases_archive))
                             }
                         }
                     }
@@ -256,14 +262,14 @@ private fun BlockDetailPanel(
                     modifier = Modifier.weight(1f),
                 )
                 TextButton(onClick = onDismiss) {
-                    Text("Close")
+                    Text(stringResource(Res.string.common_close))
                 }
             }
 
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "Status: ${execution.status.name}",
+                text = stringResource(Res.string.releases_block_status, execution.status.displayName()),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.testTag("block_status_text"),
             )
@@ -280,13 +286,14 @@ private fun BlockDetailPanel(
             if (genericOutputs.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Outputs:",
+                    text = stringResource(Res.string.releases_block_outputs),
                     style = MaterialTheme.typography.labelMedium,
                 )
                 genericOutputs.forEach { (key, value) ->
                     Text(
-                        text = "  $key: $value",
+                        text = stringResource(Res.string.releases_block_output_entry, key, value),
                         style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(start = 16.dp),
                     )
                 }
             }
@@ -309,9 +316,9 @@ private fun BlockDetailPanel(
                 }
 
                 val phaseContext = when (execution.gatePhase) {
-                    GatePhase.PRE -> "Waiting for approval before execution"
-                    GatePhase.POST -> "Execution complete — waiting for approval"
-                    null -> "Waiting for approval"
+                    GatePhase.PRE -> stringResource(Res.string.releases_gate_phase_pre)
+                    GatePhase.POST -> stringResource(Res.string.releases_gate_phase_post)
+                    null -> stringResource(Res.string.releases_gate_phase_unknown)
                 }
                 Text(
                     text = phaseContext,
@@ -330,7 +337,7 @@ private fun BlockDetailPanel(
                 gate?.let { g ->
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "${execution.approvals.size} of ${g.approvalRule.requiredCount} approvals",
+                        text = stringResource(Res.string.releases_approval_progress, execution.approvals.size, g.approvalRule.requiredCount),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.testTag("gate_approval_progress"),
@@ -342,7 +349,7 @@ private fun BlockDetailPanel(
                     onClick = onApprove,
                     modifier = Modifier.testTag("approve_block_button"),
                 ) {
-                    Text("Approve")
+                    Text(stringResource(Res.string.common_approve))
                 }
             }
         }

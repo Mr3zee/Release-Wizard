@@ -16,6 +16,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.model.BlockType
 import com.github.mr3zee.theme.LocalAppColors
+import com.github.mr3zee.util.displayName
+import org.jetbrains.compose.resources.stringResource
+import releasewizard.composeapp.generated.resources.*
 
 @Composable
 fun EditorToolbar(
@@ -44,7 +47,7 @@ fun EditorToolbar(
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(
-            "Blocks",
+            stringResource(Res.string.editor_toolbar_blocks),
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.padding(bottom = 4.dp),
         )
@@ -61,7 +64,7 @@ fun EditorToolbar(
                 ),
             ) {
                 Text(
-                    blockTypeDisplayName(type),
+                    type.displayName(),
                     style = MaterialTheme.typography.labelMedium,
                 )
             }
@@ -77,13 +80,13 @@ fun EditorToolbar(
                 contentColor = appColors.containerBlock,
             ),
         ) {
-            Text("Container", style = MaterialTheme.typography.labelMedium)
+            Text(stringResource(Res.string.editor_toolbar_container), style = MaterialTheme.typography.labelMedium)
         }
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
         Text(
-            "Actions",
+            stringResource(Res.string.editor_toolbar_actions),
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.padding(bottom = 4.dp),
         )
@@ -100,7 +103,7 @@ fun EditorToolbar(
             ) {
                 Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Undo")
+                Text(stringResource(Res.string.editor_toolbar_undo))
             }
             OutlinedButton(
                 onClick = onRedo,
@@ -110,7 +113,7 @@ fun EditorToolbar(
             ) {
                 Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Redo")
+                Text(stringResource(Res.string.editor_toolbar_redo))
             }
         }
 
@@ -126,7 +129,7 @@ fun EditorToolbar(
             ) {
                 Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Copy")
+                Text(stringResource(Res.string.editor_toolbar_copy))
             }
             OutlinedButton(
                 onClick = onPaste,
@@ -136,7 +139,7 @@ fun EditorToolbar(
             ) {
                 Icon(Icons.Default.ContentPaste, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Paste")
+                Text(stringResource(Res.string.editor_toolbar_paste))
             }
         }
 
@@ -151,17 +154,9 @@ fun EditorToolbar(
         ) {
             Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(4.dp))
-            Text("Delete")
+            Text(stringResource(Res.string.editor_toolbar_delete))
         }
     }
-}
-
-private fun blockTypeDisplayName(type: BlockType): String = when (type) {
-    BlockType.TEAMCITY_BUILD -> "TeamCity Build"
-    BlockType.GITHUB_ACTION -> "GitHub Action"
-    BlockType.GITHUB_PUBLICATION -> "GitHub Publication"
-    BlockType.MAVEN_CENTRAL_PUBLICATION -> "Maven Central"
-    BlockType.SLACK_MESSAGE -> "Slack Message"
 }
 
 private fun defaultBlockName(type: BlockType): String = when (type) {

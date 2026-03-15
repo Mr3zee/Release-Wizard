@@ -170,7 +170,7 @@ class ConnectionScreensTest {
         }
 
         onNodeWithTag("connection_type_selector").performClick()
-        onNodeWithText("SLACK").performClick()
+        onNodeWithText("Slack").performClick()
         onNodeWithTag("slack_webhook_url").assertExists()
         onNodeWithTag("github_token").assertDoesNotExist()
     }
@@ -183,7 +183,7 @@ class ConnectionScreensTest {
         }
 
         onNodeWithTag("connection_type_selector").performClick()
-        onNodeWithText("TEAMCITY").performClick()
+        onNodeWithText("TeamCity").performClick()
         onNodeWithTag("teamcity_server_url").assertExists()
         onNodeWithTag("teamcity_token").assertExists()
     }
@@ -196,7 +196,7 @@ class ConnectionScreensTest {
         }
 
         onNodeWithTag("connection_type_selector").performClick()
-        onNodeWithText("MAVEN_CENTRAL").performClick()
+        onNodeWithText("Maven Central").performClick()
         onNodeWithTag("maven_username").assertExists()
         onNodeWithTag("maven_password").assertExists()
     }
@@ -209,7 +209,7 @@ class ConnectionScreensTest {
         }
 
         onNodeWithTag("connection_type_selector").performClick()
-        onNodeWithText("SLACK").performClick()
+        onNodeWithText("Slack").performClick()
 
         onNodeWithTag("connection_name_field").performTextInput("My Slack")
         onNodeWithTag("save_connection_button").assertIsNotEnabled()
@@ -226,7 +226,7 @@ class ConnectionScreensTest {
         }
 
         onNodeWithTag("connection_type_selector").performClick()
-        onNodeWithText("TEAMCITY").performClick()
+        onNodeWithText("TeamCity").performClick()
 
         onNodeWithTag("connection_name_field").performTextInput("My TC")
         onNodeWithTag("teamcity_server_url").performTextInput("https://tc.example.com")
@@ -245,7 +245,7 @@ class ConnectionScreensTest {
         }
 
         onNodeWithTag("connection_type_selector").performClick()
-        onNodeWithText("MAVEN_CENTRAL").performClick()
+        onNodeWithText("Maven Central").performClick()
 
         onNodeWithTag("connection_name_field").performTextInput("Maven")
         onNodeWithTag("maven_username").performTextInput("user")
@@ -341,7 +341,7 @@ class ConnectionScreensTest {
             onAllNodes(hasTestTag("connection_name_field") and hasText("My GitHub")).fetchSemanticsNodes().isNotEmpty()
         }
         onNodeWithTag("connection_name_field").assertTextContains("My GitHub")
-        onNodeWithTag("connection_type_selector").assertTextContains("GITHUB")
+        onNodeWithTag("connection_type_selector").assertTextContains("GitHub")
         onNodeWithTag("github_owner").assertTextContains("mr3zee")
         onNodeWithTag("github_repo").assertTextContains("release-wizard")
     }

@@ -38,11 +38,6 @@ internal fun blockTypeColor(type: BlockType, colors: AppColors): Color = when (t
     BlockType.SLACK_MESSAGE -> colors.slackMessage
 }
 
-internal fun blockTypeLabel(block: Block): String = when (block) {
-    is Block.ActionBlock -> block.type.name.lowercase().replace("_", " ")
-    is Block.ContainerBlock -> "container"
-}
-
 // Coordinate transform
 internal class CanvasTransform(
     val zoom: Float,
@@ -132,6 +127,7 @@ internal fun DrawScope.drawBlock(
     textMeasurer: TextMeasurer,
     zoom: Float,
     colors: AppColors,
+    typeLabel: String,
     fillColor: Color = blockColor(block, colors),
 ) {
     val screenX = transform.toScreenX(position.x)
@@ -181,7 +177,7 @@ internal fun DrawScope.drawBlock(
     // Type label
     val typeSize = (10f * zoom).coerceIn(5f, 30f)
     val typeLayout = textMeasurer.measure(
-        blockTypeLabel(block),
+        typeLabel,
         style = TextStyle(fontSize = typeSize.sp, color = colors.blockTextSecondary),
     )
     drawText(

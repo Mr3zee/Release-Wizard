@@ -17,6 +17,7 @@ import com.github.mr3zee.editor.*
 import com.github.mr3zee.model.*
 import com.github.mr3zee.theme.AppColors
 import com.github.mr3zee.theme.LocalAppColors
+import com.github.mr3zee.util.typeLabel
 
 internal fun blockStatusColor(status: BlockStatus, colors: AppColors): Color = when (status) {
     BlockStatus.SUCCEEDED -> colors.blockStatusSucceeded
@@ -45,6 +46,11 @@ fun ExecutionDagCanvas(
     }
 
     val drawTransform = CanvasTransform(zoom, panOffset, density)
+
+    // Pre-resolve block type labels for canvas (stringResource requires composable context)
+    val blockLabels: Map<BlockId, String> = graph.blocks.associate { block ->
+        block.id to block.typeLabel()
+    }
 
     Canvas(
         modifier = modifier
@@ -127,7 +133,7 @@ fun ExecutionDagCanvas(
             } else {
                 blockColor(block, appColors)
             }
-            drawBlock(drawTransform, block, pos, isSelected = false, textMeasurer, zoom, appColors, fillColor)
+            drawBlock(drawTransform, block, pos, isSelected = false, textMeasurer, zoom, appColors, blockLabels[block.id] ?: "", fillColor)
         }
     }
 }

@@ -3,8 +3,9 @@ package com.github.mr3zee.teams
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.mr3zee.api.TeamApiClient
-import com.github.mr3zee.api.toUserMessage
+import com.github.mr3zee.api.toUiMessage
 import com.github.mr3zee.model.TeamInvite
+import com.github.mr3zee.util.UiMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -19,8 +20,8 @@ class MyInvitesViewModel(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error
+    private val _error = MutableStateFlow<UiMessage?>(null)
+    val error: StateFlow<UiMessage?> = _error
 
     init {
         loadInvites()
@@ -34,7 +35,7 @@ class MyInvitesViewModel(
                 val response = apiClient.getMyInvites()
                 _invites.value = response.invites
             } catch (e: Exception) {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             } finally {
                 _isLoading.value = false
             }
@@ -48,7 +49,7 @@ class MyInvitesViewModel(
                 loadInvites()
                 onAccepted()
             } catch (e: Exception) {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             }
         }
     }
@@ -59,7 +60,7 @@ class MyInvitesViewModel(
                 apiClient.declineInvite(inviteId)
                 loadInvites()
             } catch (e: Exception) {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             }
         }
     }

@@ -505,7 +505,7 @@ class ReleaseScreensTest {
         }
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("block_detail_panel").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("block_status_text").assertExists()
-        onNodeWithText("Status: RUNNING").assertExists()
+        onNodeWithText("Status: Running").assertExists()
     }
 
     @Test

@@ -3,13 +3,14 @@ package com.github.mr3zee.connections
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.mr3zee.api.ConnectionApiClient
-import com.github.mr3zee.api.toUserMessage
+import com.github.mr3zee.api.toUiMessage
 import com.github.mr3zee.api.CreateConnectionRequest
 import com.github.mr3zee.api.PaginationInfo
 import com.github.mr3zee.api.UpdateConnectionRequest
 import com.github.mr3zee.model.Connection
 import com.github.mr3zee.model.ConnectionConfig
 import com.github.mr3zee.model.ConnectionId
+import com.github.mr3zee.util.UiMessage
 import com.github.mr3zee.model.ConnectionType
 import com.github.mr3zee.model.TeamId
 import kotlinx.coroutines.FlowPreview
@@ -40,8 +41,8 @@ class ConnectionsViewModel(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error
+    private val _error = MutableStateFlow<UiMessage?>(null)
+    val error: StateFlow<UiMessage?> = _error
 
     private val _editingConnection = MutableStateFlow<Connection?>(null)
     val editingConnection: StateFlow<Connection?> = _editingConnection
@@ -58,8 +59,8 @@ class ConnectionsViewModel(
     private val _isLoadingMore = MutableStateFlow(false)
     val isLoadingMore: StateFlow<Boolean> = _isLoadingMore
 
-    private val _testSuccessMessage = MutableStateFlow<String?>(null)
-    val testSuccessMessage: StateFlow<String?> = _testSuccessMessage
+    private val _testSuccessMessage = MutableStateFlow<UiMessage?>(null)
+    val testSuccessMessage: StateFlow<UiMessage?> = _testSuccessMessage
 
     private val _isSaving = MutableStateFlow(false)
     val isSaving: StateFlow<Boolean> = _isSaving
@@ -73,8 +74,8 @@ class ConnectionsViewModel(
     private val _isManualRefresh = MutableStateFlow(false)
     val isManualRefresh: StateFlow<Boolean> = _isManualRefresh
 
-    private val _refreshError = MutableStateFlow<String?>(null)
-    val refreshError: StateFlow<String?> = _refreshError
+    private val _refreshError = MutableStateFlow<UiMessage?>(null)
+    val refreshError: StateFlow<UiMessage?> = _refreshError
 
     private val pageSize = 20
 
@@ -147,7 +148,7 @@ class ConnectionsViewModel(
                     _pagination.value = response.pagination
                 }
             } catch (e: Exception) {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             } finally {
                 _isLoadingMore.value = false
             }
@@ -174,9 +175,9 @@ class ConnectionsViewModel(
             _refreshError.value = null
         } catch (e: Exception) {
             if (silent) {
-                _refreshError.value = e.toUserMessage()
+                _refreshError.value = e.toUiMessage()
             } else {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             }
         } finally {
             _isLoading.value = false
@@ -194,7 +195,7 @@ class ConnectionsViewModel(
                 loadConnections()
                 _savedSuccessfully.tryEmit(Unit)
             } catch (e: Exception) {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             } finally {
                 _isSaving.value = false
             }
@@ -207,7 +208,7 @@ class ConnectionsViewModel(
             try {
                 _editingConnection.value = apiClient.getConnection(id)
             } catch (e: Exception) {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             }
         }
     }
@@ -225,7 +226,7 @@ class ConnectionsViewModel(
                 loadConnections()
                 _savedSuccessfully.tryEmit(Unit)
             } catch (e: Exception) {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             } finally {
                 _isSaving.value = false
             }
@@ -239,7 +240,7 @@ class ConnectionsViewModel(
                 apiClient.deleteConnection(id)
                 loadConnections()
             } catch (e: Exception) {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             }
         }
     }
@@ -250,12 +251,12 @@ class ConnectionsViewModel(
             try {
                 val result = apiClient.testConnection(id)
                 if (result.success) {
-                    _testSuccessMessage.value = "Connection test succeeded: ${result.message}"
+                    _testSuccessMessage.value = UiMessage.ConnectionTestSucceeded(result.message)
                 } else {
-                    _error.value = "Test failed: ${result.message}"
+                    _error.value = UiMessage.ConnectionTestFailed(result.message)
                 }
             } catch (e: Exception) {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             }
         }
     }

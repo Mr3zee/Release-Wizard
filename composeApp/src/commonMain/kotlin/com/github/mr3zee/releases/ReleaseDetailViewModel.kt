@@ -4,7 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.mr3zee.api.ReleaseApiClient
 import com.github.mr3zee.api.ReleaseEvent
-import com.github.mr3zee.api.toUserMessage
+import com.github.mr3zee.api.toUiMessage
+import com.github.mr3zee.util.UiMessage
 import com.github.mr3zee.model.*
 import com.github.mr3zee.model.isTerminal
 import kotlinx.coroutines.Job
@@ -28,8 +29,8 @@ class ReleaseDetailViewModel(
     private val _isConnected = MutableStateFlow(false)
     val isConnected: StateFlow<Boolean> = _isConnected
 
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error
+    private val _error = MutableStateFlow<UiMessage?>(null)
+    val error: StateFlow<UiMessage?> = _error
 
     private val _reconnectAttempt = MutableStateFlow(0)
     val reconnectAttempt: StateFlow<Int> = _reconnectAttempt
@@ -133,7 +134,7 @@ class ReleaseDetailViewModel(
             try {
                 releaseApiClient.cancelRelease(releaseId)
             } catch (e: Exception) {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             }
         }
     }
@@ -144,7 +145,7 @@ class ReleaseDetailViewModel(
                 val response = releaseApiClient.rerunRelease(releaseId)
                 onRerunCreated(response.release.id)
             } catch (e: Exception) {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             }
         }
     }
@@ -155,7 +156,7 @@ class ReleaseDetailViewModel(
                 val response = releaseApiClient.archiveRelease(releaseId)
                 _release.value = response.release
             } catch (e: Exception) {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             }
         }
     }
@@ -165,7 +166,7 @@ class ReleaseDetailViewModel(
             try {
                 releaseApiClient.approveBlock(releaseId, blockId, input)
             } catch (e: Exception) {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             }
         }
     }

@@ -12,6 +12,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.model.Block
 import com.github.mr3zee.model.Parameter
+import org.jetbrains.compose.resources.stringResource
+import releasewizard.composeapp.generated.resources.*
 
 @Composable
 fun TemplatePickerDialog(
@@ -20,8 +22,12 @@ fun TemplatePickerDialog(
     onSelect: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val suggestions = remember(parameters, predecessors) {
-        buildSuggestions(parameters, predecessors)
+    val defaultValueMarker = "\u0000"
+    val defaultValueTemplate = stringResource(Res.string.editor_template_default_value, defaultValueMarker)
+    val suggestions = remember(parameters, predecessors, defaultValueTemplate) {
+        buildSuggestions(parameters, predecessors) { value ->
+            defaultValueTemplate.replace(defaultValueMarker, value)
+        }
     }
     val paramSuggestions = remember(suggestions) {
         suggestions.filter { it.category == SuggestionCategory.PARAMETER }
@@ -32,7 +38,7 @@ fun TemplatePickerDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Insert Template") },
+        title = { Text(stringResource(Res.string.editor_template_picker_title)) },
         text = {
             LazyColumn(
                 modifier = Modifier
@@ -44,7 +50,7 @@ fun TemplatePickerDialog(
                 if (paramSuggestions.isNotEmpty()) {
                     item {
                         Text(
-                            "Parameters",
+                            stringResource(Res.string.editor_template_parameters),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(vertical = 4.dp),
@@ -62,7 +68,7 @@ fun TemplatePickerDialog(
                 if (outputSuggestions.isNotEmpty()) {
                     item {
                         Text(
-                            "Block Outputs",
+                            stringResource(Res.string.editor_template_block_outputs),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
@@ -79,7 +85,7 @@ fun TemplatePickerDialog(
                 if (suggestions.isEmpty()) {
                     item {
                         Text(
-                            "No parameters or predecessor outputs available",
+                            stringResource(Res.string.editor_template_empty),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -89,7 +95,7 @@ fun TemplatePickerDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(Res.string.common_cancel))
             }
         },
     )

@@ -42,7 +42,7 @@ class TeamScreensTest {
         onNodeWithText("Alpha Team").assertExists()
         onNodeWithText("Beta Squad").assertExists()
         onNodeWithText("3 members").assertExists()
-        onNodeWithText("1 members").assertExists()
+        onNodeWithText("1 member").assertExists()
     }
 
     @Test

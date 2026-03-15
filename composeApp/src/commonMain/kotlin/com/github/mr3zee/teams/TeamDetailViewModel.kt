@@ -3,8 +3,9 @@ package com.github.mr3zee.teams
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.mr3zee.api.TeamApiClient
-import com.github.mr3zee.api.toUserMessage
+import com.github.mr3zee.api.toUiMessage
 import com.github.mr3zee.model.Team
+import com.github.mr3zee.util.UiMessage
 import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.model.TeamMembership
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,8 +23,8 @@ class TeamDetailViewModel(
     private val _members = MutableStateFlow<List<TeamMembership>>(emptyList())
     val members: StateFlow<List<TeamMembership>> = _members
 
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error
+    private val _error = MutableStateFlow<UiMessage?>(null)
+    val error: StateFlow<UiMessage?> = _error
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
@@ -41,7 +42,7 @@ class TeamDetailViewModel(
                 _team.value = detail.team
                 _members.value = detail.members
             } catch (e: Exception) {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             } finally {
                 _isLoading.value = false
             }
@@ -54,7 +55,7 @@ class TeamDetailViewModel(
                 apiClient.leaveTeam(teamId)
                 onLeft()
             } catch (e: Exception) {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             }
         }
     }

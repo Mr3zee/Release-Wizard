@@ -10,6 +10,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.model.*
+import com.github.mr3zee.util.displayName
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
+import releasewizard.composeapp.generated.resources.*
 
 @Composable
 fun BlockPropertiesPanel(
@@ -33,14 +37,14 @@ fun BlockPropertiesPanel(
             .padding(12.dp),
     ) {
         Text(
-            "Properties",
+            stringResource(Res.string.editor_prop_title),
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.padding(bottom = 8.dp),
         )
 
         if (block == null) {
             Text(
-                "Select a block to edit its properties",
+                stringResource(Res.string.editor_prop_empty_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -55,7 +59,7 @@ fun BlockPropertiesPanel(
                 name = it
                 onUpdateName(block.id, it)
             },
-            label = { Text("Name") },
+            label = { Text(stringResource(Res.string.editor_prop_name)) },
             singleLine = true,
             enabled = enabled,
             modifier = Modifier.fillMaxWidth().testTag("block_name_field"),
@@ -79,12 +83,12 @@ fun BlockPropertiesPanel(
             }
             is Block.ContainerBlock -> {
                 Text(
-                    "Container block",
+                    stringResource(Res.string.editor_prop_container_type),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    "${block.children.blocks.size} child blocks",
+                    pluralStringResource(Res.plurals.child_blocks, block.children.blocks.size, block.children.blocks.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -107,14 +111,14 @@ private fun ActionBlockProperties(
 ) {
     // Type selector
     var typeExpanded by remember(block.id) { mutableStateOf(false) }
-    Text("Type", style = MaterialTheme.typography.labelMedium)
+    Text(stringResource(Res.string.editor_prop_type), style = MaterialTheme.typography.labelMedium)
     Box {
         OutlinedButton(
             onClick = { typeExpanded = true },
             enabled = enabled,
             modifier = Modifier.fillMaxWidth().testTag("block_type_selector"),
         ) {
-            Text(block.type.name.lowercase().replace("_", " "))
+            Text(block.type.displayName())
         }
         DropdownMenu(
             expanded = typeExpanded,
@@ -122,7 +126,7 @@ private fun ActionBlockProperties(
         ) {
             BlockType.entries.forEach { type ->
                 DropdownMenuItem(
-                    text = { Text(type.name.lowercase().replace("_", " ")) },
+                    text = { Text(type.displayName()) },
                     onClick = {
                         onUpdateType(block.id, type)
                         typeExpanded = false
@@ -145,7 +149,7 @@ private fun ActionBlockProperties(
             val seconds = text.toLongOrNull()
             onUpdateTimeout(block.id, seconds)
         },
-        label = { Text("Timeout (seconds)") },
+        label = { Text(stringResource(Res.string.editor_prop_timeout)) },
         singleLine = true,
         enabled = enabled,
         modifier = Modifier.fillMaxWidth().testTag("block_timeout_field"),
@@ -171,7 +175,7 @@ private fun ActionBlockProperties(
     Spacer(Modifier.height(12.dp))
 
     // Parameters
-    Text("Parameters", style = MaterialTheme.typography.labelMedium)
+    Text(stringResource(Res.string.editor_prop_parameters), style = MaterialTheme.typography.labelMedium)
     Spacer(Modifier.height(4.dp))
 
     var params by remember(block.id) { mutableStateOf(block.parameters) }
@@ -205,7 +209,7 @@ private fun ActionBlockProperties(
         enabled = enabled,
         modifier = Modifier.fillMaxWidth().testTag("add_parameter_button"),
     ) {
-        Text("+ Add Parameter")
+        Text(stringResource(Res.string.editor_prop_add_parameter))
     }
 }
 
@@ -220,11 +224,12 @@ private fun GateConfigSection(
 ) {
     var expanded by remember(block.id) { mutableStateOf(false) }
     val gateCount = listOfNotNull(block.preGate, block.postGate).size
-    val label = buildString {
-        append("Approval Gates")
-        if (gateCount > 0) append(" ($gateCount)")
-        append(if (expanded) " \u25BE" else " \u25B8")
+    val gateHeader = if (gateCount > 0) {
+        stringResource(Res.string.editor_gate_section_header_count, gateCount)
+    } else {
+        stringResource(Res.string.editor_gate_section_header)
     }
+    val label = gateHeader + if (expanded) " \u25BE" else " \u25B8"
 
     OutlinedButton(
         onClick = { expanded = !expanded },
@@ -238,7 +243,7 @@ private fun GateConfigSection(
         Spacer(Modifier.height(8.dp))
         Column(modifier = Modifier.testTag("gate_section_content")) {
             SingleGateEditor(
-                label = "Pre-gate",
+                label = stringResource(Res.string.editor_gate_pre_label),
                 gate = block.preGate,
                 blockId = block.id,
                 projectParameters = projectParameters,
@@ -250,7 +255,7 @@ private fun GateConfigSection(
 
             Spacer(Modifier.height(8.dp))
             SingleGateEditor(
-                label = "Post-gate",
+                label = stringResource(Res.string.editor_gate_post_label),
                 gate = block.postGate,
                 blockId = block.id,
                 projectParameters = projectParameters,
@@ -313,7 +318,7 @@ private fun SingleGateEditor(
                 },
                 projectParameters = projectParameters,
                 predecessors = predecessors,
-                label = { Text("Message") },
+                label = { Text(stringResource(Res.string.editor_gate_message)) },
                 singleLine = true,
                 enabled = enabled,
                 modifier = Modifier.weight(1f),
@@ -322,7 +327,7 @@ private fun SingleGateEditor(
             )
             TooltipBox(
                 positionProvider = TooltipDefaults.rememberTooltipPositionProvider(),
-                tooltip = { PlainTooltip { Text("Insert template (or type \${)") } },
+                tooltip = { PlainTooltip { Text(stringResource(Res.string.editor_template_tooltip)) } },
                 state = rememberTooltipState(),
             ) {
                 TextButton(
@@ -331,7 +336,7 @@ private fun SingleGateEditor(
                     contentPadding = PaddingValues(4.dp),
                     modifier = Modifier.testTag("${testTagPrefix}_template_button"),
                 ) {
-                    Text("{}", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(Res.string.editor_template_button), style = MaterialTheme.typography.bodySmall)
                 }
             }
 }
@@ -345,8 +350,8 @@ private fun SingleGateEditor(
                 val count = text.toIntOrNull()?.coerceAtLeast(1) ?: 1
                 onUpdate(gate.copy(approvalRule = gate.approvalRule.copy(requiredCount = count)))
             },
-            label = { Text("Required approvals") },
-            supportingText = if (isCountError) {{ Text("Must be 1 or more") }} else null,
+            label = { Text(stringResource(Res.string.editor_gate_required_approvals)) },
+            supportingText = if (isCountError) {{ Text(stringResource(Res.string.editor_gate_approval_count_error)) }} else null,
             isError = isCountError,
             singleLine = true,
             enabled = enabled,
@@ -390,7 +395,7 @@ private fun ParameterRow(
         OutlinedTextField(
             value = parameter.key,
             onValueChange = { onUpdate(parameter.copy(key = it)) },
-            label = { Text("Key") },
+            label = { Text(stringResource(Res.string.editor_prop_key)) },
             singleLine = true,
             enabled = enabled,
             modifier = Modifier.weight(1f),
@@ -401,7 +406,7 @@ private fun ParameterRow(
             onValueChange = { onUpdate(parameter.copy(value = it)) },
             projectParameters = projectParameters,
             predecessors = predecessors,
-            label = { Text("Value") },
+            label = { Text(stringResource(Res.string.editor_prop_value)) },
             singleLine = true,
             enabled = enabled,
             modifier = Modifier.weight(1f),
@@ -410,7 +415,7 @@ private fun ParameterRow(
         )
         TooltipBox(
             positionProvider = TooltipDefaults.rememberTooltipPositionProvider(),
-            tooltip = { PlainTooltip { Text("Insert template (or type \${)") } },
+            tooltip = { PlainTooltip { Text(stringResource(Res.string.editor_template_tooltip)) } },
             state = rememberTooltipState(),
         ) {
             TextButton(
@@ -419,7 +424,7 @@ private fun ParameterRow(
                 contentPadding = PaddingValues(4.dp),
                 modifier = Modifier.testTag("insert_template_button"),
             ) {
-                Text("{}", style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(Res.string.editor_template_button), style = MaterialTheme.typography.bodySmall)
             }
         }
         TextButton(
@@ -427,7 +432,7 @@ private fun ParameterRow(
             enabled = enabled,
             contentPadding = PaddingValues(4.dp),
         ) {
-            Text("x", color = MaterialTheme.colorScheme.error)
+            Text(stringResource(Res.string.editor_prop_remove), color = MaterialTheme.colorScheme.error)
         }
     }
 

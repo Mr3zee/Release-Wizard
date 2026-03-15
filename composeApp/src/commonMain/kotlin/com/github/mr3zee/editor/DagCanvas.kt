@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.rememberTextMeasurer
 import com.github.mr3zee.model.*
 import com.github.mr3zee.theme.LocalAppColors
+import com.github.mr3zee.util.typeLabel
 
 // Hit testing
 private sealed class HitTarget {
@@ -114,6 +115,11 @@ fun DagCanvas(
 
     // Transform for drawing — recreated each recomposition
     val drawTransform = CanvasTransform(zoom, panOffset, density)
+
+    // Pre-resolve block type labels for canvas (stringResource requires composable context)
+    val blockLabels: Map<BlockId, String> = graph.blocks.associate { block ->
+        block.id to block.typeLabel()
+    }
 
     Canvas(
         modifier = modifier
@@ -260,7 +266,7 @@ fun DagCanvas(
         for (block in graph.blocks) {
             val pos = graph.positions[block.id] ?: continue
             val isSelected = block.id in selectedBlockIds
-            drawBlock(drawTransform, block, pos, isSelected, textMeasurer, zoom, appColors)
+            drawBlock(drawTransform, block, pos, isSelected, textMeasurer, zoom, appColors, blockLabels[block.id] ?: "")
         }
 
         for (block in graph.blocks) {

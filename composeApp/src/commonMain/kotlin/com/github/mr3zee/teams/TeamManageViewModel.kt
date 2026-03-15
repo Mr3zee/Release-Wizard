@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.mr3zee.api.*
 import com.github.mr3zee.model.*
+import com.github.mr3zee.util.UiMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -22,8 +23,8 @@ class TeamManageViewModel(
     private val _joinRequests = MutableStateFlow<List<JoinRequest>>(emptyList())
     val joinRequests: StateFlow<List<JoinRequest>> = _joinRequests
 
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error
+    private val _error = MutableStateFlow<UiMessage?>(null)
+    val error: StateFlow<UiMessage?> = _error
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
@@ -44,7 +45,7 @@ class TeamManageViewModel(
                 val requestsResponse = apiClient.listJoinRequests(teamId)
                 _joinRequests.value = requestsResponse.requests
             } catch (e: Exception) {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             } finally {
                 _isLoading.value = false
             }
@@ -57,7 +58,7 @@ class TeamManageViewModel(
                 apiClient.updateMemberRole(teamId, userId, UpdateMemberRoleRequest(role))
                 loadAll()
             } catch (e: Exception) {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             }
         }
     }
@@ -68,7 +69,7 @@ class TeamManageViewModel(
                 apiClient.removeMember(teamId, userId)
                 loadAll()
             } catch (e: Exception) {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             }
         }
     }
@@ -79,7 +80,7 @@ class TeamManageViewModel(
                 apiClient.inviteUser(teamId, userId)
                 loadAll()
             } catch (e: Exception) {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             }
         }
     }
@@ -90,7 +91,7 @@ class TeamManageViewModel(
                 apiClient.cancelInvite(teamId, inviteId)
                 loadAll()
             } catch (e: Exception) {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             }
         }
     }
@@ -101,7 +102,7 @@ class TeamManageViewModel(
                 apiClient.approveJoinRequest(teamId, requestId)
                 loadAll()
             } catch (e: Exception) {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             }
         }
     }
@@ -112,7 +113,7 @@ class TeamManageViewModel(
                 apiClient.rejectJoinRequest(teamId, requestId)
                 loadAll()
             } catch (e: Exception) {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             }
         }
     }

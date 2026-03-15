@@ -46,7 +46,7 @@ class ProjectListScreenTest {
         onNodeWithTag("project_list_screen").assertExists()
         onNodeWithText("My Pipeline").assertExists()
         onNodeWithText("Release Flow").assertExists()
-        onNodeWithText("1 blocks").assertExists()
+        onNodeWithText("1 block").assertExists()
         onNodeWithText("0 blocks").assertExists()
     }
 

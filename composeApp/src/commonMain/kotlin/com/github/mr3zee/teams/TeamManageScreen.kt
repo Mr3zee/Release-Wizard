@@ -14,6 +14,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.ListItemCard
 import com.github.mr3zee.model.*
+import com.github.mr3zee.util.displayName
+import com.github.mr3zee.util.resolve
+import org.jetbrains.compose.resources.stringResource
+import releasewizard.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,13 +36,15 @@ fun TeamManageScreen(
     var inviteToCancel by remember { mutableStateOf<TeamInvite?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
+    val dismissLabel = stringResource(Res.string.common_dismiss)
+    val resolvedError = error?.resolve()
 
     // Show errors via snackbar with dismiss
     LaunchedEffect(error) {
-        val msg = error ?: return@LaunchedEffect
+        val msg = resolvedError ?: return@LaunchedEffect
         snackbarHostState.showSnackbar(
             message = msg,
-            actionLabel = "Dismiss",
+            actionLabel = dismissLabel,
             duration = SnackbarDuration.Long,
         )
         viewModel.dismissError()
@@ -47,11 +53,11 @@ fun TeamManageScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Manage Team") },
+                title = { Text(stringResource(Res.string.teams_manage_title)) },
                 navigationIcon = {
                     TextButton(onClick = onBack, modifier = Modifier.testTag("back_button")) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Navigate back")
-                        Text("Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.common_navigate_back))
+                        Text(stringResource(Res.string.common_back))
                     }
                 },
             )
@@ -78,12 +84,12 @@ fun TeamManageScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text("Members (${members.size})", style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(Res.string.teams_members_count, members.size), style = MaterialTheme.typography.titleMedium)
                         TextButton(
                             onClick = { showInviteDialog = true },
                             modifier = Modifier.testTag("invite_user_button"),
                         ) {
-                            Text("Invite User")
+                            Text(stringResource(Res.string.teams_invite_user))
                         }
                     }
                 }
@@ -106,7 +112,7 @@ fun TeamManageScreen(
                     }
                     item {
                         Text(
-                            "Pending Invites (${invites.size})",
+                            stringResource(Res.string.teams_pending_invites_count, invites.size),
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier
                                 .widthIn(max = 900.dp)
@@ -130,7 +136,7 @@ fun TeamManageScreen(
                     }
                     item {
                         Text(
-                            "Join Requests (${joinRequests.size})",
+                            stringResource(Res.string.teams_join_requests_count, joinRequests.size),
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier
                                 .widthIn(max = 900.dp)
@@ -164,18 +170,18 @@ fun TeamManageScreen(
     memberToRemove?.let { member ->
         AlertDialog(
             onDismissRequest = { memberToRemove = null },
-            title = { Text("Remove Member") },
-            text = { Text("Are you sure you want to remove ${member.username}?") },
+            title = { Text(stringResource(Res.string.teams_remove)) },
+            text = { Text(stringResource(Res.string.teams_remove_member_confirmation, member.username)) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.removeMember(member.userId.value)
                     memberToRemove = null
                 }) {
-                    Text("Remove", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(Res.string.teams_remove), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { memberToRemove = null }) { Text("Cancel") }
+                TextButton(onClick = { memberToRemove = null }) { Text(stringResource(Res.string.common_cancel)) }
             },
         )
     }
@@ -183,18 +189,18 @@ fun TeamManageScreen(
     inviteToCancel?.let { invite ->
         AlertDialog(
             onDismissRequest = { inviteToCancel = null },
-            title = { Text("Cancel Invite") },
-            text = { Text("Cancel invite for ${invite.invitedUsername}?") },
+            title = { Text(stringResource(Res.string.teams_revoke_invite)) },
+            text = { Text(stringResource(Res.string.teams_cancel_invite_confirmation, invite.invitedUsername)) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.cancelInvite(invite.id)
                     inviteToCancel = null
                 }) {
-                    Text("Cancel Invite", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(Res.string.teams_revoke_invite), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { inviteToCancel = null }) { Text("Keep") }
+                TextButton(onClick = { inviteToCancel = null }) { Text(stringResource(Res.string.teams_keep)) }
             },
         )
     }
@@ -219,19 +225,16 @@ private fun ManageMemberItem(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                when (member.role) {
-                    TeamRole.TEAM_LEAD -> "Lead"
-                    TeamRole.COLLABORATOR -> "Collaborator"
-                },
+                member.role.displayName(),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         TextButton(onClick = onToggleRole) {
-            Text(if (member.role == TeamRole.TEAM_LEAD) "Demote" else "Promote")
+            Text(if (member.role == TeamRole.TEAM_LEAD) stringResource(Res.string.teams_demote) else stringResource(Res.string.teams_promote))
         }
         TextButton(onClick = onRemove) {
-            Text("Remove", color = MaterialTheme.colorScheme.error)
+            Text(stringResource(Res.string.teams_remove), color = MaterialTheme.colorScheme.error)
         }
     }
 }
@@ -254,7 +257,7 @@ private fun InviteItem(
             modifier = Modifier.weight(1f),
         )
         TextButton(onClick = onCancel) {
-            Text("Cancel", color = MaterialTheme.colorScheme.error)
+            Text(stringResource(Res.string.teams_revoke_invite), color = MaterialTheme.colorScheme.error)
         }
     }
 }
@@ -278,9 +281,9 @@ private fun JoinRequestItem(
             modifier = Modifier.weight(1f),
         )
         Row {
-            TextButton(onClick = onApprove) { Text("Approve") }
+            TextButton(onClick = onApprove) { Text(stringResource(Res.string.common_approve)) }
             TextButton(onClick = onReject) {
-                Text("Reject", color = MaterialTheme.colorScheme.error)
+                Text(stringResource(Res.string.teams_reject), color = MaterialTheme.colorScheme.error)
             }
         }
     }
@@ -291,24 +294,24 @@ private fun InviteUserDialog(onDismiss: () -> Unit, onInvite: (String) -> Unit) 
     var username by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Invite User") },
+        title = { Text(stringResource(Res.string.teams_invite_dialog_title)) },
         text = {
             OutlinedTextField(
                 value = username,
                 onValueChange = { username = it },
-                label = { Text("Username") },
-                placeholder = { Text("Enter username") },
+                label = { Text(stringResource(Res.string.teams_invite_username_label)) },
+                placeholder = { Text(stringResource(Res.string.teams_invite_username_placeholder)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().testTag("invite_user_id_input"),
             )
         },
         confirmButton = {
             TextButton(onClick = { onInvite(username) }, enabled = username.isNotBlank()) {
-                Text("Invite")
+                Text(stringResource(Res.string.teams_invite))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.common_cancel)) }
         },
     )
 }

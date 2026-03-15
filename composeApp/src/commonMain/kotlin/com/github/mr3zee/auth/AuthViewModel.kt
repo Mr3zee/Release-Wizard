@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.mr3zee.api.AuthApiClient
 import com.github.mr3zee.api.UserInfo
+import com.github.mr3zee.util.UiMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -21,8 +22,8 @@ class AuthViewModel(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error
+    private val _error = MutableStateFlow<UiMessage?>(null)
+    val error: StateFlow<UiMessage?> = _error
 
     fun checkSession() {
         viewModelScope.launch {
@@ -46,7 +47,7 @@ class AuthViewModel(
                 val userInfo = apiClient.login(username, password)
                 _user.value = userInfo
             } catch (_: Exception) {
-                _error.value = "Invalid credentials"
+                _error.value = UiMessage.InvalidCredentials
             } finally {
                 _isLoading.value = false
             }
@@ -61,7 +62,7 @@ class AuthViewModel(
                 val userInfo = apiClient.register(username, password)
                 _user.value = userInfo
             } catch (_: Exception) {
-                _error.value = "Registration failed. Username may already be taken."
+                _error.value = UiMessage.RegistrationFailed
             } finally {
                 _isLoading.value = false
             }
@@ -81,7 +82,7 @@ class AuthViewModel(
 
     fun onSessionExpired() {
         _user.value = null
-        _error.value = "Session expired. Please log in again."
+        _error.value = UiMessage.SessionExpired
     }
 
     fun dismissError() {

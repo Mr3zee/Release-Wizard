@@ -5,8 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.github.mr3zee.api.CreateProjectRequest
 import com.github.mr3zee.api.PaginationInfo
 import com.github.mr3zee.api.ProjectApiClient
-import com.github.mr3zee.api.toUserMessage
+import com.github.mr3zee.api.toUiMessage
 import com.github.mr3zee.model.ProjectId
+import com.github.mr3zee.util.UiMessage
 import com.github.mr3zee.model.ProjectTemplate
 import com.github.mr3zee.model.TeamId
 import kotlinx.coroutines.FlowPreview
@@ -31,8 +32,8 @@ class ProjectListViewModel(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error
+    private val _error = MutableStateFlow<UiMessage?>(null)
+    val error: StateFlow<UiMessage?> = _error
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
@@ -49,8 +50,8 @@ class ProjectListViewModel(
     private val _isManualRefresh = MutableStateFlow(false)
     val isManualRefresh: StateFlow<Boolean> = _isManualRefresh
 
-    private val _refreshError = MutableStateFlow<String?>(null)
-    val refreshError: StateFlow<String?> = _refreshError
+    private val _refreshError = MutableStateFlow<UiMessage?>(null)
+    val refreshError: StateFlow<UiMessage?> = _refreshError
 
     private val pageSize = 20
 
@@ -107,7 +108,7 @@ class ProjectListViewModel(
                     _pagination.value = response.pagination
                 }
             } catch (e: Exception) {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             } finally {
                 _isLoadingMore.value = false
             }
@@ -129,9 +130,9 @@ class ProjectListViewModel(
             _refreshError.value = null
         } catch (e: Exception) {
             if (silent) {
-                _refreshError.value = e.toUserMessage()
+                _refreshError.value = e.toUiMessage()
             } else {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             }
         } finally {
             _isLoading.value = false
@@ -148,7 +149,7 @@ class ProjectListViewModel(
                 loadProjects()
                 onCreated?.invoke(project.id)
             } catch (e: Exception) {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             }
         }
     }
@@ -160,7 +161,7 @@ class ProjectListViewModel(
                 apiClient.deleteProject(id)
                 loadProjects()
             } catch (e: Exception) {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             }
         }
     }

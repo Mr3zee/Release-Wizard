@@ -2,7 +2,8 @@ package com.github.mr3zee
 
 import com.github.mr3zee.api.ApiRoutes
 import com.github.mr3zee.api.ErrorResponse
-import com.github.mr3zee.api.toUserMessage
+import com.github.mr3zee.api.toUiMessage
+import com.github.mr3zee.util.UiMessage
 import com.github.mr3zee.auth.AuthEvent
 import com.github.mr3zee.auth.AuthEventBus
 import io.ktor.client.*
@@ -26,7 +27,7 @@ import kotlin.time.Duration.Companion.milliseconds
 class ErrorUtilsTest {
 
     @Test
-    fun `toUserMessage extracts error from JSON ErrorResponse`() = runBlocking {
+    fun `toUiMessage extracts error from JSON ErrorResponse`() = runBlocking {
         val client = HttpClient(MockEngine { _ ->
             val errorJson = AppJson.encodeToString(
                 ErrorResponse.serializer(),
@@ -45,12 +46,13 @@ class ErrorUtilsTest {
         val exception = assertFailsWith<ClientRequestException> {
             client.get("http://localhost${ApiRoutes.Releases.byId("abc")}")
         }
-        val message = exception.toUserMessage()
-        assertEquals("Release not found: abc", message)
+        val result = exception.toUiMessage()
+        assertTrue(result is UiMessage.Raw)
+        assertEquals("Release not found: abc", result.text)
     }
 
     @Test
-    fun `toUserMessage falls back to status-based message for non-JSON body`() = runBlocking {
+    fun `toUiMessage falls back to ServerError for non-JSON body`() = runBlocking {
         val client = HttpClient(MockEngine { _ ->
             respond(
                 content = "plain text error",
@@ -64,8 +66,8 @@ class ErrorUtilsTest {
         val exception = assertFailsWith<ServerResponseException> {
             client.get("http://localhost/test")
         }
-        val message = exception.toUserMessage()
-        assertEquals("Server error", message)
+        val result = exception.toUiMessage()
+        assertTrue(result is UiMessage.ServerError)
     }
 
     @Test

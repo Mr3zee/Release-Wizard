@@ -27,6 +27,10 @@ import com.github.mr3zee.components.loadMoreItem
 import com.github.mr3zee.model.Connection
 import com.github.mr3zee.model.ConnectionId
 import com.github.mr3zee.model.ConnectionType
+import com.github.mr3zee.util.displayName
+import com.github.mr3zee.util.resolve
+import org.jetbrains.compose.resources.stringResource
+import releasewizard.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,12 +68,16 @@ fun ConnectionListScreen(
     )
     val spinning = isManualRefresh && isRefreshing
 
+    val retryLabel = stringResource(Res.string.common_retry)
+    val resolvedError = error?.resolve()
+    val resolvedTestSuccess = testSuccess?.resolve()
+
     // Show errors via snackbar
     LaunchedEffect(error) {
-        val msg = error ?: return@LaunchedEffect
+        val msg = resolvedError ?: return@LaunchedEffect
         snackbarHostState.showSnackbar(
             message = msg,
-            actionLabel = "Retry",
+            actionLabel = retryLabel,
             duration = SnackbarDuration.Long,
         ).let { result ->
             if (result == SnackbarResult.ActionPerformed) {
@@ -81,7 +89,7 @@ fun ConnectionListScreen(
 
     // Show test success via snackbar
     LaunchedEffect(testSuccess) {
-        val msg = testSuccess ?: return@LaunchedEffect
+        val msg = resolvedTestSuccess ?: return@LaunchedEffect
         snackbarHostState.showSnackbar(
             message = msg,
             duration = SnackbarDuration.Short,
@@ -93,20 +101,20 @@ fun ConnectionListScreen(
         topBar = {
             Box {
                 TopAppBar(
-                    title = { Text("Connections") },
+                    title = { Text(stringResource(Res.string.connections_title)) },
                     navigationIcon = {
                         TextButton(
                             onClick = onBack,
                             modifier = Modifier.testTag("back_button"),
                         ) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Navigate back")
-                            Text("Back")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.common_navigate_back))
+                            Text(stringResource(Res.string.common_back))
                         }
                     },
                     actions = {
                         TooltipBox(
                             positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                            tooltip = { PlainTooltip { Text("Refresh") } },
+                            tooltip = { PlainTooltip { Text(stringResource(Res.string.common_refresh)) } },
                             state = rememberTooltipState(),
                         ) {
                             IconButton(
@@ -115,7 +123,7 @@ fun ConnectionListScreen(
                             ) {
                                 Icon(
                                     Icons.Outlined.Refresh,
-                                    contentDescription = "Refresh",
+                                    contentDescription = stringResource(Res.string.common_refresh),
                                     modifier = Modifier
                                         .rotate(if (spinning) rotation else 0f)
                                         .testTag(if (spinning) "refresh_icon_spinning" else "refresh_icon_idle"),
@@ -141,7 +149,7 @@ fun ConnectionListScreen(
                 onClick = onCreateConnection,
                 modifier = Modifier.testTag("create_connection_fab"),
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Create connection")
+                Icon(Icons.Default.Add, contentDescription = stringResource(Res.string.connections_create))
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -153,9 +161,10 @@ fun ConnectionListScreen(
                 .padding(padding),
         ) {
             // Refresh error banner
-            if (refreshError != null) {
+            val resolvedRefreshError = refreshError?.resolve()
+            if (resolvedRefreshError != null) {
                 RefreshErrorBanner(
-                    message = refreshError ?: "",
+                    message = resolvedRefreshError,
                     onDismiss = { viewModel.dismissRefreshError() },
                 )
             }
@@ -163,7 +172,7 @@ fun ConnectionListScreen(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { viewModel.setSearchQuery(it) },
-                placeholder = { Text("Search connections...") },
+                placeholder = { Text(stringResource(Res.string.connections_search_placeholder)) },
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -179,7 +188,7 @@ fun ConnectionListScreen(
                 FilterChip(
                     selected = typeFilter == null,
                     onClick = { viewModel.setTypeFilter(null) },
-                    label = { Text("All") },
+                    label = { Text(stringResource(Res.string.common_all)) },
                 )
                 for (type in ConnectionType.entries) {
                     FilterChip(
@@ -187,7 +196,7 @@ fun ConnectionListScreen(
                         onClick = {
                             viewModel.setTypeFilter(if (typeFilter == type) null else type)
                         },
-                        label = { Text(type.name.replace("_", " ")) },
+                        label = { Text(type.displayName()) },
                         modifier = Modifier.testTag("filter_${type.name}"),
                     )
                 }
@@ -209,7 +218,7 @@ fun ConnectionListScreen(
                     if (searchQuery.isNotBlank() || typeFilter != null) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = "No results match your search.",
+                                text = stringResource(Res.string.common_no_search_results),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -218,12 +227,12 @@ fun ConnectionListScreen(
                                 viewModel.setSearchQuery("")
                                 viewModel.setTypeFilter(null)
                             }) {
-                                Text("Clear search")
+                                Text(stringResource(Res.string.common_clear_search))
                             }
                         }
                     } else {
                         Text(
-                            text = "No connections yet. Add one to get started.",
+                            text = stringResource(Res.string.connections_empty_state),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -255,19 +264,19 @@ fun ConnectionListScreen(
     connectionToDelete?.let { connection ->
         AlertDialog(
             onDismissRequest = { connectionToDelete = null },
-            title = { Text("Delete Connection") },
-            text = { Text("Are you sure you want to delete \"${connection.name}\"?") },
+            title = { Text(stringResource(Res.string.connections_delete_title)) },
+            text = { Text(stringResource(Res.string.connections_delete_confirmation, connection.name)) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteConnection(connection.id)
                     connectionToDelete = null
                 }) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(Res.string.common_delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { connectionToDelete = null }) {
-                    Text("Cancel")
+                    Text(stringResource(Res.string.common_cancel))
                 }
             },
         )
@@ -296,13 +305,13 @@ private fun ConnectionListItem(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = connection.type.name,
+                text = connection.type.displayName(),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (webhookUrl != null) {
                 Text(
-                    text = "Webhook: $webhookUrl",
+                    text = stringResource(Res.string.connections_webhook_display, webhookUrl),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -313,10 +322,10 @@ private fun ConnectionListItem(
         }
         Row {
             TextButton(onClick = onTest) {
-                Text("Test")
+                Text(stringResource(Res.string.connections_test))
             }
             TextButton(onClick = onDelete) {
-                Text("Delete", color = MaterialTheme.colorScheme.error)
+                Text(stringResource(Res.string.common_delete), color = MaterialTheme.colorScheme.error)
             }
         }
     }

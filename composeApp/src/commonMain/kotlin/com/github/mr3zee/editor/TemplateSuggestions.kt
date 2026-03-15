@@ -20,6 +20,7 @@ data class InterpolationContext(
 fun buildSuggestions(
     parameters: List<Parameter>,
     predecessors: List<Block>,
+    defaultValueFormat: (String) -> String = { "Default: $it" },
 ): List<TemplateSuggestion> {
     val suggestions = mutableListOf<TemplateSuggestion>()
 
@@ -31,7 +32,7 @@ fun buildSuggestions(
                 insertText = "\${param.${param.key}}",
                 description = when {
                     param.description.isNotEmpty() -> param.description
-                    param.value.isNotEmpty() -> "Default: ${param.value}"
+                    param.value.isNotEmpty() -> defaultValueFormat(param.value)
                     else -> null
                 },
                 category = SuggestionCategory.PARAMETER,

@@ -1,0 +1,304 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ==================== Common ==================== -->
+    <string name="common_back">Back</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="common_close">Close</string>
+    <string name="common_create">Create</string>
+    <string name="common_delete">Delete</string>
+    <string name="common_save">Save</string>
+    <string name="common_saving">Saving...</string>
+    <string name="common_retry">Retry</string>
+    <string name="common_refresh">Refresh</string>
+    <string name="common_dismiss">Dismiss</string>
+    <string name="common_approve">Approve</string>
+    <string name="common_ok">OK</string>
+    <string name="common_discard">Discard</string>
+    <string name="common_all">All</string>
+    <string name="common_error">Error</string>
+    <string name="common_unknown_error">Unknown error</string>
+    <string name="common_no_search_results">No results match your search.</string>
+    <string name="common_clear_search">Clear search</string>
+    <string name="common_navigate_back">Navigate back</string>
+    <string name="common_more_options">More options</string>
+    <string name="common_copy_to_clipboard">Copy to Clipboard</string>
+    <string name="common_expand_all">Expand All</string>
+    <string name="common_collapse_all">Collapse All</string>
+    <string name="common_unsaved_title">Unsaved Changes</string>
+    <string name="common_unsaved_message">You have unsaved changes. Discard them?</string>
+
+    <!-- ==================== Error Messages ==================== -->
+    <string name="error_invalid_credentials">Invalid credentials</string>
+    <string name="error_registration_failed">Registration failed. Username may already be taken.</string>
+    <string name="error_session_expired">Session expired. Please log in again.</string>
+    <string name="error_not_authenticated">Please log in to continue.</string>
+    <string name="error_access_denied">Access denied</string>
+    <string name="error_not_found">Not found</string>
+    <string name="error_invalid_request">Invalid request</string>
+    <string name="error_server">Server error. Please try again.</string>
+    <string name="error_cannot_connect">Cannot connect to server. Check your connection.</string>
+
+    <!-- ==================== Auth ==================== -->
+    <string name="auth_app_title">Release Wizard</string>
+    <string name="auth_create_account">Create an account</string>
+    <string name="auth_sign_in_continue">Sign in to continue</string>
+    <string name="auth_username">Username</string>
+    <string name="auth_password">Password</string>
+    <string name="auth_create_account_button">Create Account</string>
+    <string name="auth_sign_in_button">Sign In</string>
+    <string name="auth_toggle_to_signin">Already have an account? Sign in</string>
+    <string name="auth_toggle_to_register">Don&apos;t have an account? Register</string>
+    <string name="auth_sign_out">Sign Out</string>
+
+    <!-- ==================== Projects ==================== -->
+    <string name="projects_title_with_team">Projects - %1$s</string>
+    <string name="projects_switch_team">Switch team</string>
+    <string name="projects_teams">Teams</string>
+    <string name="projects_releases">Releases</string>
+    <string name="projects_connections">Connections</string>
+    <string name="projects_theme_auto">Theme: Auto</string>
+    <string name="projects_theme_light">Theme: Light</string>
+    <string name="projects_theme_dark">Theme: Dark</string>
+    <string name="projects_search_placeholder">Search projects...</string>
+    <string name="projects_empty_state">No projects yet. Create one to get started.</string>
+    <string name="projects_create_project">Create project</string>
+    <string name="projects_new_project">New Project</string>
+    <string name="projects_project_name">Project name</string>
+    <string name="projects_delete_title">Delete Project</string>
+    <string name="projects_delete_confirmation">Are you sure you want to delete \"%1$s\"?</string>
+    <string name="projects_switch_team_title">Switch Team</string>
+    <string name="projects_no_team">No Team</string>
+
+    <!-- ==================== Connections ==================== -->
+    <string name="connections_title">Connections</string>
+    <string name="connections_search_placeholder">Search connections...</string>
+    <string name="connections_empty_state">No connections yet. Add one to get started.</string>
+    <string name="connections_create">Create connection</string>
+    <string name="connections_delete_title">Delete Connection</string>
+    <string name="connections_delete_confirmation">Are you sure you want to delete \"%1$s\"?</string>
+    <string name="connections_test">Test</string>
+    <string name="connections_webhook_display">Webhook: %1$s</string>
+    <string name="connections_edit_title">Edit Connection</string>
+    <string name="connections_new_title">New Connection</string>
+    <string name="connections_name_label">Connection Name</string>
+    <string name="connections_type_label">Type</string>
+    <string name="connections_slack_webhook_url">Webhook URL</string>
+    <string name="connections_tc_server_url">Server URL</string>
+    <string name="connections_tc_token">Token</string>
+    <string name="connections_tc_webhook_secret">Webhook Secret (optional)</string>
+    <string name="connections_github_pat">Personal Access Token</string>
+    <string name="connections_github_owner">Owner</string>
+    <string name="connections_github_repo">Repository</string>
+    <string name="connections_github_webhook_secret">Webhook Secret (optional)</string>
+    <string name="connections_maven_username">Username</string>
+    <string name="connections_maven_password">Password</string>
+    <string name="connections_maven_base_url">Base URL</string>
+    <string name="connections_test_succeeded">Connection test succeeded: %1$s</string>
+    <string name="connections_test_failed">Test failed: %1$s</string>
+
+    <!-- ==================== Editor: Toolbar ==================== -->
+    <string name="editor_toolbar_blocks">Blocks</string>
+    <string name="editor_toolbar_container">Container</string>
+    <string name="editor_toolbar_actions">Actions</string>
+    <string name="editor_toolbar_undo">Undo</string>
+    <string name="editor_toolbar_redo">Redo</string>
+    <string name="editor_toolbar_copy">Copy</string>
+    <string name="editor_toolbar_paste">Paste</string>
+    <string name="editor_toolbar_delete">Delete</string>
+
+    <!-- ==================== Editor: Block Type Display Names ==================== -->
+    <string name="block_type_teamcity_build">TeamCity Build</string>
+    <string name="block_type_github_action">GitHub Action</string>
+    <string name="block_type_github_publication">GitHub Publication</string>
+    <string name="block_type_maven_central">Maven Central</string>
+    <string name="block_type_slack_message">Slack Message</string>
+
+    <!-- ==================== Editor: Block Type Labels (canvas) ==================== -->
+    <string name="block_label_teamcity_build">teamcity build</string>
+    <string name="block_label_github_action">github action</string>
+    <string name="block_label_github_publication">github publication</string>
+    <string name="block_label_maven_central">maven central</string>
+    <string name="block_label_slack_message">slack message</string>
+    <string name="block_label_container">container</string>
+
+    <!-- ==================== Editor: Properties Panel ==================== -->
+    <string name="editor_prop_title">Properties</string>
+    <string name="editor_prop_empty_hint">Select a block to edit its properties</string>
+    <string name="editor_prop_name">Name</string>
+    <string name="editor_prop_type">Type</string>
+    <string name="editor_prop_container_type">Container block</string>
+    <string name="editor_prop_timeout">Timeout (seconds)</string>
+    <string name="editor_prop_parameters">Parameters</string>
+    <string name="editor_prop_add_parameter">+ Add Parameter</string>
+    <string name="editor_prop_key">Key</string>
+    <string name="editor_prop_value">Value</string>
+    <string name="editor_prop_remove">\u00D7</string>
+
+    <!-- ==================== Editor: Gates ==================== -->
+    <string name="editor_gate_section_header">Approval Gates</string>
+    <string name="editor_gate_section_header_count">Approval Gates (%1$d)</string>
+    <string name="editor_gate_pre_label">Pre-gate</string>
+    <string name="editor_gate_post_label">Post-gate</string>
+    <string name="editor_gate_message">Message</string>
+    <string name="editor_gate_required_approvals">Required approvals</string>
+    <string name="editor_gate_approval_count_error">Must be 1 or more</string>
+
+    <!-- ==================== Editor: Template Picker ==================== -->
+    <string name="editor_template_picker_title">Insert Template</string>
+    <string name="editor_template_parameters">Parameters</string>
+    <string name="editor_template_block_outputs">Block Outputs</string>
+    <string name="editor_template_empty">No parameters or predecessor outputs available</string>
+    <string name="editor_template_default_value">Default: %1$s</string>
+    <string name="editor_template_tooltip">Insert template (or type \${)</string>
+    <string name="editor_template_button">{}</string>
+
+    <!-- ==================== Editor: Lock / Session ==================== -->
+    <string name="editor_lock_unknown_user">another user</string>
+    <string name="editor_loading">Loading...</string>
+    <string name="editor_read_only">(read-only)</string>
+    <string name="editor_dirty_indicator">*</string>
+    <string name="editor_lock_self_session">You are editing this project in another session</string>
+    <string name="editor_lock_by_other">This project is being edited by %1$s</string>
+    <string name="editor_lock_acquire_failed">Could not acquire editing lock</string>
+    <string name="editor_lock_lost_banner">Your editing session was interrupted. Changes preserved locally.</string>
+    <string name="editor_lock_reacquire_failed">Could not re-acquire lock: %1$s</string>
+
+    <!-- ==================== Editor: Dialogs ==================== -->
+    <string name="editor_dialog_lock_expired_title">Editing Lock Expired</string>
+    <string name="editor_dialog_lock_expired_body">You have unsaved changes that cannot be saved because your editing lock expired.</string>
+    <string name="editor_dialog_lock_expired_discard">Discard changes and leave</string>
+    <string name="editor_dialog_reacquire_save">Re-acquire and Save</string>
+    <string name="editor_dialog_force_unlock_title">Force Unlock</string>
+    <string name="editor_dialog_force_unlock_body">Force unlock will end %1$s&apos;s editing session. They may lose unsaved changes. Continue?</string>
+    <string name="editor_dialog_force_unlock_confirm">Force Unlock</string>
+
+    <!-- ==================== Editor: Validation ==================== -->
+    <string name="editor_validation_title">Validation Issues</string>
+    <string name="editor_validation_cycle">Cycle detected involving %1$d blocks</string>
+    <string name="editor_validation_duplicate_id">Duplicate block ID: %1$s</string>
+    <string name="editor_validation_invalid_edge">Edge references missing block: %1$s</string>
+    <string name="editor_validation_self_loop">Self-loop on block: %1$s</string>
+
+    <!-- ==================== Releases ==================== -->
+    <string name="releases_title">Releases</string>
+    <string name="releases_search_placeholder">Search releases...</string>
+    <string name="releases_filter_all_projects">All Projects</string>
+    <string name="releases_empty_state">No releases yet. Create one to get started.</string>
+    <string name="releases_start_release">Start release</string>
+    <string name="releases_updated_just_now">Updated just now</string>
+    <string name="releases_release_title">Release %1$s</string>
+    <string name="releases_project_label">Project: %1$s</string>
+    <string name="releases_started_label">Started: %1$s</string>
+    <string name="releases_archive">Archive</string>
+    <string name="releases_archive_title">Archive Release</string>
+    <string name="releases_archive_confirmation">Are you sure you want to archive this release?</string>
+    <string name="releases_delete_title">Delete Release</string>
+    <string name="releases_delete_confirmation">This will permanently delete the release and all its data. This cannot be undone.</string>
+    <string name="releases_detail_title">Release</string>
+    <string name="releases_reconnecting">Reconnecting (attempt %1$d)...</string>
+    <string name="releases_disconnected">Disconnected</string>
+    <string name="releases_cancel_title">Cancel Release</string>
+    <string name="releases_cancel_body">Cancel this release? In-progress blocks will be interrupted.</string>
+    <string name="releases_cancel_confirm">Cancel Release</string>
+    <string name="releases_keep_running">Keep Running</string>
+    <string name="releases_rerun">Re-run</string>
+    <string name="releases_approve_title">Approve: %1$s</string>
+    <string name="releases_approve_fallback_name">Step</string>
+    <string name="releases_approve_default_message">Approve this step? The pipeline will continue.</string>
+    <string name="releases_block_status">Status: %1$s</string>
+    <string name="releases_block_outputs">Outputs:</string>
+    <string name="releases_block_output_entry">%1$s: %2$s</string>
+    <string name="releases_approval_progress">%1$d of %2$d approvals</string>
+    <string name="releases_error_failed_at">Failed at: %1$s</string>
+    <string name="releases_artifacts">Artifacts</string>
+    <string name="releases_expand_node">Expand %1$s</string>
+    <string name="releases_collapse_node">Collapse %1$s</string>
+    <string name="releases_folder">Folder</string>
+    <string name="releases_file">File</string>
+    <string name="releases_expand_error">Expand error details</string>
+    <string name="releases_collapse_error">Collapse error details</string>
+
+    <!-- ==================== Block Status Display Names ==================== -->
+    <string name="block_status_waiting">Waiting</string>
+    <string name="block_status_running">Running</string>
+    <string name="block_status_succeeded">Succeeded</string>
+    <string name="block_status_failed">Failed</string>
+    <string name="block_status_waiting_for_input">Waiting for Input</string>
+
+    <!-- ==================== Connection Type Display Names ==================== -->
+    <string name="connection_type_github">GitHub</string>
+    <string name="connection_type_slack">Slack</string>
+    <string name="connection_type_teamcity">TeamCity</string>
+    <string name="connection_type_maven_central">Maven Central</string>
+
+    <!-- ==================== Releases: Status Display Names ==================== -->
+    <string name="releases_status_pending">Pending</string>
+    <string name="releases_status_running">Running</string>
+    <string name="releases_status_succeeded">Succeeded</string>
+    <string name="releases_status_failed">Failed</string>
+    <string name="releases_status_cancelled">Cancelled</string>
+    <string name="releases_status_archived">Archived</string>
+
+    <!-- ==================== Releases: Gate Phases ==================== -->
+    <string name="releases_gate_phase_pre">Waiting for approval before execution</string>
+    <string name="releases_gate_phase_post">Execution complete — waiting for approval</string>
+    <string name="releases_gate_phase_unknown">Waiting for approval</string>
+
+    <!-- ==================== Start Release Dialog ==================== -->
+    <string name="start_release_title">Start Release</string>
+    <string name="start_release_project_label">Project</string>
+    <string name="start_release_start">Start</string>
+
+    <!-- ==================== Teams ==================== -->
+    <string name="teams_title">Teams</string>
+    <string name="teams_my_invites">My Invites</string>
+    <string name="teams_search_placeholder">Search teams...</string>
+    <string name="teams_empty_state">No teams yet. Create one to get started.</string>
+    <string name="teams_new_team">New Team</string>
+    <string name="teams_team_name">Team name</string>
+    <string name="teams_description_optional">Description (optional)</string>
+    <string name="teams_member_badge">Member</string>
+    <string name="teams_request_to_join">Request to Join</string>
+    <string name="teams_join_request_submitted">Join request submitted</string>
+    <string name="teams_team_fallback">Team</string>
+    <string name="teams_leave">Leave</string>
+    <string name="teams_audit_log">Audit Log</string>
+    <string name="teams_manage">Manage</string>
+    <string name="teams_members_section">Members</string>
+    <string name="teams_leave_title">Leave Team</string>
+    <string name="teams_leave_confirmation">Are you sure you want to leave \"%1$s\"?</string>
+    <string name="teams_leave_fallback">this team</string>
+    <string name="teams_role_lead">Lead</string>
+    <string name="teams_role_collaborator">Collaborator</string>
+
+    <!-- ==================== Teams: Manage ==================== -->
+    <string name="teams_manage_title">Manage Team</string>
+    <string name="teams_members_count">Members (%1$d)</string>
+    <string name="teams_invite_user">Invite User</string>
+    <string name="teams_pending_invites_count">Pending Invites (%1$d)</string>
+    <string name="teams_join_requests_count">Join Requests (%1$d)</string>
+    <string name="teams_remove_member_confirmation">Are you sure you want to remove %1$s?</string>
+    <string name="teams_remove">Remove</string>
+    <string name="teams_cancel_invite_confirmation">Revoke invite for %1$s?</string>
+    <string name="teams_revoke_invite">Revoke</string>
+    <string name="teams_keep">Keep</string>
+    <string name="teams_promote">Promote</string>
+    <string name="teams_demote">Demote</string>
+    <string name="teams_reject">Reject</string>
+    <string name="teams_invite_dialog_title">Invite User</string>
+    <string name="teams_invite_username_label">Username</string>
+    <string name="teams_invite_username_placeholder">Enter username</string>
+    <string name="teams_invite">Invite</string>
+
+    <!-- ==================== Teams: My Invites ==================== -->
+    <string name="teams_no_pending_invites">No pending invites.</string>
+    <string name="teams_invited_by">Invited by %1$s</string>
+    <string name="teams_accept">Accept</string>
+    <string name="teams_decline">Decline</string>
+
+    <!-- ==================== Teams: Audit Log ==================== -->
+    <string name="teams_audit_log_title">Audit Log</string>
+    <string name="teams_no_audit_events">No audit events yet.</string>
+    <string name="teams_load_more">Load more</string>
+    <string name="teams_audit_entry_by">by %1$s \u2022 %2$s</string>
+</resources>

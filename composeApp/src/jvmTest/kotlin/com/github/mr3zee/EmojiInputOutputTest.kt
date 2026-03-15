@@ -83,7 +83,7 @@ class EmojiInputOutputTest {
 
         // Select Slack type
         onNodeWithTag("connection_type_selector").performClick()
-        onNodeWithText("SLACK").performClick()
+        onNodeWithText("Slack").performClick()
 
         onNodeWithTag("connection_name_field").performTextInput("\uD83D\uDCE2 Alerts")
         onNodeWithTag("slack_webhook_url").performTextInput("https://hooks.slack.com/test")

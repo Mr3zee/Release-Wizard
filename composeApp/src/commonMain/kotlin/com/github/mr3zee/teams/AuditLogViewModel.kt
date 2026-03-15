@@ -3,8 +3,9 @@ package com.github.mr3zee.teams
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.mr3zee.api.TeamApiClient
-import com.github.mr3zee.api.toUserMessage
+import com.github.mr3zee.api.toUiMessage
 import com.github.mr3zee.model.AuditEvent
+import com.github.mr3zee.util.UiMessage
 import com.github.mr3zee.model.TeamId
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,8 +22,8 @@ class AuditLogViewModel(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error
+    private val _error = MutableStateFlow<UiMessage?>(null)
+    val error: StateFlow<UiMessage?> = _error
 
     private val _hasMore = MutableStateFlow(true)
     val hasMore: StateFlow<Boolean> = _hasMore
@@ -44,7 +45,7 @@ class AuditLogViewModel(
                 currentOffset = response.events.size
                 _hasMore.value = response.events.size >= pageSize
             } catch (e: Exception) {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             } finally {
                 _isLoading.value = false
             }
@@ -59,7 +60,7 @@ class AuditLogViewModel(
                 currentOffset += response.events.size
                 _hasMore.value = response.events.size >= pageSize
             } catch (e: Exception) {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             }
         }
     }

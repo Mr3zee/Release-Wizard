@@ -1,6 +1,7 @@
 package com.github.mr3zee.api
 
 import com.github.mr3zee.AppJson
+import com.github.mr3zee.util.UiMessage
 import io.ktor.client.plugins.*
 import io.ktor.client.statement.*
 
@@ -32,30 +33,37 @@ suspend fun ClientRequestException.parseError(): ErrorResponse? {
 }
 
 /**
- * Extract a user-friendly error message from an exception.
+ * Convert an exception to a [UiMessage] for localized error display.
  * For server errors (ClientRequestException), tries to parse ErrorResponse first.
- * Falls back to category-based messages.
+ * If a server-provided error message exists, wraps it in [UiMessage.Raw].
+ * Otherwise maps HTTP status to a typed [UiMessage] variant.
  */
-suspend fun Exception.toUserMessage(): String {
+suspend fun Exception.toUiMessage(): UiMessage {
     return when (this) {
         is ClientRequestException -> {
             val errorResponse = parseError()
-            errorResponse?.error ?: when (response.status.value) {
-                401 -> "Not authenticated"
-                403 -> "Access denied"
-                404 -> "Not found"
-                in 400..499 -> "Invalid request"
-                in 500..599 -> "Server error"
-                else -> message
+            if (errorResponse != null && errorResponse.error.isNotBlank()) {
+                UiMessage.Raw(errorResponse.error)
+            } else if (errorResponse != null) {
+                UiMessage.ServerError
+            } else {
+                when (response.status.value) {
+                    401 -> UiMessage.NotAuthenticated
+                    403 -> UiMessage.AccessDenied
+                    404 -> UiMessage.NotFound
+                    in 400..499 -> UiMessage.InvalidRequest
+                    in 500..599 -> UiMessage.ServerError
+                    else -> UiMessage.UnknownError
+                }
             }
         }
-        is ServerResponseException -> "Server error"
+        is ServerResponseException -> UiMessage.ServerError
         else -> {
             val msg = message ?: ""
             if (msg.contains("connect", ignoreCase = true) || msg.contains("refused", ignoreCase = true)) {
-                "Cannot connect to server"
+                UiMessage.CannotConnect
             } else {
-                message ?: "Unknown error"
+                UiMessage.UnknownError
             }
         }
     }

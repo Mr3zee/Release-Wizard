@@ -13,6 +13,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.model.TeamInvite
+import com.github.mr3zee.util.resolve
+import org.jetbrains.compose.resources.stringResource
+import releasewizard.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,13 +29,15 @@ fun MyInvitesScreen(
     val error by viewModel.error.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
+    val retryLabel = stringResource(Res.string.common_retry)
+    val resolvedError = error?.resolve()
 
     // Show errors via snackbar with dismiss
     LaunchedEffect(error) {
-        val msg = error ?: return@LaunchedEffect
+        val msg = resolvedError ?: return@LaunchedEffect
         snackbarHostState.showSnackbar(
             message = msg,
-            actionLabel = "Retry",
+            actionLabel = retryLabel,
             duration = SnackbarDuration.Long,
         ).let { result ->
             if (result == SnackbarResult.ActionPerformed) {
@@ -45,11 +50,11 @@ fun MyInvitesScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("My Invites") },
+                title = { Text(stringResource(Res.string.teams_my_invites)) },
                 navigationIcon = {
                     TextButton(onClick = onBack, modifier = Modifier.testTag("back_button")) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Navigate back")
-                        Text("Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.common_navigate_back))
+                        Text(stringResource(Res.string.common_back))
                     }
                 },
             )
@@ -64,7 +69,7 @@ fun MyInvitesScreen(
         } else if (invites.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Text(
-                    "No pending invites.",
+                    stringResource(Res.string.teams_no_pending_invites),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -110,14 +115,14 @@ private fun InviteCard(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                "Invited by ${invite.invitedByUsername}",
+                stringResource(Res.string.teams_invited_by, invite.invitedByUsername),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(modifier = Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onAccept) { Text("Accept") }
-                TextButton(onClick = onDecline) { Text("Decline") }
+                Button(onClick = onAccept) { Text(stringResource(Res.string.teams_accept)) }
+                TextButton(onClick = onDecline) { Text(stringResource(Res.string.teams_decline)) }
             }
         }
     }

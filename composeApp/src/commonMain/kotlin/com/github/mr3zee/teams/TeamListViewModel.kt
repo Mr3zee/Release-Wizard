@@ -5,8 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.github.mr3zee.api.CreateTeamRequest
 import com.github.mr3zee.api.TeamApiClient
 import com.github.mr3zee.api.TeamResponse
-import com.github.mr3zee.api.toUserMessage
+import com.github.mr3zee.api.toUiMessage
 import com.github.mr3zee.model.TeamId
+import com.github.mr3zee.util.UiMessage
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,11 +28,11 @@ class TeamListViewModel(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error
+    private val _error = MutableStateFlow<UiMessage?>(null)
+    val error: StateFlow<UiMessage?> = _error
 
-    private val _message = MutableStateFlow<String?>(null)
-    val message: StateFlow<String?> = _message
+    private val _message = MutableStateFlow<UiMessage?>(null)
+    val message: StateFlow<UiMessage?> = _message
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
@@ -42,8 +43,8 @@ class TeamListViewModel(
     private val _isManualRefresh = MutableStateFlow(false)
     val isManualRefresh: StateFlow<Boolean> = _isManualRefresh
 
-    private val _refreshError = MutableStateFlow<String?>(null)
-    val refreshError: StateFlow<String?> = _refreshError
+    private val _refreshError = MutableStateFlow<UiMessage?>(null)
+    val refreshError: StateFlow<UiMessage?> = _refreshError
 
     init {
         viewModelScope.launch {
@@ -88,9 +89,9 @@ class TeamListViewModel(
             _refreshError.value = null
         } catch (e: Exception) {
             if (silent) {
-                _refreshError.value = e.toUserMessage()
+                _refreshError.value = e.toUiMessage()
             } else {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             }
         } finally {
             _isLoading.value = false
@@ -106,7 +107,7 @@ class TeamListViewModel(
                 loadTeams()
                 onCreated?.invoke(response.team.id)
             } catch (e: Exception) {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             }
         }
     }
@@ -121,9 +122,9 @@ class TeamListViewModel(
             _message.value = null
             try {
                 apiClient.submitJoinRequest(teamId)
-                _message.value = "Join request submitted"
+                _message.value = UiMessage.JoinRequestSubmitted
             } catch (e: Exception) {
-                _error.value = e.toUserMessage()
+                _error.value = e.toUiMessage()
             }
         }
     }

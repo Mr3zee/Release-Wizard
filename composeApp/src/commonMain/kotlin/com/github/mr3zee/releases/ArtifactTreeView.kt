@@ -19,6 +19,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.serialization.json.Json
+import org.jetbrains.compose.resources.stringResource
+import releasewizard.composeapp.generated.resources.*
 
 /**
  * Renders a collapsible file tree from a JSON array of artifact paths.
@@ -51,7 +53,7 @@ fun ArtifactTreeView(artifactsJson: String) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Artifacts",
+                text = stringResource(Res.string.releases_artifacts),
                 style = MaterialTheme.typography.labelMedium,
             )
             Row {
@@ -59,13 +61,13 @@ fun ArtifactTreeView(artifactsJson: String) {
                     onClick = { expandAll(tree, "", expandedState) },
                     modifier = Modifier.testTag("artifact_expand_all_button"),
                 ) {
-                    Text("Expand All", style = MaterialTheme.typography.labelSmall)
+                    Text(stringResource(Res.string.common_expand_all), style = MaterialTheme.typography.labelSmall)
                 }
                 TextButton(
                     onClick = { expandedState.clear() },
                     modifier = Modifier.testTag("artifact_collapse_all_button"),
                 ) {
-                    Text("Collapse All", style = MaterialTheme.typography.labelSmall)
+                    Text(stringResource(Res.string.common_collapse_all), style = MaterialTheme.typography.labelSmall)
                 }
             }
         }
@@ -102,13 +104,13 @@ private fun ArtifactNodeRow(
         if (node.isDirectory) {
             Icon(
                 imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = if (isExpanded) "Collapse ${node.name}" else "Expand ${node.name}",
+                contentDescription = if (isExpanded) stringResource(Res.string.releases_collapse_node, node.name) else stringResource(Res.string.releases_expand_node, node.name),
                 modifier = Modifier.size(16.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Icon(
                 imageVector = Icons.Default.Folder,
-                contentDescription = "Folder",
+                contentDescription = stringResource(Res.string.releases_folder),
                 modifier = Modifier.size(16.dp).padding(start = 2.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -123,7 +125,7 @@ private fun ArtifactNodeRow(
             Spacer(modifier = Modifier.width(16.dp))
             Icon(
                 imageVector = Icons.Default.Description,
-                contentDescription = "File",
+                contentDescription = stringResource(Res.string.releases_file),
                 modifier = Modifier.size(16.dp).padding(start = 2.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )

@@ -15,6 +15,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.util.copyToClipboard
 import kotlin.time.Instant
+import org.jetbrains.compose.resources.stringResource
+import releasewizard.composeapp.generated.resources.*
 
 @Composable
 fun ErrorDetailSection(
@@ -39,13 +41,13 @@ fun ErrorDetailSection(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    text = "Error",
+                    text = stringResource(Res.string.common_error),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                 )
                 Icon(
                     imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (expanded) "Collapse error details" else "Expand error details",
+                    contentDescription = if (expanded) stringResource(Res.string.releases_collapse_error) else stringResource(Res.string.releases_expand_error),
                     tint = MaterialTheme.colorScheme.onErrorContainer,
                 )
             }
@@ -54,7 +56,7 @@ fun ErrorDetailSection(
                 Column(modifier = Modifier.padding(top = 8.dp)) {
                     if (finishedAt != null) {
                         Text(
-                            text = "Failed at: $finishedAt",
+                            text = stringResource(Res.string.releases_error_failed_at, finishedAt.toString()),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onErrorContainer,
                             modifier = Modifier.testTag("error_timestamp"),
@@ -74,7 +76,7 @@ fun ErrorDetailSection(
                         onClick = { copyToClipboard(error) },
                         modifier = Modifier.testTag("copy_error_button"),
                     ) {
-                        Text("Copy to Clipboard")
+                        Text(stringResource(Res.string.common_copy_to_clipboard))
                     }
                 }
             }
