@@ -20,7 +20,7 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientCon
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.yield
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -127,8 +127,7 @@ class WebSocketLoadTest {
             // Wait a bit for all WS connections to be established, then approve
             // Retry approval until the engine reaches WAITING_FOR_INPUT
             yield()
-            // todo claude: withTimeoutOrNull
-            withTimeout(10_000.milliseconds) {
+            withTimeoutOrNull(10_000.milliseconds) {
                 while (true) {
                     val resp = httpClient.post(ApiRoutes.Releases.approveBlock(releaseId.value, "approval")) {
                         contentType(ContentType.Application.Json)
@@ -137,7 +136,7 @@ class WebSocketLoadTest {
                     if (resp.status == HttpStatusCode.OK) break
                     yield()
                 }
-            }
+            } ?: error("Timed out waiting for block approval")
 
             val allEvents = eventCollectors.awaitAll()
 
@@ -311,8 +310,7 @@ class WebSocketLoadTest {
 
             // Approve after WS clients are connected
             yield()
-            // todo claude: withTimeoutOrNull
-            withTimeout(10_000.milliseconds) {
+            withTimeoutOrNull(10_000.milliseconds) {
                 while (true) {
                     val resp = httpClient.post(ApiRoutes.Releases.approveBlock(releaseId.value, "approval")) {
                         contentType(ContentType.Application.Json)
@@ -321,7 +319,7 @@ class WebSocketLoadTest {
                     if (resp.status == HttpStatusCode.OK) break
                     yield()
                 }
-            }
+            } ?: error("Timed out waiting for block approval")
 
             val closeReasons = closeCollectors.awaitAll()
 
@@ -392,8 +390,7 @@ class WebSocketLoadTest {
 
             // Approve the gate after WS clients connect
             yield()
-            // todo claude: withTimeoutOrNull
-            withTimeout(10_000.milliseconds) {
+            withTimeoutOrNull(10_000.milliseconds) {
                 while (true) {
                     val resp = httpClient.post(ApiRoutes.Releases.approveBlock(releaseId.value, "gate")) {
                         contentType(ContentType.Application.Json)
@@ -402,7 +399,7 @@ class WebSocketLoadTest {
                     if (resp.status == HttpStatusCode.OK) break
                     yield()
                 }
-            }
+            } ?: error("Timed out waiting for block approval")
 
             val allEvents = eventCollectors.awaitAll()
 

@@ -151,13 +151,8 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
         projectTemplateId: ProjectId?,
         releaseIds: Set<String>?,
     ): Long = dbQuery {
-        // todo claude: duplicate 5 lines
         val conditions = buildReleaseConditions(includeArchived, teamId, teamIds, search, status, projectTemplateId, releaseIds)
-        val query = ReleaseTable.selectAll()
-        if (conditions.isNotEmpty()) {
-            query.where { conditions.reduce { acc, op -> acc and op } }
-        }
-        query.count()
+        countWithConditions(conditions)
     }
 
     override suspend fun findAllWithCount(
@@ -171,16 +166,17 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
         projectTemplateId: ProjectId?,
         releaseIds: Set<String>?,
     ): Pair<List<Release>, Long> = dbQuery {
-        // todo claude: duplicate 6 lines
         val conditions = buildReleaseConditions(includeArchived, teamId, teamIds, search, status, projectTemplateId, releaseIds)
-
-        val countQuery = ReleaseTable.selectAll()
-        if (conditions.isNotEmpty()) {
-            countQuery.where { conditions.reduce { acc, op -> acc and op } }
-        }
-        val totalCount = countQuery.count()
-
+        val totalCount = countWithConditions(conditions)
         queryReleasesWithTags(conditions, offset, limit) to totalCount
+    }
+
+    private fun countWithConditions(conditions: List<Op<Boolean>>): Long {
+        val query = ReleaseTable.selectAll()
+        if (conditions.isNotEmpty()) {
+            query.where { conditions.reduce { acc, op -> acc and op } }
+        }
+        return query.count()
     }
 
     override suspend fun findTeamId(id: ReleaseId): String? = dbQuery {

@@ -354,7 +354,6 @@ class DefaultReleasesService(
      * Uses batch fetching to avoid N+1 queries.
      */
     private suspend fun validateConnectionTeamConsistency(dagGraph: DagGraph, expectedTeamId: String) {
-        // todo claude: duplicate 8 lines
         val connectionIds = dagGraph.collectConnectionIds()
         if (connectionIds.isEmpty()) return
         val teamIdMap = connectionsRepository.findTeamIds(connectionIds)

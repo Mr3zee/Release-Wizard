@@ -13,7 +13,7 @@ import io.ktor.http.*
 import io.ktor.server.testing.*
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.yield
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -222,8 +222,7 @@ class ReleasesRoutesTest {
             }
 
             // Retry approval until the engine reaches WAITING_FOR_INPUT
-            // todo claude: withTimeoutOrNull
-            withTimeout(10_000.milliseconds) {
+            withTimeoutOrNull(10_000.milliseconds) {
                 while (true) {
                     val resp = client.post(ApiRoutes.Releases.approveBlock(created.release.id.value, "action")) {
                         contentType(ContentType.Application.Json)
@@ -232,7 +231,7 @@ class ReleasesRoutesTest {
                     if (resp.status == HttpStatusCode.OK) break
                     yield()
                 }
-            }
+            } ?: error("Timed out waiting for block approval")
 
             awaitDeferred.await()
         }
@@ -519,8 +518,7 @@ class ReleasesRoutesTest {
             }
 
             // Wait for post-gate WAITING_FOR_INPUT with outputs already present
-            // todo claude: withTimeoutOrNull
-            withTimeout(10_000.milliseconds) {
+            withTimeoutOrNull(10_000.milliseconds) {
                 while (true) {
                     val resp = client.post(ApiRoutes.Releases.approveBlock(created.release.id.value, "build")) {
                         contentType(ContentType.Application.Json)
@@ -529,7 +527,7 @@ class ReleasesRoutesTest {
                     if (resp.status == HttpStatusCode.OK) break
                     yield()
                 }
-            }
+            } ?: error("Timed out waiting for block approval")
 
             awaitDeferred.await()
         }
@@ -570,8 +568,7 @@ class ReleasesRoutesTest {
             }
 
             // Approve pre-gate
-            // todo claude: withTimeoutOrNull
-            withTimeout(10_000.milliseconds) {
+            withTimeoutOrNull(10_000.milliseconds) {
                 while (true) {
                     val resp = client.post(ApiRoutes.Releases.approveBlock(created.release.id.value, "build")) {
                         contentType(ContentType.Application.Json)
@@ -580,11 +577,10 @@ class ReleasesRoutesTest {
                     if (resp.status == HttpStatusCode.OK) break
                     yield()
                 }
-            }
+            } ?: error("Timed out waiting for block approval")
 
             // Approve post-gate (block must execute first, then enter post-gate)
-            // todo claude: withTimeoutOrNull
-            withTimeout(10_000.milliseconds) {
+            withTimeoutOrNull(10_000.milliseconds) {
                 while (true) {
                     val resp = client.post(ApiRoutes.Releases.approveBlock(created.release.id.value, "build")) {
                         contentType(ContentType.Application.Json)
@@ -593,7 +589,7 @@ class ReleasesRoutesTest {
                     if (resp.status == HttpStatusCode.OK) break
                     yield()
                 }
-            }
+            } ?: error("Timed out waiting for block approval")
 
             awaitDeferred.await()
         }
@@ -634,8 +630,7 @@ class ReleasesRoutesTest {
         }.body<ReleaseResponse>()
 
         // First approval from admin
-        // todo claude: withTimeoutOrNull
-        withTimeout(10_000.milliseconds) {
+        withTimeoutOrNull(10_000.milliseconds) {
             while (true) {
                 val resp = adminClient.post(ApiRoutes.Releases.approveBlock(created.release.id.value, "action")) {
                     contentType(ContentType.Application.Json)
@@ -644,7 +639,7 @@ class ReleasesRoutesTest {
                 if (resp.status == HttpStatusCode.OK) break
                 yield()
             }
-        }
+        } ?: error("Timed out waiting for block approval")
 
         // Release should still be running (only 1 of 2 approvals)
         val midCheck = adminClient.get(ApiRoutes.Releases.byId(created.release.id.value))
@@ -662,8 +657,7 @@ class ReleasesRoutesTest {
                     .body<ReleaseResponse>()
             }
 
-            // todo claude: withTimeoutOrNull
-            withTimeout(10_000.milliseconds) {
+            withTimeoutOrNull(10_000.milliseconds) {
                 while (true) {
                     val resp = user2Client.post(ApiRoutes.Releases.approveBlock(created.release.id.value, "action")) {
                         contentType(ContentType.Application.Json)
@@ -672,7 +666,7 @@ class ReleasesRoutesTest {
                     if (resp.status == HttpStatusCode.OK) break
                     yield()
                 }
-            }
+            } ?: error("Timed out waiting for block approval")
 
             awaitDeferred.await()
         }
@@ -696,8 +690,7 @@ class ReleasesRoutesTest {
         }.body<ReleaseResponse>()
 
         // Wait until block enters WAITING_FOR_INPUT
-        // todo claude: withTimeoutOrNull
-        withTimeout(10_000.milliseconds) {
+        withTimeoutOrNull(10_000.milliseconds) {
             while (true) {
                 val resp = client.get(ApiRoutes.Releases.byId(created.release.id.value))
                     .body<ReleaseResponse>()
@@ -705,7 +698,7 @@ class ReleasesRoutesTest {
                 if (exec?.status == BlockStatus.WAITING_FOR_INPUT) break
                 yield()
             }
-        }
+        } ?: error("Timed out waiting for WAITING_FOR_INPUT status")
 
         // Cancel the release
         client.post(ApiRoutes.Releases.cancel(created.release.id.value))
@@ -743,8 +736,7 @@ class ReleasesRoutesTest {
 
             // Approve both gates
             for (blockId in listOf("a", "b")) {
-                // todo claude: withTimeoutOrNull
-                withTimeout(10_000.milliseconds) {
+                withTimeoutOrNull(10_000.milliseconds) {
                     while (true) {
                         val resp = client.post(ApiRoutes.Releases.approveBlock(created.release.id.value, blockId)) {
                             contentType(ContentType.Application.Json)
@@ -753,7 +745,7 @@ class ReleasesRoutesTest {
                         if (resp.status == HttpStatusCode.OK) break
                         yield()
                     }
-                }
+                } ?: error("Timed out waiting for block approval")
             }
 
             awaitDeferred.await()

@@ -101,23 +101,24 @@ class DagEditorViewModel(
             _isLoading.value = true
             _error.value = null
             try {
-                // todo claude: duplicate 10 lines
-                val p = apiClient.getProject(projectId)
-                _project.value = p
-                _graph.value = p.dagGraph
-                // Clear undo stack on load to prevent undo to stale state
-                undoStack.clear()
-                undoIndex = -1
-                pushUndoState(p.dagGraph)
-                _isDirty.value = false
-                // Attempt lock acquisition after successful load
-                attemptAcquireLock()
+                reloadProjectAndAcquireLock()
             } catch (e: Exception) {
                 _error.value = e.toUserMessage()
             } finally {
                 _isLoading.value = false
             }
         }
+    }
+
+    private suspend fun reloadProjectAndAcquireLock() {
+        val p = apiClient.getProject(projectId)
+        _project.value = p
+        _graph.value = p.dagGraph
+        undoStack.clear()
+        undoIndex = -1
+        pushUndoState(p.dagGraph)
+        _isDirty.value = false
+        attemptAcquireLock()
     }
 
     private suspend fun attemptAcquireLock() {
@@ -180,16 +181,7 @@ class DagEditorViewModel(
         viewModelScope.launch {
             try {
                 apiClient.forceReleaseLock(projectId)
-                // Re-acquire after force release
-                // todo claude: duplicate 8 lines
-                val p = apiClient.getProject(projectId)
-                _project.value = p
-                _graph.value = p.dagGraph
-                undoStack.clear()
-                undoIndex = -1
-                pushUndoState(p.dagGraph)
-                _isDirty.value = false
-                attemptAcquireLock()
+                reloadProjectAndAcquireLock()
             } catch (e: Exception) {
                 _error.value = e.toUserMessage()
             }
@@ -199,16 +191,7 @@ class DagEditorViewModel(
     fun retryAcquireLock() {
         viewModelScope.launch {
             try {
-                // Reload project to get latest state
-                // todo claude: duplicate 8 lines
-                val p = apiClient.getProject(projectId)
-                _project.value = p
-                _graph.value = p.dagGraph
-                undoStack.clear()
-                undoIndex = -1
-                pushUndoState(p.dagGraph)
-                _isDirty.value = false
-                attemptAcquireLock()
+                reloadProjectAndAcquireLock()
             } catch (e: Exception) {
                 _error.value = e.toUserMessage()
             }
@@ -407,58 +390,29 @@ class DagEditorViewModel(
     }
 
     fun updateBlockParameters(blockId: BlockId, parameters: List<Parameter>) {
-        // todo claude: duplicate 11 lines
-        if (isReadOnly.value) return
-        val g = _graph.value
-        updateGraphSilent(
-            g.copy(
-                blocks = g.blocks.map { block ->
-                    if (block.id == blockId && block is Block.ActionBlock) {
-                        block.copy(parameters = parameters)
-                    } else block
-                }
-            )
-        )
+        updateActionBlock(blockId) { it.copy(parameters = parameters) }
     }
 
     fun updateBlockTimeout(blockId: BlockId, timeoutSeconds: Long?) {
-        // todo claude: duplicate 11 lines
-        if (isReadOnly.value) return
-        val g = _graph.value
-        updateGraphSilent(
-            g.copy(
-                blocks = g.blocks.map { block ->
-                    if (block.id == blockId && block is Block.ActionBlock) {
-                        block.copy(timeoutSeconds = timeoutSeconds)
-                    } else block
-                }
-            )
-        )
+        updateActionBlock(blockId) { it.copy(timeoutSeconds = timeoutSeconds) }
     }
 
     fun updateBlockPreGate(blockId: BlockId, gate: Gate?) {
-        // todo claude: duplicate 11 lines
-        if (isReadOnly.value) return
-        val g = _graph.value
-        updateGraphSilent(
-            g.copy(
-                blocks = g.blocks.map { block ->
-                    if (block.id == blockId && block is Block.ActionBlock) {
-                        block.copy(preGate = gate)
-                    } else block
-                }
-            )
-        )
+        updateActionBlock(blockId) { it.copy(preGate = gate) }
     }
 
     fun updateBlockPostGate(blockId: BlockId, gate: Gate?) {
+        updateActionBlock(blockId) { it.copy(postGate = gate) }
+    }
+
+    private fun updateActionBlock(blockId: BlockId, transform: (Block.ActionBlock) -> Block.ActionBlock) {
         if (isReadOnly.value) return
         val g = _graph.value
         updateGraphSilent(
             g.copy(
                 blocks = g.blocks.map { block ->
                     if (block.id == blockId && block is Block.ActionBlock) {
-                        block.copy(postGate = gate)
+                        transform(block)
                     } else block
                 }
             )

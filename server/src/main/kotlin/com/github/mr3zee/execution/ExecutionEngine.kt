@@ -298,39 +298,7 @@ class ExecutionEngine(
 
                 when (gatePhase) {
                     GatePhase.PRE -> {
-                        // Pre-gate resolved — now execute the block (with potential post-gate)
-                        // todo claude: duplicate 31 lines
-                        statusMap[block.id] = BlockStatus.RUNNING
-                        persistAndEmit(release.id, BlockExecution(
-                            blockId = block.id,
-                            releaseId = release.id,
-                            status = BlockStatus.RUNNING,
-                            startedAt = startTime,
-                        ))
-
-                        val postGate = block.postGate
-                        executeWithBlockErrorHandling(release.id, block.id, startTime, statusMap, outputsMap) {
-                            val outputs = resolveAndExecute(release, block, outputsMap, BlockExecutor::execute)
-
-                            if (postGate != null) {
-                                outputsMap[block.id] = outputs
-                                val msg = resolveGateMessage(postGate, block.name, GatePhase.POST, release, outputsMap)
-                                statusMap[block.id] = BlockStatus.WAITING_FOR_INPUT
-                                persistAndEmit(release.id, BlockExecution(
-                                    blockId = block.id,
-                                    releaseId = release.id,
-                                    status = BlockStatus.WAITING_FOR_INPUT,
-                                    outputs = outputs,
-                                    startedAt = startTime,
-                                    gatePhase = GatePhase.POST,
-                                    gateMessage = msg,
-                                ))
-
-                                awaitGateApproval(release.id, block.id)
-                            }
-
-                            outputs
-                        }
+                        runBlockWithPostGate(release, block, startTime, statusMap, outputsMap, BlockExecutor::execute)
                     }
                     GatePhase.POST -> {
                         // Post-gate resolved — complete with stored outputs
@@ -355,40 +323,7 @@ class ExecutionEngine(
         statusMap: MutableMap<BlockId, BlockStatus>,
         outputsMap: MutableMap<BlockId, Map<String, String>>,
     ) {
-        val startTime = Clock.System.now()
-        statusMap[block.id] = BlockStatus.RUNNING
-        persistAndEmit(release.id, BlockExecution(
-            blockId = block.id,
-            releaseId = release.id,
-            status = BlockStatus.RUNNING,
-            startedAt = startTime,
-        ))
-
-        // todo claude: duplicate 24 lines
-        val postGate = block.postGate
-        executeWithBlockErrorHandling(release.id, block.id, startTime, statusMap, outputsMap) {
-            val outputs = resolveAndExecute(release, block, outputsMap, BlockExecutor::resume)
-
-            // Post-gate after resume if configured
-            if (postGate != null) {
-                outputsMap[block.id] = outputs
-                val msg = resolveGateMessage(postGate, block.name, GatePhase.POST, release, outputsMap)
-                statusMap[block.id] = BlockStatus.WAITING_FOR_INPUT
-                persistAndEmit(release.id, BlockExecution(
-                    blockId = block.id,
-                    releaseId = release.id,
-                    status = BlockStatus.WAITING_FOR_INPUT,
-                    outputs = outputs,
-                    startedAt = startTime,
-                    gatePhase = GatePhase.POST,
-                    gateMessage = msg,
-                ))
-
-                awaitGateApproval(release.id, block.id)
-            }
-
-            outputs
-        }
+        runBlockWithPostGate(release, block, Clock.System.now(), statusMap, outputsMap, BlockExecutor::resume)
     }
 
     /**
@@ -655,7 +590,6 @@ class ExecutionEngine(
         val startTime = Clock.System.now()
 
         val preGate = block.preGate
-        val postGate = block.postGate
 
         executeWithBlockErrorHandling(release.id, block.id, startTime, statusMap, outputsMap) {
             // 1. Pre-gate (if configured)
@@ -691,29 +625,65 @@ class ExecutionEngine(
                 ))
             }
 
-            // 2. Execute the block
-            // todo claude: duplicate 21 lines
-            val outputs = resolveAndExecute(release, block, outputsMap, BlockExecutor::execute)
+            // 2. Execute the block + 3. Post-gate (if configured)
+            executeAndHandlePostGate(release, block, startTime, statusMap, outputsMap, BlockExecutor::execute)
+        }
+    }
 
-            // 3. Post-gate (if configured)
-            if (postGate != null) {
-                outputsMap[block.id] = outputs
-                val msg = resolveGateMessage(postGate, block.name, GatePhase.POST, release, outputsMap)
-                statusMap[block.id] = BlockStatus.WAITING_FOR_INPUT
-                persistAndEmit(release.id, BlockExecution(
-                    blockId = block.id,
-                    releaseId = release.id,
-                    status = BlockStatus.WAITING_FOR_INPUT,
-                    outputs = outputs,
-                    startedAt = startTime,
-                    gatePhase = GatePhase.POST,
-                    gateMessage = msg,
-                ))
+    /**
+     * Execute a block and handle post-gate if configured.
+     * Shared by fresh execution, recovery (pre-gate resolved), and resume paths.
+     */
+    private suspend fun executeAndHandlePostGate(
+        release: Release,
+        block: Block.ActionBlock,
+        startTime: Instant,
+        statusMap: MutableMap<BlockId, BlockStatus>,
+        outputsMap: MutableMap<BlockId, Map<String, String>>,
+        run: suspend BlockExecutor.(Block.ActionBlock, List<Parameter>, ExecutionContext) -> Map<String, String>,
+    ): Map<String, String> {
+        val outputs = resolveAndExecute(release, block, outputsMap, run)
+        val postGate = block.postGate
+        if (postGate != null) {
+            outputsMap[block.id] = outputs
+            val msg = resolveGateMessage(postGate, block.name, GatePhase.POST, release, outputsMap)
+            statusMap[block.id] = BlockStatus.WAITING_FOR_INPUT
+            persistAndEmit(release.id, BlockExecution(
+                blockId = block.id,
+                releaseId = release.id,
+                status = BlockStatus.WAITING_FOR_INPUT,
+                outputs = outputs,
+                startedAt = startTime,
+                gatePhase = GatePhase.POST,
+                gateMessage = msg,
+            ))
+            awaitGateApproval(release.id, block.id)
+        }
+        return outputs
+    }
 
-                awaitGateApproval(release.id, block.id)
-            }
+    /**
+     * Set block to RUNNING, persist, then execute with post-gate handling.
+     * Shared by recovery (pre-gate resolved) and resume paths.
+     */
+    private suspend fun runBlockWithPostGate(
+        release: Release,
+        block: Block.ActionBlock,
+        startTime: Instant,
+        statusMap: MutableMap<BlockId, BlockStatus>,
+        outputsMap: MutableMap<BlockId, Map<String, String>>,
+        run: suspend BlockExecutor.(Block.ActionBlock, List<Parameter>, ExecutionContext) -> Map<String, String>,
+    ) {
+        statusMap[block.id] = BlockStatus.RUNNING
+        persistAndEmit(release.id, BlockExecution(
+            blockId = block.id,
+            releaseId = release.id,
+            status = BlockStatus.RUNNING,
+            startedAt = startTime,
+        ))
 
-            outputs
+        executeWithBlockErrorHandling(release.id, block.id, startTime, statusMap, outputsMap) {
+            executeAndHandlePostGate(release, block, startTime, statusMap, outputsMap, run)
         }
     }
 
