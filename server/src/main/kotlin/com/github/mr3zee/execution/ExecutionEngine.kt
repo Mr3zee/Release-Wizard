@@ -738,9 +738,8 @@ class ExecutionEngine(
         val connections = mutableMapOf<ConnectionId, ConnectionConfig>()
         block.connectionId?.let { connId ->
             val connection = connectionsRepository.findById(connId)
-            if (connection != null) {
-                connections[connId] = connection.config
-            }
+                ?: throw IllegalStateException("Connection ${connId.value} not found for block ${block.id.value}")
+            connections[connId] = connection.config
         }
 
         val context = ExecutionContext(
