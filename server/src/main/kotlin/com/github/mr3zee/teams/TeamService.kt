@@ -43,8 +43,8 @@ class DefaultTeamService(
         require(request.name.isNotBlank()) { "Team name must not be blank" }
         require(request.name.length <= 100) { "Team name must not exceed 100 characters" }
         require(request.description.length <= 2000) { "Team description must not exceed 2000 characters" }
-        val team = teamRepository.createIfNameAvailable(request.name, request.description)
-        teamRepository.addMember(team.id, session.userId, TeamRole.TEAM_LEAD)
+        // Create the team and add the creator as TEAM_LEAD atomically in a single transaction
+        val team = teamRepository.createTeamWithMember(request.name, request.description, session.userId, TeamRole.TEAM_LEAD)
         auditService.log(team.id, session, AuditAction.TEAM_CREATED, AuditTargetType.TEAM, team.id.value, "Created team '${team.name}'")
         return TeamResponse(team = team, memberCount = 1)
     }

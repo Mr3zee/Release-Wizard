@@ -5,6 +5,8 @@ import com.github.mr3zee.model.ConnectionConfig
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.http.*
+import java.net.InetAddress
+import java.net.URI
 
 /**
  * Tests connections by making lightweight API calls to verify credentials and reachability.
@@ -30,6 +32,7 @@ class ConnectionTester(
 
     private suspend fun testTeamCity(config: ConnectionConfig.TeamCityConfig): ConnectionTestResult {
         return try {
+            validateUrlNotPrivate(config.serverUrl)
             val response = httpClient.get("${config.serverUrl}/app/rest/server") {
                 header("Authorization", "Bearer ${config.token}")
                 header("Accept", "application/json")
@@ -39,6 +42,8 @@ class ConnectionTester(
             } else {
                 ConnectionTestResult(success = false, message = "TeamCity returned ${response.status}")
             }
+        } catch (e: IllegalArgumentException) {
+            ConnectionTestResult(success = false, message = e.message ?: "Invalid URL")
         } catch (e: Exception) {
             ConnectionTestResult(success = false, message = "Failed to connect: ${e.message}")
         }
@@ -62,6 +67,7 @@ class ConnectionTester(
 
     private suspend fun testMavenCentral(config: ConnectionConfig.MavenCentralConfig): ConnectionTestResult {
         return try {
+            validateUrlNotPrivate(config.baseUrl)
             val response = httpClient.get("${config.baseUrl}/api/v1/publisher/status") {
                 basicAuth(config.username, config.password)
             }
@@ -70,8 +76,44 @@ class ConnectionTester(
             } else {
                 ConnectionTestResult(success = false, message = "Maven Central returned ${response.status}")
             }
+        } catch (e: IllegalArgumentException) {
+            ConnectionTestResult(success = false, message = e.message ?: "Invalid URL")
         } catch (e: Exception) {
             ConnectionTestResult(success = false, message = "Failed to connect: ${e.message}")
+        }
+    }
+
+    companion object {
+        /**
+         * Validates that the given URL does not point to a private/loopback/link-local address
+         * to prevent SSRF attacks.
+         */
+        fun validateUrlNotPrivate(url: String) {
+            val host = try {
+                URI(url).host ?: throw IllegalArgumentException("URL has no host: $url")
+            } catch (e: IllegalArgumentException) {
+                throw e
+            } catch (_: Exception) {
+                throw IllegalArgumentException("Invalid URL: $url")
+            }
+
+            val addresses = try {
+                InetAddress.getAllByName(host)
+            } catch (_: Exception) {
+                // If hostname can't be resolved, the actual HTTP request will fail anyway.
+                // SSRF protection only needs to block resolvable private IPs.
+                return
+            }
+
+            for (addr in addresses) {
+                if (addr.isLoopbackAddress ||
+                    addr.isLinkLocalAddress ||
+                    addr.isSiteLocalAddress ||
+                    addr.isAnyLocalAddress
+                ) {
+                    throw IllegalArgumentException("Connections to private/internal network addresses are not allowed")
+                }
+            }
         }
     }
 }

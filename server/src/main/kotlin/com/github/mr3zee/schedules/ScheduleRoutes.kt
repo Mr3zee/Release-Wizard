@@ -5,6 +5,7 @@ import com.github.mr3zee.api.ApiRoutes
 import com.github.mr3zee.api.CreateScheduleRequest
 import com.github.mr3zee.api.ScheduleListResponse
 import com.github.mr3zee.api.ScheduleResponse
+import com.github.mr3zee.api.ToggleScheduleRequest
 import com.github.mr3zee.auth.userSession
 import com.github.mr3zee.util.requireProjectId
 import com.github.mr3zee.util.requireUuidParam
@@ -59,9 +60,6 @@ fun Route.scheduleRoutes() {
         }
     }
 }
-
-@kotlinx.serialization.Serializable
-data class ToggleScheduleRequest(val enabled: Boolean)
 
 private fun ApplicationCall.requireScheduleId(): String {
     return requireUuidParam("scheduleId")

@@ -100,11 +100,16 @@ class DefaultProjectsService(
         teamAccessService.checkTeamLead(TeamId(teamId), session)
     }
 
+    /**
+     * Validates that all connections referenced in the DAG belong to the expected team.
+     * Uses batch fetching to avoid N+1 queries.
+     */
     private suspend fun validateConnectionTeamConsistency(dagGraph: DagGraph, expectedTeamId: String) {
         val connectionIds = dagGraph.collectConnectionIds()
-        for (connId in connectionIds) {
-            val connTeamId = connectionsRepository.findTeamId(connId)
-            if (connTeamId != null && connTeamId != expectedTeamId) {
+        if (connectionIds.isEmpty()) return
+        val teamIdMap = connectionsRepository.findTeamIds(connectionIds)
+        for ((connId, connTeamId) in teamIdMap) {
+            if (connTeamId != expectedTeamId) {
                 throw IllegalArgumentException("Connection ${connId.value} belongs to a different team")
             }
         }

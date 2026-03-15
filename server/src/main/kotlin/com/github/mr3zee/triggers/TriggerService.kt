@@ -1,6 +1,7 @@
 package com.github.mr3zee.triggers
 
 import com.github.mr3zee.ForbiddenException
+import com.github.mr3zee.NotFoundException
 import com.github.mr3zee.api.CreateTriggerRequest
 import com.github.mr3zee.api.TriggerResponse
 import com.github.mr3zee.auth.UserSession
@@ -102,9 +103,8 @@ class DefaultTriggerService(
     private suspend fun checkProjectAccess(projectId: ProjectId, session: UserSession) {
         if (session.role == UserRole.ADMIN) return
         val projectTeamId = projectsRepository.findTeamId(projectId)
-        if (projectTeamId != null) {
-            teamAccessService.checkMembership(TeamId(projectTeamId), session)
-        }
+            ?: throw NotFoundException("Project not found")
+        teamAccessService.checkMembership(TeamId(projectTeamId), session)
     }
 
     private fun generateSecret(): String {

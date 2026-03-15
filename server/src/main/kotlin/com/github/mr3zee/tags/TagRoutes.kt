@@ -18,6 +18,8 @@ fun Route.tagRoutes() {
 
     route(ApiRoutes.Tags.BASE) {
         get {
+            // Global tag list (admin only for cross-team view; team-scoped via team routes)
+            requireTagAdmin()
             val tags = service.listAllTags()
             call.respond(TagListResponse(tags))
         }
@@ -27,6 +29,7 @@ fun Route.tagRoutes() {
                 requireTagAdmin()
                 val name = call.parameters["name"] ?: throw IllegalArgumentException("Missing tag name")
                 val request = call.receive<RenameTagRequest>()
+                // Admin global rename (no team scoping)
                 val updated = service.renameTag(name, request.newName)
                 call.respond(mapOf("updated" to updated))
             }
@@ -34,6 +37,7 @@ fun Route.tagRoutes() {
             delete {
                 requireTagAdmin()
                 val name = call.parameters["name"] ?: throw IllegalArgumentException("Missing tag name")
+                // Admin global delete (no team scoping)
                 val deleted = service.deleteTag(name)
                 if (deleted > 0) {
                     call.respond(HttpStatusCode.NoContent)

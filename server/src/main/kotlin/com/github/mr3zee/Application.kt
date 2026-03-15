@@ -43,6 +43,7 @@ import io.ktor.server.auth.*
 import io.ktor.server.plugins.ContentTransformationException
 import io.ktor.server.plugins.calllogging.*
 import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.defaultheaders.*
 import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.plugins.statuspages.*
@@ -56,7 +57,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.job
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 import kotlinx.serialization.SerializationException
 import org.koin.dsl.module
 import org.koin.java.KoinJavaComponent.getKoin
@@ -70,6 +71,9 @@ fun Application.module() {
     val encryptionConfig = environment.config.encryptionConfig()
     val webhookConfig = environment.config.webhookConfig()
     val passwordPolicyConfig = environment.config.passwordPolicyConfig()
+    val corsConfig = environment.config.corsConfig()
+
+    val appVersion = environment.config.propertyOrNull("app.version")?.getString() ?: "dev"
 
     val executionScope = CoroutineScope(SupervisorJob(coroutineContext.job) + Dispatchers.Default)
 
@@ -95,6 +99,40 @@ fun Application.module() {
         header("X-Content-Type-Options", "nosniff")
         header("X-Frame-Options", "DENY")
         header("Referrer-Policy", "strict-origin-when-cross-origin")
+        header("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
+        header("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    }
+
+    install(CORS) {
+        val log = this@module.environment.log
+        for (origin in corsConfig.allowedOrigins) {
+            if (!origin.startsWith("https://")) {
+                log.warn(
+                    "CORS origin '{}' does not use https:// — it will be served over https only. " +
+                        "Ensure this is intentional (e.g., local development).",
+                    origin,
+                )
+            }
+            val host = origin
+                .removePrefix("https://")
+                .removePrefix("http://")
+                .trimEnd('/')
+            require(host.isNotBlank()) { "CORS origin '$origin' does not contain a valid host" }
+            allowHost(host, schemes = listOf("https"))
+        }
+        if (corsConfig.allowedOrigins.isEmpty()) {
+            // Development fallback: no origins allowed (strict by default)
+        }
+        allowHeader(HttpHeaders.ContentType)
+        allowHeader(HttpHeaders.Authorization)
+        allowHeader("X-CSRF-Token")
+        exposeHeader("X-CSRF-Token")
+        allowCredentials = true
+        allowMethod(HttpMethod.Get)
+        allowMethod(HttpMethod.Post)
+        allowMethod(HttpMethod.Put)
+        allowMethod(HttpMethod.Delete)
+        allowMethod(HttpMethod.Patch)
     }
 
     install(RequestSizeLimit)
@@ -118,7 +156,7 @@ fun Application.module() {
             cookie.path = "/"
             cookie.maxAgeInSeconds = authConfig.sessionTtlSeconds
             cookie.httpOnly = true
-            cookie.secure = this@module.environment.config.propertyOrNull("app.auth.secureCookie")?.getString()?.toBooleanStrictOrNull() ?: false
+            cookie.secure = this@module.environment.config.propertyOrNull("app.auth.secureCookie")?.getString()?.toBooleanStrictOrNull() ?: true
             cookie.extensions["SameSite"] = "Lax"
             transform(SessionTransportTransformerMessageAuthentication(hex(authConfig.sessionSignKey)))
         }
@@ -228,7 +266,7 @@ fun Application.module() {
         }
     }
 
-    configureRouting()
+    configureRouting(appVersion)
 
     monitor.subscribe(ApplicationStarted) {
         try {
@@ -242,11 +280,15 @@ fun Application.module() {
                 listener.start(engine, scope)
             }
 
-            // Then run recovery (events emitted here will be captured by listener)
+            // Then run recovery asynchronously (events emitted here will be captured by listener)
             val recoveryService = koin.getOrNull<RecoveryService>()
-            if (recoveryService != null) {
-                runBlocking {
-                    recoveryService.recover()
+            if (recoveryService != null && scope != null) {
+                scope.launch {
+                    try {
+                        recoveryService.recover()
+                    } catch (e: Exception) {
+                        environment.log.error("Release recovery failed", e)
+                    }
                 }
             }
 
@@ -256,7 +298,7 @@ fun Application.module() {
                 schedulerService.start(scope)
             }
         } catch (e: Exception) {
-            environment.log.error("Release recovery failed", e)
+            environment.log.error("Application startup failed", e)
         }
     }
 
@@ -271,12 +313,12 @@ fun Application.module() {
     }
 }
 
-fun Application.configureRouting() {
+fun Application.configureRouting(appVersion: String = "dev") {
     routing {
         get("/") {
             call.respond(mapOf(
                 "service" to "Release Wizard API",
-                "version" to (System.getenv("APP_VERSION") ?: "dev"),
+                "version" to appVersion,
             ))
         }
         healthRoute()

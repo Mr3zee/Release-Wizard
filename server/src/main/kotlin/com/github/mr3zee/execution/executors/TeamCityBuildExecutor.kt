@@ -17,7 +17,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.serialization.json.Json
+import com.github.mr3zee.AppJson
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.slf4j.LoggerFactory
@@ -161,7 +161,7 @@ class TeamCityBuildExecutor(
                 config.serverUrl, config.token, buildId, artifactsGlob, maxDepth, maxFiles,
             )
             if (artifacts.isNotEmpty()) {
-                mapOf(BlockExecution.ARTIFACTS_OUTPUT_KEY to Json.encodeToString(artifacts))
+                mapOf(BlockExecution.ARTIFACTS_OUTPUT_KEY to AppJson.encodeToString(artifacts))
             } else {
                 emptyMap()
             }
@@ -173,7 +173,7 @@ class TeamCityBuildExecutor(
 
     private fun parseCompletionPayload(payload: String, buildId: String, serverUrl: String): Map<String, String> {
         return try {
-            val json = Json.decodeFromString<JsonObject>(payload)
+            val json = AppJson.decodeFromString<JsonObject>(payload)
             mapOf(
                 "buildNumber" to (json["buildNumber"]?.jsonPrimitive?.content ?: buildId),
                 "buildUrl" to "$serverUrl/viewLog.html?buildId=$buildId",

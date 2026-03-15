@@ -4,6 +4,7 @@ import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import com.github.mr3zee.AppJson
 import kotlinx.serialization.json.*
 import org.slf4j.LoggerFactory
 import java.nio.file.FileSystems
@@ -67,7 +68,7 @@ class TeamCityArtifactService(private val httpClient: HttpClient) {
                 log.warn("Failed to fetch artifacts at '{}': HTTP {}", subpath, response.status.value)
                 return
             }
-            Json.decodeFromString<JsonObject>(response.bodyAsText())
+            AppJson.decodeFromString<JsonObject>(response.bodyAsText())
         } catch (e: Exception) {
             log.warn("Error fetching artifacts at '{}'", subpath, e)
             return

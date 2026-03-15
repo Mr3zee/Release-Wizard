@@ -55,7 +55,8 @@ class DefaultReleasesService(
     private val connectionsRepository: ConnectionsRepository,
 ) : ReleasesService {
 
-    private val approvalMutexes = ConcurrentHashMap<String, Mutex>()
+    /** Per-(releaseId, blockId) mutex to serialize concurrent approvals and prevent read-modify-write races. */
+    private val approvalMutexes = ConcurrentHashMap<Pair<String, String>, Mutex>()
 
     override suspend fun listReleases(
         session: UserSession,
@@ -113,7 +114,7 @@ class DefaultReleasesService(
         val project = projectsRepository.findById(request.projectTemplateId)
             ?: throw IllegalArgumentException("Project not found: ${request.projectTemplateId.value}")
 
-        // Get teamId from project — releases inherit team from their project
+        // Get teamId from project -- releases inherit team from their project
         val projectTeamId = projectsRepository.findTeamId(request.projectTemplateId)
             ?: throw IllegalArgumentException("Project has no team")
         teamAccessService.checkMembership(TeamId(projectTeamId), session)
@@ -136,16 +137,8 @@ class DefaultReleasesService(
         val tags = (project.defaultTags + request.tags).map { it.trim().lowercase() }.distinct()
         applyTags(release.id, tags, projectTeamId)
 
-        // Initialize block executions as WAITING
-        for (block in project.dagGraph.blocks) {
-            repository.upsertBlockExecution(
-                BlockExecution(
-                    blockId = block.id,
-                    releaseId = release.id,
-                    status = BlockStatus.WAITING,
-                )
-            )
-        }
+        // Initialize block executions as WAITING (batch)
+        repository.batchUpsertBlockExecutions(release.id, project.dagGraph.blocks)
 
         executionEngine.startExecution(release)
 
@@ -178,15 +171,8 @@ class DefaultReleasesService(
         val tags = project.defaultTags.map { it.trim().lowercase() }.distinct()
         applyTags(release.id, tags, projectTeamId)
 
-        for (block in project.dagGraph.blocks) {
-            repository.upsertBlockExecution(
-                BlockExecution(
-                    blockId = block.id,
-                    releaseId = release.id,
-                    status = BlockStatus.WAITING,
-                )
-            )
-        }
+        // Initialize block executions as WAITING (batch)
+        repository.batchUpsertBlockExecutions(release.id, project.dagGraph.blocks)
 
         executionEngine.startExecution(release)
 
@@ -217,15 +203,8 @@ class DefaultReleasesService(
         val originalTags = original.tags
         applyTags(release.id, originalTags, releaseTeamId)
 
-        for (block in original.dagSnapshot.blocks) {
-            repository.upsertBlockExecution(
-                BlockExecution(
-                    blockId = block.id,
-                    releaseId = release.id,
-                    status = BlockStatus.WAITING,
-                )
-            )
-        }
+        // Initialize block executions as WAITING (batch)
+        repository.batchUpsertBlockExecutions(release.id, original.dagSnapshot.blocks)
 
         executionEngine.startExecution(release)
         return release.copy(tags = originalTags)
@@ -238,7 +217,6 @@ class DefaultReleasesService(
             return false
         }
         executionEngine.cancelExecution(id)
-        approvalMutexes.keys.removeIf { it.startsWith("${id.value}:") }
         val teamId = repository.findTeamId(id)
         if (teamId != null) {
             auditService.log(TeamId(teamId), session, AuditAction.RELEASE_CANCELLED, AuditTargetType.RELEASE, id.value)
@@ -250,22 +228,14 @@ class DefaultReleasesService(
         val release = repository.findById(id) ?: return false
         checkAccess(id, session)
         if (!release.status.isTerminal) return false
-        val archived = repository.updateStatus(id, ReleaseStatus.ARCHIVED)
-        if (archived) {
-            approvalMutexes.keys.removeIf { it.startsWith("${id.value}:") }
-        }
-        return archived
+        return repository.updateStatus(id, ReleaseStatus.ARCHIVED)
     }
 
     override suspend fun deleteRelease(id: ReleaseId, session: UserSession): Boolean {
         val release = repository.findById(id) ?: return false
         checkAccess(id, session)
         if (!release.status.isTerminal) return false
-        val deleted = repository.delete(id)
-        if (deleted) {
-            approvalMutexes.keys.removeIf { it.startsWith("${id.value}:") }
-        }
-        return deleted
+        return repository.delete(id)
     }
 
     override suspend fun awaitRelease(id: ReleaseId) {
@@ -296,10 +266,9 @@ class DefaultReleasesService(
                 return executionEngine.approveBlock(releaseId, blockId, request.input)
             }
 
-            val mutexKey = "${releaseId.value}:${blockId.value}"
-            val mutex = approvalMutexes.getOrPut(mutexKey) { Mutex() }
-
-            mutex.withLock {
+            // Serialize concurrent approvals for the same (release, block) to prevent read-modify-write races
+            val mutex = approvalMutexes.getOrPut(releaseId.value to blockId.value) { Mutex() }
+            val shouldProceed = mutex.withLock {
                 val execution = repository.findBlockExecution(releaseId, blockId) ?: return false
                 if (execution.status != BlockStatus.WAITING_FOR_INPUT) return false
 
@@ -326,9 +295,9 @@ class DefaultReleasesService(
                     executionEngine.emitBlockUpdate(releaseId, updatedExecution)
                     return true
                 }
+                true
             }
-
-            approvalMutexes.remove(mutexKey)
+            if (!shouldProceed) return false
         } else {
             val execution = repository.findBlockExecution(releaseId, blockId) ?: return false
             if (execution.status != BlockStatus.WAITING_FOR_INPUT) return false
@@ -357,11 +326,16 @@ class DefaultReleasesService(
         return merged.values.toList()
     }
 
+    /**
+     * Validates that all connections referenced in the DAG belong to the expected team.
+     * Uses batch fetching to avoid N+1 queries.
+     */
     private suspend fun validateConnectionTeamConsistency(dagGraph: DagGraph, expectedTeamId: String) {
         val connectionIds = dagGraph.collectConnectionIds()
-        for (connId in connectionIds) {
-            val connTeamId = connectionsRepository.findTeamId(connId)
-            if (connTeamId != null && connTeamId != expectedTeamId) {
+        if (connectionIds.isEmpty()) return
+        val teamIdMap = connectionsRepository.findTeamIds(connectionIds)
+        for ((connId, connTeamId) in teamIdMap) {
+            if (connTeamId != expectedTeamId) {
                 throw IllegalArgumentException("Connection ${connId.value} belongs to a different team")
             }
         }

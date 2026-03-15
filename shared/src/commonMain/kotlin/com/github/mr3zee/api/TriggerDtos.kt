@@ -22,3 +22,6 @@ data class TriggerResponse(
 data class TriggerListResponse(
     val triggers: List<TriggerResponse>,
 )
+
+@Serializable
+data class ToggleTriggerRequest(val enabled: Boolean)

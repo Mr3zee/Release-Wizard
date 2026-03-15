@@ -1,5 +1,6 @@
 package com.github.mr3zee.execution.executors
 
+import com.github.mr3zee.AppJson
 import com.github.mr3zee.execution.BlockExecutor
 import com.github.mr3zee.execution.ExecutionContext
 import com.github.mr3zee.model.Block
@@ -9,6 +10,8 @@ import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
 import org.slf4j.LoggerFactory
 
 /**
@@ -47,14 +50,11 @@ class SlackMessageExecutor(
             ?: throw IllegalArgumentException("Slack Message requires 'text' parameter")
         val channel = parameters.find { it.key == "channel" }?.value
 
-        val body = buildMap {
-            put("text", text)
-            if (channel != null) put("channel", channel)
-        }
+        val payload = SlackWebhookPayload(text = text, channel = channel)
 
         val response = httpClient.post(config.webhookUrl) {
             contentType(ContentType.Application.Json)
-            setBody(body)
+            setBody(AppJson.encodeToString(payload))
         }
 
         if (!response.status.isSuccess()) {
@@ -69,3 +69,9 @@ class SlackMessageExecutor(
         }
     }
 }
+
+@Serializable
+private data class SlackWebhookPayload(
+    val text: String,
+    val channel: String? = null,
+)

@@ -7,12 +7,13 @@ data class DatabaseConfig(
     val user: String,
     val password: String,
     val driver: String,
+    val maxPoolSize: Int = 10,
 )
 
 data class AuthConfig(
     val sessionSignKey: String,
     val sessionTtlSeconds: Long = 86400,
-    val sessionRefreshThresholdSeconds: Long = 3600,
+    val sessionRefreshThresholdSeconds: Long = 60,
 )
 
 data class PasswordPolicyConfig(
@@ -30,12 +31,17 @@ data class WebhookConfig(
     val baseUrl: String,
 )
 
+data class CorsConfig(
+    val allowedOrigins: List<String>,
+)
+
 fun ApplicationConfig.databaseConfig(): DatabaseConfig {
     return DatabaseConfig(
         url = property("app.database.url").getString(),
         user = property("app.database.user").getString(),
         password = property("app.database.password").getString(),
         driver = property("app.database.driver").getString(),
+        maxPoolSize = propertyOrNull("app.database.maxPoolSize")?.getString()?.toIntOrNull() ?: 10,
     )
 }
 
@@ -48,7 +54,7 @@ fun ApplicationConfig.authConfig(): AuthConfig {
     }
 
     val sessionTtlSeconds = propertyOrNull("app.auth.sessionTtlSeconds")?.getString()?.toLongOrNull() ?: 86400L
-    val sessionRefreshThresholdSeconds = propertyOrNull("app.auth.sessionRefreshThresholdSeconds")?.getString()?.toLongOrNull() ?: 3600L
+    val sessionRefreshThresholdSeconds = propertyOrNull("app.auth.sessionRefreshThresholdSeconds")?.getString()?.toLongOrNull() ?: 60L
 
     return AuthConfig(
         sessionSignKey = sessionSignKey,
@@ -81,4 +87,9 @@ fun ApplicationConfig.webhookConfig(): WebhookConfig {
     return WebhookConfig(
         baseUrl = property("app.webhook.baseUrl").getString(),
     )
+}
+
+fun ApplicationConfig.corsConfig(): CorsConfig {
+    val origins = propertyOrNull("app.cors.allowedOrigins")?.getList() ?: emptyList()
+    return CorsConfig(allowedOrigins = origins)
 }

@@ -48,7 +48,7 @@ class DatabaseAuthService(private val db: Database) : AuthService {
     private fun ResultRow.toUser(): User = User(
         id = UserId(this[UserTable.id].value.toString()),
         username = this[UserTable.username],
-        role = UserRole.valueOf(this[UserTable.role]),
+        role = this[UserTable.role],
     )
 
     override suspend fun validate(username: String, password: String): User? = dbQuery {
@@ -92,7 +92,7 @@ class DatabaseAuthService(private val db: Database) : AuthService {
                     it[UserTable.id] = id
                     it[UserTable.username] = username
                     it[UserTable.passwordHash] = hash
-                    it[UserTable.role] = role.name
+                    it[UserTable.role] = role
                     it[UserTable.createdAt] = now
                 }
 
@@ -122,7 +122,7 @@ class DatabaseAuthService(private val db: Database) : AuthService {
 
     override suspend fun updateUserRole(id: UserId, role: UserRole): Boolean = dbQuery {
         val updated = UserTable.update({ UserTable.id eq UUID.fromString(id.value) }) {
-            it[UserTable.role] = role.name
+            it[UserTable.role] = role
         }
         updated > 0
     }
@@ -136,10 +136,10 @@ class DatabaseAuthService(private val db: Database) : AuthService {
                         .where { UserTable.id eq UUID.fromString(id.value) }
                         .singleOrNull()
                         ?: return@suspendTransaction Result.success(false)
-                    val isTargetCurrentlyAdmin = targetRow[UserTable.role] == UserRole.ADMIN.name
+                    val isTargetCurrentlyAdmin = targetRow[UserTable.role] == UserRole.ADMIN
                     if (isTargetCurrentlyAdmin) {
                         val adminCount = UserTable.selectAll()
-                            .where { UserTable.role eq UserRole.ADMIN.name }
+                            .where { UserTable.role eq UserRole.ADMIN }
                             .count()
                         if (adminCount <= 1) {
                             return@suspendTransaction Result.failure(
@@ -150,7 +150,7 @@ class DatabaseAuthService(private val db: Database) : AuthService {
                 }
 
                 val updated = UserTable.update({ UserTable.id eq UUID.fromString(id.value) }) {
-                    it[UserTable.role] = role.name
+                    it[UserTable.role] = role
                 }
                 Result.success(updated > 0)
             }

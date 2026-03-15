@@ -1,7 +1,6 @@
 package com.github.mr3zee.teams
 
 import com.github.mr3zee.api.*
-import com.github.mr3zee.audit.AuditService
 import com.github.mr3zee.auth.userSession
 import com.github.mr3zee.model.TeamId
 import io.ktor.http.*
@@ -13,7 +12,6 @@ import java.util.UUID
 
 fun Route.teamRoutes() {
     val service by inject<TeamService>()
-    val auditService by inject<AuditService>()
 
     route(ApiRoutes.Teams.BASE) {
         post {

@@ -8,7 +8,7 @@ import com.github.mr3zee.model.ReleaseId
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.serialization.json.Json
+import com.github.mr3zee.AppJson
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -143,7 +143,7 @@ class WebhookService(
 
     private fun extractTeamCityBuildId(payload: String): String? {
         return try {
-            val json = Json.decodeFromString<JsonObject>(payload)
+            val json = AppJson.decodeFromString<JsonObject>(payload)
             json["build"]?.jsonObject?.get("id")?.jsonPrimitive?.content
                 ?: json["id"]?.jsonPrimitive?.content
         } catch (_: Exception) {
@@ -153,7 +153,7 @@ class WebhookService(
 
     private fun extractGitHubRunId(payload: String): String? {
         return try {
-            val json = Json.decodeFromString<JsonObject>(payload)
+            val json = AppJson.decodeFromString<JsonObject>(payload)
             json["workflow_run"]?.jsonObject?.get("id")?.jsonPrimitive?.content
         } catch (_: Exception) {
             null

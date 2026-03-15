@@ -20,7 +20,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
+import com.github.mr3zee.AppJson
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
@@ -170,7 +170,7 @@ class GitHubActionExecutor(
         repo: String,
     ): Map<String, String> {
         return try {
-            val json = Json.decodeFromString<JsonObject>(payload)
+            val json = AppJson.decodeFromString<JsonObject>(payload)
             val workflowRun = json["workflow_run"]?.jsonObject
             mapOf(
                 "runId" to (workflowRun?.get("id")?.jsonPrimitive?.content ?: runId),

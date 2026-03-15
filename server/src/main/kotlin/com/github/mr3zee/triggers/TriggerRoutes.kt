@@ -3,6 +3,7 @@ package com.github.mr3zee.triggers
 import com.github.mr3zee.NotFoundException
 import com.github.mr3zee.api.ApiRoutes
 import com.github.mr3zee.api.CreateTriggerRequest
+import com.github.mr3zee.api.ToggleTriggerRequest
 import com.github.mr3zee.api.TriggerListResponse
 import com.github.mr3zee.auth.userSession
 import com.github.mr3zee.util.requireProjectId
@@ -98,9 +99,6 @@ fun Route.triggerWebhookRoutes() {
         }
     }
 }
-
-@kotlinx.serialization.Serializable
-data class ToggleTriggerRequest(val enabled: Boolean)
 
 private fun ApplicationCall.requireTriggerId(): String {
     return requireUuidParam("triggerId")

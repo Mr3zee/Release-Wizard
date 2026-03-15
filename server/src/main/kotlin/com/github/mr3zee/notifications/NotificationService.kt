@@ -1,6 +1,7 @@
 package com.github.mr3zee.notifications
 
 import com.github.mr3zee.ForbiddenException
+import com.github.mr3zee.NotFoundException
 import com.github.mr3zee.api.CreateNotificationConfigRequest
 import com.github.mr3zee.api.NotificationConfigResponse
 import com.github.mr3zee.auth.UserSession
@@ -23,6 +24,12 @@ class DefaultNotificationService(
 ) : NotificationService {
 
     override suspend fun listByProject(projectId: ProjectId, session: UserSession): List<NotificationConfigResponse> {
+        // Verify the caller has access to the project's team (or is admin)
+        if (session.role != UserRole.ADMIN) {
+            val projectTeamId = projectsRepository.findTeamId(projectId)
+                ?: throw NotFoundException("Project not found")
+            teamAccessService.checkMembership(TeamId(projectTeamId), session)
+        }
         return repository.findByProjectId(projectId).map { it.toResponse() }
     }
 
@@ -30,9 +37,8 @@ class DefaultNotificationService(
         // Verify the caller has access to the project's team (or is admin)
         if (session.role != UserRole.ADMIN) {
             val projectTeamId = projectsRepository.findTeamId(request.projectId)
-            if (projectTeamId != null) {
-                teamAccessService.checkMembership(TeamId(projectTeamId), session)
-            }
+                ?: throw NotFoundException("Project not found")
+            teamAccessService.checkMembership(TeamId(projectTeamId), session)
         }
 
         val entity = repository.create(
@@ -47,11 +53,19 @@ class DefaultNotificationService(
 
     override suspend fun delete(id: String, session: UserSession): Boolean {
         val entity = repository.findById(id) ?: return false
-        checkAccess(entity, session)
+
+        // Verify team membership before allowing delete
+        if (session.role != UserRole.ADMIN) {
+            val projectTeamId = projectsRepository.findTeamId(entity.projectId)
+                ?: throw NotFoundException("Project not found")
+            teamAccessService.checkMembership(TeamId(projectTeamId), session)
+        }
+
+        checkOwnership(entity, session)
         return repository.delete(id)
     }
 
-    private fun checkAccess(entity: NotificationConfigEntity, session: UserSession) {
+    private fun checkOwnership(entity: NotificationConfigEntity, session: UserSession) {
         if (session.role == UserRole.ADMIN) return
         if (entity.userId.isNotEmpty() && entity.userId != session.userId) {
             throw ForbiddenException("Access denied")

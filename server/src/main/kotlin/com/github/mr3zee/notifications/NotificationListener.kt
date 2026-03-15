@@ -1,5 +1,6 @@
 package com.github.mr3zee.notifications
 
+import com.github.mr3zee.AppJson
 import com.github.mr3zee.api.ReleaseEvent
 import com.github.mr3zee.execution.ExecutionEngine
 import com.github.mr3zee.model.NotificationConfig
@@ -12,7 +13,14 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
 import org.slf4j.LoggerFactory
+
+@Serializable
+data class SlackPayload(
+    val text: String,
+    val channel: String = "",
+)
 
 class NotificationListener(
     private val notificationRepository: NotificationRepository,
@@ -79,16 +87,14 @@ class NotificationListener(
         }
         val text = "$emoji Release `${releaseId.value}` completed with status *${status.name}*"
 
-        val payload = buildMap {
-            put("text", text)
-            if (config.channel.isNotBlank()) {
-                put("channel", config.channel)
-            }
-        }
+        val payload = SlackPayload(
+            text = text,
+            channel = config.channel,
+        )
 
         httpClient.post(config.webhookUrl) {
             contentType(ContentType.Application.Json)
-            setBody(payload)
+            setBody(AppJson.encodeToString(payload))
         }
 
         log.info("Sent Slack notification for release {} to channel {}", releaseId.value, config.channel)

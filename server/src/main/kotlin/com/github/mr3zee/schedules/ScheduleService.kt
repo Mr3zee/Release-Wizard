@@ -1,6 +1,7 @@
 package com.github.mr3zee.schedules
 
 import com.github.mr3zee.ForbiddenException
+import com.github.mr3zee.NotFoundException
 import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.model.Schedule
@@ -44,6 +45,9 @@ class DefaultScheduleService(
         val cron = CronUtils.parser.parse(request.cronExpression)
         cron.validate()
 
+        // Reject expressions that fire more than once per 5 minutes
+        CronUtils.validateMinimumInterval(request.cronExpression)
+
         val nextRunAt = CronUtils.computeNextRun(request.cronExpression)
 
         val entity = repository.create(
@@ -79,9 +83,8 @@ class DefaultScheduleService(
     private suspend fun checkProjectAccess(projectId: ProjectId, session: UserSession) {
         if (session.role == UserRole.ADMIN) return
         val projectTeamId = projectsRepository.findTeamId(projectId)
-        if (projectTeamId != null) {
-            teamAccessService.checkMembership(TeamId(projectTeamId), session)
-        }
+            ?: throw NotFoundException("Project not found")
+        teamAccessService.checkMembership(TeamId(projectTeamId), session)
     }
 
 }

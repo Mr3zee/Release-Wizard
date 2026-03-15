@@ -4,6 +4,8 @@ import com.github.mr3zee.api.ApiRoutes
 import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
@@ -23,9 +25,11 @@ fun Route.healthRoute() {
 
     get(ApiRoutes.HEALTH) {
         try {
-            suspendTransaction(db) {
-                @Suppress("SqlNoDataSourceInspection")
-                exec("SELECT 1")
+            withContext(Dispatchers.IO) {
+                suspendTransaction(db) {
+                    @Suppress("SqlNoDataSourceInspection")
+                    exec("SELECT 1")
+                }
             }
             call.respond(HealthStatus(status = "UP"))
         } catch (e: Exception) {

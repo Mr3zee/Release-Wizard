@@ -20,3 +20,6 @@ data class ScheduleResponse(
 data class ScheduleListResponse(
     val schedules: List<Schedule>,
 )
+
+@Serializable
+data class ToggleScheduleRequest(val enabled: Boolean)
