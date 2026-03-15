@@ -63,4 +63,8 @@ class AuditLogViewModel(
             }
         }
     }
+
+    fun dismissError() {
+        _error.value = null
+    }
 }

@@ -1,11 +1,14 @@
 package com.github.mr3zee.releases
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.model.*
 import com.github.mr3zee.model.isTerminal
@@ -17,14 +20,88 @@ fun ReleaseDetailScreen(
     blockExecutions: List<BlockExecution>,
     isConnected: Boolean,
     reconnectAttempt: Int = 0,
+    error: String? = null,
     onBack: () -> Unit,
     onCancel: () -> Unit,
     onRerun: () -> Unit,
     onArchive: () -> Unit,
     onApproveBlock: (BlockId) -> Unit,
     onBlockClick: (BlockId) -> Unit,
+    onDismissError: () -> Unit = {},
 ) {
     var selectedBlockId by remember { mutableStateOf<BlockId?>(null) }
+    var showCancelConfirmation by remember { mutableStateOf(false) }
+    var showApproveConfirmation by remember { mutableStateOf<BlockId?>(null) }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Show errors via snackbar
+    LaunchedEffect(error) {
+        val msg = error ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(
+            message = msg,
+            duration = SnackbarDuration.Long,
+        )
+        onDismissError()
+    }
+
+    // Cancel release confirmation dialog
+    if (showCancelConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showCancelConfirmation = false },
+            title = { Text("Cancel Release") },
+            text = { Text("Cancel this release? In-progress blocks will be interrupted.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showCancelConfirmation = false
+                        onCancel()
+                    },
+                    modifier = Modifier.testTag("confirm_cancel_button"),
+                ) {
+                    Text("Cancel Release", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showCancelConfirmation = false },
+                    modifier = Modifier.testTag("dismiss_cancel_button"),
+                ) {
+                    Text("Keep Running")
+                }
+            },
+            modifier = Modifier.testTag("cancel_confirmation_dialog"),
+        )
+    }
+
+    // Approve block confirmation dialog
+    showApproveConfirmation?.let { blockId ->
+        AlertDialog(
+            onDismissRequest = { showApproveConfirmation = null },
+            title = { Text("Approve Step") },
+            text = { Text("Approve this step? The pipeline will continue.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showApproveConfirmation = null
+                        onApproveBlock(blockId)
+                    },
+                    modifier = Modifier.testTag("confirm_approve_button"),
+                ) {
+                    Text("Approve")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showApproveConfirmation = null },
+                    modifier = Modifier.testTag("dismiss_approve_button"),
+                ) {
+                    Text("Go Back")
+                }
+            },
+            modifier = Modifier.testTag("approve_confirmation_dialog"),
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -34,7 +111,11 @@ fun ReleaseDetailScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        Text("Release")
+                        Text(
+                            "Release",
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                         if (release != null) {
                             StatusBadge(release.status)
                         }
@@ -42,6 +123,7 @@ fun ReleaseDetailScreen(
                 },
                 navigationIcon = {
                     TextButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Navigate back")
                         Text("Back")
                     }
                 },
@@ -63,7 +145,7 @@ fun ReleaseDetailScreen(
                     }
                     if (release?.status == ReleaseStatus.RUNNING) {
                         TextButton(
-                            onClick = onCancel,
+                            onClick = { showCancelConfirmation = true },
                             modifier = Modifier.testTag("cancel_release_button"),
                         ) {
                             Text("Cancel", color = MaterialTheme.colorScheme.error)
@@ -88,6 +170,7 @@ fun ReleaseDetailScreen(
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = Modifier.testTag("release_detail_screen"),
     ) { padding ->
         if (release == null) {
@@ -131,13 +214,14 @@ fun ReleaseDetailScreen(
                     BlockDetailPanel(
                         block = block,
                         execution = execution,
-                        onApprove = { onApproveBlock(blockId) },
+                        onApprove = { showApproveConfirmation = blockId },
                         onDismiss = { selectedBlockId = null },
                     )
                 }
             }
         }
     }
+
 }
 
 @Composable
@@ -164,6 +248,9 @@ private fun BlockDetailPanel(
                 Text(
                     text = block.name,
                     style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
                 )
                 TextButton(onClick = onDismiss) {
                     Text("Close")
@@ -178,10 +265,10 @@ private fun BlockDetailPanel(
                 modifier = Modifier.testTag("block_status_text"),
             )
 
-            execution.error?.let { error ->
+            execution.error?.let { errorMsg ->
                 Spacer(modifier = Modifier.height(4.dp))
                 ErrorDetailSection(
-                    error = error,
+                    error = errorMsg,
                     finishedAt = execution.finishedAt,
                 )
             }

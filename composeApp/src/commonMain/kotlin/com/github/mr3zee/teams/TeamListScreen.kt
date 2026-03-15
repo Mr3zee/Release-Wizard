@@ -1,16 +1,21 @@
 package com.github.mr3zee.teams
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.api.TeamResponse
+import com.github.mr3zee.components.ListItemCard
 import com.github.mr3zee.model.TeamId
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -31,13 +36,33 @@ fun TeamListScreen(
 
     var showCreateDialog by remember { mutableStateOf(false) }
 
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Show errors via snackbar
+    LaunchedEffect(error) {
+        val msg = error ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(
+            message = msg,
+            actionLabel = "Retry",
+            duration = SnackbarDuration.Long,
+        ).let { result ->
+            if (result == SnackbarResult.ActionPerformed) {
+                viewModel.loadTeams()
+            }
+        }
+        viewModel.dismissError()
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Teams") },
                 navigationIcon = {
                     if (onBack != null) {
-                        TextButton(onClick = onBack) { Text("Back") }
+                        TextButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Navigate back")
+                            Text("Back")
+                        }
                     }
                 },
                 actions = {
@@ -55,9 +80,10 @@ fun TeamListScreen(
                 onClick = { showCreateDialog = true },
                 modifier = Modifier.testTag("create_team_fab"),
             ) {
-                Text("+")
+                Icon(Icons.Default.Add, contentDescription = "Create team")
             }
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = Modifier.testTag("team_list_screen"),
     ) { padding ->
         Column(
@@ -105,25 +131,32 @@ fun TeamListScreen(
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
-            } else if (error != null) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(error ?: "", color = MaterialTheme.colorScheme.error)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(onClick = { viewModel.loadTeams() }) { Text("Retry") }
-                    }
-                }
             } else if (teams.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        "No teams yet. Create one to get started.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    if (searchQuery.isNotBlank()) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                "No results match your search.",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            TextButton(onClick = { viewModel.setSearchQuery("") }) {
+                                Text("Clear search")
+                            }
+                        }
+                    } else {
+                        Text(
+                            "No teams yet. Create one to get started.",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize().testTag("team_list"),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     items(teams, key = { it.team.id.value }) { teamResponse ->
                         TeamListItem(
@@ -131,6 +164,7 @@ fun TeamListScreen(
                             onClick = { onTeamClick(teamResponse.team.id) },
                             onJoinRequest = { viewModel.requestToJoin(teamResponse.team.id) },
                             isMember = teamResponse.team.id in memberTeamIds,
+                            modifier = Modifier.widthIn(max = 900.dp),
                         )
                     }
                 }
@@ -157,45 +191,50 @@ private fun TeamListItem(
     onClick: () -> Unit,
     onJoinRequest: () -> Unit,
     isMember: Boolean,
+    modifier: Modifier = Modifier,
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .clickable(onClick = onClick)
-            .testTag("team_item_${teamResponse.team.id.value}"),
+    ListItemCard(
+        onClick = onClick,
+        testTag = "team_item_${teamResponse.team.id.value}",
+        modifier = modifier,
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(teamResponse.team.name, style = MaterialTheme.typography.titleMedium)
-                if (teamResponse.team.description.isNotBlank()) {
-                    Text(
-                        teamResponse.team.description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                teamResponse.team.name,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (teamResponse.team.description.isNotBlank()) {
                 Text(
-                    "${teamResponse.memberCount} members",
-                    style = MaterialTheme.typography.bodySmall,
+                    teamResponse.team.description,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
-            if (isMember) {
+            Text(
+                "${teamResponse.memberCount} members",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (isMember) {
+            Surface(
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                shape = RoundedCornerShape(50),
+            ) {
                 Text(
                     "Member",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(horizontal = 8.dp),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                 )
-            } else {
-                TextButton(onClick = onJoinRequest) {
-                    Text("Request to Join")
-                }
+            }
+        } else {
+            TextButton(onClick = onJoinRequest) {
+                Text("Request to Join")
             }
         }
     }

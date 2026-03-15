@@ -170,6 +170,10 @@ class ReleaseDetailViewModel(
         }
     }
 
+    fun dismissError() {
+        _error.value = null
+    }
+
     override fun onCleared() {
         disconnect()
         super.onCleared()

@@ -67,9 +67,10 @@ fun LoginScreen(
                         .testTag("login_password"),
                 )
 
-                if (error != null) {
+                val currentError = error
+                if (currentError != null) {
                     Text(
-                        text = error ?: "",
+                        text = currentError,
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodySmall,
                     )

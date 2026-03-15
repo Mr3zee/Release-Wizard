@@ -105,12 +105,14 @@ fun AppNavigation(
             val blockExecutions by viewModel.blockExecutions.collectAsState()
             val isConnected by viewModel.isConnected.collectAsState()
             val reconnectAttempt by viewModel.reconnectAttempt.collectAsState()
+            val vmError by viewModel.error.collectAsState()
 
             ReleaseDetailScreen(
                 release = release,
                 blockExecutions = blockExecutions,
                 isConnected = isConnected,
                 reconnectAttempt = reconnectAttempt,
+                error = vmError,
                 onBack = { onGoBack() },
                 onCancel = { viewModel.cancelRelease() },
                 onRerun = {
@@ -121,6 +123,7 @@ fun AppNavigation(
                 onArchive = { viewModel.archiveRelease() },
                 onApproveBlock = { viewModel.approveBlock(it) },
                 onBlockClick = {},
+                onDismissError = { viewModel.dismissError() },
             )
         }
         is Screen.TeamList -> {

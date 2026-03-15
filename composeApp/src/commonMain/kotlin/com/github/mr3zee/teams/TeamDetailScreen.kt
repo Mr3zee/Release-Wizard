@@ -3,12 +3,16 @@ package com.github.mr3zee.teams
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.github.mr3zee.components.ListItemCard
 import com.github.mr3zee.model.TeamMembership
 import com.github.mr3zee.model.TeamRole
 
@@ -31,9 +35,18 @@ fun TeamDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(team?.name ?: "Team") },
+                title = {
+                    Text(
+                        team?.name ?: "Team",
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
                 navigationIcon = {
-                    TextButton(onClick = onBack, modifier = Modifier.testTag("back_button")) { Text("Back") }
+                    TextButton(onClick = onBack, modifier = Modifier.testTag("back_button")) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Navigate back")
+                        Text("Back")
+                    }
                 },
                 actions = {
                     TextButton(
@@ -76,20 +89,39 @@ fun TeamDetailScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(padding),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 team?.let { t ->
                     item {
                         Card(
-                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            modifier = Modifier
+                                .widthIn(max = 900.dp)
+                                .fillMaxWidth()
+                                .padding(16.dp),
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
-                                Text(t.name, style = MaterialTheme.typography.titleLarge)
+                                Text(
+                                    t.name,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
                                 if (t.description.isNotBlank()) {
                                     Spacer(modifier = Modifier.height(4.dp))
-                                    Text(t.description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(
+                                        t.description,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Text("${members.size} members", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(
+                                    "${members.size} members",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                         }
                     }
@@ -99,12 +131,18 @@ fun TeamDetailScreen(
                     Text(
                         "Members",
                         style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        modifier = Modifier
+                            .widthIn(max = 900.dp)
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
                     )
                 }
 
                 items(members, key = { it.userId.value }) { member ->
-                    MemberItem(member)
+                    MemberItem(
+                        member = member,
+                        modifier = Modifier.widthIn(max = 900.dp),
+                    )
                 }
             }
         }
@@ -131,27 +169,28 @@ fun TeamDetailScreen(
 }
 
 @Composable
-private fun MemberItem(member: TeamMembership) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .testTag("member_item_${member.userId.value}"),
+private fun MemberItem(
+    member: TeamMembership,
+    modifier: Modifier = Modifier,
+) {
+    ListItemCard(
+        testTag = "member_item_${member.userId.value}",
+        modifier = modifier,
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(member.username, style = MaterialTheme.typography.titleMedium)
-            Text(
-                when (member.role) {
-                    TeamRole.TEAM_LEAD -> "Lead"
-                    TeamRole.COLLABORATOR -> "Collaborator"
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+        Text(
+            member.username,
+            style = MaterialTheme.typography.titleMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            when (member.role) {
+                TeamRole.TEAM_LEAD -> "Lead"
+                TeamRole.COLLABORATOR -> "Collaborator"
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }

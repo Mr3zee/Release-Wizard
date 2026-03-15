@@ -134,4 +134,8 @@ class ProjectListViewModel(
             }
         }
     }
+
+    fun dismissError() {
+        _error.value = null
+    }
 }

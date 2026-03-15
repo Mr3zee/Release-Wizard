@@ -63,4 +63,8 @@ class MyInvitesViewModel(
             }
         }
     }
+
+    fun dismissError() {
+        _error.value = null
+    }
 }

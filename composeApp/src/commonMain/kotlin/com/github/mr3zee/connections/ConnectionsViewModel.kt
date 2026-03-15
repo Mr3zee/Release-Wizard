@@ -13,7 +13,9 @@ import com.github.mr3zee.model.ConnectionId
 import com.github.mr3zee.model.ConnectionType
 import com.github.mr3zee.model.TeamId
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
@@ -55,6 +57,15 @@ class ConnectionsViewModel(
 
     private val _isLoadingMore = MutableStateFlow(false)
     val isLoadingMore: StateFlow<Boolean> = _isLoadingMore
+
+    private val _testSuccessMessage = MutableStateFlow<String?>(null)
+    val testSuccessMessage: StateFlow<String?> = _testSuccessMessage
+
+    private val _isSaving = MutableStateFlow(false)
+    val isSaving: StateFlow<Boolean> = _isSaving
+
+    private val _savedSuccessfully = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val savedSuccessfully: SharedFlow<Unit> = _savedSuccessfully
 
     private val pageSize = 20
 
@@ -146,12 +157,16 @@ class ConnectionsViewModel(
     fun createConnection(name: String, type: ConnectionType, config: ConnectionConfig) {
         viewModelScope.launch {
             _error.value = null
+            _isSaving.value = true
             try {
                 val teamId = activeTeamId.value ?: error("No active team selected")
                 apiClient.createConnection(CreateConnectionRequest(name = name, teamId = teamId, type = type, config = config))
                 loadConnections()
+                _savedSuccessfully.tryEmit(Unit)
             } catch (e: Exception) {
                 _error.value = e.toUserMessage()
+            } finally {
+                _isSaving.value = false
             }
         }
     }
@@ -174,11 +189,15 @@ class ConnectionsViewModel(
     fun updateConnection(id: ConnectionId, name: String?, config: ConnectionConfig?) {
         viewModelScope.launch {
             _error.value = null
+            _isSaving.value = true
             try {
                 apiClient.updateConnection(id, UpdateConnectionRequest(name = name, config = config))
                 loadConnections()
+                _savedSuccessfully.tryEmit(Unit)
             } catch (e: Exception) {
                 _error.value = e.toUserMessage()
+            } finally {
+                _isSaving.value = false
             }
         }
     }
@@ -200,12 +219,22 @@ class ConnectionsViewModel(
             _error.value = null
             try {
                 val result = apiClient.testConnection(id)
-                if (!result.success) {
+                if (result.success) {
+                    _testSuccessMessage.value = "Connection test succeeded: ${result.message}"
+                } else {
                     _error.value = "Test failed: ${result.message}"
                 }
             } catch (e: Exception) {
                 _error.value = e.toUserMessage()
             }
         }
+    }
+
+    fun clearTestSuccessMessage() {
+        _testSuccessMessage.value = null
+    }
+
+    fun dismissError() {
+        _error.value = null
     }
 }

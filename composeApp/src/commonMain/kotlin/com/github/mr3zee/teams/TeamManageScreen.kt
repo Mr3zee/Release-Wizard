@@ -3,12 +3,16 @@ package com.github.mr3zee.teams
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.github.mr3zee.components.ListItemCard
 import com.github.mr3zee.model.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -27,15 +31,32 @@ fun TeamManageScreen(
     var memberToRemove by remember { mutableStateOf<TeamMembership?>(null) }
     var inviteToCancel by remember { mutableStateOf<TeamInvite?>(null) }
 
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Show errors via snackbar with dismiss
+    LaunchedEffect(error) {
+        val msg = error ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(
+            message = msg,
+            actionLabel = "Dismiss",
+            duration = SnackbarDuration.Long,
+        )
+        viewModel.dismissError()
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Manage Team") },
                 navigationIcon = {
-                    TextButton(onClick = onBack, modifier = Modifier.testTag("back_button")) { Text("Back") }
+                    TextButton(onClick = onBack, modifier = Modifier.testTag("back_button")) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Navigate back")
+                        Text("Back")
+                    }
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = Modifier.testTag("team_manage_screen"),
     ) { padding ->
         if (isLoading) {
@@ -45,22 +66,15 @@ fun TeamManageScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(padding),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                // Error
-                if (error != null) {
-                    item {
-                        Text(
-                            error ?: "",
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(16.dp),
-                        )
-                    }
-                }
-
                 // Members section
                 item {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        modifier = Modifier
+                            .widthIn(max = 900.dp)
+                            .fillMaxWidth()
+                            .padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -81,6 +95,7 @@ fun TeamManageScreen(
                             viewModel.updateMemberRole(member.userId.value, newRole)
                         },
                         onRemove = { memberToRemove = member },
+                        modifier = Modifier.widthIn(max = 900.dp),
                     )
                 }
 
@@ -93,13 +108,17 @@ fun TeamManageScreen(
                         Text(
                             "Pending Invites (${invites.size})",
                             style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            modifier = Modifier
+                                .widthIn(max = 900.dp)
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
                         )
                     }
                     items(invites, key = { "invite-${it.id}" }) { invite ->
                         InviteItem(
                             invite = invite,
                             onCancel = { inviteToCancel = invite },
+                            modifier = Modifier.widthIn(max = 900.dp),
                         )
                     }
                 }
@@ -113,7 +132,10 @@ fun TeamManageScreen(
                         Text(
                             "Join Requests (${joinRequests.size})",
                             style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            modifier = Modifier
+                                .widthIn(max = 900.dp)
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
                         )
                     }
                     items(joinRequests, key = { "request-${it.id}" }) { request ->
@@ -121,6 +143,7 @@ fun TeamManageScreen(
                             request = request,
                             onApprove = { viewModel.approveJoinRequest(request.id) },
                             onReject = { viewModel.rejectJoinRequest(request.id) },
+                            modifier = Modifier.widthIn(max = 900.dp),
                         )
                     }
                 }
@@ -182,73 +205,82 @@ private fun ManageMemberItem(
     member: TeamMembership,
     onToggleRole: () -> Unit,
     onRemove: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .testTag("manage_member_${member.userId.value}"),
+    ListItemCard(
+        testTag = "manage_member_${member.userId.value}",
+        modifier = modifier,
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(member.username, style = MaterialTheme.typography.titleMedium)
-                Text(
-                    when (member.role) {
-                        TeamRole.TEAM_LEAD -> "Lead"
-                        TeamRole.COLLABORATOR -> "Collaborator"
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            TextButton(onClick = onToggleRole) {
-                Text(if (member.role == TeamRole.TEAM_LEAD) "Demote" else "Promote")
-            }
-            TextButton(onClick = onRemove) {
-                Text("Remove", color = MaterialTheme.colorScheme.error)
-            }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                member.username,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                when (member.role) {
+                    TeamRole.TEAM_LEAD -> "Lead"
+                    TeamRole.COLLABORATOR -> "Collaborator"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        TextButton(onClick = onToggleRole) {
+            Text(if (member.role == TeamRole.TEAM_LEAD) "Demote" else "Promote")
+        }
+        TextButton(onClick = onRemove) {
+            Text("Remove", color = MaterialTheme.colorScheme.error)
         }
     }
 }
 
 @Composable
-private fun InviteItem(invite: TeamInvite, onCancel: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("invite_item_${invite.id}"),
+private fun InviteItem(
+    invite: TeamInvite,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    ListItemCard(
+        testTag = "invite_item_${invite.id}",
+        modifier = modifier,
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(invite.invitedUsername, style = MaterialTheme.typography.titleMedium)
-            TextButton(onClick = onCancel) {
-                Text("Cancel", color = MaterialTheme.colorScheme.error)
-            }
+        Text(
+            invite.invitedUsername,
+            style = MaterialTheme.typography.titleMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        TextButton(onClick = onCancel) {
+            Text("Cancel", color = MaterialTheme.colorScheme.error)
         }
     }
 }
 
 @Composable
-private fun JoinRequestItem(request: JoinRequest, onApprove: () -> Unit, onReject: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).testTag("join_request_item_${request.id}"),
+private fun JoinRequestItem(
+    request: JoinRequest,
+    onApprove: () -> Unit,
+    onReject: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    ListItemCard(
+        testTag = "join_request_item_${request.id}",
+        modifier = modifier,
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(request.username, style = MaterialTheme.typography.titleMedium)
-            Row {
-                TextButton(onClick = onApprove) { Text("Approve") }
-                TextButton(onClick = onReject) {
-                    Text("Reject", color = MaterialTheme.colorScheme.error)
-                }
+        Text(
+            request.username,
+            style = MaterialTheme.typography.titleMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        Row {
+            TextButton(onClick = onApprove) { Text("Approve") }
+            TextButton(onClick = onReject) {
+                Text("Reject", color = MaterialTheme.colorScheme.error)
             }
         }
     }
@@ -256,21 +288,22 @@ private fun JoinRequestItem(request: JoinRequest, onApprove: () -> Unit, onRejec
 
 @Composable
 private fun InviteUserDialog(onDismiss: () -> Unit, onInvite: (String) -> Unit) {
-    var userId by remember { mutableStateOf("") }
+    var username by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Invite User") },
         text = {
             OutlinedTextField(
-                value = userId,
-                onValueChange = { userId = it },
-                label = { Text("User ID") },
+                value = username,
+                onValueChange = { username = it },
+                label = { Text("Username") },
+                placeholder = { Text("Enter username") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().testTag("invite_user_id_input"),
             )
         },
         confirmButton = {
-            TextButton(onClick = { onInvite(userId) }, enabled = userId.isNotBlank()) {
+            TextButton(onClick = { onInvite(username) }, enabled = username.isNotBlank()) {
                 Text("Invite")
             }
         },

@@ -197,4 +197,8 @@ class ReleaseListViewModel(
             }
         }
     }
+
+    fun dismissError() {
+        _error.value = null
+    }
 }

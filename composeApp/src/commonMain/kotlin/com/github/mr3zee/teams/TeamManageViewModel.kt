@@ -116,4 +116,8 @@ class TeamManageViewModel(
             }
         }
     }
+
+    fun dismissError() {
+        _error.value = null
+    }
 }

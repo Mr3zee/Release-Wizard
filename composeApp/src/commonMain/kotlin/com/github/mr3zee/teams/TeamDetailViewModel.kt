@@ -58,4 +58,8 @@ class TeamDetailViewModel(
             }
         }
     }
+
+    fun dismissError() {
+        _error.value = null
+    }
 }

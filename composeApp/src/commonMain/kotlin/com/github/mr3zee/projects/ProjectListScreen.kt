@@ -1,16 +1,21 @@
 package com.github.mr3zee.projects
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.api.UserTeamInfo
+import com.github.mr3zee.components.ListItemCard
 import com.github.mr3zee.components.loadMoreItem
 import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.model.ProjectTemplate
@@ -40,13 +45,12 @@ fun ProjectListScreen(
     val isLoadingMore by viewModel.isLoadingMore.collectAsState()
     val pagination by viewModel.pagination.collectAsState()
 
-    // Initial load is handled by the ViewModel's init block (debounced search flow).
-
     var showCreateDialog by remember { mutableStateOf(false) }
     var projectToDelete by remember { mutableStateOf<ProjectTemplate?>(null) }
 
     val currentTeamId = activeTeamId?.collectAsState()?.value
     var showTeamPicker by remember { mutableStateOf(false) }
+    var showOverflowMenu by remember { mutableStateOf(false) }
     val activeTeamName = userTeams.find { it.teamId == currentTeamId }?.teamName ?: "No Team"
 
     Scaffold(
@@ -58,10 +62,25 @@ fun ProjectListScreen(
                             onClick = { showTeamPicker = true },
                             modifier = Modifier.testTag("team_switcher"),
                         ) {
-                            Text("Projects - $activeTeamName")
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    "Projects - $activeTeamName",
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                Icon(
+                                    Icons.Default.ArrowDropDown,
+                                    contentDescription = "Switch team",
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
                         }
                     } else {
-                        Text("Projects")
+                        Text(
+                            "Projects - $activeTeamName",
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
                 },
                 actions = {
@@ -72,24 +91,6 @@ fun ProjectListScreen(
                         ) {
                             Text("Teams")
                         }
-                    }
-                    TextButton(
-                        onClick = {
-                            val next = when (themePreference) {
-                                ThemePreference.SYSTEM -> ThemePreference.LIGHT
-                                ThemePreference.LIGHT -> ThemePreference.DARK
-                                ThemePreference.DARK -> ThemePreference.SYSTEM
-                            }
-                            onThemeChange(next)
-                        },
-                        modifier = Modifier.testTag("theme_toggle_button"),
-                    ) {
-                        val label = when (themePreference) {
-                            ThemePreference.SYSTEM -> "Auto"
-                            ThemePreference.LIGHT -> "Light"
-                            ThemePreference.DARK -> "Dark"
-                        }
-                        Text(label)
                     }
                     if (onReleases != null) {
                         TextButton(
@@ -115,6 +116,40 @@ fun ProjectListScreen(
                             Text("Logout")
                         }
                     }
+                    // Overflow menu for theme toggle
+                    Box {
+                        IconButton(
+                            onClick = { showOverflowMenu = true },
+                            modifier = Modifier.testTag("overflow_menu_button"),
+                        ) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                        }
+                        DropdownMenu(
+                            expanded = showOverflowMenu,
+                            onDismissRequest = { showOverflowMenu = false },
+                        ) {
+                            DropdownMenuItem(
+                                text = {
+                                    val label = when (themePreference) {
+                                        ThemePreference.SYSTEM -> "Theme: Auto"
+                                        ThemePreference.LIGHT -> "Theme: Light"
+                                        ThemePreference.DARK -> "Theme: Dark"
+                                    }
+                                    Text(label)
+                                },
+                                onClick = {
+                                    val next = when (themePreference) {
+                                        ThemePreference.SYSTEM -> ThemePreference.LIGHT
+                                        ThemePreference.LIGHT -> ThemePreference.DARK
+                                        ThemePreference.DARK -> ThemePreference.SYSTEM
+                                    }
+                                    onThemeChange(next)
+                                    showOverflowMenu = false
+                                },
+                                modifier = Modifier.testTag("theme_toggle_menu_item"),
+                            )
+                        }
+                    }
                 },
             )
         },
@@ -123,7 +158,7 @@ fun ProjectListScreen(
                 onClick = { showCreateDialog = true },
                 modifier = Modifier.testTag("create_project_fab"),
             ) {
-                Text("+")
+                Icon(Icons.Default.Add, contentDescription = "Create project")
             }
         },
         modifier = Modifier.testTag("project_list_screen"),
@@ -172,23 +207,39 @@ fun ProjectListScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        text = "No projects yet. Create one to get started.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    if (searchQuery.isNotBlank()) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "No results match your search.",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            TextButton(onClick = { viewModel.setSearchQuery("") }) {
+                                Text("Clear search")
+                            }
+                        }
+                    } else {
+                        Text(
+                            text = "No projects yet. Create one to get started.",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             } else {
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
                         .testTag("project_list"),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     items(projects, key = { it.id.value }) { project ->
                         ProjectListItem(
                             project = project,
                             onClick = { onEditProject(project.id) },
                             onDelete = { projectToDelete = project },
+                            modifier = Modifier.widthIn(max = 900.dp),
                         )
                     }
                     loadMoreItem(pagination, isLoadingMore, onLoadMore = { viewModel.loadMore() })
@@ -266,42 +317,37 @@ private fun ProjectListItem(
     project: ProjectTemplate,
     onClick: () -> Unit,
     onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .clickable(onClick = onClick)
-            .testTag("project_item_${project.id.value}"),
+    ListItemCard(
+        onClick = onClick,
+        testTag = "project_item_${project.id.value}",
+        modifier = modifier,
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = project.name,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (project.description.isNotBlank()) {
                 Text(
-                    text = project.name,
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                if (project.description.isNotBlank()) {
-                    Text(
-                        text = project.description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Text(
-                    text = "${project.dagGraph.blocks.size} blocks",
-                    style = MaterialTheme.typography.bodySmall,
+                    text = project.description,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
-            TextButton(onClick = onDelete) {
-                Text("Delete", color = MaterialTheme.colorScheme.error)
-            }
+            Text(
+                text = "${project.dagGraph.blocks.size} blocks",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        TextButton(onClick = onDelete) {
+            Text("Delete", color = MaterialTheme.colorScheme.error)
         }
     }
 }

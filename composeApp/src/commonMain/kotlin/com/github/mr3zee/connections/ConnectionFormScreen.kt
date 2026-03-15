@@ -1,6 +1,8 @@
 package com.github.mr3zee.connections
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -20,23 +22,65 @@ fun ConnectionFormScreen(
 ) {
     val isEditMode = connectionId != null
     val editingConnection by viewModel.editingConnection.collectAsState()
+    val isSaving by viewModel.isSaving.collectAsState()
+    val error by viewModel.error.collectAsState()
 
-    var name by remember { mutableStateOf("") }
-    var selectedType by remember { mutableStateOf(ConnectionType.GITHUB) }
-    var expanded by remember { mutableStateOf(false) }
+    // Navigate back only after a successful save
+    LaunchedEffect(Unit) {
+        viewModel.savedSuccessfully.collect {
+            onBack()
+        }
+    }
+
+    var name by remember(connectionId) { mutableStateOf("") }
+    var selectedType by remember(connectionId) { mutableStateOf(ConnectionType.GITHUB) }
+    var expanded by remember(connectionId) { mutableStateOf(false) }
 
     // Type-specific fields
-    var slackWebhookUrl by remember { mutableStateOf("") }
-    var teamCityServerUrl by remember { mutableStateOf("") }
-    var teamCityToken by remember { mutableStateOf("") }
-    var teamCityWebhookSecret by remember { mutableStateOf("") }
-    var githubToken by remember { mutableStateOf("") }
-    var githubOwner by remember { mutableStateOf("") }
-    var githubRepo by remember { mutableStateOf("") }
-    var githubWebhookSecret by remember { mutableStateOf("") }
-    var mavenUsername by remember { mutableStateOf("") }
-    var mavenPassword by remember { mutableStateOf("") }
-    var mavenBaseUrl by remember { mutableStateOf("https://central.sonatype.com") }
+    var slackWebhookUrl by remember(connectionId) { mutableStateOf("") }
+    var teamCityServerUrl by remember(connectionId) { mutableStateOf("") }
+    var teamCityToken by remember(connectionId) { mutableStateOf("") }
+    var teamCityWebhookSecret by remember(connectionId) { mutableStateOf("") }
+    var githubToken by remember(connectionId) { mutableStateOf("") }
+    var githubOwner by remember(connectionId) { mutableStateOf("") }
+    var githubRepo by remember(connectionId) { mutableStateOf("") }
+    var githubWebhookSecret by remember(connectionId) { mutableStateOf("") }
+    var mavenUsername by remember(connectionId) { mutableStateOf("") }
+    var mavenPassword by remember(connectionId) { mutableStateOf("") }
+    var mavenBaseUrl by remember(connectionId) { mutableStateOf("https://central.sonatype.com") }
+
+    // Track initial values to detect dirty state
+    var initialName by remember(connectionId) { mutableStateOf("") }
+    var initialSlackWebhookUrl by remember(connectionId) { mutableStateOf("") }
+    var initialTeamCityServerUrl by remember(connectionId) { mutableStateOf("") }
+    var initialTeamCityToken by remember(connectionId) { mutableStateOf("") }
+    var initialTeamCityWebhookSecret by remember(connectionId) { mutableStateOf("") }
+    var initialGithubToken by remember(connectionId) { mutableStateOf("") }
+    var initialGithubOwner by remember(connectionId) { mutableStateOf("") }
+    var initialGithubRepo by remember(connectionId) { mutableStateOf("") }
+    var initialGithubWebhookSecret by remember(connectionId) { mutableStateOf("") }
+    var initialMavenUsername by remember(connectionId) { mutableStateOf("") }
+    var initialMavenPassword by remember(connectionId) { mutableStateOf("") }
+    var initialMavenBaseUrl by remember(connectionId) { mutableStateOf("https://central.sonatype.com") }
+
+    val isDirty by remember {
+        derivedStateOf {
+            name != initialName ||
+                slackWebhookUrl != initialSlackWebhookUrl ||
+                teamCityServerUrl != initialTeamCityServerUrl ||
+                teamCityToken != initialTeamCityToken ||
+                teamCityWebhookSecret != initialTeamCityWebhookSecret ||
+                githubToken != initialGithubToken ||
+                githubOwner != initialGithubOwner ||
+                githubRepo != initialGithubRepo ||
+                githubWebhookSecret != initialGithubWebhookSecret ||
+                mavenUsername != initialMavenUsername ||
+                mavenPassword != initialMavenPassword ||
+                mavenBaseUrl != initialMavenBaseUrl
+        }
+    }
+
+    var showDiscardDialog by remember { mutableStateOf(false) }
 
     if (isEditMode) {
         LaunchedEffect(connectionId) {
@@ -46,26 +90,38 @@ fun ConnectionFormScreen(
         LaunchedEffect(editingConnection) {
             val connection = editingConnection ?: return@LaunchedEffect
             name = connection.name
+            initialName = connection.name
             selectedType = connection.type
             when (val config = connection.config) {
                 is ConnectionConfig.SlackConfig -> {
                     slackWebhookUrl = config.webhookUrl
+                    initialSlackWebhookUrl = config.webhookUrl
                 }
                 is ConnectionConfig.TeamCityConfig -> {
                     teamCityServerUrl = config.serverUrl
                     teamCityToken = config.token
                     teamCityWebhookSecret = config.webhookSecret
+                    initialTeamCityServerUrl = config.serverUrl
+                    initialTeamCityToken = config.token
+                    initialTeamCityWebhookSecret = config.webhookSecret
                 }
                 is ConnectionConfig.GitHubConfig -> {
                     githubToken = config.token
                     githubOwner = config.owner
                     githubRepo = config.repo
                     githubWebhookSecret = config.webhookSecret
+                    initialGithubToken = config.token
+                    initialGithubOwner = config.owner
+                    initialGithubRepo = config.repo
+                    initialGithubWebhookSecret = config.webhookSecret
                 }
                 is ConnectionConfig.MavenCentralConfig -> {
                     mavenUsername = config.username
                     mavenPassword = config.password
                     mavenBaseUrl = config.baseUrl
+                    initialMavenUsername = config.username
+                    initialMavenPassword = config.password
+                    initialMavenBaseUrl = config.baseUrl
                 }
             }
         }
@@ -81,12 +137,21 @@ fun ConnectionFormScreen(
         }
     }
 
+    val handleBack: () -> Unit = {
+        if (isDirty) {
+            showDiscardDialog = true
+        } else {
+            onBack()
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(if (isEditMode) "Edit Connection" else "New Connection") },
                 navigationIcon = {
-                    TextButton(onClick = onBack) {
+                    TextButton(onClick = handleBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Navigate back")
                         Text("Back")
                     }
                 },
@@ -98,12 +163,11 @@ fun ConnectionFormScreen(
                             } else {
                                 viewModel.createConnection(name, selectedType, currentConfig)
                             }
-                            onBack()
                         },
-                        enabled = name.isNotBlank() && currentConfig.isValid(),
+                        enabled = name.isNotBlank() && currentConfig.isValid() && !isSaving,
                         modifier = Modifier.testTag("save_connection_button"),
                     ) {
-                        Text("Save")
+                        Text(if (isSaving) "Saving..." else "Save")
                     }
                 },
             )
@@ -255,7 +319,40 @@ fun ConnectionFormScreen(
                     )
                 }
             }
+
+            error?.let { errorMessage ->
+                Text(
+                    text = errorMessage,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("connection_form_error"),
+                )
+            }
         }
+    }
+
+    // Unsaved changes confirmation dialog
+    if (showDiscardDialog) {
+        AlertDialog(
+            onDismissRequest = { showDiscardDialog = false },
+            title = { Text("Unsaved Changes") },
+            text = { Text("You have unsaved changes. Discard them?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDiscardDialog = false
+                    onBack()
+                }) {
+                    Text("Discard")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDiscardDialog = false }) {
+                    Text("Cancel")
+                }
+            },
+        )
     }
 }
 

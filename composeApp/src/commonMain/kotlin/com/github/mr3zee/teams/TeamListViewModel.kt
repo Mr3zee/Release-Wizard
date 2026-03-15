@@ -95,4 +95,8 @@ class TeamListViewModel(
             }
         }
     }
+
+    fun dismissError() {
+        _error.value = null
+    }
 }

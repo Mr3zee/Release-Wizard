@@ -3,11 +3,14 @@ package com.github.mr3zee.teams
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.model.AuditEvent
 import kotlin.time.Instant
@@ -25,15 +28,32 @@ fun AuditLogScreen(
     val error by viewModel.error.collectAsState()
     val hasMore by viewModel.hasMore.collectAsState()
 
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Show errors via snackbar with dismiss
+    LaunchedEffect(error) {
+        val msg = error ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(
+            message = msg,
+            actionLabel = "Dismiss",
+            duration = SnackbarDuration.Long,
+        )
+        viewModel.dismissError()
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Audit Log") },
                 navigationIcon = {
-                    TextButton(onClick = onBack, modifier = Modifier.testTag("back_button")) { Text("Back") }
+                    TextButton(onClick = onBack, modifier = Modifier.testTag("back_button")) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Navigate back")
+                        Text("Back")
+                    }
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = Modifier.testTag("audit_log_screen"),
     ) { padding ->
         if (isLoading) {
@@ -51,14 +71,13 @@ fun AuditLogScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(padding).testTag("audit_event_list"),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                if (error != null) {
-                    item {
-                        Text(error ?: "", color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp))
-                    }
-                }
                 items(events, key = { it.id }) { event ->
-                    AuditEventItem(event)
+                    AuditEventItem(
+                        event = event,
+                        modifier = Modifier.widthIn(max = 900.dp),
+                    )
                 }
                 if (hasMore) {
                     item {
@@ -76,9 +95,12 @@ fun AuditLogScreen(
 }
 
 @Composable
-private fun AuditEventItem(event: AuditEvent) {
+private fun AuditEventItem(
+    event: AuditEvent,
+    modifier: Modifier = Modifier,
+) {
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
             .testTag("audit_event_${event.id}"),
@@ -92,6 +114,9 @@ private fun AuditEventItem(event: AuditEvent) {
                     event.action.name.replace("_", " ").lowercase()
                         .replaceFirstChar { it.uppercase() },
                     style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
                 )
                 Text(
                     event.targetType.name.lowercase(),
@@ -114,6 +139,8 @@ private fun AuditEventItem(event: AuditEvent) {
                     event.details,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }

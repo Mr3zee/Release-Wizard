@@ -1,6 +1,8 @@
 package com.github.mr3zee.editor
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,12 +31,37 @@ fun DagEditorScreen(
     val validationErrors by viewModel.validationErrors.collectAsState()
     val clipboard by viewModel.clipboard.collectAsState()
 
+    var showDiscardDialog by remember { mutableStateOf(false) }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Show transient errors via snackbar
+    LaunchedEffect(error) {
+        val msg = error ?: return@LaunchedEffect
+        if (project != null) {
+            snackbarHostState.showSnackbar(
+                message = msg,
+                actionLabel = "Dismiss",
+                duration = SnackbarDuration.Long,
+            )
+            viewModel.dismissError()
+        }
+    }
+
     LaunchedEffect(Unit) {
         viewModel.loadProject()
     }
 
     val selectedBlock = remember(selectedBlockIds, graph) {
         if (selectedBlockIds.size == 1) graph.blocks.find { it.id == selectedBlockIds.first() } else null
+    }
+
+    val handleBack: () -> Unit = {
+        if (isDirty) {
+            showDiscardDialog = true
+        } else {
+            onBack()
+        }
     }
 
     Scaffold(
@@ -52,7 +79,8 @@ fun DagEditorScreen(
                     }
                 },
                 navigationIcon = {
-                    TextButton(onClick = onBack) {
+                    TextButton(onClick = handleBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Navigate back")
                         Text("Back")
                     }
                 },
@@ -70,6 +98,7 @@ fun DagEditorScreen(
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = Modifier
             .testTag("dag_editor_screen")
             .onKeyEvent { event ->
@@ -135,22 +164,6 @@ fun DagEditorScreen(
             return@Scaffold
         }
 
-        // Error snackbar for save errors
-        error?.let { msg ->
-            if (project != null) {
-                Snackbar(
-                    modifier = Modifier.padding(16.dp),
-                    action = {
-                        TextButton(onClick = { viewModel.dismissError() }) {
-                            Text("Dismiss")
-                        }
-                    },
-                ) {
-                    Text(msg)
-                }
-            }
-        }
-
         Row(
             modifier = Modifier
                 .fillMaxSize()
@@ -212,6 +225,28 @@ fun DagEditorScreen(
                 onUpdateTimeout = { id, timeout -> viewModel.updateBlockTimeout(id, timeout) },
             )
         }
+    }
+
+    // Unsaved changes confirmation dialog
+    if (showDiscardDialog) {
+        AlertDialog(
+            onDismissRequest = { showDiscardDialog = false },
+            title = { Text("Unsaved Changes") },
+            text = { Text("You have unsaved changes. Discard them?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDiscardDialog = false
+                    onBack()
+                }) {
+                    Text("Discard")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDiscardDialog = false }) {
+                    Text("Cancel")
+                }
+            },
+        )
     }
 }
 

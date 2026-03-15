@@ -119,7 +119,7 @@ fun DagCanvas(
             .clipToBounds()
             .background(appColors.canvasBackground)
             // Scroll for zoom + hover tracking
-            .pointerInput(Unit) {
+            .pointerInput(graph) {
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent()
@@ -139,7 +139,7 @@ fun DagCanvas(
                 }
             }
             // Click and drag
-            .pointerInput(Unit) {
+            .pointerInput(graph) {
                 awaitPointerEventScope {
                     while (true) {
                         val down = awaitPointerEvent()
@@ -254,10 +254,9 @@ fun DagCanvas(
 
         for (block in graph.blocks) {
             val pos = graph.positions[block.id] ?: continue
-            val isInputHovered = hoveredPort is HitTarget.InputPort &&
-                    (hoveredPort as HitTarget.InputPort).blockId == block.id
-            val isOutputHovered = hoveredPort is HitTarget.OutputPort &&
-                    (hoveredPort as HitTarget.OutputPort).blockId == block.id
+            val currentHoveredPort = hoveredPort
+            val isInputHovered = currentHoveredPort is HitTarget.InputPort && currentHoveredPort.blockId == block.id
+            val isOutputHovered = currentHoveredPort is HitTarget.OutputPort && currentHoveredPort.blockId == block.id
             drawPorts(drawTransform, pos, isInputHovered, isOutputHovered, appColors)
         }
     }

@@ -20,10 +20,11 @@ fun LazyListScope.loadMoreItem(
     isLoadingMore: Boolean,
     onLoadMore: () -> Unit,
 ) {
-    val hasMore = pagination?.let { (it.offset + it.limit) < it.totalCount } ?: false
+    val currentPagination = pagination ?: return
+    val hasMore = (currentPagination.offset + currentPagination.limit) < currentPagination.totalCount
     if (hasMore) {
         item {
-            LaunchedEffect(Unit) { onLoadMore() }
+            LaunchedEffect(currentPagination.offset) { onLoadMore() }
             if (isLoadingMore) {
                 Box(
                     modifier = Modifier.fillMaxWidth().padding(16.dp),

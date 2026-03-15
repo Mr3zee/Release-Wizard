@@ -53,7 +53,7 @@ fun ExecutionDagCanvas(
             .background(appColors.canvasBackground)
             .testTag("execution_dag_canvas")
             // Scroll for zoom
-            .pointerInput(Unit) {
+            .pointerInput(graph) {
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent()
@@ -65,7 +65,7 @@ fun ExecutionDagCanvas(
                 }
             }
             // Pan and click
-            .pointerInput(Unit) {
+            .pointerInput(graph) {
                 awaitPointerEventScope {
                     while (true) {
                         val down = awaitPointerEvent()
