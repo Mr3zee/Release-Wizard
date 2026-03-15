@@ -21,7 +21,7 @@ import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.Spacing
-import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.*
 import com.github.mr3zee.i18n.packStringResource
 import releasewizard.composeapp.generated.resources.*
 
@@ -30,18 +30,28 @@ import releasewizard.composeapp.generated.resources.*
  */
 @Composable
 fun ArtifactTreeView(artifactsJson: String) {
-    val paths = remember(artifactsJson) {
+    val entries = remember(artifactsJson) {
         try {
-            Json.decodeFromString<List<String>>(artifactsJson)
+            val json = Json.parseToJsonElement(artifactsJson).jsonArray
+            json.map { element ->
+                when (element) {
+                    is JsonPrimitive -> ArtifactEntry(path = element.content)
+                    is JsonObject -> ArtifactEntry(
+                        path = element["path"]?.jsonPrimitive?.content ?: return@map ArtifactEntry("unknown"),
+                        size = element["size"]?.jsonPrimitive?.longOrNull,
+                    )
+                    else -> ArtifactEntry("unknown")
+                }
+            }
         } catch (_: Exception) {
             null
         }
     }
 
-    if (paths.isNullOrEmpty()) return
+    if (entries.isNullOrEmpty()) return
 
-    val tree = remember(paths) { buildArtifactTree(paths) }
-    val expandedState = remember { mutableStateMapOf<String, Boolean>() }
+    val tree = remember(entries) { buildArtifactTreeFromEntries(entries) }
+    val expandedState = remember(artifactsJson) { mutableStateMapOf<String, Boolean>() }
 
     Column(
         modifier = Modifier
@@ -141,6 +151,14 @@ private fun ArtifactNodeRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            if (node.size != null) {
+                Spacer(Modifier.width(Spacing.sm))
+                Text(
+                    text = formatFileSize(node.size),
+                    style = AppTypography.caption,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 
@@ -158,5 +176,17 @@ private fun expandAll(nodes: List<ArtifactNode>, parentPath: String, expandedSta
             expandedState[path] = true
             expandAll(node.children, path, expandedState)
         }
+    }
+}
+
+private fun formatFileSize(bytes: Long): String {
+    val kb = bytes / 1024.0
+    val mb = kb / 1024.0
+    val gb = mb / 1024.0
+    return when {
+        bytes < 1024 -> "$bytes B"
+        kb < 1024 -> "${(kb * 10).toLong() / 10.0} KB"
+        mb < 1024 -> "${(mb * 10).toLong() / 10.0} MB"
+        else -> "${(gb * 10).toLong() / 10.0} GB"
     }
 }

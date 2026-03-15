@@ -8,6 +8,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.BasicTextField
@@ -17,6 +18,7 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -49,6 +51,7 @@ fun RwTextField(
     textStyle: TextStyle = AppTypography.body,
     label: String? = null,
     placeholder: String? = null,
+    trailingIcon: @Composable (() -> Unit)? = null,
     isError: Boolean = false,
     supportingText: @Composable (() -> Unit)? = null,
     singleLine: Boolean = false,
@@ -99,23 +102,29 @@ fun RwTextField(
             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
             modifier = modifier,
             decorationBox = { innerTextField ->
-                Box(
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(AppShapes.sm)
                         .background(bgColor, AppShapes.sm)
                         .border(borderWidth, borderColor, AppShapes.sm)
                         .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (value.isEmpty() && placeholder != null) {
-                        Text(
-                            text = placeholder,
-                            style = textStyle,
-                            color = colors.inputPlaceholder,
-                        )
+                    Box(modifier = Modifier.weight(1f)) {
+                        if (value.isEmpty() && placeholder != null) {
+                            Text(
+                                text = placeholder,
+                                style = textStyle,
+                                color = colors.inputPlaceholder,
+                            )
+                        }
+                        CompositionLocalProvider(LocalContentColor provides colors.chromeTextPrimary) {
+                            innerTextField()
+                        }
                     }
-                    CompositionLocalProvider(LocalContentColor provides colors.chromeTextPrimary) {
-                        innerTextField()
+                    if (trailingIcon != null) {
+                        trailingIcon()
                     }
                 }
             },

@@ -301,4 +301,18 @@
     <string name="teams_no_audit_events">No audit events yet.</string>
     <string name="teams_load_more">Load more</string>
     <string name="teams_audit_entry_by">by %1$s \u2022 %2$s</string>
+
+    <!-- ==================== Releases: Block Detail ==================== -->
+    <string name="releases_duration">Duration: %1$s</string>
+    <string name="releases_elapsed">Elapsed: %1$s</string>
+
+    <!-- ==================== Connections: Section Headers ==================== -->
+    <string name="connections_section_slack">Slack Configuration</string>
+    <string name="connections_section_teamcity">TeamCity Configuration</string>
+    <string name="connections_section_github">GitHub Configuration</string>
+    <string name="connections_section_maven">Maven Central Configuration</string>
+
+    <!-- ==================== Connections: Password Toggle ==================== -->
+    <string name="connections_hide_password">Hide password</string>
+    <string name="connections_show_password">Show password</string>
 </resources>

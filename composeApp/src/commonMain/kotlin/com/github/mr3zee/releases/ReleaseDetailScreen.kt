@@ -21,7 +21,13 @@ import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.UiMessage
 import com.github.mr3zee.util.displayName
 import com.github.mr3zee.util.resolve
+import com.github.mr3zee.util.typeLabel
 import com.github.mr3zee.i18n.packStringResource
+import kotlin.time.Clock
+import kotlin.time.Duration
+import kotlin.time.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import releasewizard.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -272,13 +278,20 @@ private fun BlockDetailPanel(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = block.name,
-                    style = AppTypography.heading,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = block.name,
+                        style = AppTypography.heading,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = block.typeLabel(),
+                        style = AppTypography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testTag("block_type_label"),
+                    )
+                }
                 RwButton(onClick = onDismiss, variant = RwButtonVariant.Ghost) {
                     Text(packStringResource(Res.string.common_close))
                 }
@@ -291,6 +304,39 @@ private fun BlockDetailPanel(
                 style = AppTypography.body,
                 modifier = Modifier.testTag("block_status_text"),
             )
+
+            // Duration / elapsed time
+            val startedAt = execution.startedAt
+            val finishedAt = execution.finishedAt
+            if (startedAt != null) {
+                Spacer(modifier = Modifier.height(Spacing.xs))
+                if (finishedAt != null) {
+                    // Completed block — show static duration
+                    val duration = finishedAt - startedAt
+                    Text(
+                        text = packStringResource(Res.string.releases_duration, formatDuration(duration)),
+                        style = AppTypography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testTag("block_duration_text"),
+                    )
+                } else if (execution.status == BlockStatus.RUNNING) {
+                    // Running block — live ticker
+                    var elapsed by remember { mutableStateOf("") }
+                    LaunchedEffect(startedAt) {
+                        while (true) {
+                            val now = Clock.System.now()
+                            elapsed = formatDuration(now - startedAt)
+                            kotlinx.coroutines.delay(1000)
+                        }
+                    }
+                    Text(
+                        text = packStringResource(Res.string.releases_elapsed, elapsed),
+                        style = AppTypography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testTag("block_duration_text"),
+                    )
+                }
+            }
 
             execution.error?.let { errorMsg ->
                 Spacer(modifier = Modifier.height(Spacing.sm))
@@ -353,13 +399,43 @@ private fun BlockDetailPanel(
                     null -> null // gatePhase should always be set; don't guess
                 }
                 gate?.let { g ->
+                    val requiredCount = g.approvalRule.requiredCount
                     Spacer(modifier = Modifier.height(Spacing.xs))
                     Text(
-                        text = packStringResource(Res.string.releases_approval_progress, execution.approvals.size, g.approvalRule.requiredCount),
+                        text = packStringResource(Res.string.releases_approval_progress, execution.approvals.size, requiredCount),
                         style = AppTypography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.testTag("gate_approval_progress"),
                     )
+
+                    // Progress bar
+                    if (requiredCount > 0) {
+                        LinearProgressIndicator(
+                            progress = { (execution.approvals.size.toFloat() / requiredCount).coerceIn(0f, 1f) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = Spacing.xs)
+                                .testTag("gate_approval_progress_bar"),
+                        )
+                    }
+
+                    // Individual approvals
+                    if (execution.approvals.isNotEmpty()) {
+                        Column(modifier = Modifier.testTag("approval_list")) {
+                            execution.approvals.forEach { approval ->
+                                val instant = Instant.fromEpochMilliseconds(approval.approvedAt)
+                                val dateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
+                                val formatted = "${dateTime.date} ${dateTime.hour.toString().padStart(2, '0')}:${dateTime.minute.toString().padStart(2, '0')}"
+                                Text(
+                                    text = "\u2713 ${approval.username} — $formatted",
+                                    style = AppTypography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(Spacing.xs))
@@ -373,4 +449,16 @@ private fun BlockDetailPanel(
             }
         }
     }
+}
+
+private fun formatDuration(duration: Duration): String {
+    val totalSeconds = duration.inWholeSeconds.coerceAtLeast(0)
+    val h = totalSeconds / 3600
+    val m = (totalSeconds % 3600) / 60
+    val s = totalSeconds % 60
+    return buildString {
+        if (h > 0) append("${h}h ")
+        if (h > 0 || m > 0) append("${m}m ")
+        append("${s}s")
+    }.trim()
 }

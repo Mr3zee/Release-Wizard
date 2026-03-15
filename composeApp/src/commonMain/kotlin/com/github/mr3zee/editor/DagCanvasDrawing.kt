@@ -5,6 +5,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.PointerEvent
@@ -15,6 +16,7 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.unit.sp
 import com.github.mr3zee.model.*
 import com.github.mr3zee.theme.AppColors
+import kotlin.math.PI
 
 // Block dimensions in dp (logical coordinates)
 internal const val BLOCK_WIDTH = 180f
@@ -353,4 +355,104 @@ internal fun DrawScope.drawDraftEdge(start: Offset, end: Offset, colors: AppColo
             pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(dashLength, gapLength)),
         ),
     )
+}
+
+internal fun DrawScope.drawRunningIndicator(
+    transform: CanvasTransform,
+    position: BlockPosition,
+    phase: Float, // 0 to 2π
+    colors: AppColors,
+) {
+    val screenX = transform.toScreenX(position.x)
+    val screenY = transform.toScreenY(position.y)
+    val screenW = transform.toScreen(BLOCK_WIDTH)
+    val screenH = transform.toScreen(BLOCK_HEIGHT)
+    val dotRadius = transform.toScreen(3f)
+    val clampedRadius = dotRadius.coerceAtLeast(1.5f)
+
+    // Orbit the dot around the block perimeter
+    val perimeter = 2 * (screenW + screenH)
+    val dist = (phase / (2f * PI.toFloat())) * perimeter
+
+    val (dotX, dotY) = when {
+        dist < screenW -> Offset(screenX + dist, screenY) // top edge
+        dist < screenW + screenH -> Offset(screenX + screenW, screenY + (dist - screenW)) // right edge
+        dist < 2 * screenW + screenH -> Offset(screenX + screenW - (dist - screenW - screenH), screenY + screenH) // bottom edge
+        else -> Offset(screenX, screenY + screenH - (dist - 2 * screenW - screenH)) // left edge
+    }
+
+    drawCircle(
+        color = colors.blockStatusRunning,
+        radius = clampedRadius,
+        center = Offset(dotX, dotY),
+    )
+    // Subtle glow behind the dot
+    drawCircle(
+        color = colors.blockStatusRunning.copy(alpha = 0.3f),
+        radius = clampedRadius * 2.5f,
+        center = Offset(dotX, dotY),
+    )
+}
+
+internal fun DrawScope.drawBlockStatusIcon(
+    transform: CanvasTransform,
+    position: BlockPosition,
+    status: BlockStatus,
+    colors: AppColors,
+) {
+    val screenX = transform.toScreenX(position.x)
+    val screenY = transform.toScreenY(position.y)
+    val screenW = transform.toScreen(BLOCK_WIDTH)
+    val screenH = transform.toScreen(BLOCK_HEIGHT)
+    val iconSize = transform.toScreen(8f)
+    if (iconSize < 4f) return
+    val iconCenterX = screenX + screenW - transform.toScreen(14f)
+    val iconCenterY = screenY + screenH - transform.toScreen(14f)
+    val strokeWidth = transform.toScreen(1.5f)
+
+    val iconColor = when (status) {
+        BlockStatus.SUCCEEDED -> colors.blockStatusSucceeded
+        BlockStatus.FAILED -> colors.blockStatusFailed
+        BlockStatus.WAITING -> colors.blockStatusWaiting
+        BlockStatus.WAITING_FOR_INPUT -> colors.blockStatusWaitingForInput
+        BlockStatus.RUNNING -> return // spinner dot handles this
+    }
+
+    // Draw white background circle for contrast
+    drawCircle(
+        color = Color.White.copy(alpha = 0.9f),
+        radius = iconSize + transform.toScreen(2f),
+        center = Offset(iconCenterX, iconCenterY),
+    )
+
+    when (status) {
+        BlockStatus.SUCCEEDED -> {
+            // Checkmark using lines instead of Path to avoid per-frame allocation
+            drawLine(iconColor,
+                Offset(iconCenterX - iconSize * 0.6f, iconCenterY),
+                Offset(iconCenterX - iconSize * 0.1f, iconCenterY + iconSize * 0.5f),
+                strokeWidth = strokeWidth, cap = StrokeCap.Round)
+            drawLine(iconColor,
+                Offset(iconCenterX - iconSize * 0.1f, iconCenterY + iconSize * 0.5f),
+                Offset(iconCenterX + iconSize * 0.6f, iconCenterY - iconSize * 0.4f),
+                strokeWidth = strokeWidth, cap = StrokeCap.Round)
+        }
+        BlockStatus.FAILED -> {
+            // X mark
+            drawLine(iconColor, Offset(iconCenterX - iconSize * 0.4f, iconCenterY - iconSize * 0.4f), Offset(iconCenterX + iconSize * 0.4f, iconCenterY + iconSize * 0.4f), strokeWidth = strokeWidth, cap = StrokeCap.Round)
+            drawLine(iconColor, Offset(iconCenterX - iconSize * 0.4f, iconCenterY + iconSize * 0.4f), Offset(iconCenterX + iconSize * 0.4f, iconCenterY - iconSize * 0.4f), strokeWidth = strokeWidth, cap = StrokeCap.Round)
+        }
+        BlockStatus.WAITING -> {
+            // Clock circle
+            drawCircle(iconColor, radius = iconSize * 0.6f, center = Offset(iconCenterX, iconCenterY), style = Stroke(width = strokeWidth))
+            // Hour/minute hands
+            drawLine(iconColor, Offset(iconCenterX, iconCenterY), Offset(iconCenterX, iconCenterY - iconSize * 0.35f), strokeWidth = strokeWidth, cap = StrokeCap.Round)
+            drawLine(iconColor, Offset(iconCenterX, iconCenterY), Offset(iconCenterX + iconSize * 0.25f, iconCenterY), strokeWidth = strokeWidth, cap = StrokeCap.Round)
+        }
+        BlockStatus.WAITING_FOR_INPUT -> {
+            // Exclamation mark
+            drawLine(iconColor, Offset(iconCenterX, iconCenterY - iconSize * 0.5f), Offset(iconCenterX, iconCenterY + iconSize * 0.15f), strokeWidth = strokeWidth * 1.2f, cap = StrokeCap.Round)
+            drawCircle(iconColor, radius = strokeWidth * 0.8f, center = Offset(iconCenterX, iconCenterY + iconSize * 0.45f))
+        }
+    }
 }

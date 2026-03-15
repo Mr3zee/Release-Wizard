@@ -620,4 +620,36 @@ class ConnectionScreensTest {
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("refresh_error_banner").fetchSemanticsNodes().isEmpty() }
         onNodeWithTag("refresh_error_banner").assertDoesNotExist()
     }
+
+    // ---- New feature tests ----
+
+    @Test
+    fun `connection form shows section header for default type`() = runComposeUiTest {
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")), MutableStateFlow(TeamId("test-team")))
+        setContent {
+            MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = {}) }
+        }
+
+        // Default type is GitHub
+        onNodeWithTag("section_header_github", useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun `password toggle reveals password text`() = runComposeUiTest {
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")), MutableStateFlow(TeamId("test-team")))
+        setContent {
+            MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = {}) }
+        }
+
+        // Enter text in the github_token field (GitHub is default type)
+        onNodeWithTag("github_token").performTextInput("secret123")
+        waitForIdle()
+
+        // Click the toggle visibility button
+        onNodeWithTag("github_token_toggle_visibility", useUnmergedTree = true).performClick()
+        waitForIdle()
+
+        // After toggling, the field should show the actual text
+        onNodeWithTag("github_token").assertTextContains("secret123")
+    }
 }

@@ -5,15 +5,19 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
+import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.model.ConnectionConfig
 import com.github.mr3zee.model.ConnectionId
@@ -250,16 +254,40 @@ fun ConnectionFormScreen(
 
             when (selectedType) {
                 ConnectionType.SLACK -> {
+                    var showSlackWebhook by remember { mutableStateOf(false) }
+
+                    Text(
+                        text = packStringResource(Res.string.connections_section_slack),
+                        style = AppTypography.subheading,
+                        modifier = Modifier.testTag("section_header_slack"),
+                    )
                     RwTextField(
                         value = slackWebhookUrl,
                         onValueChange = { slackWebhookUrl = it },
                         label = packStringResource(Res.string.connections_slack_webhook_url),
                         placeholder = packStringResource(Res.string.connections_slack_webhook_url),
                         singleLine = true,
+                        visualTransformation = if (showSlackWebhook) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            RwIconButton(onClick = { showSlackWebhook = !showSlackWebhook }, modifier = Modifier.size(32.dp).testTag("slack_webhook_url_toggle_visibility")) {
+                                Icon(
+                                    if (showSlackWebhook) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = if (showSlackWebhook) packStringResource(Res.string.connections_hide_password) else packStringResource(Res.string.connections_show_password),
+                                )
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth().testTag("slack_webhook_url"),
                     )
                 }
                 ConnectionType.TEAMCITY -> {
+                    var showTeamCityToken by remember { mutableStateOf(false) }
+                    var showTeamCityWebhookSecret by remember { mutableStateOf(false) }
+
+                    Text(
+                        text = packStringResource(Res.string.connections_section_teamcity),
+                        style = AppTypography.subheading,
+                        modifier = Modifier.testTag("section_header_teamcity"),
+                    )
                     RwTextField(
                         value = teamCityServerUrl,
                         onValueChange = { teamCityServerUrl = it },
@@ -274,7 +302,15 @@ fun ConnectionFormScreen(
                         label = packStringResource(Res.string.connections_tc_token),
                         placeholder = packStringResource(Res.string.connections_tc_token),
                         singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
+                        visualTransformation = if (showTeamCityToken) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            RwIconButton(onClick = { showTeamCityToken = !showTeamCityToken }, modifier = Modifier.size(32.dp).testTag("teamcity_token_toggle_visibility")) {
+                                Icon(
+                                    if (showTeamCityToken) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = if (showTeamCityToken) packStringResource(Res.string.connections_hide_password) else packStringResource(Res.string.connections_show_password),
+                                )
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth().testTag("teamcity_token"),
                     )
                     RwTextField(
@@ -283,18 +319,42 @@ fun ConnectionFormScreen(
                         label = packStringResource(Res.string.connections_tc_webhook_secret),
                         placeholder = packStringResource(Res.string.connections_tc_webhook_secret),
                         singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
+                        visualTransformation = if (showTeamCityWebhookSecret) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            RwIconButton(onClick = { showTeamCityWebhookSecret = !showTeamCityWebhookSecret }, modifier = Modifier.size(32.dp).testTag("teamcity_webhook_secret_toggle_visibility")) {
+                                Icon(
+                                    if (showTeamCityWebhookSecret) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = if (showTeamCityWebhookSecret) packStringResource(Res.string.connections_hide_password) else packStringResource(Res.string.connections_show_password),
+                                )
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth().testTag("teamcity_webhook_secret"),
                     )
                 }
                 ConnectionType.GITHUB -> {
+                    var showGithubToken by remember { mutableStateOf(false) }
+                    var showGithubWebhookSecret by remember { mutableStateOf(false) }
+
+                    Text(
+                        text = packStringResource(Res.string.connections_section_github),
+                        style = AppTypography.subheading,
+                        modifier = Modifier.testTag("section_header_github"),
+                    )
                     RwTextField(
                         value = githubToken,
                         onValueChange = { githubToken = it },
                         label = packStringResource(Res.string.connections_github_pat),
                         placeholder = packStringResource(Res.string.connections_github_pat),
                         singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
+                        visualTransformation = if (showGithubToken) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            RwIconButton(onClick = { showGithubToken = !showGithubToken }, modifier = Modifier.size(32.dp).testTag("github_token_toggle_visibility")) {
+                                Icon(
+                                    if (showGithubToken) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = if (showGithubToken) packStringResource(Res.string.connections_hide_password) else packStringResource(Res.string.connections_show_password),
+                                )
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth().testTag("github_token"),
                     )
                     RwTextField(
@@ -319,11 +379,26 @@ fun ConnectionFormScreen(
                         label = packStringResource(Res.string.connections_github_webhook_secret),
                         placeholder = packStringResource(Res.string.connections_github_webhook_secret),
                         singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
+                        visualTransformation = if (showGithubWebhookSecret) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            RwIconButton(onClick = { showGithubWebhookSecret = !showGithubWebhookSecret }, modifier = Modifier.size(32.dp).testTag("github_webhook_secret_toggle_visibility")) {
+                                Icon(
+                                    if (showGithubWebhookSecret) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = if (showGithubWebhookSecret) packStringResource(Res.string.connections_hide_password) else packStringResource(Res.string.connections_show_password),
+                                )
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth().testTag("github_webhook_secret"),
                     )
                 }
                 ConnectionType.MAVEN_CENTRAL -> {
+                    var showMavenPassword by remember { mutableStateOf(false) }
+
+                    Text(
+                        text = packStringResource(Res.string.connections_section_maven),
+                        style = AppTypography.subheading,
+                        modifier = Modifier.testTag("section_header_maven"),
+                    )
                     RwTextField(
                         value = mavenUsername,
                         onValueChange = { mavenUsername = it },
@@ -338,7 +413,15 @@ fun ConnectionFormScreen(
                         label = packStringResource(Res.string.connections_maven_password),
                         placeholder = packStringResource(Res.string.connections_maven_password),
                         singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
+                        visualTransformation = if (showMavenPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            RwIconButton(onClick = { showMavenPassword = !showMavenPassword }, modifier = Modifier.size(32.dp).testTag("maven_password_toggle_visibility")) {
+                                Icon(
+                                    if (showMavenPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = if (showMavenPassword) packStringResource(Res.string.connections_hide_password) else packStringResource(Res.string.connections_show_password),
+                                )
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth().testTag("maven_password"),
                     )
                     RwTextField(

@@ -1364,4 +1364,209 @@ class ReleaseScreensTest {
         }
         onNodeWithTag("last_updated_text", useUnmergedTree = true).assertDoesNotExist()
     }
+
+    // ---- New feature tests ----
+
+    @Test
+    fun `block detail panel shows block type label`() = runComposeUiTest {
+        val release = Release(
+            id = ReleaseId("r1"),
+            projectTemplateId = ProjectId("p1"),
+            status = ReleaseStatus.SUCCEEDED,
+            dagSnapshot = DagGraph(
+                blocks = listOf(
+                    Block.ActionBlock(id = BlockId("b1"), name = "Build Step", type = BlockType.TEAMCITY_BUILD),
+                ),
+                positions = mapOf(BlockId("b1") to BlockPosition(100f, 100f)),
+            ),
+        )
+        val executions = listOf(
+            BlockExecution(
+                blockId = BlockId("b1"),
+                releaseId = ReleaseId("r1"),
+                status = BlockStatus.SUCCEEDED,
+            ),
+        )
+
+        setContent {
+            MaterialTheme {
+                ReleaseDetailScreen(
+                    release = release,
+                    blockExecutions = executions,
+                    isConnected = true,
+                    onBack = {},
+                    onCancel = {},
+                    onRerun = {},
+                    onArchive = {},
+                    onApproveBlock = {},
+                    onBlockClick = {},
+                )
+            }
+        }
+
+        onNodeWithTag("execution_dag_canvas").performTouchInput {
+            click(Offset(190f, 135f))
+        }
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("block_detail_panel").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("block_type_label", useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun `gate approval shows progress bar`() = runComposeUiTest {
+        val release = Release(
+            id = ReleaseId("r1"),
+            projectTemplateId = ProjectId("p1"),
+            status = ReleaseStatus.RUNNING,
+            dagSnapshot = DagGraph(
+                blocks = listOf(
+                    Block.ActionBlock(
+                        id = BlockId("b1"),
+                        name = "Gated Step",
+                        type = BlockType.SLACK_MESSAGE,
+                        preGate = Gate(approvalRule = ApprovalRule(requiredCount = 3)),
+                    ),
+                ),
+                positions = mapOf(BlockId("b1") to BlockPosition(100f, 100f)),
+            ),
+        )
+        val executions = listOf(
+            BlockExecution(
+                blockId = BlockId("b1"),
+                releaseId = ReleaseId("r1"),
+                status = BlockStatus.WAITING_FOR_INPUT,
+                gatePhase = GatePhase.PRE,
+                gateMessage = "Approve to start 'Gated Step'",
+                approvals = listOf(
+                    BlockApproval("u1", "alice", 1710500000000L),
+                ),
+            ),
+        )
+
+        setContent {
+            MaterialTheme {
+                ReleaseDetailScreen(
+                    release = release,
+                    blockExecutions = executions,
+                    isConnected = true,
+                    onBack = {},
+                    onCancel = {},
+                    onRerun = {},
+                    onArchive = {},
+                    onApproveBlock = {},
+                    onBlockClick = {},
+                )
+            }
+        }
+
+        onNodeWithTag("execution_dag_canvas").performTouchInput {
+            click(Offset(190f, 135f))
+        }
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("block_detail_panel").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("gate_approval_progress_bar", useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun `gate approval shows approver names`() = runComposeUiTest {
+        val release = Release(
+            id = ReleaseId("r1"),
+            projectTemplateId = ProjectId("p1"),
+            status = ReleaseStatus.RUNNING,
+            dagSnapshot = DagGraph(
+                blocks = listOf(
+                    Block.ActionBlock(
+                        id = BlockId("b1"),
+                        name = "Approval Step",
+                        type = BlockType.SLACK_MESSAGE,
+                        preGate = Gate(approvalRule = ApprovalRule(requiredCount = 3)),
+                    ),
+                ),
+                positions = mapOf(BlockId("b1") to BlockPosition(100f, 100f)),
+            ),
+        )
+        val executions = listOf(
+            BlockExecution(
+                blockId = BlockId("b1"),
+                releaseId = ReleaseId("r1"),
+                status = BlockStatus.WAITING_FOR_INPUT,
+                gatePhase = GatePhase.PRE,
+                gateMessage = "Approve to start 'Approval Step'",
+                approvals = listOf(
+                    BlockApproval("u1", "alice", 1710500000000L),
+                    BlockApproval("u2", "bob", 1710500060000L),
+                ),
+            ),
+        )
+
+        setContent {
+            MaterialTheme {
+                ReleaseDetailScreen(
+                    release = release,
+                    blockExecutions = executions,
+                    isConnected = true,
+                    onBack = {},
+                    onCancel = {},
+                    onRerun = {},
+                    onArchive = {},
+                    onApproveBlock = {},
+                    onBlockClick = {},
+                )
+            }
+        }
+
+        onNodeWithTag("execution_dag_canvas").performTouchInput {
+            click(Offset(190f, 135f))
+        }
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("block_detail_panel").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("approval_list", useUnmergedTree = true).assertExists()
+        onNodeWithText("alice", substring = true, useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun `block detail shows duration for finished block`() = runComposeUiTest {
+        val startInstant = kotlin.time.Instant.parse("2026-03-13T00:00:00Z")
+        val endInstant = kotlin.time.Instant.parse("2026-03-13T00:01:00Z")
+        val release = Release(
+            id = ReleaseId("r1"),
+            projectTemplateId = ProjectId("p1"),
+            status = ReleaseStatus.SUCCEEDED,
+            dagSnapshot = DagGraph(
+                blocks = listOf(
+                    Block.ActionBlock(id = BlockId("b1"), name = "Build", type = BlockType.TEAMCITY_BUILD),
+                ),
+                positions = mapOf(BlockId("b1") to BlockPosition(100f, 100f)),
+            ),
+        )
+        val executions = listOf(
+            BlockExecution(
+                blockId = BlockId("b1"),
+                releaseId = ReleaseId("r1"),
+                status = BlockStatus.SUCCEEDED,
+                startedAt = startInstant,
+                finishedAt = endInstant,
+            ),
+        )
+
+        setContent {
+            MaterialTheme {
+                ReleaseDetailScreen(
+                    release = release,
+                    blockExecutions = executions,
+                    isConnected = true,
+                    onBack = {},
+                    onCancel = {},
+                    onRerun = {},
+                    onArchive = {},
+                    onApproveBlock = {},
+                    onBlockClick = {},
+                )
+            }
+        }
+
+        onNodeWithTag("execution_dag_canvas").performTouchInput {
+            click(Offset(190f, 135f))
+        }
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("block_detail_panel").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("block_duration_text", useUnmergedTree = true).assertExists()
+        onNodeWithText("1m", substring = true, useUnmergedTree = true).assertExists()
+    }
 }

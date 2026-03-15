@@ -1,5 +1,11 @@
 package com.github.mr3zee.releases
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,6 +24,7 @@ import com.github.mr3zee.model.*
 import com.github.mr3zee.theme.AppColors
 import com.github.mr3zee.theme.LocalAppColors
 import com.github.mr3zee.util.typeLabel
+import kotlin.math.PI
 
 internal fun blockStatusColor(status: BlockStatus, colors: AppColors): Color = when (status) {
     BlockStatus.SUCCEEDED -> colors.blockStatusSucceeded
@@ -47,10 +54,22 @@ fun ExecutionDagCanvas(
 
     val drawTransform = CanvasTransform(zoom, panOffset, density)
 
-    // Pre-resolve block type labels for canvas (stringResource requires composable context)
-    val blockLabels: Map<BlockId, String> = graph.blocks.associate { block ->
-        block.id to block.typeLabel()
-    }
+    val hasRunningBlocks = blockExecutions.any { it.status == BlockStatus.RUNNING }
+    val infiniteTransition = rememberInfiniteTransition(label = "running_indicator")
+    val runningPhase by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = (2f * PI).toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "running_phase",
+    )
+
+    // Pre-resolve block type labels in composable context (typeLabel() uses string resources)
+    val blockLabels = graph.blocks.associate { block -> block.id to block.typeLabel() }
+
+    val effectiveRunningPhase = if (hasRunningBlocks) runningPhase else 0f
 
     Canvas(
         modifier = modifier
@@ -134,6 +153,12 @@ fun ExecutionDagCanvas(
                 blockColor(block, appColors)
             }
             drawBlock(drawTransform, block, pos, isSelected = false, textMeasurer, zoom, appColors, blockLabels[block.id] ?: "", fillColor)
+            if (execution != null) {
+                drawBlockStatusIcon(drawTransform, pos, execution.status, appColors)
+            }
+            if (execution?.status == BlockStatus.RUNNING && hasRunningBlocks) {
+                drawRunningIndicator(drawTransform, pos, effectiveRunningPhase, appColors)
+            }
         }
     }
 }
