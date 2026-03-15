@@ -4,6 +4,7 @@ import com.github.mr3zee.AppJson
 import com.github.mr3zee.api.*
 import com.github.mr3zee.jsonClient
 import com.github.mr3zee.login
+import com.github.mr3zee.loginAndCreateTeam
 import com.github.mr3zee.model.*
 import com.github.mr3zee.testModule
 import io.ktor.client.*
@@ -19,6 +20,7 @@ import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientCon
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -28,6 +30,7 @@ import kotlin.test.assertTrue
 class WebSocketLoadTest {
 
     private suspend fun HttpClient.createTestProject(
+        teamId: TeamId,
         blocks: List<Block> = listOf(
             Block.ActionBlock(id = BlockId("block-a"), name = "Build", type = BlockType.TEAMCITY_BUILD),
         ),
@@ -38,7 +41,7 @@ class WebSocketLoadTest {
             setBody(
                 CreateProjectRequest(
                     name = "Test Project",
-                    teamId = TeamId("00000000-0000-0000-0000-000000000000"),
+                    teamId = teamId,
                     dagGraph = DagGraph(blocks = blocks, edges = edges),
                 )
             )
@@ -60,13 +63,14 @@ class WebSocketLoadTest {
     fun `multiple WebSocket clients receive same events for a running release`() = testApplication {
         application { testModule() }
         val httpClient = jsonClient()
-        httpClient.login()
+        val teamId = httpClient.loginAndCreateTeam()
 
         val m = 3
 
         // Create a project with a USER_ACTION block so the release stays running
         // while we connect WebSocket clients, followed by a regular block
         val project = httpClient.createTestProject(
+            teamId,
             blocks = listOf(
                 Block.ActionBlock(id = BlockId("approval"), name = "Approve", type = BlockType.USER_ACTION),
                 Block.ActionBlock(id = BlockId("build"), name = "Build", type = BlockType.TEAMCITY_BUILD),
@@ -122,13 +126,15 @@ class WebSocketLoadTest {
             // Wait a bit for all WS connections to be established, then approve
             // Retry approval until the engine reaches WAITING_FOR_INPUT
             yield()
-            while (true) {
-                val resp = httpClient.post(ApiRoutes.Releases.approveBlock(releaseId.value, "approval")) {
-                    contentType(ContentType.Application.Json)
-                    setBody(ApproveBlockRequest(input = mapOf("approved" to "true")))
+            withTimeout(10_000) {
+                while (true) {
+                    val resp = httpClient.post(ApiRoutes.Releases.approveBlock(releaseId.value, "approval")) {
+                        contentType(ContentType.Application.Json)
+                        setBody(ApproveBlockRequest(input = mapOf("approved" to "true")))
+                    }
+                    if (resp.status == HttpStatusCode.OK) break
+                    yield()
                 }
-                if (resp.status == HttpStatusCode.OK) break
-                yield()
             }
 
             val allEvents = eventCollectors.awaitAll()
@@ -178,12 +184,13 @@ class WebSocketLoadTest {
     fun `multiple WebSocket clients receive updates for simple release`() = testApplication {
         application { testModule() }
         val httpClient = jsonClient()
-        httpClient.login()
+        val teamId = httpClient.loginAndCreateTeam()
 
         val m = 3
 
         // Use a simple 2-block chain: A -> B (no user action, just watch execution)
         val project = httpClient.createTestProject(
+            teamId,
             blocks = listOf(
                 Block.ActionBlock(id = BlockId("a"), name = "A", type = BlockType.TEAMCITY_BUILD),
                 Block.ActionBlock(id = BlockId("b"), name = "B", type = BlockType.GITHUB_ACTION),
@@ -253,10 +260,11 @@ class WebSocketLoadTest {
     fun `WebSocket connections close cleanly on release completion`() = testApplication {
         application { testModule() }
         val httpClient = jsonClient()
-        httpClient.login()
+        val teamId = httpClient.loginAndCreateTeam()
 
         // Use USER_ACTION so release stays running until we approve
         val project = httpClient.createTestProject(
+            teamId,
             blocks = listOf(
                 Block.ActionBlock(id = BlockId("approval"), name = "Approve", type = BlockType.USER_ACTION),
             ),
@@ -301,13 +309,15 @@ class WebSocketLoadTest {
 
             // Approve after WS clients are connected
             yield()
-            while (true) {
-                val resp = httpClient.post(ApiRoutes.Releases.approveBlock(releaseId.value, "approval")) {
-                    contentType(ContentType.Application.Json)
-                    setBody(ApproveBlockRequest(input = emptyMap()))
+            withTimeout(10_000) {
+                while (true) {
+                    val resp = httpClient.post(ApiRoutes.Releases.approveBlock(releaseId.value, "approval")) {
+                        contentType(ContentType.Application.Json)
+                        setBody(ApproveBlockRequest(input = emptyMap()))
+                    }
+                    if (resp.status == HttpStatusCode.OK) break
+                    yield()
                 }
-                if (resp.status == HttpStatusCode.OK) break
-                yield()
             }
 
             val closeReasons = closeCollectors.awaitAll()
@@ -328,11 +338,12 @@ class WebSocketLoadTest {
     fun `WebSocket clients see consistent block execution updates across connections`() = testApplication {
         application { testModule() }
         val httpClient = jsonClient()
-        httpClient.login()
+        val teamId = httpClient.loginAndCreateTeam()
 
         // Use USER_ACTION first so release stays running while WS clients connect,
         // then A -> B -> C chain for block execution events
         val project = httpClient.createTestProject(
+            teamId,
             blocks = listOf(
                 Block.ActionBlock(id = BlockId("gate"), name = "Gate", type = BlockType.USER_ACTION),
                 Block.ActionBlock(id = BlockId("a"), name = "A", type = BlockType.TEAMCITY_BUILD),
@@ -378,13 +389,15 @@ class WebSocketLoadTest {
 
             // Approve the gate after WS clients connect
             yield()
-            while (true) {
-                val resp = httpClient.post(ApiRoutes.Releases.approveBlock(releaseId.value, "gate")) {
-                    contentType(ContentType.Application.Json)
-                    setBody(ApproveBlockRequest(input = emptyMap()))
+            withTimeout(10_000) {
+                while (true) {
+                    val resp = httpClient.post(ApiRoutes.Releases.approveBlock(releaseId.value, "gate")) {
+                        contentType(ContentType.Application.Json)
+                        setBody(ApproveBlockRequest(input = emptyMap()))
+                    }
+                    if (resp.status == HttpStatusCode.OK) break
+                    yield()
                 }
-                if (resp.status == HttpStatusCode.OK) break
-                yield()
             }
 
             val allEvents = eventCollectors.awaitAll()

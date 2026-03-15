@@ -6,6 +6,7 @@ import com.github.mr3zee.login
 import com.github.mr3zee.createTestTeam
 import com.github.mr3zee.model.*
 import com.github.mr3zee.testModule
+import com.github.mr3zee.loginAndCreateTeam
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
@@ -180,6 +181,43 @@ class TeamAccessControlTest {
         // Delete
         val deleteResponse = admin.delete(ApiRoutes.Teams.byId(team.team.id.value))
         assertEquals(HttpStatusCode.NoContent, deleteResponse.status)
+    }
+
+    @Test
+    fun `non-member cannot start release for team project`() = testApplication {
+        application { testModule() }
+        val admin = jsonClient()
+        admin.login("admin", "adminpass")
+        val teamId = admin.createTestTeam("Release Team")
+
+        // Create a project with blocks under admin's team
+        val createResponse = admin.post(ApiRoutes.Projects.BASE) {
+            contentType(ContentType.Application.Json)
+            setBody(
+                CreateProjectRequest(
+                    name = "Team Release Project",
+                    teamId = teamId,
+                    dagGraph = DagGraph(
+                        blocks = listOf(
+                            Block.ActionBlock(id = BlockId("b1"), name = "Build", type = BlockType.TEAMCITY_BUILD),
+                        ),
+                    ),
+                )
+            )
+        }
+        assertEquals(HttpStatusCode.Created, createResponse.status)
+        val projectId = createResponse.body<ProjectResponse>().project.id
+
+        // Register a non-member user
+        val user2 = jsonClient()
+        user2.login("outsider", "outsiderpass")
+
+        // Attempt to start a release — should get 403 (Forbidden)
+        val releaseResponse = user2.post(ApiRoutes.Releases.BASE) {
+            contentType(ContentType.Application.Json)
+            setBody(CreateReleaseRequest(projectTemplateId = projectId))
+        }
+        assertEquals(HttpStatusCode.Forbidden, releaseResponse.status)
     }
 
     @Test

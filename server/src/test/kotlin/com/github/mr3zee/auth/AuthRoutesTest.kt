@@ -2,6 +2,7 @@ package com.github.mr3zee.auth
 
 import com.github.mr3zee.api.*
 import com.github.mr3zee.jsonClient
+import com.github.mr3zee.loginAndCreateTeam
 import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.model.UserRole
 import com.github.mr3zee.testModule
@@ -249,14 +250,15 @@ class AuthRoutesTest {
         val adminClient = jsonClient()
         val userClient = jsonClient()
 
-        // First user becomes admin
+        // First user becomes admin and creates a team
         adminClient.register(username = "admin1", password = "password1234")
         adminClient.login(username = "admin1", password = "password1234")
+        val teamId = adminClient.loginAndCreateTeam(username = "admin1", password = "password1234")
 
         // Admin creates a project
         adminClient.post(ApiRoutes.Projects.BASE) {
             contentType(ContentType.Application.Json)
-            setBody(CreateProjectRequest(name = "Admin Project", teamId = TeamId("00000000-0000-0000-0000-000000000000")))
+            setBody(CreateProjectRequest(name = "Admin Project", teamId = teamId))
         }.also { assertEquals(HttpStatusCode.Created, it.status) }
 
         // Second user registers and logs in

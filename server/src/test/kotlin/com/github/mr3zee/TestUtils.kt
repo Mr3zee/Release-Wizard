@@ -327,3 +327,48 @@ suspend fun HttpClient.loginAndCreateTeam(
     login(username, password)
     return createTestTeam(teamName)
 }
+
+/**
+ * Creates a project with optional blocks and returns its ID as a String.
+ * Requires the user to be logged in and a valid teamId.
+ */
+suspend fun HttpClient.createTestProject(
+    teamId: TeamId,
+    name: String = "Test Project",
+    dagGraph: com.github.mr3zee.model.DagGraph? = null,
+): String {
+    val response = post(ApiRoutes.Projects.BASE) {
+        contentType(ContentType.Application.Json)
+        setBody(
+            CreateProjectRequest(
+                name = name,
+                teamId = teamId,
+                dagGraph = dagGraph ?: com.github.mr3zee.model.DagGraph(),
+            )
+        )
+    }
+    return response.body<ProjectResponse>().project.id.value
+}
+
+/**
+ * Creates a project with a single action block and returns its ID.
+ * Useful for tests that need a project that can start a release.
+ */
+suspend fun HttpClient.createTestProjectWithBlocks(
+    teamId: TeamId,
+    name: String = "Test Project",
+): String {
+    return createTestProject(
+        teamId = teamId,
+        name = name,
+        dagGraph = com.github.mr3zee.model.DagGraph(
+            blocks = listOf(
+                com.github.mr3zee.model.Block.ActionBlock(
+                    id = com.github.mr3zee.model.BlockId("block-a"),
+                    name = "Build",
+                    type = com.github.mr3zee.model.BlockType.TEAMCITY_BUILD,
+                ),
+            ),
+        ),
+    )
+}

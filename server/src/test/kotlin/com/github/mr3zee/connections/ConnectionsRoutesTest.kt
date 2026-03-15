@@ -3,6 +3,7 @@ package com.github.mr3zee.connections
 import com.github.mr3zee.api.*
 import com.github.mr3zee.jsonClient
 import com.github.mr3zee.login
+import com.github.mr3zee.loginAndCreateTeam
 import com.github.mr3zee.testModule
 import com.github.mr3zee.model.ConnectionConfig
 import com.github.mr3zee.model.ConnectionType
@@ -33,14 +34,14 @@ class ConnectionsRoutesTest {
     fun `create and get connection`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val createResponse = client.post(ApiRoutes.Connections.BASE) {
             contentType(ContentType.Application.Json)
             setBody(
                 CreateConnectionRequest(
                     name = "My GitHub",
-                    teamId = TeamId("00000000-0000-0000-0000-000000000000"),
+                    teamId = teamId,
                     type = ConnectionType.GITHUB,
                     config = ConnectionConfig.GitHubConfig(
                         token = "ghp_1234567890abcdef",
@@ -69,14 +70,14 @@ class ConnectionsRoutesTest {
     fun `create connection with blank name returns 400`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val response = client.post(ApiRoutes.Connections.BASE) {
             contentType(ContentType.Application.Json)
             setBody(
                 CreateConnectionRequest(
                     name = "",
-                    teamId = TeamId("00000000-0000-0000-0000-000000000000"),
+                    teamId = teamId,
                     type = ConnectionType.SLACK,
                     config = ConnectionConfig.SlackConfig(webhookUrl = "https://hooks.slack.com/test"),
                 )
@@ -89,14 +90,14 @@ class ConnectionsRoutesTest {
     fun `update connection`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val createResponse = client.post(ApiRoutes.Connections.BASE) {
             contentType(ContentType.Application.Json)
             setBody(
                 CreateConnectionRequest(
                     name = "Original",
-                    teamId = TeamId("00000000-0000-0000-0000-000000000000"),
+                    teamId = teamId,
                     type = ConnectionType.TEAMCITY,
                     config = ConnectionConfig.TeamCityConfig(
                         serverUrl = "https://tc.example.com",
@@ -122,14 +123,14 @@ class ConnectionsRoutesTest {
     fun `update connection config`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val createResponse = client.post(ApiRoutes.Connections.BASE) {
             contentType(ContentType.Application.Json)
             setBody(
                 CreateConnectionRequest(
                     name = "GitHub",
-                    teamId = TeamId("00000000-0000-0000-0000-000000000000"),
+                    teamId = teamId,
                     type = ConnectionType.GITHUB,
                     config = ConnectionConfig.GitHubConfig(
                         token = "ghp_old_token",
@@ -166,14 +167,14 @@ class ConnectionsRoutesTest {
     fun `delete connection`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val createResponse = client.post(ApiRoutes.Connections.BASE) {
             contentType(ContentType.Application.Json)
             setBody(
                 CreateConnectionRequest(
                     name = "To Delete",
-                    teamId = TeamId("00000000-0000-0000-0000-000000000000"),
+                    teamId = teamId,
                     type = ConnectionType.SLACK,
                     config = ConnectionConfig.SlackConfig(webhookUrl = "https://hooks.slack.com/test"),
                 )
@@ -192,14 +193,14 @@ class ConnectionsRoutesTest {
     fun `test connection endpoint`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val createResponse = client.post(ApiRoutes.Connections.BASE) {
             contentType(ContentType.Application.Json)
             setBody(
                 CreateConnectionRequest(
                     name = "Test Conn",
-                    teamId = TeamId("00000000-0000-0000-0000-000000000000"),
+                    teamId = teamId,
                     type = ConnectionType.MAVEN_CENTRAL,
                     config = ConnectionConfig.MavenCentralConfig(
                         username = "user",
@@ -229,14 +230,14 @@ class ConnectionsRoutesTest {
     fun `credentials are masked in API responses`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val createResponse = client.post(ApiRoutes.Connections.BASE) {
             contentType(ContentType.Application.Json)
             setBody(
                 CreateConnectionRequest(
                     name = "Encrypted Test",
-                    teamId = TeamId("00000000-0000-0000-0000-000000000000"),
+                    teamId = teamId,
                     type = ConnectionType.GITHUB,
                     config = ConnectionConfig.GitHubConfig(
                         token = "ghp_supersecret",

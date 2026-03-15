@@ -129,7 +129,7 @@ class ProjectListScreenTest {
         }
 
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("My Pipeline").fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithTag("project_item_p1").performClick()
+        onNodeWithTag("project_item_p1", useUnmergedTree = true).performClick()
         assertEquals(ProjectId("p1"), editedId)
     }
 

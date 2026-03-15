@@ -2,7 +2,7 @@ package com.github.mr3zee.webhooks
 
 import com.github.mr3zee.api.*
 import com.github.mr3zee.jsonClient
-import com.github.mr3zee.login
+import com.github.mr3zee.loginAndCreateTeam
 import com.github.mr3zee.model.ConnectionConfig
 import com.github.mr3zee.model.ConnectionType
 import com.github.mr3zee.model.TeamId
@@ -24,10 +24,11 @@ class WebhookRoutesTest {
         name: String,
         type: ConnectionType,
         config: ConnectionConfig,
+        teamId: TeamId,
     ): ConnectionResponse {
         val response = post(ApiRoutes.Connections.BASE) {
             contentType(ContentType.Application.Json)
-            setBody(CreateConnectionRequest(name = name, teamId = TeamId("00000000-0000-0000-0000-000000000000"), type = type, config = config))
+            setBody(CreateConnectionRequest(name = name, teamId = teamId, type = type, config = config))
         }
         return response.body()
     }
@@ -36,11 +37,12 @@ class WebhookRoutesTest {
     fun `teamcity webhook without pending webhooks returns OK`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val conn = client.createConnection(
             "TC", ConnectionType.TEAMCITY,
             ConnectionConfig.TeamCityConfig(serverUrl = "https://tc.example.com", token = "token"),
+            teamId,
         )
 
         val response = client.post(ApiRoutes.Webhooks.teamcity(conn.connection.id.value)) {
@@ -54,7 +56,7 @@ class WebhookRoutesTest {
     fun `teamcity webhook with valid secret accepted`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val conn = client.createConnection(
             "TC Secret", ConnectionType.TEAMCITY,
@@ -63,6 +65,7 @@ class WebhookRoutesTest {
                 token = "token",
                 webhookSecret = "my-secret-123",
             ),
+            teamId,
         )
 
         val response = client.post(ApiRoutes.Webhooks.teamcity(conn.connection.id.value)) {
@@ -77,7 +80,7 @@ class WebhookRoutesTest {
     fun `teamcity webhook with wrong secret returns 401`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val conn = client.createConnection(
             "TC Secret", ConnectionType.TEAMCITY,
@@ -86,6 +89,7 @@ class WebhookRoutesTest {
                 token = "token",
                 webhookSecret = "correct-secret",
             ),
+            teamId,
         )
 
         val response = client.post(ApiRoutes.Webhooks.teamcity(conn.connection.id.value)) {
@@ -100,7 +104,7 @@ class WebhookRoutesTest {
     fun `teamcity webhook with no secret when required returns 401`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val conn = client.createConnection(
             "TC Secret", ConnectionType.TEAMCITY,
@@ -109,6 +113,7 @@ class WebhookRoutesTest {
                 token = "token",
                 webhookSecret = "secret",
             ),
+            teamId,
         )
 
         val response = client.post(ApiRoutes.Webhooks.teamcity(conn.connection.id.value)) {
@@ -122,7 +127,7 @@ class WebhookRoutesTest {
     fun `github webhook with valid HMAC accepted`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val secret = "gh-webhook-secret"
         val conn = client.createConnection(
@@ -133,6 +138,7 @@ class WebhookRoutesTest {
                 repo = "test",
                 webhookSecret = secret,
             ),
+            teamId,
         )
 
         val payload = """{"action":"completed","workflow_run":{"id":123}}"""
@@ -150,7 +156,7 @@ class WebhookRoutesTest {
     fun `github webhook with invalid HMAC returns 401`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val conn = client.createConnection(
             "GitHub", ConnectionType.GITHUB,
@@ -160,6 +166,7 @@ class WebhookRoutesTest {
                 repo = "test",
                 webhookSecret = "correct-secret",
             ),
+            teamId,
         )
 
         val payload = """{"action":"completed"}"""
@@ -177,7 +184,7 @@ class WebhookRoutesTest {
     fun `github webhook without signature when secret required returns 401`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val conn = client.createConnection(
             "GitHub", ConnectionType.GITHUB,
@@ -187,6 +194,7 @@ class WebhookRoutesTest {
                 repo = "test",
                 webhookSecret = "secret",
             ),
+            teamId,
         )
 
         val response = client.post(ApiRoutes.Webhooks.github(conn.connection.id.value)) {
@@ -224,11 +232,12 @@ class WebhookRoutesTest {
     fun `teamcity webhook to github connection returns 400`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val conn = client.createConnection(
             "GitHub", ConnectionType.GITHUB,
             ConnectionConfig.GitHubConfig(token = "ghp_test", owner = "test", repo = "test"),
+            teamId,
         )
 
         val response = client.post(ApiRoutes.Webhooks.teamcity(conn.connection.id.value)) {
@@ -246,10 +255,11 @@ class WebhookRoutesTest {
 
         // First create a connection (need auth for that)
         val authedClient = jsonClient()
-        authedClient.login()
+        val teamId = authedClient.loginAndCreateTeam()
         val conn = authedClient.createConnection(
             "TC", ConnectionType.TEAMCITY,
             ConnectionConfig.TeamCityConfig(serverUrl = "https://tc.example.com", token = "token"),
+            teamId,
         )
 
         // Unauthenticated webhook request should NOT return 401

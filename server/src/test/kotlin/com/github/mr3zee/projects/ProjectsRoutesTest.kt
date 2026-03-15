@@ -3,8 +3,9 @@ package com.github.mr3zee.projects
 import com.github.mr3zee.api.*
 import com.github.mr3zee.jsonClient
 import com.github.mr3zee.login
-import com.github.mr3zee.model.TeamId
+import com.github.mr3zee.loginAndCreateTeam
 import com.github.mr3zee.testModule
+import com.github.mr3zee.model.TeamId
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
@@ -30,11 +31,11 @@ class ProjectsRoutesTest {
     fun `create and get project`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val createResponse = client.post(ApiRoutes.Projects.BASE) {
             contentType(ContentType.Application.Json)
-            setBody(CreateProjectRequest(name = "Test Project", teamId = TeamId("00000000-0000-0000-0000-000000000000"), description = "A test"))
+            setBody(CreateProjectRequest(name = "Test Project", teamId = teamId, description = "A test"))
         }
         assertEquals(HttpStatusCode.Created, createResponse.status)
         val created = createResponse.body<ProjectResponse>()
@@ -52,11 +53,11 @@ class ProjectsRoutesTest {
     fun `create project with blank name returns 400`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val response = client.post(ApiRoutes.Projects.BASE) {
             contentType(ContentType.Application.Json)
-            setBody(CreateProjectRequest(name = "", teamId = TeamId("00000000-0000-0000-0000-000000000000")))
+            setBody(CreateProjectRequest(name = "", teamId = teamId))
         }
         assertEquals(HttpStatusCode.BadRequest, response.status)
     }
@@ -65,11 +66,11 @@ class ProjectsRoutesTest {
     fun `update project preserves createdAt and updates updatedAt`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val createResponse = client.post(ApiRoutes.Projects.BASE) {
             contentType(ContentType.Application.Json)
-            setBody(CreateProjectRequest(name = "Original", teamId = TeamId("00000000-0000-0000-0000-000000000000")))
+            setBody(CreateProjectRequest(name = "Original", teamId = teamId))
         }
         val created = createResponse.body<ProjectResponse>()
 
@@ -101,11 +102,11 @@ class ProjectsRoutesTest {
     fun `delete project`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val createResponse = client.post(ApiRoutes.Projects.BASE) {
             contentType(ContentType.Application.Json)
-            setBody(CreateProjectRequest(name = "To Delete", teamId = TeamId("00000000-0000-0000-0000-000000000000")))
+            setBody(CreateProjectRequest(name = "To Delete", teamId = teamId))
         }
         val created = createResponse.body<ProjectResponse>()
 
@@ -150,15 +151,15 @@ class ProjectsRoutesTest {
     fun `list projects returns created projects`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         client.post(ApiRoutes.Projects.BASE) {
             contentType(ContentType.Application.Json)
-            setBody(CreateProjectRequest(name = "Project A", teamId = TeamId("00000000-0000-0000-0000-000000000000")))
+            setBody(CreateProjectRequest(name = "Project A", teamId = teamId))
         }
         client.post(ApiRoutes.Projects.BASE) {
             contentType(ContentType.Application.Json)
-            setBody(CreateProjectRequest(name = "Project B", teamId = TeamId("00000000-0000-0000-0000-000000000000")))
+            setBody(CreateProjectRequest(name = "Project B", teamId = teamId))
         }
 
         val listResponse = client.get(ApiRoutes.Projects.BASE)

@@ -49,8 +49,8 @@ class ReleaseScreensTest {
 
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("release_list").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("release_list").assertExists()
-        onNodeWithTag("release_item_r1").assertExists()
-        onNodeWithTag("release_item_r2").assertExists()
+        onNodeWithTag("release_item_r1", useUnmergedTree = true).assertExists()
+        onNodeWithTag("release_item_r2", useUnmergedTree = true).assertExists()
         onNodeWithTag("status_badge_RUNNING", useUnmergedTree = true).assertExists()
         onNodeWithTag("status_badge_SUCCEEDED", useUnmergedTree = true).assertExists()
     }
@@ -416,6 +416,9 @@ class ReleaseScreensTest {
         }
 
         onNodeWithTag("cancel_release_button").performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("cancel_confirmation_dialog").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("confirm_cancel_button").performClick()
+        waitForIdle()
         assertTrue(cancelClicked)
     }
 
@@ -656,7 +659,7 @@ class ReleaseScreensTest {
         }
 
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("release_list").fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithTag("release_item_r1").performClick()
+        onNodeWithTag("release_item_r1", useUnmergedTree = true).performClick()
         assertEquals(ReleaseId("r1"), viewedId)
     }
 
@@ -733,6 +736,9 @@ class ReleaseScreensTest {
         }
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("approve_block_button").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("approve_block_button").performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("approve_confirmation_dialog").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("confirm_approve_button").performClick()
+        waitForIdle()
         assertEquals(BlockId("approve1"), approvedBlockId)
     }
 

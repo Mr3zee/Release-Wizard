@@ -2,7 +2,7 @@ package com.github.mr3zee.execution
 
 import com.github.mr3zee.api.*
 import com.github.mr3zee.jsonClient
-import com.github.mr3zee.login
+import com.github.mr3zee.loginAndCreateTeam
 import com.github.mr3zee.model.*
 import com.github.mr3zee.testModule
 import io.ktor.client.*
@@ -20,6 +20,7 @@ import kotlin.test.assertTrue
 class ConcurrentReleasesTest {
 
     private suspend fun HttpClient.createTestProject(
+        teamId: TeamId,
         name: String = "Test Project",
         blocks: List<Block> = listOf(
             Block.ActionBlock(id = BlockId("block-a"), name = "Build", type = BlockType.TEAMCITY_BUILD),
@@ -32,7 +33,7 @@ class ConcurrentReleasesTest {
             setBody(
                 CreateProjectRequest(
                     name = name,
-                    teamId = TeamId("00000000-0000-0000-0000-000000000000"),
+                    teamId = teamId,
                     dagGraph = DagGraph(blocks = blocks, edges = edges),
                     parameters = parameters,
                 )
@@ -61,13 +62,14 @@ class ConcurrentReleasesTest {
     fun `concurrent releases all complete successfully`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val n = 5
 
         // Create N different projects with unique configurations
         val projects = (1..n).map { i ->
             client.createTestProject(
+                teamId,
                 name = "Concurrent Project $i",
                 blocks = listOf(
                     Block.ActionBlock(
@@ -126,7 +128,7 @@ class ConcurrentReleasesTest {
     fun `concurrent releases with diamond DAGs all succeed`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val n = 5
 
@@ -145,6 +147,7 @@ class ConcurrentReleasesTest {
                 Edge(fromBlockId = BlockId("c-$i"), toBlockId = BlockId("d-$i")),
             )
             client.createTestProject(
+                teamId,
                 name = "Diamond Project $i",
                 blocks = blocks,
                 edges = edges,
@@ -179,12 +182,13 @@ class ConcurrentReleasesTest {
     fun `concurrent releases have isolated parameters`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val n = 5
 
         // Use a single project template for all releases, but different parameters
         val project = client.createTestProject(
+            teamId,
             name = "Shared Project",
             blocks = listOf(
                 Block.ActionBlock(id = BlockId("build"), name = "Build", type = BlockType.TEAMCITY_BUILD),
@@ -231,7 +235,7 @@ class ConcurrentReleasesTest {
     fun `concurrent releases with sequential chains all succeed`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val n = 5
 
@@ -247,6 +251,7 @@ class ConcurrentReleasesTest {
                 Edge(fromBlockId = BlockId("b-$i"), toBlockId = BlockId("c-$i")),
             )
             client.createTestProject(
+                teamId,
                 name = "Chain Project $i",
                 blocks = blocks,
                 edges = edges,

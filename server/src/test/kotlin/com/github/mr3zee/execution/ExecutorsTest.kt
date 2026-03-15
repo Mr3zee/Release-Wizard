@@ -16,6 +16,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class ExecutorsTest {
@@ -98,17 +99,15 @@ class ExecutorsTest {
         val client = mockClient { respond("ok", HttpStatusCode.OK) }
         val executor = SlackMessageExecutor(client)
 
-        try {
+        val e = assertFailsWith<IllegalArgumentException> {
             executor.execute(
                 block = slackBlock(),
                 parameters = emptyList(),
                 context = context(config = ConnectionConfig.SlackConfig(webhookUrl = "https://hooks.slack.com/test")),
             )
-            assertTrue(false, "Should have thrown")
-        } catch (e: IllegalArgumentException) {
-            val message = e.message ?: error("IllegalArgumentException should have a message")
-            assertTrue(message.contains("text"))
         }
+        val message = e.message ?: error("IllegalArgumentException should have a message")
+        assertTrue(message.contains("text"))
     }
 
     @Test
@@ -116,17 +115,15 @@ class ExecutorsTest {
         val client = mockClient { respond("channel_not_found", HttpStatusCode.NotFound) }
         val executor = SlackMessageExecutor(client)
 
-        try {
+        val e = assertFailsWith<RuntimeException> {
             executor.execute(
                 block = slackBlock(),
                 parameters = listOf(Parameter(key = "text", value = "Hello")),
                 context = context(config = ConnectionConfig.SlackConfig(webhookUrl = "https://hooks.slack.com/test")),
             )
-            assertTrue(false, "Should have thrown")
-        } catch (e: RuntimeException) {
-            val message = e.message ?: error("RuntimeException should have a message")
-            assertTrue(message.contains("Slack webhook failed"))
         }
+        val message = e.message ?: error("RuntimeException should have a message")
+        assertTrue(message.contains("Slack webhook failed"))
     }
 
     // --- GitHub Publication Executor ---
@@ -182,7 +179,7 @@ class ExecutorsTest {
         val client = mockClient { respond("", HttpStatusCode.OK) }
         val executor = GitHubPublicationExecutor(client)
 
-        try {
+        val e = assertFailsWith<IllegalArgumentException> {
             executor.execute(
                 block = ghPubBlock(),
                 parameters = emptyList(),
@@ -190,11 +187,9 @@ class ExecutorsTest {
                     config = ConnectionConfig.GitHubConfig(token = "t", owner = "o", repo = "r"),
                 ),
             )
-            assertTrue(false, "Should have thrown")
-        } catch (e: IllegalArgumentException) {
-            val message = e.message ?: error("IllegalArgumentException should have a message")
-            assertTrue(message.contains("tagName"))
         }
+        val message = e.message ?: error("IllegalArgumentException should have a message")
+        assertTrue(message.contains("tagName"))
     }
 
     @Test
@@ -208,7 +203,7 @@ class ExecutorsTest {
         }
         val executor = GitHubPublicationExecutor(client)
 
-        try {
+        val e = assertFailsWith<RuntimeException> {
             executor.execute(
                 block = ghPubBlock(),
                 parameters = listOf(Parameter(key = "tagName", value = "v1.0")),
@@ -216,11 +211,9 @@ class ExecutorsTest {
                     config = ConnectionConfig.GitHubConfig(token = "t", owner = "o", repo = "r"),
                 ),
             )
-            assertTrue(false, "Should have thrown")
-        } catch (e: RuntimeException) {
-            val message = e.message ?: error("RuntimeException should have a message")
-            assertTrue(message.contains("GitHub release creation failed"))
         }
+        val message = e.message ?: error("RuntimeException should have a message")
+        assertTrue(message.contains("GitHub release creation failed"))
     }
 
     @Test
@@ -325,17 +318,15 @@ class ExecutorsTest {
         val client = mockClient { respond("", HttpStatusCode.OK) }
         val executor = MavenCentralExecutor(client)
 
-        try {
+        val e = assertFailsWith<IllegalArgumentException> {
             executor.execute(
                 block = mavenBlock(),
                 parameters = emptyList(),
                 context = context(config = mavenConfig),
             )
-            assertTrue(false, "Should have thrown")
-        } catch (e: IllegalArgumentException) {
-            val message = e.message ?: error("IllegalArgumentException should have a message")
-            assertTrue(message.contains("deploymentId"))
         }
+        val message = e.message ?: error("IllegalArgumentException should have a message")
+        assertTrue(message.contains("deploymentId"))
     }
 
     // --- Missing connection tests ---
@@ -352,7 +343,7 @@ class ExecutorsTest {
             connectionId = null,
         )
 
-        try {
+        val e = assertFailsWith<IllegalStateException> {
             executor.execute(
                 block = blockWithoutConnection,
                 parameters = listOf(Parameter(key = "text", value = "test")),
@@ -363,10 +354,8 @@ class ExecutorsTest {
                     connections = emptyMap(),
                 ),
             )
-            assertTrue(false, "Should have thrown")
-        } catch (e: IllegalStateException) {
-            val message = e.message ?: error("IllegalStateException should have a message")
-            assertTrue(message.contains("requires a connection"))
         }
+        val message = e.message ?: error("IllegalStateException should have a message")
+        assertTrue(message.contains("requires a connection"))
     }
 }

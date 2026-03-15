@@ -18,7 +18,7 @@ class TimeoutTest {
             parameters: List<Parameter>,
             context: ExecutionContext,
         ): Map<String, String> {
-            delay(5.seconds)
+            delay(2.seconds)
             return emptyMap()
         }
     }

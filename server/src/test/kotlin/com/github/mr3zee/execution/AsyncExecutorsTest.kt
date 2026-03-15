@@ -17,6 +17,7 @@ import kotlinx.coroutines.*
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 import kotlin.time.Clock
 
@@ -116,7 +117,7 @@ class AsyncExecutorsTest {
         val webhookService = WebhookService(webhookRepo, connectionsRepo)
         val executor = TeamCityBuildExecutor(client, webhookRepo, webhookService)
 
-        try {
+        val e = assertFailsWith<IllegalArgumentException> {
             executor.execute(
                 block = Block.ActionBlock(
                     id = BlockId("tc-1"), name = "Build",
@@ -127,11 +128,9 @@ class AsyncExecutorsTest {
                     config = ConnectionConfig.TeamCityConfig(serverUrl = "https://tc.example.com", token = "t"),
                 ),
             )
-            assertTrue(false, "Should have thrown")
-        } catch (e: IllegalArgumentException) {
-            val message = e.message ?: error("IllegalArgumentException should have a message")
-            assertTrue(message.contains("buildTypeId"))
         }
+        val message = e.message ?: error("IllegalArgumentException should have a message")
+        assertTrue(message.contains("buildTypeId"))
     }
 
     @Test
@@ -422,7 +421,7 @@ class AsyncExecutorsTest {
         val webhookService = WebhookService(webhookRepo, connectionsRepo)
         val executor = GitHubActionExecutor(client, webhookRepo, webhookService)
 
-        try {
+        val e = assertFailsWith<IllegalArgumentException> {
             executor.execute(
                 block = Block.ActionBlock(
                     id = BlockId("gh-1"), name = "Action",
@@ -433,11 +432,9 @@ class AsyncExecutorsTest {
                     config = ConnectionConfig.GitHubConfig(token = "t", owner = "o", repo = "r"),
                 ),
             )
-            assertTrue(false, "Should have thrown")
-        } catch (e: IllegalArgumentException) {
-            val message = e.message ?: error("IllegalArgumentException should have a message")
-            assertTrue(message.contains("workflowFile"))
         }
+        val message = e.message ?: error("IllegalArgumentException should have a message")
+        assertTrue(message.contains("workflowFile"))
     }
 }
 

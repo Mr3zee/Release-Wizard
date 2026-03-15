@@ -4,8 +4,7 @@ import com.github.mr3zee.model.Block
 import com.github.mr3zee.model.BlockExecution
 import com.github.mr3zee.model.BlockType
 import com.github.mr3zee.model.Parameter
-import kotlinx.coroutines.delay
-import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.yield
 
 /**
  * Stub executor for tests. Returns simulated outputs based on block type.
@@ -16,8 +15,8 @@ class StubBlockExecutor : BlockExecutor {
         parameters: List<Parameter>,
         context: ExecutionContext,
     ): Map<String, String> {
-        // Simulate some work
-        delay(100.milliseconds)
+        // Yield to allow other coroutines to run
+        yield()
 
         return when (block.type) {
             BlockType.TEAMCITY_BUILD -> mapOf(

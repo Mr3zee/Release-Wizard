@@ -250,9 +250,26 @@ class InMemoryReleasesRepository : ReleasesRepository {
         releases[release.id] = release
     }
 
-    override suspend fun findAll(includeArchived: Boolean, teamId: String?, teamIds: List<String>?, offset: Int, limit: Int, search: String?, status: ReleaseStatus?, projectTemplateId: ProjectId?, releaseIds: Set<String>?) = releases.values.toList()
-    override suspend fun countAll(includeArchived: Boolean, teamId: String?, teamIds: List<String>?, search: String?, status: ReleaseStatus?, projectTemplateId: ProjectId?, releaseIds: Set<String>?) = releases.size.toLong()
-    override suspend fun findAllWithCount(includeArchived: Boolean, teamId: String?, teamIds: List<String>?, offset: Int, limit: Int, search: String?, status: ReleaseStatus?, projectTemplateId: ProjectId?, releaseIds: Set<String>?) = releases.values.toList() to releases.size.toLong()
+    override suspend fun findAll(includeArchived: Boolean, teamId: String?, teamIds: List<String>?, offset: Int, limit: Int, search: String?, status: ReleaseStatus?, projectTemplateId: ProjectId?, releaseIds: Set<String>?): List<Release> {
+        var result = releases.values.toList()
+        if (!includeArchived) result = result.filter { it.status != ReleaseStatus.ARCHIVED }
+        if (status != null) result = result.filter { it.status == status }
+        if (projectTemplateId != null) result = result.filter { it.projectTemplateId == projectTemplateId }
+        return result
+    }
+
+    override suspend fun countAll(includeArchived: Boolean, teamId: String?, teamIds: List<String>?, search: String?, status: ReleaseStatus?, projectTemplateId: ProjectId?, releaseIds: Set<String>?): Long {
+        var result = releases.values.toList()
+        if (!includeArchived) result = result.filter { it.status != ReleaseStatus.ARCHIVED }
+        if (status != null) result = result.filter { it.status == status }
+        if (projectTemplateId != null) result = result.filter { it.projectTemplateId == projectTemplateId }
+        return result.size.toLong()
+    }
+
+    override suspend fun findAllWithCount(includeArchived: Boolean, teamId: String?, teamIds: List<String>?, offset: Int, limit: Int, search: String?, status: ReleaseStatus?, projectTemplateId: ProjectId?, releaseIds: Set<String>?): Pair<List<Release>, Long> {
+        val filtered = findAll(includeArchived, teamId, teamIds, offset, limit, search, status, projectTemplateId, releaseIds)
+        return filtered to filtered.size.toLong()
+    }
     override suspend fun findById(id: ReleaseId) = releases[id]
     override suspend fun findTeamId(id: ReleaseId): String? = null
     override suspend fun findByProjectId(projectId: ProjectId) =

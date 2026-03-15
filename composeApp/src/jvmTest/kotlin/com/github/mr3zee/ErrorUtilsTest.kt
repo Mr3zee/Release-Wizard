@@ -19,6 +19,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -41,13 +42,11 @@ class ErrorUtilsTest {
             expectSuccess = true
         }
 
-        try {
+        val exception = assertFailsWith<ClientRequestException> {
             client.get("http://localhost${ApiRoutes.Releases.byId("abc")}")
-            assertTrue(false, "Should have thrown")
-        } catch (e: ClientRequestException) {
-            val message = e.toUserMessage()
-            assertEquals("Release not found: abc", message)
         }
+        val message = exception.toUserMessage()
+        assertEquals("Release not found: abc", message)
     }
 
     @Test
@@ -62,13 +61,11 @@ class ErrorUtilsTest {
             expectSuccess = true
         }
 
-        try {
+        val exception = assertFailsWith<ServerResponseException> {
             client.get("http://localhost/test")
-            assertTrue(false, "Should have thrown")
-        } catch (e: ServerResponseException) {
-            val message = e.toUserMessage()
-            assertEquals("Server error", message)
         }
+        val message = exception.toUserMessage()
+        assertEquals("Server error", message)
     }
 
     @Test

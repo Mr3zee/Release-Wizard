@@ -8,7 +8,7 @@ import kotlin.test.assertEquals
 class TemplateEngineTest {
 
     @Test
-    fun resolveProjectParameter() {
+    fun `resolve project parameter`() {
         val result = TemplateEngine.resolve(
             $$"Release version ${param.version}",
             listOf(Parameter("version", "1.0.0")),
@@ -17,7 +17,7 @@ class TemplateEngineTest {
     }
 
     @Test
-    fun resolveBlockOutput() {
+    fun `resolve block output`() {
         val result = TemplateEngine.resolve(
             $$"Build #${block.build1.buildNumber}",
             emptyList(),
@@ -27,7 +27,7 @@ class TemplateEngineTest {
     }
 
     @Test
-    fun unresolvedExpressionKeptAsIs() {
+    fun `unresolved expression kept as is`() {
         val result = TemplateEngine.resolve(
             $$"Unknown ${param.missing}",
             emptyList(),
@@ -36,7 +36,7 @@ class TemplateEngineTest {
     }
 
     @Test
-    fun multipleExpressions() {
+    fun `multiple expressions`() {
         val result = TemplateEngine.resolve(
             $$"${param.name} v${param.version}",
             listOf(Parameter("name", "MyLib"), Parameter("version", "2.0")),
@@ -45,7 +45,7 @@ class TemplateEngineTest {
     }
 
     @Test
-    fun resolveParametersList() {
+    fun `resolve parameters list`() {
         val blockParams = listOf(
             Parameter("message", $$"Release ${param.version} is ready"),
             Parameter("channel", "#releases"),
@@ -58,13 +58,23 @@ class TemplateEngineTest {
     }
 
     @Test
-    fun noTemplateExpressionsUnchanged() {
+    fun `no template expressions unchanged`() {
         val result = TemplateEngine.resolve("plain text", emptyList())
         assertEquals("plain text", result)
     }
 
     @Test
-    fun blockOutputWithMultipleParts() {
+    fun `block output with existing block but missing key kept as is`() {
+        val result = TemplateEngine.resolve(
+            $$"Value: ${block.build1.missingKey}",
+            emptyList(),
+            mapOf(BlockId("build1") to mapOf("buildNumber" to "42")),
+        )
+        assertEquals($$"Value: ${block.build1.missingKey}", result)
+    }
+
+    @Test
+    fun `block output with multiple parts`() {
         val result = TemplateEngine.resolve(
             $$"URL: ${block.gh-action.runUrl}",
             emptyList(),

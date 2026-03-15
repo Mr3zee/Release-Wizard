@@ -36,9 +36,9 @@ class ConnectionScreensTest {
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("My GitHub").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("connection_list_screen").assertExists()
         onNodeWithText("My GitHub").assertExists()
-        onNodeWithTag("connection_item_c1").assertExists()
+        onNodeWithTag("connection_item_c1", useUnmergedTree = true).assertExists()
         onNodeWithText("Team Slack").assertExists()
-        onNodeWithTag("connection_item_c2").assertExists()
+        onNodeWithTag("connection_item_c2", useUnmergedTree = true).assertExists()
     }
 
     @Test
@@ -433,7 +433,7 @@ class ConnectionScreensTest {
             onAllNodes(hasTestTag("connection_name_field") and hasText("My GitHub")).fetchSemanticsNodes().isNotEmpty()
         }
         onNodeWithTag("save_connection_button").performClick()
-        assertTrue(backCalled)
+        waitUntil(timeoutMillis = 3000L) { backCalled }
     }
 
     @Test

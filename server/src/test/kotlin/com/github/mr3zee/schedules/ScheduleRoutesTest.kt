@@ -2,8 +2,8 @@ package com.github.mr3zee.schedules
 
 import com.github.mr3zee.api.*
 import com.github.mr3zee.jsonClient
-import com.github.mr3zee.login
-import com.github.mr3zee.model.TeamId
+import com.github.mr3zee.loginAndCreateTeam
+import com.github.mr3zee.createTestProject
 import com.github.mr3zee.testModule
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -20,9 +20,9 @@ class ScheduleRoutesTest {
     fun `create schedule for project`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
-        val projectId = client.createProject()
+        val projectId = client.createTestProject(teamId)
 
         val createResponse = client.post(ApiRoutes.Schedules.byProject(projectId)) {
             contentType(ContentType.Application.Json)
@@ -38,9 +38,9 @@ class ScheduleRoutesTest {
     fun `list schedules for project`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
-        val projectId = client.createProject()
+        val projectId = client.createTestProject(teamId)
 
         client.post(ApiRoutes.Schedules.byProject(projectId)) {
             contentType(ContentType.Application.Json)
@@ -58,9 +58,9 @@ class ScheduleRoutesTest {
     fun `invalid cron expression returns 400`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
-        val projectId = client.createProject()
+        val projectId = client.createTestProject(teamId)
 
         val response = client.post(ApiRoutes.Schedules.byProject(projectId)) {
             contentType(ContentType.Application.Json)
@@ -73,9 +73,9 @@ class ScheduleRoutesTest {
     fun `toggle schedule`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
-        val projectId = client.createProject()
+        val projectId = client.createTestProject(teamId)
 
         val createResponse = client.post(ApiRoutes.Schedules.byProject(projectId)) {
             contentType(ContentType.Application.Json)
@@ -97,9 +97,9 @@ class ScheduleRoutesTest {
     fun `delete schedule`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
-        val projectId = client.createProject()
+        val projectId = client.createTestProject(teamId)
 
         val createResponse = client.post(ApiRoutes.Schedules.byProject(projectId)) {
             contentType(ContentType.Application.Json)
@@ -114,15 +114,4 @@ class ScheduleRoutesTest {
         val body = listResponse.body<ScheduleListResponse>()
         assertTrue(body.schedules.isEmpty())
     }
-}
-
-/**
- * Helper: creates a project and returns its ID as a String.
- */
-private suspend fun io.ktor.client.HttpClient.createProject(name: String = "Test Project"): String {
-    val response = post(ApiRoutes.Projects.BASE) {
-        contentType(ContentType.Application.Json)
-        setBody(CreateProjectRequest(name = name, teamId = TeamId("00000000-0000-0000-0000-000000000000")))
-    }
-    return response.body<ProjectResponse>().project.id.value
 }

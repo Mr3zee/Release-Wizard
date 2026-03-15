@@ -2,6 +2,7 @@ package com.github.mr3zee.model
 
 import com.github.mr3zee.AppJson
 import com.github.mr3zee.api.*
+import com.github.mr3zee.model.*
 import kotlin.time.Clock
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -11,7 +12,7 @@ class SerializationTest {
     private val json = AppJson
 
     @Test
-    fun dagGraphRoundTrip() {
+    fun `DAG graph round trip`() {
         val graph = DagGraph(
             blocks = listOf(
                 Block.ActionBlock(
@@ -57,7 +58,7 @@ class SerializationTest {
     }
 
     @Test
-    fun projectTemplateRoundTrip() {
+    fun `project template round trip`() {
         val now = Clock.System.now()
         val template = ProjectTemplate(
             id = ProjectId("p1"),
@@ -74,7 +75,7 @@ class SerializationTest {
     }
 
     @Test
-    fun blockStatusRoundTrip() {
+    fun `block status round trip`() {
         for (status in BlockStatus.entries) {
             val encoded = json.encodeToString(BlockStatus.serializer(), status)
             val decoded = json.decodeFromString(BlockStatus.serializer(), encoded)
@@ -83,7 +84,7 @@ class SerializationTest {
     }
 
     @Test
-    fun connectionConfigRoundTrip() {
+    fun `connection config round trip`() {
         val configs = listOf(
             ConnectionConfig.SlackConfig(webhookUrl = "https://hooks.slack.com/test"),
             ConnectionConfig.TeamCityConfig(serverUrl = "https://tc.example.com", token = "abc123"),
@@ -98,7 +99,7 @@ class SerializationTest {
     }
 
     @Test
-    fun createProjectRequestRoundTrip() {
+    fun `create project request round trip`() {
         val request = CreateProjectRequest(
             name = "New Project",
             teamId = TeamId("test-team"),
@@ -111,7 +112,7 @@ class SerializationTest {
     }
 
     @Test
-    fun updateProjectRequestRoundTrip() {
+    fun `update project request round trip`() {
         val request = UpdateProjectRequest(name = "Updated Name")
         val encoded = json.encodeToString(UpdateProjectRequest.serializer(), request)
         val decoded = json.decodeFromString(UpdateProjectRequest.serializer(), encoded)
@@ -119,7 +120,7 @@ class SerializationTest {
     }
 
     @Test
-    fun projectResponseRoundTrip() {
+    fun `project response round trip`() {
         val now = Clock.System.now()
         val response = ProjectResponse(
             project = ProjectTemplate(
@@ -135,7 +136,7 @@ class SerializationTest {
     }
 
     @Test
-    fun projectListResponseRoundTrip() {
+    fun `project list response round trip`() {
         val response = ProjectListResponse(projects = emptyList())
         val encoded = json.encodeToString(ProjectListResponse.serializer(), response)
         val decoded = json.decodeFromString(ProjectListResponse.serializer(), encoded)
@@ -143,7 +144,7 @@ class SerializationTest {
     }
 
     @Test
-    fun connectionRoundTrip() {
+    fun `connection round trip`() {
         val now = Clock.System.now()
         val connection = Connection(
             id = ConnectionId("c1"),
@@ -159,7 +160,7 @@ class SerializationTest {
     }
 
     @Test
-    fun connectionDtosRoundTrip() {
+    fun `connection DTOs round trip`() {
         val createRequest = CreateConnectionRequest(
             name = "My Slack",
             teamId = TeamId("test-team"),
@@ -177,7 +178,7 @@ class SerializationTest {
     }
 
     @Test
-    fun authDtosRoundTrip() {
+    fun `auth DTOs round trip`() {
         val loginRequest = LoginRequest(username = "admin", password = "pass")
         val encoded1 = json.encodeToString(LoginRequest.serializer(), loginRequest)
         val decoded1 = json.decodeFromString(LoginRequest.serializer(), encoded1)
@@ -190,7 +191,7 @@ class SerializationTest {
     }
 
     @Test
-    fun releaseRoundTrip() {
+    fun `release round trip`() {
         val now = Clock.System.now()
         val release = Release(
             id = ReleaseId("r1"),
@@ -205,7 +206,7 @@ class SerializationTest {
     }
 
     @Test
-    fun blockExecutionRoundTrip() {
+    fun `block execution round trip`() {
         val now = Clock.System.now()
         val execution = BlockExecution(
             blockId = BlockId("b1"),
@@ -221,7 +222,7 @@ class SerializationTest {
     }
 
     @Test
-    fun blockExecutionWithErrorRoundTrip() {
+    fun `block execution with error round trip`() {
         val execution = BlockExecution(
             blockId = BlockId("b1"),
             releaseId = ReleaseId("r1"),
@@ -234,7 +235,7 @@ class SerializationTest {
     }
 
     @Test
-    fun releaseDtosRoundTrip() {
+    fun `release DTOs round trip`() {
         val createRequest = CreateReleaseRequest(
             projectTemplateId = ProjectId("p1"),
             parameters = listOf(Parameter("version", "1.0.0")),
@@ -252,7 +253,7 @@ class SerializationTest {
     }
 
     @Test
-    fun releaseEventSnapshotRoundTrip() {
+    fun `release event snapshot round trip`() {
         val now = Clock.System.now()
         val event: ReleaseEvent = ReleaseEvent.Snapshot(
             releaseId = ReleaseId("r1"),
@@ -280,7 +281,7 @@ class SerializationTest {
     }
 
     @Test
-    fun releaseEventStatusChangedRoundTrip() {
+    fun `release event status changed round trip`() {
         val now = Clock.System.now()
         val event: ReleaseEvent = ReleaseEvent.ReleaseStatusChanged(
             releaseId = ReleaseId("r1"),
@@ -294,7 +295,7 @@ class SerializationTest {
     }
 
     @Test
-    fun releaseEventBlockExecutionUpdatedRoundTrip() {
+    fun `release event block execution updated round trip`() {
         val now = Clock.System.now()
         val event: ReleaseEvent = ReleaseEvent.BlockExecutionUpdated(
             releaseId = ReleaseId("r1"),
@@ -314,7 +315,7 @@ class SerializationTest {
     }
 
     @Test
-    fun releaseEventCompletedRoundTrip() {
+    fun `release event completed round trip`() {
         val now = Clock.System.now()
         val event: ReleaseEvent = ReleaseEvent.ReleaseCompleted(
             releaseId = ReleaseId("r1"),
@@ -328,7 +329,94 @@ class SerializationTest {
     }
 
     @Test
-    fun releaseResponseRoundTrip() {
+    fun `CreateTeamRequest round trip`() {
+        val request = CreateTeamRequest(name = "Dev Team", description = "Development team")
+        val encoded = json.encodeToString(CreateTeamRequest.serializer(), request)
+        val decoded = json.decodeFromString(CreateTeamRequest.serializer(), encoded)
+        assertEquals(request, decoded)
+    }
+
+    @Test
+    fun `TeamResponse round trip`() {
+        val response = TeamResponse(
+            team = Team(id = TeamId("t1"), name = "Alpha", description = "First team", createdAt = 0),
+            memberCount = 3,
+        )
+        val encoded = json.encodeToString(TeamResponse.serializer(), response)
+        val decoded = json.decodeFromString(TeamResponse.serializer(), encoded)
+        assertEquals(response, decoded)
+    }
+
+    @Test
+    fun `InviteListResponse round trip`() {
+        val response = InviteListResponse(
+            invites = listOf(
+                TeamInvite(
+                    id = "inv-1",
+                    teamId = TeamId("t1"),
+                    teamName = "Alpha",
+                    invitedUserId = UserId("u2"),
+                    invitedUsername = "bob",
+                    invitedByUserId = UserId("u1"),
+                    invitedByUsername = "alice",
+                    status = InviteStatus.PENDING,
+                    createdAt = 0,
+                ),
+            ),
+        )
+        val encoded = json.encodeToString(InviteListResponse.serializer(), response)
+        val decoded = json.decodeFromString(InviteListResponse.serializer(), encoded)
+        assertEquals(response, decoded)
+    }
+
+    @Test
+    fun `JoinRequestListResponse round trip`() {
+        val response = JoinRequestListResponse(
+            requests = listOf(
+                JoinRequest(
+                    id = "jr-1",
+                    teamId = TeamId("t1"),
+                    teamName = "Alpha",
+                    userId = UserId("u3"),
+                    username = "charlie",
+                    status = JoinRequestStatus.PENDING,
+                    createdAt = 0,
+                ),
+            ),
+        )
+        val encoded = json.encodeToString(JoinRequestListResponse.serializer(), response)
+        val decoded = json.decodeFromString(JoinRequestListResponse.serializer(), encoded)
+        assertEquals(response, decoded)
+    }
+
+    @Test
+    fun `TeamMemberListResponse round trip`() {
+        val response = TeamMemberListResponse(
+            members = listOf(
+                TeamMembership(
+                    teamId = TeamId("t1"),
+                    userId = UserId("u1"),
+                    username = "alice",
+                    role = TeamRole.TEAM_LEAD,
+                    joinedAt = 0,
+                ),
+            ),
+        )
+        val encoded = json.encodeToString(TeamMemberListResponse.serializer(), response)
+        val decoded = json.decodeFromString(TeamMemberListResponse.serializer(), encoded)
+        assertEquals(response, decoded)
+    }
+
+    @Test
+    fun `UpdateMemberRoleRequest round trip`() {
+        val request = UpdateMemberRoleRequest(role = TeamRole.COLLABORATOR)
+        val encoded = json.encodeToString(UpdateMemberRoleRequest.serializer(), request)
+        val decoded = json.decodeFromString(UpdateMemberRoleRequest.serializer(), encoded)
+        assertEquals(request, decoded)
+    }
+
+    @Test
+    fun `release response round trip`() {
         val now = Clock.System.now()
         val response = ReleaseResponse(
             release = Release(

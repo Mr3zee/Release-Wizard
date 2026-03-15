@@ -2,7 +2,7 @@ package com.github.mr3zee.releases
 
 import com.github.mr3zee.api.*
 import com.github.mr3zee.jsonClient
-import com.github.mr3zee.login
+import com.github.mr3zee.loginAndCreateTeam
 import com.github.mr3zee.testModule
 import com.github.mr3zee.model.*
 import io.ktor.client.*
@@ -10,10 +10,9 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -24,6 +23,7 @@ import kotlin.test.assertTrue
 class ReleasesRoutesTest {
 
     private suspend fun HttpClient.createTestProject(
+        teamId: TeamId,
         name: String = "Test Project",
         blocks: List<Block> = listOf(
             Block.ActionBlock(
@@ -40,7 +40,7 @@ class ReleasesRoutesTest {
             setBody(
                 CreateProjectRequest(
                     name = name,
-                    teamId = TeamId("00000000-0000-0000-0000-000000000000"),
+                    teamId = teamId,
                     dagGraph = DagGraph(blocks = blocks, edges = edges),
                     parameters = parameters,
                 )
@@ -70,7 +70,7 @@ class ReleasesRoutesTest {
     fun `list releases returns empty list initially`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val response = client.get(ApiRoutes.Releases.BASE)
         assertEquals(HttpStatusCode.OK, response.status)
@@ -82,9 +82,9 @@ class ReleasesRoutesTest {
     fun `start release and get it`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
-        val project = client.createTestProject()
+        val project = client.createTestProject(teamId)
         val result = client.startAndAwaitRelease(project.id)
 
         assertEquals(project.id, result.release.projectTemplateId)
@@ -103,7 +103,7 @@ class ReleasesRoutesTest {
     fun `start release with nonexistent project returns 400`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val response = client.post(ApiRoutes.Releases.BASE) {
             contentType(ContentType.Application.Json)
@@ -116,9 +116,9 @@ class ReleasesRoutesTest {
     fun `start release with empty DAG returns 400`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
-        val project = client.createTestProject(blocks = emptyList())
+        val project = client.createTestProject(teamId, blocks = emptyList())
 
         val response = client.post(ApiRoutes.Releases.BASE) {
             contentType(ContentType.Application.Json)
@@ -131,7 +131,7 @@ class ReleasesRoutesTest {
     fun `sequential DAG executes in correct order`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         // A -> B -> C
         val blocks = listOf(
@@ -143,7 +143,7 @@ class ReleasesRoutesTest {
             Edge(fromBlockId = BlockId("a"), toBlockId = BlockId("b")),
             Edge(fromBlockId = BlockId("b"), toBlockId = BlockId("c")),
         )
-        val project = client.createTestProject(blocks = blocks, edges = edges)
+        val project = client.createTestProject(teamId, blocks = blocks, edges = edges)
         val result = client.startAndAwaitRelease(project.id)
 
         assertEquals(ReleaseStatus.SUCCEEDED, result.release.status)
@@ -155,7 +155,7 @@ class ReleasesRoutesTest {
     fun `diamond DAG executes correctly`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         // A -> B, A -> C, B -> D, C -> D
         val blocks = listOf(
@@ -170,7 +170,7 @@ class ReleasesRoutesTest {
             Edge(fromBlockId = BlockId("b"), toBlockId = BlockId("d")),
             Edge(fromBlockId = BlockId("c"), toBlockId = BlockId("d")),
         )
-        val project = client.createTestProject(blocks = blocks, edges = edges)
+        val project = client.createTestProject(teamId, blocks = blocks, edges = edges)
         val result = client.startAndAwaitRelease(project.id)
 
         assertEquals(ReleaseStatus.SUCCEEDED, result.release.status)
@@ -198,50 +198,52 @@ class ReleasesRoutesTest {
     fun `user action block waits for approval`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val blocks = listOf(
             Block.ActionBlock(id = BlockId("action"), name = "Approve", type = BlockType.USER_ACTION),
         )
-        val project = client.createTestProject(blocks = blocks)
+        val project = client.createTestProject(teamId, blocks = blocks)
 
         val created = client.post(ApiRoutes.Releases.BASE) {
             contentType(ContentType.Application.Json)
             setBody(CreateReleaseRequest(projectTemplateId = project.id))
         }.body<ReleaseResponse>()
 
-        // Launch await in background — it will block until the release completes
-        val awaitScope = CoroutineScope(Dispatchers.Default)
-        val awaitDeferred = awaitScope.async {
-            client.post(ApiRoutes.Releases.await(created.release.id.value))
-                .body<ReleaseResponse>()
-        }
-
-        // Retry approval until the engine reaches WAITING_FOR_INPUT
-        while (true) {
-            val resp = client.post(ApiRoutes.Releases.approveBlock(created.release.id.value, "action")) {
-                contentType(ContentType.Application.Json)
-                setBody(ApproveBlockRequest(input = mapOf("approved" to "true")))
+        // Launch await in background and retry approval with timeout
+        val result = coroutineScope {
+            val awaitDeferred = async {
+                client.post(ApiRoutes.Releases.await(created.release.id.value))
+                    .body<ReleaseResponse>()
             }
-            if (resp.status == HttpStatusCode.OK) break
-            yield()
-        }
 
-        val result = awaitDeferred.await()
+            // Retry approval until the engine reaches WAITING_FOR_INPUT
+            withTimeout(10_000) {
+                while (true) {
+                    val resp = client.post(ApiRoutes.Releases.approveBlock(created.release.id.value, "action")) {
+                        contentType(ContentType.Application.Json)
+                        setBody(ApproveBlockRequest(input = mapOf("approved" to "true")))
+                    }
+                    if (resp.status == HttpStatusCode.OK) break
+                    yield()
+                }
+            }
+
+            awaitDeferred.await()
+        }
         assertEquals(ReleaseStatus.SUCCEEDED, result.release.status)
-        awaitScope.cancel()
     }
 
     @Test
     fun `cancel running release`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val blocks = listOf(
             Block.ActionBlock(id = BlockId("action"), name = "Wait", type = BlockType.USER_ACTION),
         )
-        val project = client.createTestProject(blocks = blocks)
+        val project = client.createTestProject(teamId, blocks = blocks)
 
         val created = client.post(ApiRoutes.Releases.BASE) {
             contentType(ContentType.Application.Json)
@@ -261,7 +263,7 @@ class ReleasesRoutesTest {
     fun `get nonexistent release returns 404`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val response = client.get(ApiRoutes.Releases.byId("00000000-0000-0000-0000-000000000000"))
         assertEquals(HttpStatusCode.NotFound, response.status)
@@ -280,12 +282,13 @@ class ReleasesRoutesTest {
     fun `release with parameters merges project and request params`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val blocks = listOf(
             Block.ActionBlock(id = BlockId("a"), name = "A", type = BlockType.TEAMCITY_BUILD),
         )
         val project = client.createTestProject(
+            teamId,
             blocks = blocks,
             parameters = listOf(
                 Parameter(key = "version", value = "1.0.0"),
@@ -307,12 +310,12 @@ class ReleasesRoutesTest {
     fun `block outputs are captured`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val blocks = listOf(
             Block.ActionBlock(id = BlockId("build"), name = "Build", type = BlockType.TEAMCITY_BUILD),
         )
-        val project = client.createTestProject(blocks = blocks)
+        val project = client.createTestProject(teamId, blocks = blocks)
         val result = client.startAndAwaitRelease(project.id)
 
         val buildExec = result.blockExecutions.find { it.blockId == BlockId("build") }
@@ -328,12 +331,12 @@ class ReleasesRoutesTest {
     fun `rerun release creates new release with same DAG`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val blocks = listOf(
             Block.ActionBlock(id = BlockId("a"), name = "A", type = BlockType.TEAMCITY_BUILD),
         )
-        val project = client.createTestProject(blocks = blocks)
+        val project = client.createTestProject(teamId, blocks = blocks)
         val original = client.startAndAwaitRelease(project.id)
         assertEquals(ReleaseStatus.SUCCEEDED, original.release.status)
 
@@ -356,12 +359,12 @@ class ReleasesRoutesTest {
     fun `rerun running release returns 400`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val blocks = listOf(
             Block.ActionBlock(id = BlockId("action"), name = "Wait", type = BlockType.USER_ACTION),
         )
-        val project = client.createTestProject(blocks = blocks)
+        val project = client.createTestProject(teamId, blocks = blocks)
 
         val created = client.post(ApiRoutes.Releases.BASE) {
             contentType(ContentType.Application.Json)
@@ -381,9 +384,9 @@ class ReleasesRoutesTest {
     fun `archive release sets status to ARCHIVED`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
-        val project = client.createTestProject()
+        val project = client.createTestProject(teamId)
         val result = client.startAndAwaitRelease(project.id)
         assertEquals(ReleaseStatus.SUCCEEDED, result.release.status)
 
@@ -402,12 +405,12 @@ class ReleasesRoutesTest {
     fun `archive running release returns 400`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val blocks = listOf(
             Block.ActionBlock(id = BlockId("action"), name = "Wait", type = BlockType.USER_ACTION),
         )
-        val project = client.createTestProject(blocks = blocks)
+        val project = client.createTestProject(teamId, blocks = blocks)
 
         val created = client.post(ApiRoutes.Releases.BASE) {
             contentType(ContentType.Application.Json)
@@ -425,9 +428,9 @@ class ReleasesRoutesTest {
     fun `delete release removes it`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
-        val project = client.createTestProject()
+        val project = client.createTestProject(teamId)
         val result = client.startAndAwaitRelease(project.id)
         assertEquals(ReleaseStatus.SUCCEEDED, result.release.status)
 
@@ -443,12 +446,12 @@ class ReleasesRoutesTest {
     fun `delete running release returns 400`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         val blocks = listOf(
             Block.ActionBlock(id = BlockId("action"), name = "Wait", type = BlockType.USER_ACTION),
         )
-        val project = client.createTestProject(blocks = blocks)
+        val project = client.createTestProject(teamId, blocks = blocks)
 
         val created = client.post(ApiRoutes.Releases.BASE) {
             contentType(ContentType.Application.Json)
@@ -466,9 +469,9 @@ class ReleasesRoutesTest {
     fun `archived releases excluded from list`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
-        val project = client.createTestProject()
+        val project = client.createTestProject(teamId)
         val result = client.startAndAwaitRelease(project.id)
         assertEquals(ReleaseStatus.SUCCEEDED, result.release.status)
 
