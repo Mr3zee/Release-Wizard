@@ -7,11 +7,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.*
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.model.Block
 import com.github.mr3zee.model.Parameter
@@ -47,6 +51,27 @@ fun TemplateAutocompleteField(
     var filteredSuggestions by remember { mutableStateOf(emptyList<TemplateSuggestion>()) }
     var selectedIndex by remember { mutableStateOf(-1) }
     var interpolationContext by remember { mutableStateOf<InterpolationContext?>(null) }
+
+    // Compute horizontal offset to position dropdown near the ${ trigger
+    val textMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    var containerWidthDp by remember { mutableStateOf(0.dp) }
+    val dropdownOffset by remember {
+        derivedStateOf {
+            val ctx = interpolationContext ?: return@derivedStateOf DpOffset.Zero
+            val triggerPos = ctx.triggerOffset.coerceAtMost(tfv.text.length)
+            val textBeforeTrigger = tfv.text.substring(0, triggerPos)
+            val layoutResult = textMeasurer.measure(text = textBeforeTrigger, style = textStyle)
+            val textWidthPx = if (textBeforeTrigger.isEmpty()) 0f
+                else layoutResult.getCursorRect(textBeforeTrigger.length).left
+            with(density) {
+                val triggerX = OUTLINED_FIELD_START_PADDING + textWidthPx.toDp()
+                // Clamp so dropdown doesn't overflow the field's right edge
+                val maxOffset = (containerWidthDp - DROPDOWN_MIN_WIDTH).coerceAtLeast(0.dp)
+                DpOffset(x = triggerX.coerceAtMost(maxOffset), y = 0.dp)
+            }
+        }
+    }
 
     fun updateSuggestions(textFieldValue: TextFieldValue) {
         val ctx = parseInterpolationContext(textFieldValue.text, textFieldValue.selection.start)
@@ -86,7 +111,11 @@ fun TemplateAutocompleteField(
     }
     val outputStartIndex = paramSuggestions.size
 
-    Box(modifier = modifier) {
+    Box(
+        modifier = modifier.onSizeChanged { size ->
+            with(density) { containerWidthDp = size.width.toDp() }
+        },
+    ) {
         OutlinedTextField(
             value = tfv,
             onValueChange = { newTfv ->
@@ -148,11 +177,12 @@ fun TemplateAutocompleteField(
         DropdownMenu(
             expanded = showDropdown,
             onDismissRequest = { showDropdown = false },
+            offset = dropdownOffset,
             modifier = Modifier.testTag("${testTag}_autocomplete_dropdown"),
         ) {
             Column(
                 modifier = Modifier
-                    .width(280.dp)
+                    .widthIn(min = 200.dp, max = 280.dp)
                     .heightIn(max = 200.dp)
                     .verticalScroll(rememberScrollState()),
             ) {
@@ -248,3 +278,9 @@ private fun SuggestionItem(
         }
     }
 }
+
+/** Material3 OutlinedTextField default horizontal content padding (start). */
+private val OUTLINED_FIELD_START_PADDING = 16.dp
+
+/** Minimum dropdown width used for offset clamping. */
+private val DROPDOWN_MIN_WIDTH = 200.dp

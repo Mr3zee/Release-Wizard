@@ -526,4 +526,66 @@ class TemplateAutocompleteFieldTest {
         onNodeWithTag("field").assertIsNotEnabled()
         onNodeWithTag("field_suggestion_0", useUnmergedTree = true).assertDoesNotExist()
     }
+
+    // ---- Cursor-relative offset tests ----
+
+    @Test
+    fun `dropdown shifts right when trigger is preceded by text`() = runComposeUiTest {
+        setContent {
+            MaterialTheme {
+                var value by remember { mutableStateOf("") }
+                TemplateAutocompleteField(
+                    value = value,
+                    onValueChange = { value = it },
+                    projectParameters = testParams,
+                    predecessors = testPredecessors,
+                    testTag = "field",
+                )
+            }
+        }
+
+        // Trigger at start — dropdown at left edge
+        onNodeWithTag("field").performTextInput("\${")
+        waitForIdle()
+        val leftAtStart = onNodeWithTag("field_suggestion_0", useUnmergedTree = true)
+            .fetchSemanticsNode().boundsInRoot.left
+
+        // Clear and trigger with prefix — dropdown should shift right
+        onNodeWithTag("field").performTextClearance()
+        waitForIdle()
+        onNodeWithTag("field").performTextInput("some prefix text \${")
+        waitForIdle()
+        val leftWithPrefix = onNodeWithTag("field_suggestion_0", useUnmergedTree = true)
+            .fetchSemanticsNode().boundsInRoot.left
+
+        // Dropdown with prefix should be to the right of dropdown at start
+        assert(leftWithPrefix > leftAtStart) {
+            "Expected dropdown with prefix (left=$leftWithPrefix) to be right of dropdown at start (left=$leftAtStart)"
+        }
+    }
+
+    @Test
+    fun `dropdown persists while typing expression body`() = runComposeUiTest {
+        setContent {
+            MaterialTheme {
+                var value by remember { mutableStateOf("") }
+                TemplateAutocompleteField(
+                    value = value,
+                    onValueChange = { value = it },
+                    projectParameters = testParams,
+                    predecessors = testPredecessors,
+                    testTag = "field",
+                )
+            }
+        }
+
+        onNodeWithTag("field").performTextInput("\${par")
+        waitForIdle()
+        onNodeWithTag("field_suggestion_0", useUnmergedTree = true).assertExists()
+
+        // Type more — triggerOffset stays stable, dropdown still visible
+        onNodeWithTag("field").performTextInput("am.")
+        waitForIdle()
+        onNodeWithTag("field_suggestion_0", useUnmergedTree = true).assertExists()
+    }
 }
