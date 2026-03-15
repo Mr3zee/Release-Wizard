@@ -14,7 +14,7 @@ fun dataSource(config: DatabaseConfig): DataSource {
         username = config.user
         password = config.password
         driverClassName = config.driver
-        maximumPoolSize = 10
+        maximumPoolSize = config.maxPoolSize
         validate()
     }
     return HikariDataSource(hikariConfig)
@@ -23,7 +23,7 @@ fun dataSource(config: DatabaseConfig): DataSource {
 fun initDatabase(ds: DataSource): Database {
     val database = Database.connect(ds)
     transaction(database) {
-        SchemaUtils.create(
+        SchemaUtils.createMissingTablesAndColumns(
             UserTable,
             TeamTable,
             TeamMembershipTable,

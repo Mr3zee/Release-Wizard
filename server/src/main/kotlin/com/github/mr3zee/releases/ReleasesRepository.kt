@@ -3,6 +3,17 @@ package com.github.mr3zee.releases
 import com.github.mr3zee.model.*
 
 interface ReleasesRepository {
+    suspend fun batchUpsertBlockExecutions(releaseId: ReleaseId, blocks: List<Block>) {
+        for (block in blocks) {
+            upsertBlockExecution(
+                BlockExecution(
+                    blockId = block.id,
+                    releaseId = releaseId,
+                    status = BlockStatus.WAITING,
+                )
+            )
+        }
+    }
     suspend fun findAll(
         includeArchived: Boolean = false,
         teamId: String? = null,

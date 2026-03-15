@@ -18,8 +18,8 @@ class ExposedNotificationRepository(private val db: Database) : NotificationRepo
     private fun ResultRow.toEntity(): NotificationConfigEntity {
         return NotificationConfigEntity(
             id = this[NotificationConfigTable.id].value.toString(),
-            projectId = ProjectId(this[NotificationConfigTable.projectId]),
-            userId = this[NotificationConfigTable.userId],
+            projectId = ProjectId(this[NotificationConfigTable.projectId].value.toString()),
+            userId = this[NotificationConfigTable.userId].value.toString(),
             type = this[NotificationConfigTable.type],
             config = this[NotificationConfigTable.config],
             enabled = this[NotificationConfigTable.enabled],
@@ -28,7 +28,7 @@ class ExposedNotificationRepository(private val db: Database) : NotificationRepo
 
     override suspend fun findByProjectId(projectId: ProjectId): List<NotificationConfigEntity> = dbQuery {
         NotificationConfigTable.selectAll()
-            .where { NotificationConfigTable.projectId eq projectId.value }
+            .where { NotificationConfigTable.projectId eq UUID.fromString(projectId.value) }
             .map { it.toEntity() }
     }
 
@@ -49,8 +49,8 @@ class ExposedNotificationRepository(private val db: Database) : NotificationRepo
         val id = UUID.randomUUID()
         NotificationConfigTable.insert {
             it[NotificationConfigTable.id] = id
-            it[NotificationConfigTable.projectId] = projectId.value
-            it[NotificationConfigTable.userId] = userId
+            it[NotificationConfigTable.projectId] = UUID.fromString(projectId.value)
+            it[NotificationConfigTable.userId] = UUID.fromString(userId)
             it[NotificationConfigTable.type] = type
             it[NotificationConfigTable.config] = config
             it[NotificationConfigTable.enabled] = enabled

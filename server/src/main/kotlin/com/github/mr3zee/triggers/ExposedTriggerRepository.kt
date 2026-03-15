@@ -18,7 +18,7 @@ class ExposedTriggerRepository(private val db: Database) : TriggerRepository {
     private fun ResultRow.toEntity(): TriggerEntity {
         return TriggerEntity(
             id = this[TriggerTable.id].value.toString(),
-            projectId = ProjectId(this[TriggerTable.projectId]),
+            projectId = ProjectId(this[TriggerTable.projectId].value.toString()),
             secret = this[TriggerTable.secret],
             enabled = this[TriggerTable.enabled],
             parametersTemplate = this[TriggerTable.parametersTemplate],
@@ -27,7 +27,7 @@ class ExposedTriggerRepository(private val db: Database) : TriggerRepository {
 
     override suspend fun findByProjectId(projectId: ProjectId): List<TriggerEntity> = dbQuery {
         TriggerTable.selectAll()
-            .where { TriggerTable.projectId eq projectId.value }
+            .where { TriggerTable.projectId eq UUID.fromString(projectId.value) }
             .map { it.toEntity() }
     }
 
@@ -46,7 +46,7 @@ class ExposedTriggerRepository(private val db: Database) : TriggerRepository {
         val id = UUID.randomUUID()
         TriggerTable.insert {
             it[TriggerTable.id] = id
-            it[TriggerTable.projectId] = projectId.value
+            it[TriggerTable.projectId] = UUID.fromString(projectId.value)
             it[TriggerTable.secret] = secret
             it[TriggerTable.enabled] = true
             it[TriggerTable.parametersTemplate] = parametersTemplate

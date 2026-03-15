@@ -78,7 +78,7 @@ enum class AuditTargetType {
 data class AuditEvent(
     val id: String,
     val teamId: TeamId? = null,
-    val actorUserId: UserId,
+    val actorUserId: UserId? = null,
     val actorUsername: String,
     val action: AuditAction,
     val targetType: AuditTargetType,

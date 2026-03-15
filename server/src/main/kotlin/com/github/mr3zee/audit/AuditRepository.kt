@@ -24,8 +24,8 @@ class ExposedAuditRepository(private val db: Database) : AuditRepository {
     override suspend fun insert(event: AuditEvent): Unit = dbQuery {
         AuditEventTable.insert {
             it[id] = UUID.randomUUID()
-            it[teamId] = event.teamId?.value
-            it[actorUserId] = event.actorUserId.value
+            it[teamId] = event.teamId?.let { tid -> UUID.fromString(tid.value) }
+            it[actorUserId] = event.actorUserId?.let { uid -> UUID.fromString(uid.value) }
             it[actorUsername] = event.actorUsername
             it[action] = event.action.name
             it[targetType] = event.targetType.name
@@ -36,12 +36,13 @@ class ExposedAuditRepository(private val db: Database) : AuditRepository {
     }
 
     override suspend fun findByTeam(teamId: TeamId, offset: Int, limit: Int): Pair<List<AuditEvent>, Long> = dbQuery {
+        val teamUuid = UUID.fromString(teamId.value)
         val totalCount = AuditEventTable.selectAll()
-            .where { AuditEventTable.teamId eq teamId.value }
+            .where { AuditEventTable.teamId eq teamUuid }
             .count()
 
         val events = AuditEventTable.selectAll()
-            .where { AuditEventTable.teamId eq teamId.value }
+            .where { AuditEventTable.teamId eq teamUuid }
             .orderBy(AuditEventTable.timestamp, SortOrder.DESC)
             .limit(limit)
             .offset(safeOffset(offset))
@@ -52,8 +53,8 @@ class ExposedAuditRepository(private val db: Database) : AuditRepository {
 
     private fun ResultRow.toAuditEvent(): AuditEvent = AuditEvent(
         id = this[AuditEventTable.id].value.toString(),
-        teamId = this[AuditEventTable.teamId]?.let { TeamId(it) },
-        actorUserId = UserId(this[AuditEventTable.actorUserId]),
+        teamId = this[AuditEventTable.teamId]?.let { entityId -> TeamId(entityId.value.toString()) },
+        actorUserId = this[AuditEventTable.actorUserId]?.let { entityId -> UserId(entityId.value.toString()) },
         actorUsername = this[AuditEventTable.actorUsername],
         action = AuditAction.valueOf(this[AuditEventTable.action]),
         targetType = AuditTargetType.valueOf(this[AuditEventTable.targetType]),

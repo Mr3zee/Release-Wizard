@@ -30,6 +30,16 @@ interface ConnectionsRepository {
     ): Pair<List<Connection>, Long>
     suspend fun findById(id: ConnectionId): Connection?
     suspend fun findTeamId(id: ConnectionId): String?
+    suspend fun findTeamIds(ids: List<ConnectionId>): Map<ConnectionId, String> {
+        val result = mutableMapOf<ConnectionId, String>()
+        for (id in ids) {
+            val teamId = findTeamId(id)
+            if (teamId != null) {
+                result[id] = teamId
+            }
+        }
+        return result
+    }
     suspend fun create(name: String, type: ConnectionType, config: ConnectionConfig, teamId: String): Connection
     suspend fun update(id: ConnectionId, name: String?, config: ConnectionConfig?): Connection?
     suspend fun delete(id: ConnectionId): Boolean

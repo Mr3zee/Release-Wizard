@@ -11,7 +11,7 @@ data class ScheduleEntity(
     val cronExpression: String,
     val parameters: List<Parameter>,
     val enabled: Boolean,
-    val createdBy: String,
+    val createdBy: String?,
     val nextRunAt: Instant?,
     val lastRunAt: Instant?,
 )

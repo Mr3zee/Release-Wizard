@@ -2,15 +2,18 @@ package com.github.mr3zee.tags
 
 import com.github.mr3zee.model.ReleaseId
 import com.github.mr3zee.persistence.ReleaseTagTable
+import com.github.mr3zee.persistence.ReleaseTable
+import com.github.mr3zee.persistence.TeamTable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
+import java.util.UUID
 
 interface TagRepository {
     suspend fun findTagsForRelease(releaseId: ReleaseId): List<String>
-    suspend fun setTagsForRelease(releaseId: ReleaseId, tags: List<String>, teamId: String = "")
+    suspend fun setTagsForRelease(releaseId: ReleaseId, tags: List<String>, teamId: String)
     suspend fun findAllTagsWithCount(): List<Pair<String, Long>>
     suspend fun findTagsWithCountByTeam(teamId: String): List<Pair<String, Long>>
     suspend fun renameTag(oldName: String, newName: String, teamId: String? = null): Long
@@ -24,19 +27,21 @@ class ExposedTagRepository(private val db: Database) : TagRepository {
 
     override suspend fun findTagsForRelease(releaseId: ReleaseId): List<String> = dbQuery {
         ReleaseTagTable.select(ReleaseTagTable.tag)
-            .where { ReleaseTagTable.releaseId eq releaseId.value }
+            .where { ReleaseTagTable.releaseId eq UUID.fromString(releaseId.value) }
             .orderBy(ReleaseTagTable.tag, SortOrder.ASC)
             .map { it[ReleaseTagTable.tag] }
     }
 
     override suspend fun setTagsForRelease(releaseId: ReleaseId, tags: List<String>, teamId: String) = dbQuery {
-        ReleaseTagTable.deleteWhere { ReleaseTagTable.releaseId eq releaseId.value }
+        val releaseUuid = UUID.fromString(releaseId.value)
+        val teamUuid = UUID.fromString(teamId)
+        ReleaseTagTable.deleteWhere { ReleaseTagTable.releaseId eq releaseUuid }
         for (tag in tags.map { it.trim().lowercase() }.distinct()) {
             if (tag.isNotBlank()) {
                 ReleaseTagTable.insert {
-                    it[ReleaseTagTable.releaseId] = releaseId.value
+                    it[ReleaseTagTable.releaseId] = releaseUuid
                     it[ReleaseTagTable.tag] = tag
-                    it[ReleaseTagTable.teamId] = teamId
+                    it[ReleaseTagTable.teamId] = teamUuid
                 }
             }
         }
@@ -51,9 +56,10 @@ class ExposedTagRepository(private val db: Database) : TagRepository {
     }
 
     override suspend fun findTagsWithCountByTeam(teamId: String): List<Pair<String, Long>> = dbQuery {
+        val teamUuid = UUID.fromString(teamId)
         val countExpr = ReleaseTagTable.releaseId.count()
         ReleaseTagTable.select(ReleaseTagTable.tag, countExpr)
-            .where { ReleaseTagTable.teamId eq teamId }
+            .where { ReleaseTagTable.teamId eq teamUuid }
             .groupBy(ReleaseTagTable.tag)
             .orderBy(ReleaseTagTable.tag, SortOrder.ASC)
             .map { it[ReleaseTagTable.tag] to it[countExpr] }
@@ -64,14 +70,16 @@ class ExposedTagRepository(private val db: Database) : TagRepository {
         val normalizedNew = newName.trim().lowercase()
         if (normalizedOld == normalizedNew) return@dbQuery 0L
 
+        val teamUuid = teamId?.let { UUID.fromString(it) }
+
         fun baseCondition(): Op<Boolean> {
             val cond: Op<Boolean> = ReleaseTagTable.tag eq normalizedOld
-            return if (teamId != null) cond and (ReleaseTagTable.teamId eq teamId) else cond
+            return if (teamUuid != null) cond and (ReleaseTagTable.teamId eq teamUuid) else cond
         }
 
         val releasesWithNewTag = ReleaseTagTable.select(ReleaseTagTable.releaseId)
             .where { ReleaseTagTable.tag eq normalizedNew }
-            .map { it[ReleaseTagTable.releaseId] }
+            .map { it[ReleaseTagTable.releaseId].value }
             .toSet()
 
         if (releasesWithNewTag.isNotEmpty()) {
@@ -88,9 +96,10 @@ class ExposedTagRepository(private val db: Database) : TagRepository {
 
     override suspend fun deleteTag(name: String, teamId: String?): Long = dbQuery {
         val normalized = name.trim().lowercase()
+        val teamUuid = teamId?.let { UUID.fromString(it) }
         val deleted = ReleaseTagTable.deleteWhere {
             val cond: Op<Boolean> = ReleaseTagTable.tag eq normalized
-            if (teamId != null) cond and (ReleaseTagTable.teamId eq teamId) else cond
+            if (teamUuid != null) cond and (ReleaseTagTable.teamId eq teamUuid) else cond
         }
         deleted.toLong()
     }
@@ -99,6 +108,6 @@ class ExposedTagRepository(private val db: Database) : TagRepository {
         val normalized = tag.trim().lowercase()
         ReleaseTagTable.select(ReleaseTagTable.releaseId)
             .where { ReleaseTagTable.tag eq normalized }
-            .map { it[ReleaseTagTable.releaseId] }
+            .map { it[ReleaseTagTable.releaseId].value.toString() }
     }
 }

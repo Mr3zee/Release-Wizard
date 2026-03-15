@@ -37,9 +37,10 @@ class ExposedProjectsRepository(private val db: Database) : ProjectsRepository {
     ): List<Op<Boolean>> {
         val conditions = mutableListOf<Op<Boolean>>()
         if (teamId != null) {
-            conditions.add(ProjectTemplateTable.teamId eq teamId)
+            conditions.add(ProjectTemplateTable.teamId eq UUID.fromString(teamId))
         } else if (teamIds != null) {
-            conditions.add(ProjectTemplateTable.teamId inList teamIds)
+            val uuids = teamIds.mapNotNull { runCatching { UUID.fromString(it) }.getOrNull() }
+            conditions.add(ProjectTemplateTable.teamId inList uuids)
         }
         if (!search.isNullOrBlank()) {
             conditions.add(ProjectTemplateTable.name.lowerCase() like likeContains(search))
@@ -112,7 +113,7 @@ class ExposedProjectsRepository(private val db: Database) : ProjectsRepository {
         ProjectTemplateTable.select(ProjectTemplateTable.teamId)
             .where { ProjectTemplateTable.id eq UUID.fromString(id.value) }
             .singleOrNull()
-            ?.get(ProjectTemplateTable.teamId)
+            ?.get(ProjectTemplateTable.teamId)?.value?.toString()
     }
 
     override suspend fun create(
@@ -132,7 +133,7 @@ class ExposedProjectsRepository(private val db: Database) : ProjectsRepository {
             it[ProjectTemplateTable.dagGraph] = dagGraph
             it[ProjectTemplateTable.parameters] = parameters
             it[ProjectTemplateTable.defaultTags] = defaultTags
-            it[ProjectTemplateTable.teamId] = teamId
+            it[ProjectTemplateTable.teamId] = UUID.fromString(teamId)
             it[ProjectTemplateTable.createdAt] = now
             it[ProjectTemplateTable.updatedAt] = now
         }

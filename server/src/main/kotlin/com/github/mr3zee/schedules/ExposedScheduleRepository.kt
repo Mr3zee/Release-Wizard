@@ -19,11 +19,11 @@ class ExposedScheduleRepository(private val db: Database) : ScheduleRepository {
     private fun ResultRow.toEntity(): ScheduleEntity {
         return ScheduleEntity(
             id = this[ScheduleTable.id].value.toString(),
-            projectId = ProjectId(this[ScheduleTable.projectId]),
+            projectId = ProjectId(this[ScheduleTable.projectId].value.toString()),
             cronExpression = this[ScheduleTable.cronExpression],
             parameters = this[ScheduleTable.parameters],
             enabled = this[ScheduleTable.enabled],
-            createdBy = this[ScheduleTable.createdBy],
+            createdBy = this[ScheduleTable.createdBy]?.value?.toString(),
             nextRunAt = this[ScheduleTable.nextRunAt],
             lastRunAt = this[ScheduleTable.lastRunAt],
         )
@@ -31,7 +31,7 @@ class ExposedScheduleRepository(private val db: Database) : ScheduleRepository {
 
     override suspend fun findByProjectId(projectId: ProjectId): List<ScheduleEntity> = dbQuery {
         ScheduleTable.selectAll()
-            .where { ScheduleTable.projectId eq projectId.value }
+            .where { ScheduleTable.projectId eq UUID.fromString(projectId.value) }
             .map { it.toEntity() }
     }
 
@@ -62,11 +62,11 @@ class ExposedScheduleRepository(private val db: Database) : ScheduleRepository {
         val id = UUID.randomUUID()
         ScheduleTable.insert {
             it[ScheduleTable.id] = id
-            it[ScheduleTable.projectId] = projectId.value
+            it[ScheduleTable.projectId] = UUID.fromString(projectId.value)
             it[ScheduleTable.cronExpression] = cronExpression
             it[ScheduleTable.parameters] = parameters
             it[ScheduleTable.enabled] = enabled
-            it[ScheduleTable.createdBy] = createdBy
+            it[ScheduleTable.createdBy] = UUID.fromString(createdBy)
             it[ScheduleTable.nextRunAt] = nextRunAt
             it[ScheduleTable.lastRunAt] = null
         }

@@ -43,9 +43,10 @@ class ExposedConnectionsRepository(
     ): List<Op<Boolean>> {
         val conditions = mutableListOf<Op<Boolean>>()
         if (teamId != null) {
-            conditions.add(ConnectionTable.teamId eq teamId)
+            conditions.add(ConnectionTable.teamId eq UUID.fromString(teamId))
         } else if (teamIds != null) {
-            conditions.add(ConnectionTable.teamId inList teamIds)
+            val uuids = teamIds.mapNotNull { runCatching { UUID.fromString(it) }.getOrNull() }
+            conditions.add(ConnectionTable.teamId inList uuids)
         }
         if (!search.isNullOrBlank()) {
             conditions.add(ConnectionTable.name.lowerCase() like likeContains(search))
@@ -128,7 +129,17 @@ class ExposedConnectionsRepository(
         ConnectionTable.select(ConnectionTable.teamId)
             .where { ConnectionTable.id eq UUID.fromString(id.value) }
             .singleOrNull()
-            ?.get(ConnectionTable.teamId)
+            ?.get(ConnectionTable.teamId)?.value?.toString()
+    }
+
+    override suspend fun findTeamIds(ids: List<ConnectionId>): Map<ConnectionId, String> = dbQuery {
+        if (ids.isEmpty()) return@dbQuery emptyMap()
+        val uuids = ids.mapNotNull { runCatching { UUID.fromString(it.value) }.getOrNull() }
+        ConnectionTable.select(ConnectionTable.id, ConnectionTable.teamId)
+            .where { ConnectionTable.id inList uuids }
+            .associate {
+                ConnectionId(it[ConnectionTable.id].value.toString()) to it[ConnectionTable.teamId].value.toString()
+            }
     }
 
     override suspend fun create(
@@ -145,7 +156,7 @@ class ExposedConnectionsRepository(
             it[ConnectionTable.name] = name
             it[ConnectionTable.type] = type
             it[ConnectionTable.encryptedConfig] = encryptedConfig
-            it[ConnectionTable.teamId] = teamId
+            it[ConnectionTable.teamId] = UUID.fromString(teamId)
             it[ConnectionTable.createdAt] = now
             it[ConnectionTable.updatedAt] = now
         }

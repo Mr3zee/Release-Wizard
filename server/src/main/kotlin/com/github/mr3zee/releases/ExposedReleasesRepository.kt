@@ -23,8 +23,8 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
     private fun ResultRow.toRelease(): Release {
         return Release(
             id = ReleaseId(this[ReleaseTable.id].value.toString()),
-            projectTemplateId = ProjectId(this[ReleaseTable.projectTemplateId]),
-            status = ReleaseStatus.valueOf(this[ReleaseTable.status]),
+            projectTemplateId = ProjectId(this[ReleaseTable.projectTemplateId].value.toString()),
+            status = this[ReleaseTable.status],
             dagSnapshot = this[ReleaseTable.dagSnapshot],
             parameters = this[ReleaseTable.parameters],
             startedAt = this[ReleaseTable.startedAt],
@@ -35,8 +35,8 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
     private fun ResultRow.toBlockExecution(): BlockExecution {
         return BlockExecution(
             blockId = BlockId(this[BlockExecutionTable.blockId]),
-            releaseId = ReleaseId(this[BlockExecutionTable.releaseId]),
-            status = BlockStatus.valueOf(this[BlockExecutionTable.status]),
+            releaseId = ReleaseId(this[BlockExecutionTable.releaseId].value.toString()),
+            status = this[BlockExecutionTable.status],
             outputs = this[BlockExecutionTable.outputs],
             error = this[BlockExecutionTable.error],
             startedAt = this[BlockExecutionTable.startedAt],
@@ -47,16 +47,17 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
 
     private fun loadTagsForRelease(releaseId: String): List<String> {
         return ReleaseTagTable.select(ReleaseTagTable.tag)
-            .where { ReleaseTagTable.releaseId eq releaseId }
+            .where { ReleaseTagTable.releaseId eq UUID.fromString(releaseId) }
             .orderBy(ReleaseTagTable.tag, SortOrder.ASC)
             .map { it[ReleaseTagTable.tag] }
     }
 
     private fun loadTagsForReleases(releaseIds: List<String>): Map<String, List<String>> {
         if (releaseIds.isEmpty()) return emptyMap()
+        val uuids = releaseIds.mapNotNull { runCatching { UUID.fromString(it) }.getOrNull() }
         return ReleaseTagTable.selectAll()
-            .where { ReleaseTagTable.releaseId inList releaseIds }
-            .groupBy({ it[ReleaseTagTable.releaseId] }, { it[ReleaseTagTable.tag] })
+            .where { ReleaseTagTable.releaseId inList uuids }
+            .groupBy({ it[ReleaseTagTable.releaseId].value.toString() }, { it[ReleaseTagTable.tag] })
     }
 
     private fun buildReleaseConditions(
@@ -70,30 +71,31 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
     ): List<Op<Boolean>> {
         val conditions = mutableListOf<Op<Boolean>>()
         if (!includeArchived) {
-            conditions.add(ReleaseTable.status neq ReleaseStatus.ARCHIVED.name)
+            conditions.add(ReleaseTable.status neq ReleaseStatus.ARCHIVED)
         }
         if (teamId != null) {
-            conditions.add(ReleaseTable.teamId eq teamId)
+            conditions.add(ReleaseTable.teamId eq UUID.fromString(teamId))
         } else if (teamIds != null) {
-            conditions.add(ReleaseTable.teamId inList teamIds)
+            val uuids = teamIds.mapNotNull { runCatching { UUID.fromString(it) }.getOrNull() }
+            conditions.add(ReleaseTable.teamId inList uuids)
         }
         if (status != null) {
-            conditions.add(ReleaseTable.status eq status.name)
+            conditions.add(ReleaseTable.status eq status)
         }
         if (projectTemplateId != null) {
-            conditions.add(ReleaseTable.projectTemplateId eq projectTemplateId.value)
+            conditions.add(ReleaseTable.projectTemplateId eq UUID.fromString(projectTemplateId.value))
         }
         if (!search.isNullOrBlank()) {
             val pattern = likeContains(search)
             val projectNameMatch = exists(
                 ProjectTemplateTable.selectAll().where {
-                    (ProjectTemplateTable.id.castTo<String>(VarCharColumnType(36)) eq ReleaseTable.projectTemplateId) and
+                    (ProjectTemplateTable.id eq ReleaseTable.projectTemplateId) and
                         (ProjectTemplateTable.name.lowerCase() like pattern)
                 }
             )
             val tagMatch = exists(
                 ReleaseTagTable.selectAll().where {
-                    (ReleaseTagTable.releaseId eq ReleaseTable.id.castTo<String>(VarCharColumnType(36))) and
+                    (ReleaseTagTable.releaseId eq ReleaseTable.id) and
                         (ReleaseTagTable.tag.lowerCase() like pattern)
                 }
             )
@@ -181,7 +183,7 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
         ReleaseTable.select(ReleaseTable.teamId)
             .where { ReleaseTable.id eq UUID.fromString(id.value) }
             .singleOrNull()
-            ?.get(ReleaseTable.teamId)
+            ?.get(ReleaseTable.teamId)?.value?.toString()
     }
 
     override suspend fun findById(id: ReleaseId): Release? = dbQuery {
@@ -194,7 +196,8 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
 
     override suspend fun findByStatuses(statuses: Set<ReleaseStatus>): List<Release> = dbQuery {
         val releases = ReleaseTable.selectAll()
-            .where { ReleaseTable.status inList statuses.map { it.name } }
+            .where { ReleaseTable.status inList statuses }
+            .limit(1000)
             .map { it.toRelease() }
         val tagMap = loadTagsForReleases(releases.map { it.id.value })
         releases.map { it.copy(tags = tagMap[it.id.value] ?: emptyList()) }
@@ -202,8 +205,9 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
 
     override suspend fun findByProjectId(projectId: ProjectId): List<Release> = dbQuery {
         val releases = ReleaseTable.selectAll()
-            .where { ReleaseTable.projectTemplateId eq projectId.value }
+            .where { ReleaseTable.projectTemplateId eq UUID.fromString(projectId.value) }
             .orderBy(ReleaseTable.startedAt to SortOrder.DESC)
+            .limit(1000)
             .map { it.toRelease() }
         val tagMap = loadTagsForReleases(releases.map { it.id.value })
         releases.map { it.copy(tags = tagMap[it.id.value] ?: emptyList()) }
@@ -216,13 +220,15 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
         teamId: String,
     ): Release = dbQuery {
         val id = UUID.randomUUID()
+        val now = Clock.System.now()
         ReleaseTable.insert {
             it[ReleaseTable.id] = id
-            it[ReleaseTable.projectTemplateId] = projectTemplateId.value
-            it[ReleaseTable.status] = ReleaseStatus.PENDING.name
+            it[ReleaseTable.projectTemplateId] = UUID.fromString(projectTemplateId.value)
+            it[ReleaseTable.status] = ReleaseStatus.PENDING
             it[ReleaseTable.dagSnapshot] = dagSnapshot
             it[ReleaseTable.parameters] = parameters
-            it[ReleaseTable.teamId] = teamId
+            it[ReleaseTable.teamId] = UUID.fromString(teamId)
+            it[ReleaseTable.createdAt] = now
             it[ReleaseTable.startedAt] = null
             it[ReleaseTable.finishedAt] = null
         }
@@ -237,7 +243,7 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
 
     override suspend fun updateStatus(id: ReleaseId, status: ReleaseStatus): Boolean = dbQuery {
         val updated = ReleaseTable.update({ ReleaseTable.id eq UUID.fromString(id.value) }) {
-            it[ReleaseTable.status] = status.name
+            it[ReleaseTable.status] = status
         }
         updated > 0
     }
@@ -245,7 +251,7 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
     override suspend fun setStarted(id: ReleaseId): Boolean = dbQuery {
         val now = Clock.System.now()
         val updated = ReleaseTable.update({ ReleaseTable.id eq UUID.fromString(id.value) }) {
-            it[ReleaseTable.status] = ReleaseStatus.RUNNING.name
+            it[ReleaseTable.status] = ReleaseStatus.RUNNING
             it[ReleaseTable.startedAt] = now
         }
         updated > 0
@@ -254,7 +260,7 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
     override suspend fun setFinished(id: ReleaseId, status: ReleaseStatus): Boolean = dbQuery {
         val now = Clock.System.now()
         val updated = ReleaseTable.update({ ReleaseTable.id eq UUID.fromString(id.value) }) {
-            it[ReleaseTable.status] = status.name
+            it[ReleaseTable.status] = status
             it[ReleaseTable.finishedAt] = now
         }
         updated > 0
@@ -262,10 +268,10 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
 
     override suspend fun delete(id: ReleaseId): Boolean = dbQuery {
         BlockExecutionTable.deleteWhere {
-            BlockExecutionTable.releaseId eq id.value
+            BlockExecutionTable.releaseId eq UUID.fromString(id.value)
         }
         ReleaseTagTable.deleteWhere {
-            ReleaseTagTable.releaseId eq id.value
+            ReleaseTagTable.releaseId eq UUID.fromString(id.value)
         }
         val deleted = ReleaseTable.deleteWhere {
             ReleaseTable.id eq UUID.fromString(id.value)
@@ -275,14 +281,14 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
 
     override suspend fun findBlockExecutions(releaseId: ReleaseId): List<BlockExecution> = dbQuery {
         BlockExecutionTable.selectAll()
-            .where { BlockExecutionTable.releaseId eq releaseId.value }
+            .where { BlockExecutionTable.releaseId eq UUID.fromString(releaseId.value) }
             .map { it.toBlockExecution() }
     }
 
     override suspend fun findBlockExecution(releaseId: ReleaseId, blockId: BlockId): BlockExecution? = dbQuery {
         BlockExecutionTable.selectAll()
             .where {
-                (BlockExecutionTable.releaseId eq releaseId.value) and
+                (BlockExecutionTable.releaseId eq UUID.fromString(releaseId.value)) and
                     (BlockExecutionTable.blockId eq blockId.value)
             }
             .singleOrNull()
@@ -293,7 +299,7 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
         BlockExecutionTable.upsert(
             keys = arrayOf(BlockExecutionTable.releaseId, BlockExecutionTable.blockId),
             onUpdate = {
-                it[BlockExecutionTable.status] = execution.status.name
+                it[BlockExecutionTable.status] = execution.status
                 it[BlockExecutionTable.outputs] = execution.outputs
                 it[BlockExecutionTable.error] = execution.error
                 it[BlockExecutionTable.startedAt] = execution.startedAt
@@ -302,14 +308,41 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
             },
         ) {
             it[BlockExecutionTable.id] = UUID.randomUUID()
-            it[BlockExecutionTable.releaseId] = execution.releaseId.value
+            it[BlockExecutionTable.releaseId] = UUID.fromString(execution.releaseId.value)
             it[BlockExecutionTable.blockId] = execution.blockId.value
-            it[BlockExecutionTable.status] = execution.status.name
+            it[BlockExecutionTable.status] = execution.status
             it[BlockExecutionTable.outputs] = execution.outputs
             it[BlockExecutionTable.error] = execution.error
             it[BlockExecutionTable.startedAt] = execution.startedAt
             it[BlockExecutionTable.finishedAt] = execution.finishedAt
             it[BlockExecutionTable.approvals] = execution.approvals
+        }
+        Unit
+    }
+
+    override suspend fun batchUpsertBlockExecutions(releaseId: ReleaseId, blocks: List<Block>) = dbQuery {
+        val releaseUuid = UUID.fromString(releaseId.value)
+        BlockExecutionTable.batchUpsert(
+            data = blocks,
+            keys = arrayOf(BlockExecutionTable.releaseId, BlockExecutionTable.blockId),
+            onUpdate = {
+                it[BlockExecutionTable.status] = BlockStatus.WAITING
+                it[BlockExecutionTable.outputs] = emptyMap()
+                it[BlockExecutionTable.error] = null
+                it[BlockExecutionTable.startedAt] = null
+                it[BlockExecutionTable.finishedAt] = null
+                it[BlockExecutionTable.approvals] = emptyList()
+            },
+        ) { block ->
+            this[BlockExecutionTable.id] = UUID.randomUUID()
+            this[BlockExecutionTable.releaseId] = releaseUuid
+            this[BlockExecutionTable.blockId] = block.id.value
+            this[BlockExecutionTable.status] = BlockStatus.WAITING
+            this[BlockExecutionTable.outputs] = emptyMap()
+            this[BlockExecutionTable.error] = null
+            this[BlockExecutionTable.startedAt] = null
+            this[BlockExecutionTable.finishedAt] = null
+            this[BlockExecutionTable.approvals] = emptyList()
         }
         Unit
     }

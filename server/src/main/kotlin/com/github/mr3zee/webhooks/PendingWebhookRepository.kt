@@ -43,10 +43,10 @@ class ExposedPendingWebhookRepository(
         id = this[PendingWebhookTable.id].value.toString(),
         externalId = this[PendingWebhookTable.externalId],
         blockId = BlockId(this[PendingWebhookTable.blockId]),
-        releaseId = ReleaseId(this[PendingWebhookTable.releaseId]),
-        connectionId = ConnectionId(this[PendingWebhookTable.connectionId]),
-        type = WebhookType.valueOf(this[PendingWebhookTable.type]),
-        status = WebhookStatus.valueOf(this[PendingWebhookTable.status]),
+        releaseId = ReleaseId(this[PendingWebhookTable.releaseId].value.toString()),
+        connectionId = ConnectionId(this[PendingWebhookTable.connectionId].value.toString()),
+        type = this[PendingWebhookTable.type],
+        status = this[PendingWebhookTable.status],
         payload = this[PendingWebhookTable.payload],
         createdAt = this[PendingWebhookTable.createdAt],
         updatedAt = this[PendingWebhookTable.updatedAt],
@@ -65,10 +65,10 @@ class ExposedPendingWebhookRepository(
             it[PendingWebhookTable.id] = id
             it[PendingWebhookTable.externalId] = externalId
             it[PendingWebhookTable.blockId] = blockId.value
-            it[PendingWebhookTable.releaseId] = releaseId.value
-            it[PendingWebhookTable.connectionId] = connectionId.value
-            it[PendingWebhookTable.type] = type.name
-            it[PendingWebhookTable.status] = WebhookStatus.PENDING.name
+            it[PendingWebhookTable.releaseId] = UUID.fromString(releaseId.value)
+            it[PendingWebhookTable.connectionId] = UUID.fromString(connectionId.value)
+            it[PendingWebhookTable.type] = type
+            it[PendingWebhookTable.status] = WebhookStatus.PENDING
             it[PendingWebhookTable.payload] = null
             it[createdAt] = now
             it[updatedAt] = now
@@ -90,7 +90,7 @@ class ExposedPendingWebhookRepository(
         PendingWebhookTable.selectAll()
             .where {
                 (PendingWebhookTable.externalId eq externalId) and
-                    (PendingWebhookTable.type eq type.name)
+                    (PendingWebhookTable.type eq type)
             }
             .orderBy(PendingWebhookTable.createdAt, SortOrder.DESC)
             .firstOrNull()
@@ -101,8 +101,8 @@ class ExposedPendingWebhookRepository(
         PendingWebhookTable.selectAll()
             .where {
                 (PendingWebhookTable.externalId eq externalId) and
-                    (PendingWebhookTable.type eq type.name) and
-                    (PendingWebhookTable.status eq WebhookStatus.PENDING.name)
+                    (PendingWebhookTable.type eq type) and
+                    (PendingWebhookTable.status eq WebhookStatus.PENDING)
             }
             .orderBy(PendingWebhookTable.createdAt, SortOrder.DESC)
             .firstOrNull()
@@ -115,9 +115,9 @@ class ExposedPendingWebhookRepository(
     ): List<PendingWebhook> = dbQuery {
         PendingWebhookTable.selectAll()
             .where {
-                (PendingWebhookTable.connectionId eq connectionId.value) and
-                    (PendingWebhookTable.type eq type.name) and
-                    (PendingWebhookTable.status eq WebhookStatus.PENDING.name)
+                (PendingWebhookTable.connectionId eq UUID.fromString(connectionId.value)) and
+                    (PendingWebhookTable.type eq type) and
+                    (PendingWebhookTable.status eq WebhookStatus.PENDING)
             }
             .map { it.toWebhook() }
     }
@@ -125,8 +125,8 @@ class ExposedPendingWebhookRepository(
     override suspend fun findPendingByReleaseId(releaseId: ReleaseId): List<PendingWebhook> = dbQuery {
         PendingWebhookTable.selectAll()
             .where {
-                (PendingWebhookTable.releaseId eq releaseId.value) and
-                    (PendingWebhookTable.status eq WebhookStatus.PENDING.name)
+                (PendingWebhookTable.releaseId eq UUID.fromString(releaseId.value)) and
+                    (PendingWebhookTable.status eq WebhookStatus.PENDING)
             }
             .map { it.toWebhook() }
     }
@@ -134,7 +134,7 @@ class ExposedPendingWebhookRepository(
     override suspend fun findByReleaseIdAndBlockId(releaseId: ReleaseId, blockId: BlockId): PendingWebhook? = dbQuery {
         PendingWebhookTable.selectAll()
             .where {
-                (PendingWebhookTable.releaseId eq releaseId.value) and
+                (PendingWebhookTable.releaseId eq UUID.fromString(releaseId.value)) and
                     (PendingWebhookTable.blockId eq blockId.value)
             }
             .orderBy(PendingWebhookTable.createdAt, SortOrder.DESC)
@@ -145,7 +145,7 @@ class ExposedPendingWebhookRepository(
     override suspend fun updateStatus(id: String, status: WebhookStatus, payload: String?): Boolean = dbQuery {
         val now = Clock.System.now()
         val updated = PendingWebhookTable.update({ PendingWebhookTable.id eq UUID.fromString(id) }) {
-            it[PendingWebhookTable.status] = status.name
+            it[PendingWebhookTable.status] = status
             it[PendingWebhookTable.updatedAt] = now
             if (payload != null) {
                 it[PendingWebhookTable.payload] = payload
@@ -165,7 +165,7 @@ class ExposedPendingWebhookRepository(
 
     override suspend fun deleteCompletedOlderThan(cutoff: Instant): Int = dbQuery {
         PendingWebhookTable.deleteWhere {
-            (PendingWebhookTable.status eq WebhookStatus.COMPLETED.name) and
+            (PendingWebhookTable.status eq WebhookStatus.COMPLETED) and
                 (PendingWebhookTable.updatedAt less cutoff)
         }
     }

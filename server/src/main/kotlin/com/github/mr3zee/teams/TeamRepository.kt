@@ -20,6 +20,7 @@ interface TeamRepository {
     suspend fun deleteWithActiveReleaseCheck(teamId: TeamId): Boolean
     suspend fun findByName(name: String): Team?
     suspend fun createIfNameAvailable(name: String, description: String): Team
+    suspend fun createTeamWithMember(name: String, description: String, userId: String, role: TeamRole): Team
     suspend fun updateIfNameAvailable(id: TeamId, name: String?, description: String?): Team?
 
     suspend fun addMember(teamId: TeamId, userId: String, role: TeamRole): Boolean
@@ -84,6 +85,18 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
             .associate { it[TeamTable.id].value.toString() to it[TeamTable.name] }
     }
 
+    /**
+     * Detects a unique constraint violation from any SQL exception.
+     */
+    private fun isUniqueConstraintViolation(e: Exception): Boolean {
+        return e is SQLIntegrityConstraintViolationException ||
+            e.cause is SQLIntegrityConstraintViolationException ||
+            e.message?.contains("unique constraint", ignoreCase = true) == true ||
+            e.message?.contains("duplicate key", ignoreCase = true) == true ||
+            e.cause?.message?.contains("unique constraint", ignoreCase = true) == true ||
+            e.cause?.message?.contains("duplicate key", ignoreCase = true) == true
+    }
+
     override suspend fun create(name: String, description: String): Team = dbQuery {
         val now = Clock.System.now()
         val id = UUID.randomUUID()
@@ -108,13 +121,33 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
             }
             Team(id = TeamId(id.toString()), name = name, description = description, createdAt = now.toEpochMilliseconds())
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-            val isSqlConstraint = e is SQLIntegrityConstraintViolationException ||
-                e.cause is SQLIntegrityConstraintViolationException ||
-                e.message?.contains("unique constraint", ignoreCase = true) == true ||
-                e.message?.contains("duplicate key", ignoreCase = true) == true ||
-                e.cause?.message?.contains("unique constraint", ignoreCase = true) == true ||
-                e.cause?.message?.contains("duplicate key", ignoreCase = true) == true
-            if (isSqlConstraint) {
+            if (isUniqueConstraintViolation(e)) {
+                throw IllegalArgumentException("Team name already taken")
+            }
+            throw e
+        }
+    }
+
+    override suspend fun createTeamWithMember(name: String, description: String, userId: String, role: TeamRole): Team = dbQuery {
+        try {
+            val now = Clock.System.now()
+            val id = UUID.randomUUID()
+            TeamTable.insert {
+                it[TeamTable.id] = id
+                it[TeamTable.name] = name
+                it[TeamTable.description] = description
+                it[TeamTable.createdAt] = now
+            }
+            val teamId = TeamId(id.toString())
+            TeamMembershipTable.insert {
+                it[TeamMembershipTable.teamId] = id
+                it[TeamMembershipTable.userId] = UUID.fromString(userId)
+                it[TeamMembershipTable.role] = role
+                it[TeamMembershipTable.joinedAt] = now
+            }
+            Team(id = teamId, name = name, description = description, createdAt = now.toEpochMilliseconds())
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+            if (isUniqueConstraintViolation(e)) {
                 throw IllegalArgumentException("Team name already taken")
             }
             throw e
@@ -130,13 +163,7 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
             }
             if (updated > 0) TeamTable.selectAll().where { TeamTable.id eq uuid }.single().toTeam() else null
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-            val isSqlConstraint = e is SQLIntegrityConstraintViolationException ||
-                e.cause is SQLIntegrityConstraintViolationException ||
-                e.message?.contains("unique constraint", ignoreCase = true) == true ||
-                e.message?.contains("duplicate key", ignoreCase = true) == true ||
-                e.cause?.message?.contains("unique constraint", ignoreCase = true) == true ||
-                e.cause?.message?.contains("duplicate key", ignoreCase = true) == true
-            if (isSqlConstraint) {
+            if (isUniqueConstraintViolation(e)) {
                 throw IllegalArgumentException("Team name already taken")
             }
             throw e
@@ -182,35 +209,38 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
     }
 
     override suspend fun delete(id: TeamId): Boolean = dbQuery {
-        TeamMembershipTable.deleteWhere { TeamMembershipTable.teamId eq id.value }
-        TeamInviteTable.deleteWhere { TeamInviteTable.teamId eq id.value }
-        JoinRequestTable.deleteWhere { JoinRequestTable.teamId eq id.value }
-        TeamTable.deleteWhere { TeamTable.id eq UUID.fromString(id.value) } > 0
+        val teamUuid = UUID.fromString(id.value)
+        // Delete dependent rows (cascade handles most via FK, but explicit for safety)
+        TeamMembershipTable.deleteWhere { TeamMembershipTable.teamId eq teamUuid }
+        TeamInviteTable.deleteWhere { TeamInviteTable.teamId eq teamUuid }
+        JoinRequestTable.deleteWhere { JoinRequestTable.teamId eq teamUuid }
+        TeamTable.deleteWhere { TeamTable.id eq teamUuid } > 0
     }
 
     override suspend fun deleteWithActiveReleaseCheck(teamId: TeamId): Boolean = dbQuery {
+        val teamUuid = UUID.fromString(teamId.value)
         val hasActiveReleases = ReleaseTable.selectAll()
             .where {
-                (ReleaseTable.teamId eq teamId.value) and
-                    (ReleaseTable.status inList listOf("PENDING", "RUNNING"))
+                (ReleaseTable.teamId eq teamUuid) and
+                    (ReleaseTable.status inList listOf(ReleaseStatus.PENDING, ReleaseStatus.RUNNING))
             }
             .count() > 0
         if (hasActiveReleases) {
             throw IllegalArgumentException("Cannot delete team with active releases")
         }
-        TeamMembershipTable.deleteWhere { TeamMembershipTable.teamId eq teamId.value }
-        TeamInviteTable.deleteWhere { TeamInviteTable.teamId eq teamId.value }
-        JoinRequestTable.deleteWhere { JoinRequestTable.teamId eq teamId.value }
-        TeamTable.deleteWhere { TeamTable.id eq UUID.fromString(teamId.value) } > 0
+        TeamMembershipTable.deleteWhere { TeamMembershipTable.teamId eq teamUuid }
+        TeamInviteTable.deleteWhere { TeamInviteTable.teamId eq teamUuid }
+        JoinRequestTable.deleteWhere { JoinRequestTable.teamId eq teamUuid }
+        TeamTable.deleteWhere { TeamTable.id eq teamUuid } > 0
     }
 
     // Membership
 
     override suspend fun addMember(teamId: TeamId, userId: String, role: TeamRole): Boolean = dbQuery {
         TeamMembershipTable.insert {
-            it[TeamMembershipTable.teamId] = teamId.value
-            it[TeamMembershipTable.userId] = userId
-            it[TeamMembershipTable.role] = role.name
+            it[TeamMembershipTable.teamId] = UUID.fromString(teamId.value)
+            it[TeamMembershipTable.userId] = UUID.fromString(userId)
+            it[TeamMembershipTable.role] = role
             it[TeamMembershipTable.joinedAt] = Clock.System.now()
         }
         true
@@ -218,28 +248,30 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
 
     override suspend fun removeMember(teamId: TeamId, userId: String): Boolean = dbQuery {
         TeamMembershipTable.deleteWhere {
-            (TeamMembershipTable.teamId eq teamId.value) and (TeamMembershipTable.userId eq userId)
+            (TeamMembershipTable.teamId eq UUID.fromString(teamId.value)) and (TeamMembershipTable.userId eq UUID.fromString(userId))
         } > 0
     }
 
     override suspend fun updateMemberRole(teamId: TeamId, userId: String, role: TeamRole): Boolean = dbQuery {
         TeamMembershipTable.update({
-            (TeamMembershipTable.teamId eq teamId.value) and (TeamMembershipTable.userId eq userId)
-        }) { it[TeamMembershipTable.role] = role.name } > 0
+            (TeamMembershipTable.teamId eq UUID.fromString(teamId.value)) and (TeamMembershipTable.userId eq UUID.fromString(userId))
+        }) { it[TeamMembershipTable.role] = role } > 0
     }
 
     override suspend fun findMembers(teamId: TeamId): List<TeamMembership> = dbQuery {
+        val teamUuid = UUID.fromString(teamId.value)
         val rows = TeamMembershipTable.selectAll()
-            .where { TeamMembershipTable.teamId eq teamId.value }
+            .where { TeamMembershipTable.teamId eq teamUuid }
             .toList()
-        val userIds = rows.map { it[TeamMembershipTable.userId] }.toSet()
+        val userIds = rows.map { it[TeamMembershipTable.userId].value.toString() }.toSet()
         val usernameMap = batchLookupUsernames(userIds)
         rows.map { row ->
+            val uid = row[TeamMembershipTable.userId].value.toString()
             TeamMembership(
-                teamId = TeamId(row[TeamMembershipTable.teamId]),
-                userId = UserId(row[TeamMembershipTable.userId]),
-                username = usernameMap[row[TeamMembershipTable.userId]] ?: "",
-                role = TeamRole.valueOf(row[TeamMembershipTable.role]),
+                teamId = TeamId(row[TeamMembershipTable.teamId].value.toString()),
+                userId = UserId(uid),
+                username = usernameMap[uid] ?: "",
+                role = row[TeamMembershipTable.role],
                 joinedAt = row[TeamMembershipTable.joinedAt].toEpochMilliseconds(),
             )
         }
@@ -247,14 +279,15 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
 
     override suspend fun findMembership(teamId: TeamId, userId: String): TeamMembership? = dbQuery {
         TeamMembershipTable.selectAll()
-            .where { (TeamMembershipTable.teamId eq teamId.value) and (TeamMembershipTable.userId eq userId) }
+            .where { (TeamMembershipTable.teamId eq UUID.fromString(teamId.value)) and (TeamMembershipTable.userId eq UUID.fromString(userId)) }
             .singleOrNull()?.let { row ->
-                val usernameMap = batchLookupUsernames(setOf(row[TeamMembershipTable.userId]))
+                val uid = row[TeamMembershipTable.userId].value.toString()
+                val usernameMap = batchLookupUsernames(setOf(uid))
                 TeamMembership(
-                    teamId = TeamId(row[TeamMembershipTable.teamId]),
-                    userId = UserId(row[TeamMembershipTable.userId]),
-                    username = usernameMap[row[TeamMembershipTable.userId]] ?: "",
-                    role = TeamRole.valueOf(row[TeamMembershipTable.role]),
+                    teamId = TeamId(row[TeamMembershipTable.teamId].value.toString()),
+                    userId = UserId(uid),
+                    username = usernameMap[uid] ?: "",
+                    role = row[TeamMembershipTable.role],
                     joinedAt = row[TeamMembershipTable.joinedAt].toEpochMilliseconds(),
                 )
             }
@@ -262,42 +295,42 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
 
     override suspend fun countMembersWithRole(teamId: TeamId, role: TeamRole): Long = dbQuery {
         TeamMembershipTable.selectAll()
-            .where { (TeamMembershipTable.teamId eq teamId.value) and (TeamMembershipTable.role eq role.name) }
+            .where { (TeamMembershipTable.teamId eq UUID.fromString(teamId.value)) and (TeamMembershipTable.role eq role) }
             .count()
     }
 
     override suspend fun getMemberCount(teamId: TeamId): Int = dbQuery {
         TeamMembershipTable.selectAll()
-            .where { TeamMembershipTable.teamId eq teamId.value }
+            .where { TeamMembershipTable.teamId eq UUID.fromString(teamId.value) }
             .count().toInt()
     }
 
     override suspend fun getMemberCounts(teamIds: List<TeamId>): Map<TeamId, Int> = dbQuery {
         if (teamIds.isEmpty()) return@dbQuery emptyMap()
-        val teamIdStrings = teamIds.map { it.value }
+        val teamUuids = teamIds.mapNotNull { runCatching { UUID.fromString(it.value) }.getOrNull() }
         TeamMembershipTable
             .select(TeamMembershipTable.teamId, TeamMembershipTable.teamId.count())
-            .where { TeamMembershipTable.teamId inList teamIdStrings }
+            .where { TeamMembershipTable.teamId inList teamUuids }
             .groupBy(TeamMembershipTable.teamId)
             .associate { row ->
-                TeamId(row[TeamMembershipTable.teamId]) to row[TeamMembershipTable.teamId.count()].toInt()
+                TeamId(row[TeamMembershipTable.teamId].value.toString()) to row[TeamMembershipTable.teamId.count()].toInt()
             }
     }
 
     override suspend fun getUserTeams(userId: String): List<Pair<Team, TeamRole>> = dbQuery {
+        val userUuid = UUID.fromString(userId)
         val rows = TeamMembershipTable.selectAll()
-            .where { TeamMembershipTable.userId eq userId }
+            .where { TeamMembershipTable.userId eq userUuid }
             .toList()
         if (rows.isEmpty()) return@dbQuery emptyList()
-        val teamIdStrings = rows.map { it[TeamMembershipTable.teamId] }.toSet()
-        val teamUuids = teamIdStrings.mapNotNull { runCatching { UUID.fromString(it) }.getOrNull() }
+        val teamUuids = rows.map { it[TeamMembershipTable.teamId].value }.toSet()
         val teamMap = TeamTable.selectAll()
             .where { TeamTable.id inList teamUuids }
             .associate { it[TeamTable.id].value.toString() to it.toTeam() }
         rows.mapNotNull { row ->
-            val teamId = row[TeamMembershipTable.teamId]
-            val team = teamMap[teamId] ?: return@mapNotNull null
-            team to TeamRole.valueOf(row[TeamMembershipTable.role])
+            val tid = row[TeamMembershipTable.teamId].value.toString()
+            val team = teamMap[tid] ?: return@mapNotNull null
+            team to row[TeamMembershipTable.role]
         }
     }
 
@@ -308,10 +341,10 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
         val id = UUID.randomUUID()
         TeamInviteTable.insert {
             it[TeamInviteTable.id] = id
-            it[TeamInviteTable.teamId] = teamId.value
-            it[TeamInviteTable.invitedUserId] = invitedUserId
-            it[TeamInviteTable.invitedByUserId] = invitedByUserId
-            it[TeamInviteTable.status] = InviteStatus.PENDING.name
+            it[TeamInviteTable.teamId] = UUID.fromString(teamId.value)
+            it[TeamInviteTable.invitedUserId] = UUID.fromString(invitedUserId)
+            it[TeamInviteTable.invitedByUserId] = UUID.fromString(invitedByUserId)
+            it[TeamInviteTable.status] = InviteStatus.PENDING
             it[TeamInviteTable.createdAt] = now
         }
         val usernameMap = batchLookupUsernames(setOf(invitedUserId, invitedByUserId))
@@ -338,30 +371,30 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
 
     override suspend fun findPendingInvitesByTeam(teamId: TeamId): List<TeamInvite> = dbQuery {
         val rows = TeamInviteTable.selectAll()
-            .where { (TeamInviteTable.teamId eq teamId.value) and (TeamInviteTable.status eq InviteStatus.PENDING.name) }
+            .where { (TeamInviteTable.teamId eq UUID.fromString(teamId.value)) and (TeamInviteTable.status eq InviteStatus.PENDING) }
             .toList()
         mapInviteRows(rows)
     }
 
     override suspend fun findPendingInvitesByUser(userId: String): List<TeamInvite> = dbQuery {
         val rows = TeamInviteTable.selectAll()
-            .where { (TeamInviteTable.invitedUserId eq userId) and (TeamInviteTable.status eq InviteStatus.PENDING.name) }
+            .where { (TeamInviteTable.invitedUserId eq UUID.fromString(userId)) and (TeamInviteTable.status eq InviteStatus.PENDING) }
             .toList()
         mapInviteRows(rows)
     }
 
     override suspend fun updateInviteStatus(id: String, status: InviteStatus): Boolean = dbQuery {
         TeamInviteTable.update({ TeamInviteTable.id eq UUID.fromString(id) }) {
-            it[TeamInviteTable.status] = status.name
+            it[TeamInviteTable.status] = status
         } > 0
     }
 
     override suspend fun findExistingPendingInvite(teamId: TeamId, userId: String): TeamInvite? = dbQuery {
         val row = TeamInviteTable.selectAll()
             .where {
-                (TeamInviteTable.teamId eq teamId.value) and
-                    (TeamInviteTable.invitedUserId eq userId) and
-                    (TeamInviteTable.status eq InviteStatus.PENDING.name)
+                (TeamInviteTable.teamId eq UUID.fromString(teamId.value)) and
+                    (TeamInviteTable.invitedUserId eq UUID.fromString(userId)) and
+                    (TeamInviteTable.status eq InviteStatus.PENDING)
             }
             .singleOrNull() ?: return@dbQuery null
         mapInviteRows(listOf(row)).firstOrNull()
@@ -376,22 +409,25 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
         val allUserIds = mutableSetOf<String>()
         val allTeamIds = mutableSetOf<String>()
         for (row in rows) {
-            allTeamIds.add(row[TeamInviteTable.teamId])
-            allUserIds.add(row[TeamInviteTable.invitedUserId])
-            allUserIds.add(row[TeamInviteTable.invitedByUserId])
+            allTeamIds.add(row[TeamInviteTable.teamId].value.toString())
+            allUserIds.add(row[TeamInviteTable.invitedUserId].value.toString())
+            allUserIds.add(row[TeamInviteTable.invitedByUserId].value.toString())
         }
         val usernameMap = batchLookupUsernames(allUserIds)
         val teamNameMap = batchLookupTeamNames(allTeamIds)
         return rows.map { row ->
+            val tid = row[TeamInviteTable.teamId].value.toString()
+            val invitedUid = row[TeamInviteTable.invitedUserId].value.toString()
+            val invitedByUid = row[TeamInviteTable.invitedByUserId].value.toString()
             TeamInvite(
                 id = row[TeamInviteTable.id].value.toString(),
-                teamId = TeamId(row[TeamInviteTable.teamId]),
-                teamName = teamNameMap[row[TeamInviteTable.teamId]] ?: "",
-                invitedUserId = UserId(row[TeamInviteTable.invitedUserId]),
-                invitedUsername = usernameMap[row[TeamInviteTable.invitedUserId]] ?: "",
-                invitedByUserId = UserId(row[TeamInviteTable.invitedByUserId]),
-                invitedByUsername = usernameMap[row[TeamInviteTable.invitedByUserId]] ?: "",
-                status = InviteStatus.valueOf(row[TeamInviteTable.status]),
+                teamId = TeamId(tid),
+                teamName = teamNameMap[tid] ?: "",
+                invitedUserId = UserId(invitedUid),
+                invitedUsername = usernameMap[invitedUid] ?: "",
+                invitedByUserId = UserId(invitedByUid),
+                invitedByUsername = usernameMap[invitedByUid] ?: "",
+                status = row[TeamInviteTable.status],
                 createdAt = row[TeamInviteTable.createdAt].toEpochMilliseconds(),
             )
         }
@@ -404,9 +440,9 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
         val id = UUID.randomUUID()
         JoinRequestTable.insert {
             it[JoinRequestTable.id] = id
-            it[JoinRequestTable.teamId] = teamId.value
-            it[JoinRequestTable.userId] = userId
-            it[JoinRequestTable.status] = JoinRequestStatus.PENDING.name
+            it[JoinRequestTable.teamId] = UUID.fromString(teamId.value)
+            it[JoinRequestTable.userId] = UUID.fromString(userId)
+            it[JoinRequestTable.status] = JoinRequestStatus.PENDING
             it[JoinRequestTable.createdAt] = now
         }
         val usernameMap = batchLookupUsernames(setOf(userId))
@@ -431,15 +467,15 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
 
     override suspend fun findPendingJoinRequestsByTeam(teamId: TeamId): List<JoinRequest> = dbQuery {
         val rows = JoinRequestTable.selectAll()
-            .where { (JoinRequestTable.teamId eq teamId.value) and (JoinRequestTable.status eq JoinRequestStatus.PENDING.name) }
+            .where { (JoinRequestTable.teamId eq UUID.fromString(teamId.value)) and (JoinRequestTable.status eq JoinRequestStatus.PENDING) }
             .toList()
         mapJoinRequestRows(rows)
     }
 
     override suspend fun updateJoinRequestStatus(id: String, status: JoinRequestStatus, reviewedByUserId: String): Boolean = dbQuery {
         JoinRequestTable.update({ JoinRequestTable.id eq UUID.fromString(id) }) {
-            it[JoinRequestTable.status] = status.name
-            it[JoinRequestTable.reviewedByUserId] = reviewedByUserId
+            it[JoinRequestTable.status] = status
+            it[JoinRequestTable.reviewedByUserId] = UUID.fromString(reviewedByUserId)
             it[JoinRequestTable.reviewedAt] = Clock.System.now()
         } > 0
     }
@@ -447,9 +483,9 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
     override suspend fun findExistingPendingJoinRequest(teamId: TeamId, userId: String): JoinRequest? = dbQuery {
         val row = JoinRequestTable.selectAll()
             .where {
-                (JoinRequestTable.teamId eq teamId.value) and
-                    (JoinRequestTable.userId eq userId) and
-                    (JoinRequestTable.status eq JoinRequestStatus.PENDING.name)
+                (JoinRequestTable.teamId eq UUID.fromString(teamId.value)) and
+                    (JoinRequestTable.userId eq UUID.fromString(userId)) and
+                    (JoinRequestTable.status eq JoinRequestStatus.PENDING)
             }
             .singleOrNull() ?: return@dbQuery null
         mapJoinRequestRows(listOf(row)).firstOrNull()
@@ -464,21 +500,23 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
         val allUserIds = mutableSetOf<String>()
         val allTeamIds = mutableSetOf<String>()
         for (row in rows) {
-            allTeamIds.add(row[JoinRequestTable.teamId])
-            allUserIds.add(row[JoinRequestTable.userId])
-            row[JoinRequestTable.reviewedByUserId]?.let { allUserIds.add(it) }
+            allTeamIds.add(row[JoinRequestTable.teamId].value.toString())
+            allUserIds.add(row[JoinRequestTable.userId].value.toString())
+            row[JoinRequestTable.reviewedByUserId]?.let { entityId -> allUserIds.add(entityId.value.toString()) }
         }
         val usernameMap = batchLookupUsernames(allUserIds)
         val teamNameMap = batchLookupTeamNames(allTeamIds)
         return rows.map { row ->
-            val reviewerId = row[JoinRequestTable.reviewedByUserId]
+            val tid = row[JoinRequestTable.teamId].value.toString()
+            val uid = row[JoinRequestTable.userId].value.toString()
+            val reviewerId = row[JoinRequestTable.reviewedByUserId]?.let { entityId -> entityId.value.toString() }
             JoinRequest(
                 id = row[JoinRequestTable.id].value.toString(),
-                teamId = TeamId(row[JoinRequestTable.teamId]),
-                teamName = teamNameMap[row[JoinRequestTable.teamId]] ?: "",
-                userId = UserId(row[JoinRequestTable.userId]),
-                username = usernameMap[row[JoinRequestTable.userId]] ?: "",
-                status = JoinRequestStatus.valueOf(row[JoinRequestTable.status]),
+                teamId = TeamId(tid),
+                teamName = teamNameMap[tid] ?: "",
+                userId = UserId(uid),
+                username = usernameMap[uid] ?: "",
+                status = row[JoinRequestTable.status],
                 reviewedByUserId = reviewerId?.let { UserId(it) },
                 reviewedByUsername = reviewerId?.let { usernameMap[it] ?: "" },
                 createdAt = row[JoinRequestTable.createdAt].toEpochMilliseconds(),
