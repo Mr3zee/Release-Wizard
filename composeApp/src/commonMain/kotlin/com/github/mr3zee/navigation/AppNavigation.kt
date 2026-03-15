@@ -16,6 +16,7 @@ import com.github.mr3zee.projects.ProjectListScreen
 import com.github.mr3zee.projects.ProjectListViewModel
 import com.github.mr3zee.releases.*
 import com.github.mr3zee.teams.*
+import com.github.mr3zee.i18n.LanguagePack
 import com.github.mr3zee.theme.ThemePreference
 import kotlinx.coroutines.flow.StateFlow
 
@@ -39,6 +40,8 @@ fun AppNavigation(
     onRefreshUser: () -> Unit,
     themePreference: ThemePreference = ThemePreference.SYSTEM,
     onThemeChange: (ThemePreference) -> Unit = {},
+    languagePack: LanguagePack = LanguagePack.ENGLISH,
+    onLanguagePackChange: (LanguagePack) -> Unit = {},
 ) {
     when (currentScreen) {
         is Screen.ProjectList -> ProjectListScreen(
@@ -50,6 +53,8 @@ fun AppNavigation(
             onLogout = onLogout,
             themePreference = themePreference,
             onThemeChange = onThemeChange,
+            languagePack = languagePack,
+            onLanguagePackChange = onLanguagePackChange,
             activeTeamId = activeTeamId,
             userTeams = userTeams,
             onTeamChanged = onTeamChanged,

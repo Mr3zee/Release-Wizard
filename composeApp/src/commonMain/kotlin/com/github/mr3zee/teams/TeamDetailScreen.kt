@@ -16,8 +16,8 @@ import com.github.mr3zee.components.ListItemCard
 import com.github.mr3zee.model.TeamMembership
 import com.github.mr3zee.util.displayName
 import com.github.mr3zee.util.resolve
-import org.jetbrains.compose.resources.pluralStringResource
-import org.jetbrains.compose.resources.stringResource
+import com.github.mr3zee.i18n.packPluralStringResource
+import com.github.mr3zee.i18n.packStringResource
 import releasewizard.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -41,15 +41,15 @@ fun TeamDetailScreen(
             TopAppBar(
                 title = {
                     Text(
-                        team?.name ?: stringResource(Res.string.teams_team_fallback),
+                        team?.name ?: packStringResource(Res.string.teams_team_fallback),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                 },
                 navigationIcon = {
                     TextButton(onClick = onBack, modifier = Modifier.testTag("back_button")) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.common_navigate_back))
-                        Text(stringResource(Res.string.common_back))
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
+                        Text(packStringResource(Res.string.common_back))
                     }
                 },
                 actions = {
@@ -57,20 +57,20 @@ fun TeamDetailScreen(
                         onClick = { showLeaveDialog = true },
                         modifier = Modifier.testTag("leave_team_button"),
                     ) {
-                        Text(stringResource(Res.string.teams_leave), color = MaterialTheme.colorScheme.error)
+                        Text(packStringResource(Res.string.teams_leave), color = MaterialTheme.colorScheme.error)
                     }
                     TextButton(
                         onClick = onAuditLog,
                         modifier = Modifier.testTag("audit_log_button"),
                     ) {
-                        Text(stringResource(Res.string.teams_audit_log))
+                        Text(packStringResource(Res.string.teams_audit_log))
                     }
                     if (isTeamLead) {
                         TextButton(
                             onClick = onManage,
                             modifier = Modifier.testTag("manage_team_button"),
                         ) {
-                            Text(stringResource(Res.string.teams_manage))
+                            Text(packStringResource(Res.string.teams_manage))
                         }
                     }
                 },
@@ -85,9 +85,9 @@ fun TeamDetailScreen(
         } else if (error != null) {
             Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(error?.resolve() ?: stringResource(Res.string.common_unknown_error), color = MaterialTheme.colorScheme.error)
+                    Text(error?.resolve() ?: packStringResource(Res.string.common_unknown_error), color = MaterialTheme.colorScheme.error)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Button(onClick = { viewModel.loadDetail() }) { Text(stringResource(Res.string.common_retry)) }
+                    Button(onClick = { viewModel.loadDetail() }) { Text(packStringResource(Res.string.common_retry)) }
                 }
             }
         } else {
@@ -122,7 +122,7 @@ fun TeamDetailScreen(
                                 }
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    pluralStringResource(Res.plurals.members, members.size, members.size),
+                                    packPluralStringResource(Res.plurals.members, members.size, members.size),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -133,7 +133,7 @@ fun TeamDetailScreen(
 
                 item {
                     Text(
-                        stringResource(Res.string.teams_members_section),
+                        packStringResource(Res.string.teams_members_section),
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier
                             .widthIn(max = 900.dp)
@@ -155,18 +155,18 @@ fun TeamDetailScreen(
     if (showLeaveDialog) {
         AlertDialog(
             onDismissRequest = { showLeaveDialog = false },
-            title = { Text(stringResource(Res.string.teams_leave_title)) },
-            text = { Text(stringResource(Res.string.teams_leave_confirmation, team?.name ?: stringResource(Res.string.teams_leave_fallback))) },
+            title = { Text(packStringResource(Res.string.teams_leave_title)) },
+            text = { Text(packStringResource(Res.string.teams_leave_confirmation, team?.name ?: packStringResource(Res.string.teams_leave_fallback))) },
             confirmButton = {
                 TextButton(onClick = {
                     showLeaveDialog = false
                     viewModel.leaveTeam { onBack() }
                 }) {
-                    Text(stringResource(Res.string.teams_leave), color = MaterialTheme.colorScheme.error)
+                    Text(packStringResource(Res.string.teams_leave), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showLeaveDialog = false }) { Text(stringResource(Res.string.common_cancel)) }
+                TextButton(onClick = { showLeaveDialog = false }) { Text(packStringResource(Res.string.common_cancel)) }
             },
         )
     }

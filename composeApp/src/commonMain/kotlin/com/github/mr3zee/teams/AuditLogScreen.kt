@@ -17,7 +17,7 @@ import com.github.mr3zee.util.resolve
 import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import org.jetbrains.compose.resources.stringResource
+import com.github.mr3zee.i18n.packStringResource
 import releasewizard.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,7 +32,7 @@ fun AuditLogScreen(
     val hasMore by viewModel.hasMore.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
-    val dismissLabel = stringResource(Res.string.common_dismiss)
+    val dismissLabel = packStringResource(Res.string.common_dismiss)
     val resolvedError = error?.resolve()
 
     // Show errors via snackbar with dismiss
@@ -49,11 +49,11 @@ fun AuditLogScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(Res.string.teams_audit_log_title)) },
+                title = { Text(packStringResource(Res.string.teams_audit_log_title)) },
                 navigationIcon = {
                     TextButton(onClick = onBack, modifier = Modifier.testTag("back_button")) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.common_navigate_back))
-                        Text(stringResource(Res.string.common_back))
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
+                        Text(packStringResource(Res.string.common_back))
                     }
                 },
             )
@@ -68,7 +68,7 @@ fun AuditLogScreen(
         } else if (events.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Text(
-                    stringResource(Res.string.teams_no_audit_events),
+                    packStringResource(Res.string.teams_no_audit_events),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -90,7 +90,7 @@ fun AuditLogScreen(
                             onClick = { viewModel.loadMore() },
                             modifier = Modifier.fillMaxWidth().padding(8.dp).testTag("load_more_audit"),
                         ) {
-                            Text(stringResource(Res.string.teams_load_more))
+                            Text(packStringResource(Res.string.teams_load_more))
                         }
                     }
                 }
@@ -134,7 +134,7 @@ private fun AuditEventItem(
             val dateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
             val formatted = "${dateTime.date} ${dateTime.hour.toString().padStart(2, '0')}:${dateTime.minute.toString().padStart(2, '0')}"
             Text(
-                stringResource(Res.string.teams_audit_entry_by, event.actorUsername, formatted),
+                packStringResource(Res.string.teams_audit_entry_by, event.actorUsername, formatted),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

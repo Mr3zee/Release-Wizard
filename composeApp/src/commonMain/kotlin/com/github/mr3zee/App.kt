@@ -25,9 +25,12 @@ import com.github.mr3zee.navigation.Screen
 import com.github.mr3zee.projects.ProjectListViewModel
 import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.releases.ReleaseListViewModel
+import com.github.mr3zee.i18n.LanguagePack
 import com.github.mr3zee.theme.AppTheme
 import com.github.mr3zee.theme.ThemePreference
+import com.github.mr3zee.theme.loadLanguagePack
 import com.github.mr3zee.theme.loadThemePreference
+import com.github.mr3zee.theme.saveLanguagePack
 import com.github.mr3zee.theme.saveThemePreference
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -55,6 +58,7 @@ fun App() {
     val isCheckingSession by authViewModel.isCheckingSession.collectAsState()
 
     var themePreference by remember { mutableStateOf(loadThemePreference()) }
+    var languagePack by remember { mutableStateOf(loadLanguagePack()) }
 
     val navController = remember { NavigationController() }
     val currentScreen = navController.currentScreen
@@ -89,7 +93,7 @@ fun App() {
         }
     }
 
-    AppTheme(themePreference = themePreference) {
+    AppTheme(themePreference = themePreference, languagePack = languagePack) {
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background,
@@ -135,6 +139,11 @@ fun App() {
                         onThemeChange = {
                             themePreference = it
                             saveThemePreference(it)
+                        },
+                        languagePack = languagePack,
+                        onLanguagePackChange = {
+                            languagePack = it
+                            saveLanguagePack(it)
                         },
                     )
                 }

@@ -27,8 +27,8 @@ import com.github.mr3zee.components.ListItemCard
 import com.github.mr3zee.components.RefreshErrorBanner
 import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.util.resolve
-import org.jetbrains.compose.resources.pluralStringResource
-import org.jetbrains.compose.resources.stringResource
+import com.github.mr3zee.i18n.packPluralStringResource
+import com.github.mr3zee.i18n.packStringResource
 import releasewizard.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,7 +65,7 @@ fun TeamListScreen(
     )
     val spinning = isManualRefresh && isRefreshing
 
-    val retryLabel = stringResource(Res.string.common_retry)
+    val retryLabel = packStringResource(Res.string.common_retry)
     val resolvedError = error?.resolve()
 
     // Show errors via snackbar
@@ -87,12 +87,12 @@ fun TeamListScreen(
         topBar = {
             Box {
                 TopAppBar(
-                    title = { Text(stringResource(Res.string.teams_title)) },
+                    title = { Text(packStringResource(Res.string.teams_title)) },
                     navigationIcon = {
                         if (onBack != null) {
                             TextButton(onClick = onBack) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.common_navigate_back))
-                                Text(stringResource(Res.string.common_back))
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
+                                Text(packStringResource(Res.string.common_back))
                             }
                         }
                     },
@@ -101,11 +101,11 @@ fun TeamListScreen(
                             onClick = onMyInvites,
                             modifier = Modifier.testTag("my_invites_button"),
                         ) {
-                            Text(stringResource(Res.string.teams_my_invites))
+                            Text(packStringResource(Res.string.teams_my_invites))
                         }
                         TooltipBox(
                             positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                            tooltip = { PlainTooltip { Text(stringResource(Res.string.common_refresh)) } },
+                            tooltip = { PlainTooltip { Text(packStringResource(Res.string.common_refresh)) } },
                             state = rememberTooltipState(),
                         ) {
                             IconButton(
@@ -114,7 +114,7 @@ fun TeamListScreen(
                             ) {
                                 Icon(
                                     Icons.Outlined.Refresh,
-                                    contentDescription = stringResource(Res.string.common_refresh),
+                                    contentDescription = packStringResource(Res.string.common_refresh),
                                     modifier = Modifier
                                         .rotate(if (spinning) rotation else 0f)
                                         .testTag(if (spinning) "refresh_icon_spinning" else "refresh_icon_idle"),
@@ -140,7 +140,7 @@ fun TeamListScreen(
                 onClick = { showCreateDialog = true },
                 modifier = Modifier.testTag("create_team_fab"),
             ) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(Res.string.teams_new_team))
+                Icon(Icons.Default.Add, contentDescription = packStringResource(Res.string.teams_new_team))
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -161,7 +161,7 @@ fun TeamListScreen(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { viewModel.setSearchQuery(it) },
-                placeholder = { Text(stringResource(Res.string.teams_search_placeholder)) },
+                placeholder = { Text(packStringResource(Res.string.teams_search_placeholder)) },
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -191,7 +191,7 @@ fun TeamListScreen(
                             modifier = Modifier.weight(1f),
                         )
                         TextButton(onClick = { viewModel.clearMessage() }) {
-                            Text(stringResource(Res.string.common_dismiss))
+                            Text(packStringResource(Res.string.common_dismiss))
                         }
                     }
                 }
@@ -206,18 +206,18 @@ fun TeamListScreen(
                     if (searchQuery.isNotBlank()) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                stringResource(Res.string.common_no_search_results),
+                                packStringResource(Res.string.common_no_search_results),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             TextButton(onClick = { viewModel.setSearchQuery("") }) {
-                                Text(stringResource(Res.string.common_clear_search))
+                                Text(packStringResource(Res.string.common_clear_search))
                             }
                         }
                     } else {
                         Text(
-                            stringResource(Res.string.teams_empty_state),
+                            packStringResource(Res.string.teams_empty_state),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -285,7 +285,7 @@ private fun TeamListItem(
                 )
             }
             Text(
-                pluralStringResource(Res.plurals.members, teamResponse.memberCount, teamResponse.memberCount),
+                packPluralStringResource(Res.plurals.members, teamResponse.memberCount, teamResponse.memberCount),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -296,7 +296,7 @@ private fun TeamListItem(
                 shape = RoundedCornerShape(50),
             ) {
                 Text(
-                    stringResource(Res.string.teams_member_badge),
+                    packStringResource(Res.string.teams_member_badge),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
@@ -304,7 +304,7 @@ private fun TeamListItem(
             }
         } else {
             TextButton(onClick = onJoinRequest) {
-                Text(stringResource(Res.string.teams_request_to_join))
+                Text(packStringResource(Res.string.teams_request_to_join))
             }
         }
     }
@@ -320,13 +320,13 @@ private fun CreateTeamDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(Res.string.teams_new_team)) },
+        title = { Text(packStringResource(Res.string.teams_new_team)) },
         text = {
             Column {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text(stringResource(Res.string.teams_team_name)) },
+                    label = { Text(packStringResource(Res.string.teams_team_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().testTag("team_name_input"),
                 )
@@ -334,18 +334,18 @@ private fun CreateTeamDialog(
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
-                    label = { Text(stringResource(Res.string.teams_description_optional)) },
+                    label = { Text(packStringResource(Res.string.teams_description_optional)) },
                     modifier = Modifier.fillMaxWidth().testTag("team_description_input"),
                 )
             }
         },
         confirmButton = {
             TextButton(onClick = { onCreate(name, description) }, enabled = name.isNotBlank()) {
-                Text(stringResource(Res.string.common_create))
+                Text(packStringResource(Res.string.common_create))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.common_cancel)) }
+            TextButton(onClick = onDismiss) { Text(packStringResource(Res.string.common_cancel)) }
         },
     )
 }

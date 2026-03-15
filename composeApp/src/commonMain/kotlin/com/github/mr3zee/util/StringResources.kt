@@ -7,11 +7,11 @@ import com.github.mr3zee.model.BlockType
 import com.github.mr3zee.model.ConnectionType
 import com.github.mr3zee.model.ReleaseStatus
 import com.github.mr3zee.model.TeamRole
-import org.jetbrains.compose.resources.stringResource
+import com.github.mr3zee.i18n.packStringResource
 import releasewizard.composeapp.generated.resources.*
 
 @Composable
-fun BlockType.displayName(): String = stringResource(
+fun BlockType.displayName(): String = packStringResource(
     when (this) {
         BlockType.TEAMCITY_BUILD -> Res.string.block_type_teamcity_build
         BlockType.GITHUB_ACTION -> Res.string.block_type_github_action
@@ -23,7 +23,7 @@ fun BlockType.displayName(): String = stringResource(
 
 @Composable
 fun Block.typeLabel(): String = when (this) {
-    is Block.ActionBlock -> stringResource(
+    is Block.ActionBlock -> packStringResource(
         when (type) {
             BlockType.TEAMCITY_BUILD -> Res.string.block_label_teamcity_build
             BlockType.GITHUB_ACTION -> Res.string.block_label_github_action
@@ -32,11 +32,11 @@ fun Block.typeLabel(): String = when (this) {
             BlockType.SLACK_MESSAGE -> Res.string.block_label_slack_message
         }
     )
-    is Block.ContainerBlock -> stringResource(Res.string.block_label_container)
+    is Block.ContainerBlock -> packStringResource(Res.string.block_label_container)
 }
 
 @Composable
-fun ReleaseStatus.displayName(): String = stringResource(
+fun ReleaseStatus.displayName(): String = packStringResource(
     when (this) {
         ReleaseStatus.PENDING -> Res.string.releases_status_pending
         ReleaseStatus.RUNNING -> Res.string.releases_status_running
@@ -48,7 +48,7 @@ fun ReleaseStatus.displayName(): String = stringResource(
 )
 
 @Composable
-fun TeamRole.displayName(): String = stringResource(
+fun TeamRole.displayName(): String = packStringResource(
     when (this) {
         TeamRole.TEAM_LEAD -> Res.string.teams_role_lead
         TeamRole.COLLABORATOR -> Res.string.teams_role_collaborator
@@ -56,7 +56,7 @@ fun TeamRole.displayName(): String = stringResource(
 )
 
 @Composable
-fun BlockStatus.displayName(): String = stringResource(
+fun BlockStatus.displayName(): String = packStringResource(
     when (this) {
         BlockStatus.WAITING -> Res.string.block_status_waiting
         BlockStatus.RUNNING -> Res.string.block_status_running
@@ -67,7 +67,7 @@ fun BlockStatus.displayName(): String = stringResource(
 )
 
 @Composable
-fun ConnectionType.displayName(): String = stringResource(
+fun ConnectionType.displayName(): String = packStringResource(
     when (this) {
         ConnectionType.GITHUB -> Res.string.connection_type_github
         ConnectionType.SLACK -> Res.string.connection_type_slack

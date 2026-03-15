@@ -6,7 +6,11 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import com.github.mr3zee.i18n.LanguagePack
+import com.github.mr3zee.i18n.LanguagePackRegistry
+import com.github.mr3zee.i18n.LocalLanguagePackData
 
 private val AppLightColorScheme = lightColorScheme(
     primary = Color(0xFF3B82F6),
@@ -49,6 +53,7 @@ private val AppDarkColorScheme = darkColorScheme(
 @Composable
 fun AppTheme(
     themePreference: ThemePreference = ThemePreference.SYSTEM,
+    languagePack: LanguagePack = LanguagePack.ENGLISH,
     content: @Composable () -> Unit,
 ) {
     val isDark = when (themePreference) {
@@ -59,8 +64,12 @@ fun AppTheme(
 
     val appColors = if (isDark) DarkAppColors else LightAppColors
     val colorScheme = if (isDark) AppDarkColorScheme else AppLightColorScheme
+    val packData = remember(languagePack) { LanguagePackRegistry.getData(languagePack) }
 
-    CompositionLocalProvider(LocalAppColors provides appColors) {
+    CompositionLocalProvider(
+        LocalAppColors provides appColors,
+        LocalLanguagePackData provides packData,
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             content = content,

@@ -14,7 +14,7 @@ import com.github.mr3zee.model.ConnectionId
 import com.github.mr3zee.model.ConnectionType
 import com.github.mr3zee.util.displayName
 import com.github.mr3zee.util.resolve
-import org.jetbrains.compose.resources.stringResource
+import com.github.mr3zee.i18n.packStringResource
 import releasewizard.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -152,11 +152,11 @@ fun ConnectionFormScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (isEditMode) stringResource(Res.string.connections_edit_title) else stringResource(Res.string.connections_new_title)) },
+                title = { Text(if (isEditMode) packStringResource(Res.string.connections_edit_title) else packStringResource(Res.string.connections_new_title)) },
                 navigationIcon = {
                     TextButton(onClick = handleBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.common_navigate_back))
-                        Text(stringResource(Res.string.common_back))
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
+                        Text(packStringResource(Res.string.common_back))
                     }
                 },
                 actions = {
@@ -171,7 +171,7 @@ fun ConnectionFormScreen(
                         enabled = name.isNotBlank() && currentConfig.isValid() && !isSaving,
                         modifier = Modifier.testTag("save_connection_button"),
                     ) {
-                        Text(if (isSaving) stringResource(Res.string.common_saving) else stringResource(Res.string.common_save))
+                        Text(if (isSaving) packStringResource(Res.string.common_saving) else packStringResource(Res.string.common_save))
                     }
                 },
             )
@@ -188,7 +188,7 @@ fun ConnectionFormScreen(
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text(stringResource(Res.string.connections_name_label)) },
+                label = { Text(packStringResource(Res.string.connections_name_label)) },
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -204,7 +204,7 @@ fun ConnectionFormScreen(
                     onValueChange = {},
                     readOnly = true,
                     enabled = !isEditMode,
-                    label = { Text(stringResource(Res.string.connections_type_label)) },
+                    label = { Text(packStringResource(Res.string.connections_type_label)) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -236,7 +236,7 @@ fun ConnectionFormScreen(
                     OutlinedTextField(
                         value = slackWebhookUrl,
                         onValueChange = { slackWebhookUrl = it },
-                        label = { Text(stringResource(Res.string.connections_slack_webhook_url)) },
+                        label = { Text(packStringResource(Res.string.connections_slack_webhook_url)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().testTag("slack_webhook_url"),
                     )
@@ -245,14 +245,14 @@ fun ConnectionFormScreen(
                     OutlinedTextField(
                         value = teamCityServerUrl,
                         onValueChange = { teamCityServerUrl = it },
-                        label = { Text(stringResource(Res.string.connections_tc_server_url)) },
+                        label = { Text(packStringResource(Res.string.connections_tc_server_url)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().testTag("teamcity_server_url"),
                     )
                     OutlinedTextField(
                         value = teamCityToken,
                         onValueChange = { teamCityToken = it },
-                        label = { Text(stringResource(Res.string.connections_tc_token)) },
+                        label = { Text(packStringResource(Res.string.connections_tc_token)) },
                         singleLine = true,
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth().testTag("teamcity_token"),
@@ -260,7 +260,7 @@ fun ConnectionFormScreen(
                     OutlinedTextField(
                         value = teamCityWebhookSecret,
                         onValueChange = { teamCityWebhookSecret = it },
-                        label = { Text(stringResource(Res.string.connections_tc_webhook_secret)) },
+                        label = { Text(packStringResource(Res.string.connections_tc_webhook_secret)) },
                         singleLine = true,
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth().testTag("teamcity_webhook_secret"),
@@ -270,7 +270,7 @@ fun ConnectionFormScreen(
                     OutlinedTextField(
                         value = githubToken,
                         onValueChange = { githubToken = it },
-                        label = { Text(stringResource(Res.string.connections_github_pat)) },
+                        label = { Text(packStringResource(Res.string.connections_github_pat)) },
                         singleLine = true,
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth().testTag("github_token"),
@@ -278,21 +278,21 @@ fun ConnectionFormScreen(
                     OutlinedTextField(
                         value = githubOwner,
                         onValueChange = { githubOwner = it },
-                        label = { Text(stringResource(Res.string.connections_github_owner)) },
+                        label = { Text(packStringResource(Res.string.connections_github_owner)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().testTag("github_owner"),
                     )
                     OutlinedTextField(
                         value = githubRepo,
                         onValueChange = { githubRepo = it },
-                        label = { Text(stringResource(Res.string.connections_github_repo)) },
+                        label = { Text(packStringResource(Res.string.connections_github_repo)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().testTag("github_repo"),
                     )
                     OutlinedTextField(
                         value = githubWebhookSecret,
                         onValueChange = { githubWebhookSecret = it },
-                        label = { Text(stringResource(Res.string.connections_github_webhook_secret)) },
+                        label = { Text(packStringResource(Res.string.connections_github_webhook_secret)) },
                         singleLine = true,
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth().testTag("github_webhook_secret"),
@@ -302,14 +302,14 @@ fun ConnectionFormScreen(
                     OutlinedTextField(
                         value = mavenUsername,
                         onValueChange = { mavenUsername = it },
-                        label = { Text(stringResource(Res.string.connections_maven_username)) },
+                        label = { Text(packStringResource(Res.string.connections_maven_username)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().testTag("maven_username"),
                     )
                     OutlinedTextField(
                         value = mavenPassword,
                         onValueChange = { mavenPassword = it },
-                        label = { Text(stringResource(Res.string.connections_maven_password)) },
+                        label = { Text(packStringResource(Res.string.connections_maven_password)) },
                         singleLine = true,
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth().testTag("maven_password"),
@@ -317,7 +317,7 @@ fun ConnectionFormScreen(
                     OutlinedTextField(
                         value = mavenBaseUrl,
                         onValueChange = { mavenBaseUrl = it },
-                        label = { Text(stringResource(Res.string.connections_maven_base_url)) },
+                        label = { Text(packStringResource(Res.string.connections_maven_base_url)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().testTag("maven_base_url"),
                     )
@@ -341,19 +341,19 @@ fun ConnectionFormScreen(
     if (showDiscardDialog) {
         AlertDialog(
             onDismissRequest = { showDiscardDialog = false },
-            title = { Text(stringResource(Res.string.common_unsaved_title)) },
-            text = { Text(stringResource(Res.string.common_unsaved_message)) },
+            title = { Text(packStringResource(Res.string.common_unsaved_title)) },
+            text = { Text(packStringResource(Res.string.common_unsaved_message)) },
             confirmButton = {
                 TextButton(onClick = {
                     showDiscardDialog = false
                     onBack()
                 }) {
-                    Text(stringResource(Res.string.common_discard))
+                    Text(packStringResource(Res.string.common_discard))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDiscardDialog = false }) {
-                    Text(stringResource(Res.string.common_cancel))
+                    Text(packStringResource(Res.string.common_cancel))
                 }
             },
         )

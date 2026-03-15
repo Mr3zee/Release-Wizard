@@ -14,8 +14,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.dag.ValidationError
 import com.github.mr3zee.util.resolve
-import org.jetbrains.compose.resources.pluralStringResource
-import org.jetbrains.compose.resources.stringResource
+import com.github.mr3zee.i18n.packPluralStringResource
+import com.github.mr3zee.i18n.packStringResource
 import releasewizard.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,7 +45,7 @@ fun DagEditorScreen(
     var showLockLostDiscardDialog by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
-    val dismissLabel = stringResource(Res.string.common_dismiss)
+    val dismissLabel = packStringResource(Res.string.common_dismiss)
     val resolvedError = error?.resolve()
 
     // Show transient errors via snackbar
@@ -88,16 +88,16 @@ fun DagEditorScreen(
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(project?.name ?: stringResource(Res.string.editor_loading))
+                        Text(project?.name ?: packStringResource(Res.string.editor_loading))
                         if (isReadOnly) {
                             Text(
-                                " " + stringResource(Res.string.editor_read_only),
+                                " " + packStringResource(Res.string.editor_read_only),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.bodyMedium,
                             )
                         } else if (isDirty) {
                             Text(
-                                " " + stringResource(Res.string.editor_dirty_indicator),
+                                " " + packStringResource(Res.string.editor_dirty_indicator),
                                 color = MaterialTheme.colorScheme.error,
                             )
                         }
@@ -105,8 +105,8 @@ fun DagEditorScreen(
                 },
                 navigationIcon = {
                     TextButton(onClick = handleBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.common_navigate_back))
-                        Text(stringResource(Res.string.common_back))
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
+                        Text(packStringResource(Res.string.common_back))
                     }
                 },
                 actions = {
@@ -118,7 +118,7 @@ fun DagEditorScreen(
                         enabled = isDirty && !isSaving && !isReadOnly,
                         modifier = Modifier.testTag("save_button"),
                     ) {
-                        Text(if (isSaving) stringResource(Res.string.common_saving) else stringResource(Res.string.common_save))
+                        Text(if (isSaving) packStringResource(Res.string.common_saving) else packStringResource(Res.string.common_save))
                     }
                 },
             )
@@ -181,9 +181,9 @@ fun DagEditorScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(resolvedError ?: stringResource(Res.string.common_error), color = MaterialTheme.colorScheme.error)
+                    Text(resolvedError ?: packStringResource(Res.string.common_error), color = MaterialTheme.colorScheme.error)
                     Spacer(Modifier.height(8.dp))
-                    Button(onClick = { viewModel.loadProject() }) { Text(stringResource(Res.string.common_retry)) }
+                    Button(onClick = { viewModel.loadProject() }) { Text(packStringResource(Res.string.common_retry)) }
                 }
             }
             return@Scaffold
@@ -277,8 +277,8 @@ fun DagEditorScreen(
     if (showDiscardDialog) {
         AlertDialog(
             onDismissRequest = { showDiscardDialog = false },
-            title = { Text(stringResource(Res.string.common_unsaved_title)) },
-            text = { Text(stringResource(Res.string.common_unsaved_message)) },
+            title = { Text(packStringResource(Res.string.common_unsaved_title)) },
+            text = { Text(packStringResource(Res.string.common_unsaved_message)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -289,12 +289,12 @@ fun DagEditorScreen(
                         contentColor = MaterialTheme.colorScheme.error,
                     ),
                 ) {
-                    Text(stringResource(Res.string.common_discard))
+                    Text(packStringResource(Res.string.common_discard))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDiscardDialog = false }) {
-                    Text(stringResource(Res.string.common_cancel))
+                    Text(packStringResource(Res.string.common_cancel))
                 }
             },
         )
@@ -304,10 +304,10 @@ fun DagEditorScreen(
     if (showLockLostDiscardDialog) {
         AlertDialog(
             onDismissRequest = { showLockLostDiscardDialog = false },
-            title = { Text(stringResource(Res.string.editor_dialog_lock_expired_title)) },
+            title = { Text(packStringResource(Res.string.editor_dialog_lock_expired_title)) },
             text = {
                 Column {
-                    Text(stringResource(Res.string.editor_dialog_lock_expired_body))
+                    Text(packStringResource(Res.string.editor_dialog_lock_expired_body))
                     Spacer(Modifier.height(12.dp))
                     TextButton(
                         onClick = {
@@ -318,7 +318,7 @@ fun DagEditorScreen(
                             contentColor = MaterialTheme.colorScheme.error,
                         ),
                     ) {
-                        Text(stringResource(Res.string.editor_dialog_lock_expired_discard))
+                        Text(packStringResource(Res.string.editor_dialog_lock_expired_discard))
                     }
                 }
             },
@@ -327,12 +327,12 @@ fun DagEditorScreen(
                     showLockLostDiscardDialog = false
                     viewModel.reacquireAndSave()
                 }) {
-                    Text(stringResource(Res.string.editor_dialog_reacquire_save))
+                    Text(packStringResource(Res.string.editor_dialog_reacquire_save))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showLockLostDiscardDialog = false }) {
-                    Text(stringResource(Res.string.common_cancel))
+                    Text(packStringResource(Res.string.common_cancel))
                 }
             },
         )
@@ -340,11 +340,11 @@ fun DagEditorScreen(
 
     // Force unlock confirmation dialog
     if (showForceUnlockDialog) {
-        val lockedByName = (lockState as? LockState.LockedByOther)?.info?.username ?: stringResource(Res.string.editor_lock_unknown_user)
+        val lockedByName = (lockState as? LockState.LockedByOther)?.info?.username ?: packStringResource(Res.string.editor_lock_unknown_user)
         AlertDialog(
             onDismissRequest = { showForceUnlockDialog = false },
-            title = { Text(stringResource(Res.string.editor_dialog_force_unlock_title)) },
-            text = { Text(stringResource(Res.string.editor_dialog_force_unlock_body, lockedByName)) },
+            title = { Text(packStringResource(Res.string.editor_dialog_force_unlock_title)) },
+            text = { Text(packStringResource(Res.string.editor_dialog_force_unlock_body, lockedByName)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -355,12 +355,12 @@ fun DagEditorScreen(
                         contentColor = MaterialTheme.colorScheme.error,
                     ),
                 ) {
-                    Text(stringResource(Res.string.editor_dialog_force_unlock_confirm))
+                    Text(packStringResource(Res.string.editor_dialog_force_unlock_confirm))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showForceUnlockDialog = false }) {
-                    Text(stringResource(Res.string.common_cancel))
+                    Text(packStringResource(Res.string.common_cancel))
                 }
             },
         )
@@ -404,9 +404,9 @@ private fun EditLockBanner(
                     // Self-lock must be checked first: when locked by self, username is also non-null
                     Text(
                         when {
-                            isLockedBySelf -> stringResource(Res.string.editor_lock_self_session)
-                            username != null -> stringResource(Res.string.editor_lock_by_other, username)
-                            else -> stringResource(Res.string.editor_lock_acquire_failed)
+                            isLockedBySelf -> packStringResource(Res.string.editor_lock_self_session)
+                            username != null -> packStringResource(Res.string.editor_lock_by_other, username)
+                            else -> packStringResource(Res.string.editor_lock_acquire_failed)
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = contentColor,
@@ -416,7 +416,7 @@ private fun EditLockBanner(
                         onClick = onRetry,
                         colors = ButtonDefaults.textButtonColors(contentColor = contentColor),
                     ) {
-                        Text(stringResource(Res.string.common_retry))
+                        Text(packStringResource(Res.string.common_retry))
                     }
                     if (showForceUnlock) {
                         TextButton(
@@ -427,7 +427,7 @@ private fun EditLockBanner(
                             ),
                             modifier = Modifier.testTag("force_unlock_button"),
                         ) {
-                            Text(stringResource(Res.string.editor_dialog_force_unlock_confirm))
+                            Text(packStringResource(Res.string.editor_dialog_force_unlock_confirm))
                         }
                     }
                 }
@@ -452,13 +452,13 @@ private fun EditLockBanner(
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        stringResource(Res.string.editor_lock_lost_banner),
+                        packStringResource(Res.string.editor_lock_lost_banner),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onErrorContainer,
                         modifier = Modifier.weight(1f),
                     )
                     TextButton(onClick = onReacquireAndSave) {
-                        Text(stringResource(Res.string.editor_dialog_reacquire_save))
+                        Text(packStringResource(Res.string.editor_dialog_reacquire_save))
                     }
                 }
             }
@@ -479,13 +479,13 @@ private fun ValidationErrorBadge(errors: List<ValidationError>) {
             contentColor = MaterialTheme.colorScheme.error,
         ),
     ) {
-        Text(pluralStringResource(Res.plurals.issues, errors.size, errors.size))
+        Text(packPluralStringResource(Res.plurals.issues, errors.size, errors.size))
     }
 
     if (showDialog) {
         AlertDialog(
             onDismissRequest = { showDialog = false },
-            title = { Text(stringResource(Res.string.editor_validation_title)) },
+            title = { Text(packStringResource(Res.string.editor_validation_title)) },
             text = {
                 Column {
                     errors.forEach { err ->
@@ -498,7 +498,7 @@ private fun ValidationErrorBadge(errors: List<ValidationError>) {
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showDialog = false }) { Text(stringResource(Res.string.common_ok)) }
+                TextButton(onClick = { showDialog = false }) { Text(packStringResource(Res.string.common_ok)) }
             },
         )
     }
@@ -506,8 +506,8 @@ private fun ValidationErrorBadge(errors: List<ValidationError>) {
 
 @Composable
 private fun formatValidationError(error: ValidationError): String = when (error) {
-    is ValidationError.CycleDetected -> stringResource(Res.string.editor_validation_cycle, error.involvedBlockIds.size)
-    is ValidationError.DuplicateBlockId -> stringResource(Res.string.editor_validation_duplicate_id, error.blockId.value)
-    is ValidationError.InvalidEdgeReference -> stringResource(Res.string.editor_validation_invalid_edge, error.missingBlockId.value)
-    is ValidationError.SelfLoop -> stringResource(Res.string.editor_validation_self_loop, error.edge.fromBlockId.value)
+    is ValidationError.CycleDetected -> packStringResource(Res.string.editor_validation_cycle, error.involvedBlockIds.size)
+    is ValidationError.DuplicateBlockId -> packStringResource(Res.string.editor_validation_duplicate_id, error.blockId.value)
+    is ValidationError.InvalidEdgeReference -> packStringResource(Res.string.editor_validation_invalid_edge, error.missingBlockId.value)
+    is ValidationError.SelfLoop -> packStringResource(Res.string.editor_validation_self_loop, error.edge.fromBlockId.value)
 }

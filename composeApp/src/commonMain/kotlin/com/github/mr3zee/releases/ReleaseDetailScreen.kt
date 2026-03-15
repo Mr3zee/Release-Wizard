@@ -15,7 +15,7 @@ import com.github.mr3zee.model.isTerminal
 import com.github.mr3zee.util.UiMessage
 import com.github.mr3zee.util.displayName
 import com.github.mr3zee.util.resolve
-import org.jetbrains.compose.resources.stringResource
+import com.github.mr3zee.i18n.packStringResource
 import releasewizard.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -55,8 +55,8 @@ fun ReleaseDetailScreen(
     if (showCancelConfirmation) {
         AlertDialog(
             onDismissRequest = { showCancelConfirmation = false },
-            title = { Text(stringResource(Res.string.releases_cancel_title)) },
-            text = { Text(stringResource(Res.string.releases_cancel_body)) },
+            title = { Text(packStringResource(Res.string.releases_cancel_title)) },
+            text = { Text(packStringResource(Res.string.releases_cancel_body)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -65,7 +65,7 @@ fun ReleaseDetailScreen(
                     },
                     modifier = Modifier.testTag("confirm_cancel_button"),
                 ) {
-                    Text(stringResource(Res.string.releases_cancel_confirm), color = MaterialTheme.colorScheme.error)
+                    Text(packStringResource(Res.string.releases_cancel_confirm), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
@@ -73,7 +73,7 @@ fun ReleaseDetailScreen(
                     onClick = { showCancelConfirmation = false },
                     modifier = Modifier.testTag("dismiss_cancel_button"),
                 ) {
-                    Text(stringResource(Res.string.releases_keep_running))
+                    Text(packStringResource(Res.string.releases_keep_running))
                 }
             },
             modifier = Modifier.testTag("cancel_confirmation_dialog"),
@@ -87,8 +87,8 @@ fun ReleaseDetailScreen(
         val approveMessage = approveExec?.gateMessage
         AlertDialog(
             onDismissRequest = { showApproveConfirmation = null },
-            title = { Text(stringResource(Res.string.releases_approve_title, approveBlock?.name ?: stringResource(Res.string.releases_approve_fallback_name))) },
-            text = { Text(approveMessage ?: stringResource(Res.string.releases_approve_default_message)) },
+            title = { Text(packStringResource(Res.string.releases_approve_title, approveBlock?.name ?: packStringResource(Res.string.releases_approve_fallback_name))) },
+            text = { Text(approveMessage ?: packStringResource(Res.string.releases_approve_default_message)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -97,7 +97,7 @@ fun ReleaseDetailScreen(
                     },
                     modifier = Modifier.testTag("confirm_approve_button"),
                 ) {
-                    Text(stringResource(Res.string.common_approve))
+                    Text(packStringResource(Res.string.common_approve))
                 }
             },
             dismissButton = {
@@ -105,7 +105,7 @@ fun ReleaseDetailScreen(
                     onClick = { showApproveConfirmation = null },
                     modifier = Modifier.testTag("dismiss_approve_button"),
                 ) {
-                    Text(stringResource(Res.string.common_cancel))
+                    Text(packStringResource(Res.string.common_cancel))
                 }
             },
             modifier = Modifier.testTag("approve_confirmation_dialog"),
@@ -121,7 +121,7 @@ fun ReleaseDetailScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Text(
-                            stringResource(Res.string.releases_detail_title),
+                            packStringResource(Res.string.releases_detail_title),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -132,16 +132,16 @@ fun ReleaseDetailScreen(
                 },
                 navigationIcon = {
                     TextButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.common_navigate_back))
-                        Text(stringResource(Res.string.common_back))
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
+                        Text(packStringResource(Res.string.common_back))
                     }
                 },
                 actions = {
                     if (!isConnected) {
                         val disconnectedText = if (reconnectAttempt > 0) {
-                            stringResource(Res.string.releases_reconnecting, reconnectAttempt)
+                            packStringResource(Res.string.releases_reconnecting, reconnectAttempt)
                         } else {
-                            stringResource(Res.string.releases_disconnected)
+                            packStringResource(Res.string.releases_disconnected)
                         }
                         Text(
                             text = disconnectedText,
@@ -157,7 +157,7 @@ fun ReleaseDetailScreen(
                             onClick = { showCancelConfirmation = true },
                             modifier = Modifier.testTag("cancel_release_button"),
                         ) {
-                            Text(stringResource(Res.string.common_cancel), color = MaterialTheme.colorScheme.error)
+                            Text(packStringResource(Res.string.common_cancel), color = MaterialTheme.colorScheme.error)
                         }
                     }
                     if (release != null && release.status.isTerminal) {
@@ -165,14 +165,14 @@ fun ReleaseDetailScreen(
                             onClick = onRerun,
                             modifier = Modifier.testTag("rerun_release_button"),
                         ) {
-                            Text(stringResource(Res.string.releases_rerun))
+                            Text(packStringResource(Res.string.releases_rerun))
                         }
                         if (release.status != ReleaseStatus.ARCHIVED) {
                             TextButton(
                                 onClick = onArchive,
                                 modifier = Modifier.testTag("archive_release_button"),
                             ) {
-                                Text(stringResource(Res.string.releases_archive))
+                                Text(packStringResource(Res.string.releases_archive))
                             }
                         }
                     }
@@ -262,14 +262,14 @@ private fun BlockDetailPanel(
                     modifier = Modifier.weight(1f),
                 )
                 TextButton(onClick = onDismiss) {
-                    Text(stringResource(Res.string.common_close))
+                    Text(packStringResource(Res.string.common_close))
                 }
             }
 
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = stringResource(Res.string.releases_block_status, execution.status.displayName()),
+                text = packStringResource(Res.string.releases_block_status, execution.status.displayName()),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.testTag("block_status_text"),
             )
@@ -286,12 +286,12 @@ private fun BlockDetailPanel(
             if (genericOutputs.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = stringResource(Res.string.releases_block_outputs),
+                    text = packStringResource(Res.string.releases_block_outputs),
                     style = MaterialTheme.typography.labelMedium,
                 )
                 genericOutputs.forEach { (key, value) ->
                     Text(
-                        text = stringResource(Res.string.releases_block_output_entry, key, value),
+                        text = packStringResource(Res.string.releases_block_output_entry, key, value),
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(start = 16.dp),
                     )
@@ -316,9 +316,9 @@ private fun BlockDetailPanel(
                 }
 
                 val phaseContext = when (execution.gatePhase) {
-                    GatePhase.PRE -> stringResource(Res.string.releases_gate_phase_pre)
-                    GatePhase.POST -> stringResource(Res.string.releases_gate_phase_post)
-                    null -> stringResource(Res.string.releases_gate_phase_unknown)
+                    GatePhase.PRE -> packStringResource(Res.string.releases_gate_phase_pre)
+                    GatePhase.POST -> packStringResource(Res.string.releases_gate_phase_post)
+                    null -> packStringResource(Res.string.releases_gate_phase_unknown)
                 }
                 Text(
                     text = phaseContext,
@@ -337,7 +337,7 @@ private fun BlockDetailPanel(
                 gate?.let { g ->
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = stringResource(Res.string.releases_approval_progress, execution.approvals.size, g.approvalRule.requiredCount),
+                        text = packStringResource(Res.string.releases_approval_progress, execution.approvals.size, g.approvalRule.requiredCount),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.testTag("gate_approval_progress"),
@@ -349,7 +349,7 @@ private fun BlockDetailPanel(
                     onClick = onApprove,
                     modifier = Modifier.testTag("approve_block_button"),
                 ) {
-                    Text(stringResource(Res.string.common_approve))
+                    Text(packStringResource(Res.string.common_approve))
                 }
             }
         }

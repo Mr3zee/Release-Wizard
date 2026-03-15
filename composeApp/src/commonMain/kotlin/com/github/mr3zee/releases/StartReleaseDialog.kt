@@ -7,7 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.model.ProjectTemplate
-import org.jetbrains.compose.resources.stringResource
+import com.github.mr3zee.i18n.packStringResource
 import releasewizard.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -22,7 +22,7 @@ fun StartReleaseDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(Res.string.start_release_title)) },
+        title = { Text(packStringResource(Res.string.start_release_title)) },
         text = {
             ExposedDropdownMenuBox(
                 expanded = expanded,
@@ -33,7 +33,7 @@ fun StartReleaseDialog(
                     value = selectedProject?.name ?: "",
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text(stringResource(Res.string.start_release_project_label)) },
+                    label = { Text(packStringResource(Res.string.start_release_project_label)) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -62,12 +62,12 @@ fun StartReleaseDialog(
                 enabled = selectedProject != null,
                 modifier = Modifier.testTag("start_release_confirm"),
             ) {
-                Text(stringResource(Res.string.start_release_start))
+                Text(packStringResource(Res.string.start_release_start))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(Res.string.common_cancel))
+                Text(packStringResource(Res.string.common_cancel))
             }
         },
         modifier = Modifier.testTag("start_release_dialog"),

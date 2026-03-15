@@ -9,7 +9,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import org.jetbrains.compose.resources.stringResource
+import com.github.mr3zee.i18n.packStringResource
 import releasewizard.composeapp.generated.resources.*
 
 @Composable
@@ -44,7 +44,7 @@ fun RefreshErrorBanner(
             ) {
                 Icon(
                     Icons.Default.Close,
-                    contentDescription = stringResource(Res.string.common_dismiss),
+                    contentDescription = packStringResource(Res.string.common_dismiss),
                     modifier = Modifier.size(18.dp),
                 )
             }

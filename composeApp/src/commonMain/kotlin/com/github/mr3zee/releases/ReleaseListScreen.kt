@@ -36,8 +36,8 @@ import com.github.mr3zee.theme.LocalAppColors
 import com.github.mr3zee.util.displayName
 import com.github.mr3zee.util.resolve
 import kotlinx.coroutines.delay
-import org.jetbrains.compose.resources.pluralStringResource
-import org.jetbrains.compose.resources.stringResource
+import com.github.mr3zee.i18n.packPluralStringResource
+import com.github.mr3zee.i18n.packStringResource
 import releasewizard.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -78,18 +78,18 @@ fun ReleaseListScreen(
     }
     val relativeTimeText = elapsed?.let { dur ->
         when {
-            dur.inWholeSeconds < 5 -> stringResource(Res.string.releases_updated_just_now)
+            dur.inWholeSeconds < 5 -> packStringResource(Res.string.releases_updated_just_now)
             dur.inWholeSeconds < 60 -> {
                 val seconds = dur.inWholeSeconds.toInt()
-                pluralStringResource(Res.plurals.releases_updated_seconds_ago, seconds, seconds)
+                packPluralStringResource(Res.plurals.releases_updated_seconds_ago, seconds, seconds)
             }
             dur.inWholeMinutes < 60 -> {
                 val minutes = dur.inWholeMinutes.toInt()
-                pluralStringResource(Res.plurals.releases_updated_minutes_ago, minutes, minutes)
+                packPluralStringResource(Res.plurals.releases_updated_minutes_ago, minutes, minutes)
             }
             else -> {
                 val hours = dur.inWholeHours.toInt()
-                pluralStringResource(Res.plurals.releases_updated_hours_ago, hours, hours)
+                packPluralStringResource(Res.plurals.releases_updated_hours_ago, hours, hours)
             }
         }
     }
@@ -120,7 +120,7 @@ fun ReleaseListScreen(
                 TopAppBar(
                     title = {
                         Column {
-                            Text(stringResource(Res.string.releases_title))
+                            Text(packStringResource(Res.string.releases_title))
                             if (relativeTimeText != null) {
                                 Text(
                                     text = relativeTimeText ?: "",
@@ -136,14 +136,14 @@ fun ReleaseListScreen(
                             onClick = onBack,
                             modifier = Modifier.testTag("back_button"),
                         ) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.common_navigate_back))
-                            Text(stringResource(Res.string.common_back))
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
+                            Text(packStringResource(Res.string.common_back))
                         }
                     },
                     actions = {
                         TooltipBox(
                             positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                            tooltip = { PlainTooltip { Text(stringResource(Res.string.common_refresh)) } },
+                            tooltip = { PlainTooltip { Text(packStringResource(Res.string.common_refresh)) } },
                             state = rememberTooltipState(),
                         ) {
                             IconButton(
@@ -152,7 +152,7 @@ fun ReleaseListScreen(
                             ) {
                                 Icon(
                                     Icons.Outlined.Refresh,
-                                    contentDescription = stringResource(Res.string.common_refresh),
+                                    contentDescription = packStringResource(Res.string.common_refresh),
                                     modifier = Modifier
                                         .rotate(if (spinning) rotation else 0f)
                                         .testTag(if (spinning) "refresh_icon_spinning" else "refresh_icon_idle"),
@@ -178,7 +178,7 @@ fun ReleaseListScreen(
                 onClick = { showStartDialog = true },
                 modifier = Modifier.testTag("start_release_fab"),
             ) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(Res.string.releases_start_release))
+                Icon(Icons.Default.Add, contentDescription = packStringResource(Res.string.releases_start_release))
             }
         },
         modifier = Modifier.testTag("release_list_screen"),
@@ -200,7 +200,7 @@ fun ReleaseListScreen(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { viewModel.setSearchQuery(it) },
-                placeholder = { Text(stringResource(Res.string.releases_search_placeholder)) },
+                placeholder = { Text(packStringResource(Res.string.releases_search_placeholder)) },
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -216,7 +216,7 @@ fun ReleaseListScreen(
                 FilterChip(
                     selected = statusFilter == null,
                     onClick = { viewModel.setStatusFilter(null) },
-                    label = { Text(stringResource(Res.string.common_all)) },
+                    label = { Text(packStringResource(Res.string.common_all)) },
                 )
                 for (status in listOf(ReleaseStatus.RUNNING, ReleaseStatus.SUCCEEDED, ReleaseStatus.FAILED)) {
                     FilterChip(
@@ -240,7 +240,7 @@ fun ReleaseListScreen(
                     FilterChip(
                         selected = projectFilter == null,
                         onClick = { viewModel.setProjectFilter(null) },
-                        label = { Text(stringResource(Res.string.releases_filter_all_projects)) },
+                        label = { Text(packStringResource(Res.string.releases_filter_all_projects)) },
                         modifier = Modifier.testTag("filter_all_projects"),
                     )
                     for (project in projects) {
@@ -273,7 +273,7 @@ fun ReleaseListScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = error?.resolve() ?: stringResource(Res.string.common_unknown_error),
+                            text = error?.resolve() ?: packStringResource(Res.string.common_unknown_error),
                             color = MaterialTheme.colorScheme.error,
                         )
                         Spacer(modifier = Modifier.height(8.dp))
@@ -281,7 +281,7 @@ fun ReleaseListScreen(
                             onClick = { viewModel.loadReleases() },
                             modifier = Modifier.testTag("retry_button"),
                         ) {
-                            Text(stringResource(Res.string.common_retry))
+                            Text(packStringResource(Res.string.common_retry))
                         }
                     }
                 }
@@ -293,7 +293,7 @@ fun ReleaseListScreen(
                     if (searchQuery.isNotBlank() || statusFilter != null || projectFilter != null) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = stringResource(Res.string.common_no_search_results),
+                                text = packStringResource(Res.string.common_no_search_results),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -303,12 +303,12 @@ fun ReleaseListScreen(
                                 viewModel.setStatusFilter(null)
                                 viewModel.setProjectFilter(null)
                             }) {
-                                Text(stringResource(Res.string.common_clear_search))
+                                Text(packStringResource(Res.string.common_clear_search))
                             }
                         }
                     } else {
                         Text(
-                            text = stringResource(Res.string.releases_empty_state),
+                            text = packStringResource(Res.string.releases_empty_state),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.testTag("empty_state"),
@@ -368,13 +368,13 @@ private fun ReleaseListItem(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = stringResource(Res.string.releases_release_title, release.id.value.take(8)),
+                text = packStringResource(Res.string.releases_release_title, release.id.value.take(8)),
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = stringResource(Res.string.releases_project_label, release.projectTemplateId.value.take(8)),
+                text = packStringResource(Res.string.releases_project_label, release.projectTemplateId.value.take(8)),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -382,7 +382,7 @@ private fun ReleaseListItem(
             )
             if (release.startedAt != null) {
                 Text(
-                    text = stringResource(Res.string.releases_started_label, release.startedAt.toString()),
+                    text = packStringResource(Res.string.releases_started_label, release.startedAt.toString()),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -395,7 +395,7 @@ private fun ReleaseListItem(
                     onClick = { showMenu = true },
                     modifier = Modifier.testTag("release_menu_${release.id.value}"),
                 ) {
-                    Icon(Icons.Default.MoreVert, contentDescription = stringResource(Res.string.common_more_options))
+                    Icon(Icons.Default.MoreVert, contentDescription = packStringResource(Res.string.common_more_options))
                 }
                 DropdownMenu(
                     expanded = showMenu,
@@ -403,7 +403,7 @@ private fun ReleaseListItem(
                 ) {
                     if (release.status != ReleaseStatus.ARCHIVED) {
                         DropdownMenuItem(
-                            text = { Text(stringResource(Res.string.releases_archive)) },
+                            text = { Text(packStringResource(Res.string.releases_archive)) },
                             onClick = {
                                 showMenu = false
                                 showArchiveConfirm = true
@@ -412,7 +412,7 @@ private fun ReleaseListItem(
                         )
                     }
                     DropdownMenuItem(
-                        text = { Text(stringResource(Res.string.common_delete), color = MaterialTheme.colorScheme.error) },
+                        text = { Text(packStringResource(Res.string.common_delete), color = MaterialTheme.colorScheme.error) },
                         onClick = {
                             showMenu = false
                             showDeleteConfirm = true
@@ -427,16 +427,16 @@ private fun ReleaseListItem(
     if (showArchiveConfirm) {
         AlertDialog(
             onDismissRequest = { showArchiveConfirm = false },
-            title = { Text(stringResource(Res.string.releases_archive_title)) },
-            text = { Text(stringResource(Res.string.releases_archive_confirmation)) },
+            title = { Text(packStringResource(Res.string.releases_archive_title)) },
+            text = { Text(packStringResource(Res.string.releases_archive_confirmation)) },
             confirmButton = {
                 TextButton(onClick = { showArchiveConfirm = false; onArchive() }) {
-                    Text(stringResource(Res.string.releases_archive))
+                    Text(packStringResource(Res.string.releases_archive))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showArchiveConfirm = false }) {
-                    Text(stringResource(Res.string.common_cancel))
+                    Text(packStringResource(Res.string.common_cancel))
                 }
             },
         )
@@ -445,16 +445,16 @@ private fun ReleaseListItem(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text(stringResource(Res.string.releases_delete_title)) },
-            text = { Text(stringResource(Res.string.releases_delete_confirmation)) },
+            title = { Text(packStringResource(Res.string.releases_delete_title)) },
+            text = { Text(packStringResource(Res.string.releases_delete_confirmation)) },
             confirmButton = {
                 TextButton(onClick = { showDeleteConfirm = false; onDelete() }) {
-                    Text(stringResource(Res.string.common_delete), color = MaterialTheme.colorScheme.error)
+                    Text(packStringResource(Res.string.common_delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text(stringResource(Res.string.common_cancel))
+                    Text(packStringResource(Res.string.common_cancel))
                 }
             },
         )

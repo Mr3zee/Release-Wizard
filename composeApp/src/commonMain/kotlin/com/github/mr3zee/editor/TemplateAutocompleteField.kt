@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.model.Block
 import com.github.mr3zee.model.Parameter
-import org.jetbrains.compose.resources.stringResource
+import com.github.mr3zee.i18n.packStringResource
 import releasewizard.composeapp.generated.resources.*
 
 @Composable
@@ -36,7 +36,7 @@ fun TemplateAutocompleteField(
     testTag: String = "",
 ) {
     val defaultValueMarker = "\u0000"
-    val defaultValueTemplate = stringResource(Res.string.editor_template_default_value, defaultValueMarker)
+    val defaultValueTemplate = packStringResource(Res.string.editor_template_default_value, defaultValueMarker)
     val allSuggestions = remember(projectParameters, predecessors, defaultValueTemplate) {
         buildSuggestions(projectParameters, predecessors) { value ->
             defaultValueTemplate.replace(defaultValueMarker, value)
@@ -194,7 +194,7 @@ fun TemplateAutocompleteField(
             ) {
                 if (paramSuggestions.isNotEmpty()) {
                     Text(
-                        stringResource(Res.string.editor_template_parameters),
+                        packStringResource(Res.string.editor_template_parameters),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
@@ -211,7 +211,7 @@ fun TemplateAutocompleteField(
 
                 if (outputSuggestions.isNotEmpty()) {
                     Text(
-                        stringResource(Res.string.editor_template_block_outputs),
+                        packStringResource(Res.string.editor_template_block_outputs),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),

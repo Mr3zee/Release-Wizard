@@ -29,7 +29,7 @@ import com.github.mr3zee.model.ConnectionId
 import com.github.mr3zee.model.ConnectionType
 import com.github.mr3zee.util.displayName
 import com.github.mr3zee.util.resolve
-import org.jetbrains.compose.resources.stringResource
+import com.github.mr3zee.i18n.packStringResource
 import releasewizard.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -68,7 +68,7 @@ fun ConnectionListScreen(
     )
     val spinning = isManualRefresh && isRefreshing
 
-    val retryLabel = stringResource(Res.string.common_retry)
+    val retryLabel = packStringResource(Res.string.common_retry)
     val resolvedError = error?.resolve()
     val resolvedTestSuccess = testSuccess?.resolve()
 
@@ -101,20 +101,20 @@ fun ConnectionListScreen(
         topBar = {
             Box {
                 TopAppBar(
-                    title = { Text(stringResource(Res.string.connections_title)) },
+                    title = { Text(packStringResource(Res.string.connections_title)) },
                     navigationIcon = {
                         TextButton(
                             onClick = onBack,
                             modifier = Modifier.testTag("back_button"),
                         ) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.common_navigate_back))
-                            Text(stringResource(Res.string.common_back))
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
+                            Text(packStringResource(Res.string.common_back))
                         }
                     },
                     actions = {
                         TooltipBox(
                             positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                            tooltip = { PlainTooltip { Text(stringResource(Res.string.common_refresh)) } },
+                            tooltip = { PlainTooltip { Text(packStringResource(Res.string.common_refresh)) } },
                             state = rememberTooltipState(),
                         ) {
                             IconButton(
@@ -123,7 +123,7 @@ fun ConnectionListScreen(
                             ) {
                                 Icon(
                                     Icons.Outlined.Refresh,
-                                    contentDescription = stringResource(Res.string.common_refresh),
+                                    contentDescription = packStringResource(Res.string.common_refresh),
                                     modifier = Modifier
                                         .rotate(if (spinning) rotation else 0f)
                                         .testTag(if (spinning) "refresh_icon_spinning" else "refresh_icon_idle"),
@@ -149,7 +149,7 @@ fun ConnectionListScreen(
                 onClick = onCreateConnection,
                 modifier = Modifier.testTag("create_connection_fab"),
             ) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(Res.string.connections_create))
+                Icon(Icons.Default.Add, contentDescription = packStringResource(Res.string.connections_create))
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -172,7 +172,7 @@ fun ConnectionListScreen(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { viewModel.setSearchQuery(it) },
-                placeholder = { Text(stringResource(Res.string.connections_search_placeholder)) },
+                placeholder = { Text(packStringResource(Res.string.connections_search_placeholder)) },
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -188,7 +188,7 @@ fun ConnectionListScreen(
                 FilterChip(
                     selected = typeFilter == null,
                     onClick = { viewModel.setTypeFilter(null) },
-                    label = { Text(stringResource(Res.string.common_all)) },
+                    label = { Text(packStringResource(Res.string.common_all)) },
                 )
                 for (type in ConnectionType.entries) {
                     FilterChip(
@@ -218,7 +218,7 @@ fun ConnectionListScreen(
                     if (searchQuery.isNotBlank() || typeFilter != null) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = stringResource(Res.string.common_no_search_results),
+                                text = packStringResource(Res.string.common_no_search_results),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -227,12 +227,12 @@ fun ConnectionListScreen(
                                 viewModel.setSearchQuery("")
                                 viewModel.setTypeFilter(null)
                             }) {
-                                Text(stringResource(Res.string.common_clear_search))
+                                Text(packStringResource(Res.string.common_clear_search))
                             }
                         }
                     } else {
                         Text(
-                            text = stringResource(Res.string.connections_empty_state),
+                            text = packStringResource(Res.string.connections_empty_state),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -264,19 +264,19 @@ fun ConnectionListScreen(
     connectionToDelete?.let { connection ->
         AlertDialog(
             onDismissRequest = { connectionToDelete = null },
-            title = { Text(stringResource(Res.string.connections_delete_title)) },
-            text = { Text(stringResource(Res.string.connections_delete_confirmation, connection.name)) },
+            title = { Text(packStringResource(Res.string.connections_delete_title)) },
+            text = { Text(packStringResource(Res.string.connections_delete_confirmation, connection.name)) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteConnection(connection.id)
                     connectionToDelete = null
                 }) {
-                    Text(stringResource(Res.string.common_delete), color = MaterialTheme.colorScheme.error)
+                    Text(packStringResource(Res.string.common_delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { connectionToDelete = null }) {
-                    Text(stringResource(Res.string.common_cancel))
+                    Text(packStringResource(Res.string.common_cancel))
                 }
             },
         )
@@ -311,7 +311,7 @@ private fun ConnectionListItem(
             )
             if (webhookUrl != null) {
                 Text(
-                    text = stringResource(Res.string.connections_webhook_display, webhookUrl),
+                    text = packStringResource(Res.string.connections_webhook_display, webhookUrl),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -322,10 +322,10 @@ private fun ConnectionListItem(
         }
         Row {
             TextButton(onClick = onTest) {
-                Text(stringResource(Res.string.connections_test))
+                Text(packStringResource(Res.string.connections_test))
             }
             TextButton(onClick = onDelete) {
-                Text(stringResource(Res.string.common_delete), color = MaterialTheme.colorScheme.error)
+                Text(packStringResource(Res.string.common_delete), color = MaterialTheme.colorScheme.error)
             }
         }
     }

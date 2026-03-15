@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.dp
 import com.github.mr3zee.model.BlockType
 import com.github.mr3zee.theme.LocalAppColors
 import com.github.mr3zee.util.displayName
-import org.jetbrains.compose.resources.stringResource
+import com.github.mr3zee.i18n.packStringResource
 import releasewizard.composeapp.generated.resources.*
 
 @Composable
@@ -47,7 +47,7 @@ fun EditorToolbar(
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(
-            stringResource(Res.string.editor_toolbar_blocks),
+            packStringResource(Res.string.editor_toolbar_blocks),
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.padding(bottom = 4.dp),
         )
@@ -80,13 +80,13 @@ fun EditorToolbar(
                 contentColor = appColors.containerBlock,
             ),
         ) {
-            Text(stringResource(Res.string.editor_toolbar_container), style = MaterialTheme.typography.labelMedium)
+            Text(packStringResource(Res.string.editor_toolbar_container), style = MaterialTheme.typography.labelMedium)
         }
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
         Text(
-            stringResource(Res.string.editor_toolbar_actions),
+            packStringResource(Res.string.editor_toolbar_actions),
             style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.padding(bottom = 4.dp),
         )
@@ -103,7 +103,7 @@ fun EditorToolbar(
             ) {
                 Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(stringResource(Res.string.editor_toolbar_undo))
+                Text(packStringResource(Res.string.editor_toolbar_undo))
             }
             OutlinedButton(
                 onClick = onRedo,
@@ -113,7 +113,7 @@ fun EditorToolbar(
             ) {
                 Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(stringResource(Res.string.editor_toolbar_redo))
+                Text(packStringResource(Res.string.editor_toolbar_redo))
             }
         }
 
@@ -129,7 +129,7 @@ fun EditorToolbar(
             ) {
                 Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(stringResource(Res.string.editor_toolbar_copy))
+                Text(packStringResource(Res.string.editor_toolbar_copy))
             }
             OutlinedButton(
                 onClick = onPaste,
@@ -139,7 +139,7 @@ fun EditorToolbar(
             ) {
                 Icon(Icons.Default.ContentPaste, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(stringResource(Res.string.editor_toolbar_paste))
+                Text(packStringResource(Res.string.editor_toolbar_paste))
             }
         }
 
@@ -154,7 +154,7 @@ fun EditorToolbar(
         ) {
             Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(4.dp))
-            Text(stringResource(Res.string.editor_toolbar_delete))
+            Text(packStringResource(Res.string.editor_toolbar_delete))
         }
     }
 }
