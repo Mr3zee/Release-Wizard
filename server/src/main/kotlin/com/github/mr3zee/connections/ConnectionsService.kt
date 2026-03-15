@@ -90,8 +90,9 @@ class DefaultConnectionsService(
     override suspend fun deleteConnection(id: ConnectionId, session: UserSession): Boolean {
         checkAccessTeamLead(id, session)
         val teamId = repository.findTeamId(id)
+            ?: throw NotFoundException("Connection not found")
         val deleted = repository.delete(id)
-        if (deleted && teamId != null) {
+        if (deleted) {
             auditService.log(
                 TeamId(teamId), session,
                 AuditAction.CONNECTION_DELETED, AuditTargetType.CONNECTION,

@@ -116,7 +116,7 @@ class DefaultReleasesService(
 
         // Get teamId from project -- releases inherit team from their project
         val projectTeamId = projectsRepository.findTeamId(request.projectTemplateId)
-            ?: throw IllegalArgumentException("Project has no team")
+            ?: throw NotFoundException("Project not found")
         teamAccessService.checkMembership(TeamId(projectTeamId), session)
         validateConnectionTeamConsistency(project.dagGraph, projectTeamId)
 
@@ -152,7 +152,7 @@ class DefaultReleasesService(
             ?: throw IllegalArgumentException("Project not found: ${projectId.value}")
 
         val projectTeamId = projectsRepository.findTeamId(projectId)
-            ?: error("Project ${projectId.value} has no team")
+            ?: throw NotFoundException("Project not found")
 
         if (project.dagGraph.blocks.isEmpty()) {
             throw IllegalArgumentException("Project has no blocks to execute")
@@ -190,7 +190,7 @@ class DefaultReleasesService(
         }
 
         val releaseTeamId = repository.findTeamId(id)
-            ?: error("Release ${id.value} has no team")
+            ?: throw NotFoundException("Release not found")
 
         val release = repository.create(
             projectTemplateId = original.projectTemplateId,
@@ -218,9 +218,8 @@ class DefaultReleasesService(
         }
         executionEngine.cancelExecution(id)
         val teamId = repository.findTeamId(id)
-        if (teamId != null) {
-            auditService.log(TeamId(teamId), session, AuditAction.RELEASE_CANCELLED, AuditTargetType.RELEASE, id.value)
-        }
+            ?: throw NotFoundException("Release not found")
+        auditService.log(TeamId(teamId), session, AuditAction.RELEASE_CANCELLED, AuditTargetType.RELEASE, id.value)
         return true
     }
 

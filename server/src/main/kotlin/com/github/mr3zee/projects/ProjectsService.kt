@@ -77,8 +77,9 @@ class DefaultProjectsService(
     override suspend fun deleteProject(id: ProjectId, session: UserSession): Boolean {
         checkAccessTeamLead(id, session)
         val teamId = repository.findTeamId(id)
+            ?: throw NotFoundException("Project not found")
         val deleted = repository.delete(id)
-        if (deleted && teamId != null) {
+        if (deleted) {
             auditService.log(TeamId(teamId), session, AuditAction.PROJECT_DELETED, AuditTargetType.PROJECT, id.value)
         }
         return deleted
