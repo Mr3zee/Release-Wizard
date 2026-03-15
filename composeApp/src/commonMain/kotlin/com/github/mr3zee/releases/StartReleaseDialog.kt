@@ -5,6 +5,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import com.github.mr3zee.components.RwButton
+import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.model.ProjectTemplate
 import com.github.mr3zee.i18n.packStringResource
@@ -57,16 +59,17 @@ fun StartReleaseDialog(
             }
         },
         confirmButton = {
-            TextButton(
+            RwButton(
                 onClick = { selectedProject?.let { onStart(it.id) } },
                 enabled = selectedProject != null,
                 modifier = Modifier.testTag("start_release_confirm"),
+                variant = RwButtonVariant.Ghost,
             ) {
                 Text(packStringResource(Res.string.start_release_start))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            RwButton(onClick = onDismiss, variant = RwButtonVariant.Ghost) {
                 Text(packStringResource(Res.string.common_cancel))
             }
         },

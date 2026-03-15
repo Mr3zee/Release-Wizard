@@ -1,6 +1,8 @@
 package com.github.mr3zee.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -12,6 +14,9 @@ import com.github.mr3zee.i18n.LanguagePack
 import com.github.mr3zee.i18n.LanguagePackRegistry
 import com.github.mr3zee.i18n.LocalLanguagePackData
 
+// ── Light color scheme ──────────────────────────────────────────────────────
+// Maps our design tokens into M3 color roles so retained M3 components
+// (Scaffold, TopAppBar, AlertDialog, etc.) pick up the new palette.
 private val AppLightColorScheme = lightColorScheme(
     primary = Color(0xFF3B82F6),
     onPrimary = Color.White,
@@ -29,8 +34,23 @@ private val AppLightColorScheme = lightColorScheme(
     onError = Color.White,
     errorContainer = Color(0xFFFEE2E2),
     onErrorContainer = Color(0xFF7F1D1D),
+    // Chrome surface colors mapped into M3 roles
+    background = Color(0xFFF5F6F8),
+    onBackground = Color(0xFF1F2937),
+    surface = Color(0xFFFFFFFF),
+    onSurface = Color(0xFF1F2937),
+    onSurfaceVariant = Color(0xFF6B7280),
+    surfaceContainer = Color(0xFFFFFFFF),
+    surfaceContainerLow = Color(0xFFF7F8FA),
+    surfaceContainerHigh = Color(0xFFF5F6F8),
+    surfaceContainerHighest = Color(0xFFF0F1F3),
+    inverseSurface = Color(0xFF1F2937),
+    inversePrimary = Color(0xFF93C5FD),
+    outline = Color(0xFFE5E7EB),
+    outlineVariant = Color(0xFFE5E7EB),
 )
 
+// ── Dark color scheme ───────────────────────────────────────────────────────
 private val AppDarkColorScheme = darkColorScheme(
     primary = Color(0xFF60A5FA),
     onPrimary = Color(0xFF1E3A5F),
@@ -48,8 +68,23 @@ private val AppDarkColorScheme = darkColorScheme(
     onError = Color(0xFF7F1D1D),
     errorContainer = Color(0xFF991B1B),
     onErrorContainer = Color(0xFFFEE2E2),
+    // Chrome surface colors for dark
+    background = Color(0xFF121218),
+    onBackground = Color(0xFFE5E7EB),
+    surface = Color(0xFF1E2230),
+    onSurface = Color(0xFFE5E7EB),
+    onSurfaceVariant = Color(0xFF9CA3AF),
+    surfaceContainer = Color(0xFF1E2230),
+    surfaceContainerLow = Color(0xFF1A1D27),
+    surfaceContainerHigh = Color(0xFF22252F),
+    surfaceContainerHighest = Color(0xFF282C3A),
+    inverseSurface = Color(0xFFE5E7EB),
+    inversePrimary = Color(0xFF1E40AF),
+    outline = Color(0xFF3A3F50),
+    outlineVariant = Color(0xFF3A3F50),
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppTheme(
     themePreference: ThemePreference = ThemePreference.SYSTEM,
@@ -69,9 +104,13 @@ fun AppTheme(
     CompositionLocalProvider(
         LocalAppColors provides appColors,
         LocalLanguagePackData provides packData,
+        // Suppress M3 ripple globally — Rw* components use custom hover/press indication
+        LocalRippleConfiguration provides null,
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
+            typography = AppMaterialTypography,
+            shapes = AppMaterialShapes,
             content = content,
         )
     }

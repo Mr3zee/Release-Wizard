@@ -9,10 +9,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import com.github.mr3zee.components.RwButton
+import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.dag.ValidationError
+import com.github.mr3zee.theme.LocalAppColors
 import com.github.mr3zee.util.resolve
 import com.github.mr3zee.i18n.packPluralStringResource
 import com.github.mr3zee.i18n.packStringResource
@@ -39,6 +43,8 @@ fun DagEditorScreen(
     val lockState by viewModel.lockState.collectAsState()
     val isReadOnly by viewModel.isReadOnly.collectAsState()
     val isLockedBySelf by viewModel.isLockedBySelf.collectAsState()
+
+    val appColors = LocalAppColors.current
 
     var showDiscardDialog by remember { mutableStateOf(false) }
     var showForceUnlockDialog by remember { mutableStateOf(false) }
@@ -108,7 +114,7 @@ fun DagEditorScreen(
                     }
                 },
                 navigationIcon = {
-                    TextButton(onClick = handleBack) {
+                    RwButton(onClick = handleBack, variant = RwButtonVariant.Ghost) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
                         Text(packStringResource(Res.string.common_back))
                     }
@@ -117,8 +123,9 @@ fun DagEditorScreen(
                     if (validationErrors.isNotEmpty()) {
                         ValidationErrorBadge(validationErrors)
                     }
-                    TextButton(
+                    RwButton(
                         onClick = { viewModel.save() },
+                        variant = RwButtonVariant.Ghost,
                         enabled = isDirty && !isSaving && !isReadOnly,
                         modifier = Modifier.testTag("save_button"),
                     ) {
@@ -187,7 +194,7 @@ fun DagEditorScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(resolvedError ?: packStringResource(Res.string.common_error), color = MaterialTheme.colorScheme.error)
                     Spacer(Modifier.height(8.dp))
-                    Button(onClick = { viewModel.loadProject() }) { Text(packStringResource(Res.string.common_retry)) }
+                    RwButton(onClick = { viewModel.loadProject() }, variant = RwButtonVariant.Primary) { Text(packStringResource(Res.string.common_retry)) }
                 }
             }
             return@Scaffold
@@ -238,7 +245,13 @@ fun DagEditorScreen(
                     enabled = !isReadOnly,
                 )
 
-                VerticalDivider()
+                // Canvas-chrome boundary: 1dp inset border instead of plain divider
+                Box(
+                    Modifier
+                        .fillMaxHeight()
+                        .width(1.dp)
+                        .drawBehind { drawRect(appColors.chromeBorder) }
+                )
 
                 // Center: canvas
                 DagCanvas(
@@ -258,7 +271,12 @@ fun DagEditorScreen(
                         .testTag("dag_canvas"),
                 )
 
-                VerticalDivider()
+                Box(
+                    Modifier
+                        .fillMaxHeight()
+                        .width(1.dp)
+                        .drawBehind { drawRect(appColors.chromeBorder) }
+                )
 
                 // Right: properties panel
                 BlockPropertiesPanel(
@@ -284,20 +302,19 @@ fun DagEditorScreen(
             title = { Text(packStringResource(Res.string.common_unsaved_title)) },
             text = { Text(packStringResource(Res.string.common_unsaved_message)) },
             confirmButton = {
-                TextButton(
+                RwButton(
                     onClick = {
                         showDiscardDialog = false
                         onBack()
                     },
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error,
-                    ),
+                    variant = RwButtonVariant.Ghost,
+                    contentColor = MaterialTheme.colorScheme.error,
                 ) {
                     Text(packStringResource(Res.string.common_discard))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDiscardDialog = false }) {
+                RwButton(onClick = { showDiscardDialog = false }, variant = RwButtonVariant.Ghost) {
                     Text(packStringResource(Res.string.common_cancel))
                 }
             },
@@ -313,29 +330,31 @@ fun DagEditorScreen(
                 Column {
                     Text(packStringResource(Res.string.editor_dialog_lock_expired_body))
                     Spacer(Modifier.height(12.dp))
-                    TextButton(
+                    RwButton(
                         onClick = {
                             showLockLostDiscardDialog = false
                             onBack()
                         },
-                        colors = ButtonDefaults.textButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error,
-                        ),
+                        variant = RwButtonVariant.Ghost,
+                        contentColor = MaterialTheme.colorScheme.error,
                     ) {
                         Text(packStringResource(Res.string.editor_dialog_lock_expired_discard))
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    showLockLostDiscardDialog = false
-                    viewModel.reacquireAndSave()
-                }) {
+                RwButton(
+                    onClick = {
+                        showLockLostDiscardDialog = false
+                        viewModel.reacquireAndSave()
+                    },
+                    variant = RwButtonVariant.Ghost,
+                ) {
                     Text(packStringResource(Res.string.editor_dialog_reacquire_save))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showLockLostDiscardDialog = false }) {
+                RwButton(onClick = { showLockLostDiscardDialog = false }, variant = RwButtonVariant.Ghost) {
                     Text(packStringResource(Res.string.common_cancel))
                 }
             },
@@ -350,20 +369,19 @@ fun DagEditorScreen(
             title = { Text(packStringResource(Res.string.editor_dialog_force_unlock_title)) },
             text = { Text(packStringResource(Res.string.editor_dialog_force_unlock_body, lockedByName)) },
             confirmButton = {
-                TextButton(
+                RwButton(
                     onClick = {
                         showForceUnlockDialog = false
                         viewModel.forceUnlock()
                     },
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error,
-                    ),
+                    variant = RwButtonVariant.Ghost,
+                    contentColor = MaterialTheme.colorScheme.error,
                 ) {
                     Text(packStringResource(Res.string.editor_dialog_force_unlock_confirm))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showForceUnlockDialog = false }) {
+                RwButton(onClick = { showForceUnlockDialog = false }, variant = RwButtonVariant.Ghost) {
                     Text(packStringResource(Res.string.common_cancel))
                 }
             },
@@ -416,19 +434,19 @@ private fun EditLockBanner(
                         color = contentColor,
                         modifier = Modifier.weight(1f),
                     )
-                    TextButton(
+                    RwButton(
                         onClick = onRetry,
-                        colors = ButtonDefaults.textButtonColors(contentColor = contentColor),
+                        variant = RwButtonVariant.Ghost,
+                        contentColor = contentColor,
                     ) {
                         Text(packStringResource(Res.string.common_retry))
                     }
                     if (showForceUnlock) {
-                        TextButton(
+                        RwButton(
                             onClick = onForceUnlock,
-                            colors = ButtonDefaults.textButtonColors(
-                                contentColor = if (isNetworkError) contentColor
-                                    else MaterialTheme.colorScheme.error,
-                            ),
+                            variant = RwButtonVariant.Ghost,
+                            contentColor = if (isNetworkError) contentColor
+                                else MaterialTheme.colorScheme.error,
                             modifier = Modifier.testTag("force_unlock_button"),
                         ) {
                             Text(packStringResource(Res.string.editor_dialog_force_unlock_confirm))
@@ -461,7 +479,11 @@ private fun EditLockBanner(
                         color = MaterialTheme.colorScheme.onErrorContainer,
                         modifier = Modifier.weight(1f),
                     )
-                    TextButton(onClick = onReacquireAndSave) {
+                    RwButton(
+                        onClick = onReacquireAndSave,
+                        variant = RwButtonVariant.Ghost,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    ) {
                         Text(packStringResource(Res.string.editor_dialog_reacquire_save))
                     }
                 }
@@ -477,11 +499,10 @@ private fun EditLockBanner(
 private fun ValidationErrorBadge(errors: List<ValidationError>) {
     var showDialog by remember { mutableStateOf(false) }
 
-    TextButton(
+    RwButton(
         onClick = { showDialog = true },
-        colors = ButtonDefaults.textButtonColors(
-            contentColor = MaterialTheme.colorScheme.error,
-        ),
+        variant = RwButtonVariant.Ghost,
+        contentColor = MaterialTheme.colorScheme.error,
     ) {
         Text(packPluralStringResource(Res.plurals.issues, errors.size, errors.size))
     }
@@ -502,7 +523,7 @@ private fun ValidationErrorBadge(errors: List<ValidationError>) {
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showDialog = false }) { Text(packStringResource(Res.string.common_ok)) }
+                RwButton(onClick = { showDialog = false }, variant = RwButtonVariant.Ghost) { Text(packStringResource(Res.string.common_ok)) }
             },
         )
     }

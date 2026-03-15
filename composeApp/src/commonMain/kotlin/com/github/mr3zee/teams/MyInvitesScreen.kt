@@ -12,6 +12,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.github.mr3zee.components.RwButton
+import com.github.mr3zee.components.RwButtonVariant
+import com.github.mr3zee.components.RwCard
 import com.github.mr3zee.model.TeamInvite
 import com.github.mr3zee.util.resolve
 import com.github.mr3zee.i18n.packStringResource
@@ -52,7 +55,7 @@ fun MyInvitesScreen(
             TopAppBar(
                 title = { Text(packStringResource(Res.string.teams_my_invites)) },
                 navigationIcon = {
-                    TextButton(onClick = onBack, modifier = Modifier.testTag("back_button")) {
+                    RwButton(onClick = onBack, variant = RwButtonVariant.Ghost, modifier = Modifier.testTag("back_button")) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
                         Text(packStringResource(Res.string.common_back))
                     }
@@ -101,7 +104,7 @@ private fun InviteCard(
     onDecline: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    RwCard(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -121,8 +124,8 @@ private fun InviteCard(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onAccept) { Text(packStringResource(Res.string.teams_accept)) }
-                TextButton(onClick = onDecline) { Text(packStringResource(Res.string.teams_decline)) }
+                RwButton(onClick = onAccept, variant = RwButtonVariant.Primary) { Text(packStringResource(Res.string.teams_accept)) }
+                RwButton(onClick = onDecline, variant = RwButtonVariant.Ghost) { Text(packStringResource(Res.string.teams_decline)) }
             }
         }
     }

@@ -1,13 +1,19 @@
 package com.github.mr3zee.auth
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.github.mr3zee.components.RwButton
+import com.github.mr3zee.components.RwButtonVariant
+import com.github.mr3zee.components.RwCard
+import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.util.resolve
 import com.github.mr3zee.i18n.packStringResource
 import releasewizard.composeapp.generated.resources.*
@@ -29,7 +35,7 @@ fun LoginScreen(
             .testTag("login_screen"),
         contentAlignment = Alignment.Center,
     ) {
-        Card(
+        RwCard(
             modifier = Modifier
                 .widthIn(max = 400.dp)
                 .padding(16.dp),
@@ -49,20 +55,22 @@ fun LoginScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
-                OutlinedTextField(
+                RwTextField(
                     value = username,
                     onValueChange = { username = it; viewModel.dismissError() },
-                    label = { Text(packStringResource(Res.string.auth_username)) },
+                    label = packStringResource(Res.string.auth_username),
+                    placeholder = packStringResource(Res.string.auth_username),
                     singleLine = true,
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("login_username"),
                 )
 
-                OutlinedTextField(
+                RwTextField(
                     value = password,
                     onValueChange = { password = it; viewModel.dismissError() },
-                    label = { Text(packStringResource(Res.string.auth_password)) },
+                    label = packStringResource(Res.string.auth_password),
+                    placeholder = packStringResource(Res.string.auth_password),
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier
@@ -79,7 +87,7 @@ fun LoginScreen(
                     )
                 }
 
-                Button(
+                RwButton(
                     onClick = {
                         if (isRegisterMode) {
                             viewModel.register(username, password)
@@ -87,6 +95,7 @@ fun LoginScreen(
                             viewModel.login(username, password)
                         }
                     },
+                    variant = RwButtonVariant.Primary,
                     enabled = username.isNotBlank() && password.isNotBlank() && !isLoading,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -102,11 +111,12 @@ fun LoginScreen(
                     }
                 }
 
-                TextButton(
+                RwButton(
                     onClick = {
                         isRegisterMode = !isRegisterMode
                         viewModel.dismissError()
                     },
+                    variant = RwButtonVariant.Ghost,
                     modifier = Modifier.testTag("toggle_auth_mode"),
                 ) {
                     Text(

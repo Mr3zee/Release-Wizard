@@ -1,14 +1,20 @@
 package com.github.mr3zee.connections
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.github.mr3zee.components.RwButton
+import com.github.mr3zee.components.RwButtonVariant
+import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.model.ConnectionConfig
 import com.github.mr3zee.model.ConnectionId
 import com.github.mr3zee.model.ConnectionType
@@ -154,13 +160,13 @@ fun ConnectionFormScreen(
             TopAppBar(
                 title = { Text(if (isEditMode) packStringResource(Res.string.connections_edit_title) else packStringResource(Res.string.connections_new_title)) },
                 navigationIcon = {
-                    TextButton(onClick = handleBack) {
+                    RwButton(onClick = handleBack, variant = RwButtonVariant.Ghost) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
                         Text(packStringResource(Res.string.common_back))
                     }
                 },
                 actions = {
-                    Button(
+                    RwButton(
                         onClick = {
                             if (isEditMode) {
                                 viewModel.updateConnection(connectionId, name, currentConfig)
@@ -168,6 +174,7 @@ fun ConnectionFormScreen(
                                 viewModel.createConnection(name, selectedType, currentConfig)
                             }
                         },
+                        variant = RwButtonVariant.Primary,
                         enabled = name.isNotBlank() && currentConfig.isValid() && !isSaving,
                         modifier = Modifier.testTag("save_connection_button"),
                     ) {
@@ -178,17 +185,25 @@ fun ConnectionFormScreen(
         },
         modifier = Modifier.testTag("connection_form_screen"),
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(padding),
+            contentAlignment = Alignment.TopCenter,
         ) {
-            OutlinedTextField(
+            Column(
+                modifier = Modifier
+                    .widthIn(max = 700.dp)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+            RwTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text(packStringResource(Res.string.connections_name_label)) },
+                label = packStringResource(Res.string.connections_name_label),
+                placeholder = packStringResource(Res.string.connections_name_label),
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -233,91 +248,102 @@ fun ConnectionFormScreen(
 
             when (selectedType) {
                 ConnectionType.SLACK -> {
-                    OutlinedTextField(
+                    RwTextField(
                         value = slackWebhookUrl,
                         onValueChange = { slackWebhookUrl = it },
-                        label = { Text(packStringResource(Res.string.connections_slack_webhook_url)) },
+                        label = packStringResource(Res.string.connections_slack_webhook_url),
+                        placeholder = packStringResource(Res.string.connections_slack_webhook_url),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().testTag("slack_webhook_url"),
                     )
                 }
                 ConnectionType.TEAMCITY -> {
-                    OutlinedTextField(
+                    RwTextField(
                         value = teamCityServerUrl,
                         onValueChange = { teamCityServerUrl = it },
-                        label = { Text(packStringResource(Res.string.connections_tc_server_url)) },
+                        label = packStringResource(Res.string.connections_tc_server_url),
+                        placeholder = packStringResource(Res.string.connections_tc_server_url),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().testTag("teamcity_server_url"),
                     )
-                    OutlinedTextField(
+                    RwTextField(
                         value = teamCityToken,
                         onValueChange = { teamCityToken = it },
-                        label = { Text(packStringResource(Res.string.connections_tc_token)) },
+                        label = packStringResource(Res.string.connections_tc_token),
+                        placeholder = packStringResource(Res.string.connections_tc_token),
                         singleLine = true,
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth().testTag("teamcity_token"),
                     )
-                    OutlinedTextField(
+                    RwTextField(
                         value = teamCityWebhookSecret,
                         onValueChange = { teamCityWebhookSecret = it },
-                        label = { Text(packStringResource(Res.string.connections_tc_webhook_secret)) },
+                        label = packStringResource(Res.string.connections_tc_webhook_secret),
+                        placeholder = packStringResource(Res.string.connections_tc_webhook_secret),
                         singleLine = true,
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth().testTag("teamcity_webhook_secret"),
                     )
                 }
                 ConnectionType.GITHUB -> {
-                    OutlinedTextField(
+                    RwTextField(
                         value = githubToken,
                         onValueChange = { githubToken = it },
-                        label = { Text(packStringResource(Res.string.connections_github_pat)) },
+                        label = packStringResource(Res.string.connections_github_pat),
+                        placeholder = packStringResource(Res.string.connections_github_pat),
                         singleLine = true,
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth().testTag("github_token"),
                     )
-                    OutlinedTextField(
+                    RwTextField(
                         value = githubOwner,
                         onValueChange = { githubOwner = it },
-                        label = { Text(packStringResource(Res.string.connections_github_owner)) },
+                        label = packStringResource(Res.string.connections_github_owner),
+                        placeholder = packStringResource(Res.string.connections_github_owner),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().testTag("github_owner"),
                     )
-                    OutlinedTextField(
+                    RwTextField(
                         value = githubRepo,
                         onValueChange = { githubRepo = it },
-                        label = { Text(packStringResource(Res.string.connections_github_repo)) },
+                        label = packStringResource(Res.string.connections_github_repo),
+                        placeholder = packStringResource(Res.string.connections_github_repo),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().testTag("github_repo"),
                     )
-                    OutlinedTextField(
+                    RwTextField(
                         value = githubWebhookSecret,
                         onValueChange = { githubWebhookSecret = it },
-                        label = { Text(packStringResource(Res.string.connections_github_webhook_secret)) },
+                        label = packStringResource(Res.string.connections_github_webhook_secret),
+                        placeholder = packStringResource(Res.string.connections_github_webhook_secret),
                         singleLine = true,
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth().testTag("github_webhook_secret"),
                     )
                 }
                 ConnectionType.MAVEN_CENTRAL -> {
-                    OutlinedTextField(
+                    RwTextField(
                         value = mavenUsername,
                         onValueChange = { mavenUsername = it },
-                        label = { Text(packStringResource(Res.string.connections_maven_username)) },
+                        label = packStringResource(Res.string.connections_maven_username),
+                        placeholder = packStringResource(Res.string.connections_maven_username),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().testTag("maven_username"),
                     )
-                    OutlinedTextField(
+                    RwTextField(
                         value = mavenPassword,
                         onValueChange = { mavenPassword = it },
-                        label = { Text(packStringResource(Res.string.connections_maven_password)) },
+                        label = packStringResource(Res.string.connections_maven_password),
+                        placeholder = packStringResource(Res.string.connections_maven_password),
                         singleLine = true,
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth().testTag("maven_password"),
                     )
-                    OutlinedTextField(
+                    RwTextField(
                         value = mavenBaseUrl,
                         onValueChange = { mavenBaseUrl = it },
-                        label = { Text(packStringResource(Res.string.connections_maven_base_url)) },
+                        label = packStringResource(Res.string.connections_maven_base_url),
+                        placeholder = packStringResource(Res.string.connections_maven_base_url),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().testTag("maven_base_url"),
                     )
@@ -334,6 +360,7 @@ fun ConnectionFormScreen(
                         .testTag("connection_form_error"),
                 )
             }
+            }
         }
     }
 
@@ -344,15 +371,15 @@ fun ConnectionFormScreen(
             title = { Text(packStringResource(Res.string.common_unsaved_title)) },
             text = { Text(packStringResource(Res.string.common_unsaved_message)) },
             confirmButton = {
-                TextButton(onClick = {
+                RwButton(onClick = {
                     showDiscardDialog = false
                     onBack()
-                }) {
+                }, variant = RwButtonVariant.Ghost) {
                     Text(packStringResource(Res.string.common_discard))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDiscardDialog = false }) {
+                RwButton(onClick = { showDiscardDialog = false }, variant = RwButtonVariant.Ghost) {
                     Text(packStringResource(Res.string.common_cancel))
                 }
             },

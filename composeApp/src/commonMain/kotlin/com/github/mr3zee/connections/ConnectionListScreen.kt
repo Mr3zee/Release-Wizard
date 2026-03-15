@@ -23,6 +23,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.ListItemCard
 import com.github.mr3zee.components.RefreshErrorBanner
+import com.github.mr3zee.components.RwButton
+import com.github.mr3zee.components.RwButtonVariant
+import com.github.mr3zee.components.RwChip
+import com.github.mr3zee.components.RwIconButton
+import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.components.loadMoreItem
 import com.github.mr3zee.model.Connection
 import com.github.mr3zee.model.ConnectionId
@@ -103,8 +108,9 @@ fun ConnectionListScreen(
                 TopAppBar(
                     title = { Text(packStringResource(Res.string.connections_title)) },
                     navigationIcon = {
-                        TextButton(
+                        RwButton(
                             onClick = onBack,
+                            variant = RwButtonVariant.Ghost,
                             modifier = Modifier.testTag("back_button"),
                         ) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
@@ -117,7 +123,7 @@ fun ConnectionListScreen(
                             tooltip = { PlainTooltip { Text(packStringResource(Res.string.common_refresh)) } },
                             state = rememberTooltipState(),
                         ) {
-                            IconButton(
+                            RwIconButton(
                                 onClick = { viewModel.refresh() },
                                 modifier = Modifier.testTag("refresh_button"),
                             ) {
@@ -169,13 +175,14 @@ fun ConnectionListScreen(
                 )
             }
 
-            OutlinedTextField(
+            RwTextField(
                 value = searchQuery,
                 onValueChange = { viewModel.setSearchQuery(it) },
-                placeholder = { Text(packStringResource(Res.string.connections_search_placeholder)) },
+                placeholder = packStringResource(Res.string.connections_search_placeholder),
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .widthIn(max = 900.dp)
                     .padding(horizontal = 16.dp, vertical = 8.dp)
                     .testTag("search_field"),
             )
@@ -185,13 +192,13 @@ fun ConnectionListScreen(
                     .padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                FilterChip(
+                RwChip(
                     selected = typeFilter == null,
                     onClick = { viewModel.setTypeFilter(null) },
                     label = { Text(packStringResource(Res.string.common_all)) },
                 )
                 for (type in ConnectionType.entries) {
-                    FilterChip(
+                    RwChip(
                         selected = typeFilter == type,
                         onClick = {
                             viewModel.setTypeFilter(if (typeFilter == type) null else type)
@@ -223,10 +230,10 @@ fun ConnectionListScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Spacer(modifier = Modifier.height(8.dp))
-                            TextButton(onClick = {
+                            RwButton(onClick = {
                                 viewModel.setSearchQuery("")
                                 viewModel.setTypeFilter(null)
-                            }) {
+                            }, variant = RwButtonVariant.Ghost) {
                                 Text(packStringResource(Res.string.common_clear_search))
                             }
                         }
@@ -267,15 +274,15 @@ fun ConnectionListScreen(
             title = { Text(packStringResource(Res.string.connections_delete_title)) },
             text = { Text(packStringResource(Res.string.connections_delete_confirmation, connection.name)) },
             confirmButton = {
-                TextButton(onClick = {
+                RwButton(onClick = {
                     viewModel.deleteConnection(connection.id)
                     connectionToDelete = null
-                }) {
-                    Text(packStringResource(Res.string.common_delete), color = MaterialTheme.colorScheme.error)
+                }, variant = RwButtonVariant.Ghost, contentColor = MaterialTheme.colorScheme.error) {
+                    Text(packStringResource(Res.string.common_delete))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { connectionToDelete = null }) {
+                RwButton(onClick = { connectionToDelete = null }, variant = RwButtonVariant.Ghost) {
                     Text(packStringResource(Res.string.common_cancel))
                 }
             },
@@ -321,11 +328,11 @@ private fun ConnectionListItem(
             }
         }
         Row {
-            TextButton(onClick = onTest) {
+            RwButton(onClick = onTest, variant = RwButtonVariant.Ghost) {
                 Text(packStringResource(Res.string.connections_test))
             }
-            TextButton(onClick = onDelete) {
-                Text(packStringResource(Res.string.common_delete), color = MaterialTheme.colorScheme.error)
+            RwButton(onClick = onDelete, variant = RwButtonVariant.Ghost, contentColor = MaterialTheme.colorScheme.error) {
+                Text(packStringResource(Res.string.common_delete))
             }
         }
     }

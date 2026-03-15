@@ -102,20 +102,40 @@ internal fun handleScrollZoom(
 }
 
 internal fun DrawScope.drawGrid(transform: CanvasTransform, colors: AppColors) {
-    val gridScreenSize = transform.toScreen(GRID_SIZE)
-    if (gridScreenSize < 4f) return
+    // Minor grid lines (every GRID_SIZE = 20 logical units)
+    val minorScreenSize = transform.toScreen(GRID_SIZE)
+    if (minorScreenSize >= 8f) {
+        val startX = transform.panOffset.x % minorScreenSize
+        val startY = transform.panOffset.y % minorScreenSize
 
-    val startX = transform.panOffset.x % gridScreenSize
-    val startY = transform.panOffset.y % gridScreenSize
-
-    var x = startX
-    while (x < size.width) {
+        var x = startX
+        while (x < size.width) {
+            drawLine(colors.canvasGridMinor, Offset(x, 0f), Offset(x, size.height), strokeWidth = 0.25f)
+            x += minorScreenSize
+        }
         var y = startY
         while (y < size.height) {
-            drawCircle(colors.canvasGridDots, radius = 1.5f, center = Offset(x, y))
-            y += gridScreenSize
+            drawLine(colors.canvasGridMinor, Offset(0f, y), Offset(size.width, y), strokeWidth = 0.25f)
+            y += minorScreenSize
         }
-        x += gridScreenSize
+    }
+
+    // Major grid lines (every 100 logical units = 5 * GRID_SIZE)
+    val majorScreenSize = transform.toScreen(GRID_SIZE * 5f)
+    if (majorScreenSize >= 20f) {
+        val startX = transform.panOffset.x % majorScreenSize
+        val startY = transform.panOffset.y % majorScreenSize
+
+        var x = startX
+        while (x < size.width) {
+            drawLine(colors.canvasGridMajor, Offset(x, 0f), Offset(x, size.height), strokeWidth = 0.5f)
+            x += majorScreenSize
+        }
+        var y = startY
+        while (y < size.height) {
+            drawLine(colors.canvasGridMajor, Offset(0f, y), Offset(size.width, y), strokeWidth = 0.5f)
+            y += majorScreenSize
+        }
     }
 }
 
@@ -136,10 +156,11 @@ internal fun DrawScope.drawBlock(
     val screenH = transform.toScreen(BLOCK_HEIGHT)
     val cornerRadius = transform.toScreen(8f)
 
-    // Shadow
+    // Shadow (offset scaled with zoom)
+    val shadowOffset = transform.toScreen(1.5f)
     drawRoundRect(
         color = colors.blockShadow,
-        topLeft = Offset(screenX + 2f, screenY + 2f),
+        topLeft = Offset(screenX + shadowOffset, screenY + shadowOffset),
         size = Size(screenW, screenH),
         cornerRadius = CornerRadius(cornerRadius),
     )
@@ -150,6 +171,16 @@ internal fun DrawScope.drawBlock(
         topLeft = Offset(screenX, screenY),
         size = Size(screenW, screenH),
         cornerRadius = CornerRadius(cornerRadius),
+    )
+
+    // Inner highlight (thin light line at top edge for raised-panel effect)
+    val highlightInset = transform.toScreen(1.5f)
+    drawRoundRect(
+        color = colors.blockInnerHighlight,
+        topLeft = Offset(screenX + highlightInset, screenY + highlightInset),
+        size = Size(screenW - highlightInset * 2, screenH - highlightInset * 2),
+        cornerRadius = CornerRadius(cornerRadius - highlightInset),
+        style = Stroke(width = transform.toScreen(0.75f)),
     )
 
     // Selection border
@@ -220,6 +251,14 @@ internal fun DrawScope.drawPorts(
 
     val inX = transform.toScreenX(position.x)
     val inY = transform.toScreenY(position.y + BLOCK_HEIGHT / 2)
+    // Hover ring (outer glow) on input port
+    if (isInputHovered) {
+        drawCircle(
+            color = colors.portHoverRing,
+            radius = portScreenRadius * 2f,
+            center = Offset(inX, inY),
+        )
+    }
     drawCircle(
         color = if (isInputHovered) colors.portHover else colors.portDefault,
         radius = portScreenRadius,
@@ -228,6 +267,14 @@ internal fun DrawScope.drawPorts(
 
     val outX = transform.toScreenX(position.x + BLOCK_WIDTH)
     val outY = transform.toScreenY(position.y + BLOCK_HEIGHT / 2)
+    // Hover ring (outer glow) on output port
+    if (isOutputHovered) {
+        drawCircle(
+            color = colors.portHoverRing,
+            radius = portScreenRadius * 2f,
+            center = Offset(outX, outY),
+        )
+    }
     drawCircle(
         color = if (isOutputHovered) colors.portHover else colors.portDefault,
         radius = portScreenRadius,
@@ -256,14 +303,27 @@ internal fun DrawScope.drawEdge(
         cubicTo(cp1x, startY, cp2x, endY, endX, endY)
     }
 
+    // Scale stroke widths with zoom for consistent visual weight
+    val baseStroke = transform.toScreen(1.5f)
+    val selectedStroke = transform.toScreen(2f)
+
+    // Glow effect for selected edges (outer pass at 30% alpha, wider stroke)
+    if (isSelected) {
+        drawPath(
+            path,
+            color = colors.edgeGlow,
+            style = Stroke(width = transform.toScreen(4f)),
+        )
+    }
+
     drawPath(
         path,
         color = if (isSelected) colors.edgeSelected else colors.edgeDefault,
-        style = Stroke(width = if (isSelected) 3f else 2f),
+        style = Stroke(width = if (isSelected) selectedStroke else baseStroke),
     )
 
-    // Arrow dot at end
-    val arrowSize = transform.toScreen(6f)
+    // Arrow dot at end (smaller than PORT_RADIUS to avoid overlap)
+    val arrowSize = transform.toScreen(3.5f)
     drawCircle(
         color = if (isSelected) colors.edgeSelected else colors.edgeDefault,
         radius = arrowSize,
@@ -271,7 +331,7 @@ internal fun DrawScope.drawEdge(
     )
 }
 
-internal fun DrawScope.drawDraftEdge(start: Offset, end: Offset, colors: AppColors) {
+internal fun DrawScope.drawDraftEdge(start: Offset, end: Offset, colors: AppColors, zoom: Float = 1f) {
     val dx = end.x - start.x
     val cp1x = start.x + dx * 0.4f
     val cp2x = end.x - dx * 0.4f
@@ -281,12 +341,16 @@ internal fun DrawScope.drawDraftEdge(start: Offset, end: Offset, colors: AppColo
         cubicTo(cp1x, start.y, cp2x, end.y, end.x, end.y)
     }
 
+    val strokeWidth = (2f * zoom).coerceIn(1f, 8f)
+    val dashLength = (8f * zoom).coerceIn(4f, 32f)
+    val gapLength = (4f * zoom).coerceIn(2f, 16f)
+
     drawPath(
         path,
         color = colors.draftEdge,
         style = Stroke(
-            width = 2f,
-            pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(8f, 4f)),
+            width = strokeWidth,
+            pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(dashLength, gapLength)),
         ),
     )
 }

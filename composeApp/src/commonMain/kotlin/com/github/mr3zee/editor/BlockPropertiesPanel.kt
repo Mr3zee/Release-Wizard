@@ -9,6 +9,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import com.github.mr3zee.components.RwButton
+import com.github.mr3zee.components.RwButtonVariant
+import com.github.mr3zee.components.RwCheckbox
+import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.model.*
 import com.github.mr3zee.util.displayName
 import com.github.mr3zee.i18n.packPluralStringResource
@@ -53,13 +57,14 @@ fun BlockPropertiesPanel(
 
         // Name
         var name by remember(block.id) { mutableStateOf(block.name) }
-        OutlinedTextField(
+        RwTextField(
             value = name,
             onValueChange = {
                 name = it
                 onUpdateName(block.id, it)
             },
-            label = { Text(packStringResource(Res.string.editor_prop_name)) },
+            label = packStringResource(Res.string.editor_prop_name),
+            placeholder = packStringResource(Res.string.editor_prop_name),
             singleLine = true,
             enabled = enabled,
             modifier = Modifier.fillMaxWidth().testTag("block_name_field"),
@@ -113,8 +118,9 @@ private fun ActionBlockProperties(
     var typeExpanded by remember(block.id) { mutableStateOf(false) }
     Text(packStringResource(Res.string.editor_prop_type), style = MaterialTheme.typography.labelMedium)
     Box {
-        OutlinedButton(
+        RwButton(
             onClick = { typeExpanded = true },
+            variant = RwButtonVariant.Secondary,
             enabled = enabled,
             modifier = Modifier.fillMaxWidth().testTag("block_type_selector"),
         ) {
@@ -142,14 +148,15 @@ private fun ActionBlockProperties(
     var timeoutText by remember(block.id) {
         mutableStateOf(block.timeoutSeconds?.toString() ?: "")
     }
-    OutlinedTextField(
+    RwTextField(
         value = timeoutText,
         onValueChange = { text ->
             timeoutText = text
             val seconds = text.toLongOrNull()
             onUpdateTimeout(block.id, seconds)
         },
-        label = { Text(packStringResource(Res.string.editor_prop_timeout)) },
+        label = packStringResource(Res.string.editor_prop_timeout),
+        placeholder = packStringResource(Res.string.editor_prop_timeout),
         singleLine = true,
         enabled = enabled,
         modifier = Modifier.fillMaxWidth().testTag("block_timeout_field"),
@@ -201,11 +208,12 @@ private fun ActionBlockProperties(
         }
     }
 
-    OutlinedButton(
+    RwButton(
         onClick = {
             params = params + Parameter(key = "", value = "")
             onUpdateParameters(block.id, params)
         },
+        variant = RwButtonVariant.Secondary,
         enabled = enabled,
         modifier = Modifier.fillMaxWidth().testTag("add_parameter_button"),
     ) {
@@ -231,8 +239,9 @@ private fun GateConfigSection(
     }
     val label = gateHeader + if (expanded) " \u25BE" else " \u25B8"
 
-    OutlinedButton(
+    RwButton(
         onClick = { expanded = !expanded },
+        variant = RwButtonVariant.Secondary,
         enabled = enabled,
         modifier = Modifier.fillMaxWidth().testTag("gate_section_toggle"),
     ) {
@@ -289,7 +298,7 @@ private fun SingleGateEditor(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Checkbox(
+        RwCheckbox(
             checked = isEnabled,
             onCheckedChange = { checked ->
                 if (checked) {
@@ -330,8 +339,9 @@ private fun SingleGateEditor(
                 tooltip = { PlainTooltip { Text(packStringResource(Res.string.editor_template_tooltip)) } },
                 state = rememberTooltipState(),
             ) {
-                TextButton(
+                RwButton(
                     onClick = { showTemplatePicker = true },
+                    variant = RwButtonVariant.Ghost,
                     enabled = enabled,
                     contentPadding = PaddingValues(4.dp),
                     modifier = Modifier.testTag("${testTagPrefix}_template_button"),
@@ -343,14 +353,15 @@ private fun SingleGateEditor(
 
         val countValue = requiredCount.toIntOrNull()
         val isCountError = countValue == null || countValue < 1
-        OutlinedTextField(
+        RwTextField(
             value = requiredCount,
             onValueChange = { text ->
                 requiredCount = text
                 val count = text.toIntOrNull()?.coerceAtLeast(1) ?: 1
                 onUpdate(gate.copy(approvalRule = gate.approvalRule.copy(requiredCount = count)))
             },
-            label = { Text(packStringResource(Res.string.editor_gate_required_approvals)) },
+            label = packStringResource(Res.string.editor_gate_required_approvals),
+            placeholder = packStringResource(Res.string.editor_gate_required_approvals),
             supportingText = if (isCountError) {{ Text(packStringResource(Res.string.editor_gate_approval_count_error)) }} else null,
             isError = isCountError,
             singleLine = true,
@@ -392,10 +403,10 @@ private fun ParameterRow(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        OutlinedTextField(
+        RwTextField(
             value = parameter.key,
             onValueChange = { onUpdate(parameter.copy(key = it)) },
-            label = { Text(packStringResource(Res.string.editor_prop_key)) },
+            placeholder = packStringResource(Res.string.editor_prop_key),
             singleLine = true,
             enabled = enabled,
             modifier = Modifier.weight(1f),
@@ -418,8 +429,9 @@ private fun ParameterRow(
             tooltip = { PlainTooltip { Text(packStringResource(Res.string.editor_template_tooltip)) } },
             state = rememberTooltipState(),
         ) {
-            TextButton(
+            RwButton(
                 onClick = { showTemplatePicker = true },
+                variant = RwButtonVariant.Ghost,
                 enabled = enabled,
                 contentPadding = PaddingValues(4.dp),
                 modifier = Modifier.testTag("insert_template_button"),
@@ -427,12 +439,14 @@ private fun ParameterRow(
                 Text(packStringResource(Res.string.editor_template_button), style = MaterialTheme.typography.bodySmall)
             }
         }
-        TextButton(
+        RwButton(
             onClick = onRemove,
+            variant = RwButtonVariant.Ghost,
             enabled = enabled,
             contentPadding = PaddingValues(4.dp),
+            contentColor = MaterialTheme.colorScheme.error,
         ) {
-            Text(packStringResource(Res.string.editor_prop_remove), color = MaterialTheme.colorScheme.error)
+            Text(packStringResource(Res.string.editor_prop_remove))
         }
     }
 

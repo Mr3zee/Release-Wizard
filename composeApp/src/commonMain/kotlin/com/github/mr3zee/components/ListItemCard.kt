@@ -1,12 +1,10 @@
 package com.github.mr3zee.components
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Card
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,13 +18,11 @@ fun ListItemCard(
     testTag: String? = null,
     content: @Composable RowScope.() -> Unit,
 ) {
-    Card(
+    RwCard(
+        onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
-            .let { mod ->
-                if (onClick != null) mod.clickable(onClick = onClick) else mod
-            }
             .let { mod ->
                 if (testTag != null) mod.testTag(testTag) else mod
             },

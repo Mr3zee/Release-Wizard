@@ -3,6 +3,7 @@ androidx-lifecycle = "2.9.6"
 cronUtils = "9.2.1"
 composeHotReload = "1.0.0"
 composeMultiplatform = "1.10.0"
+composeUnstyled = "1.49.6"
 composeUiTestServer = "0.2.0"
 exposed = "1.1.1"
 h2 = "2.3.232"
@@ -32,6 +33,7 @@ compose-material3 = { module = "org.jetbrains.compose.material3:material3", vers
 compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "composeMultiplatform" }
 compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "composeMultiplatform" }
 compose-uiToolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "composeMultiplatform" }
+compose-unstyled = { module = "com.composables:composeunstyled", version.ref = "composeUnstyled" }
 compose-uiTestServer = { module = "io.github.forketyfork:compose-ui-test-server", version.ref = "composeUiTestServer" }
 kotlinx-coroutinesSwing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "kotlinx-coroutines" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }

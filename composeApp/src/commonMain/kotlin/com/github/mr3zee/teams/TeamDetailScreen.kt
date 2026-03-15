@@ -13,6 +13,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.ListItemCard
+import com.github.mr3zee.components.RwButton
+import com.github.mr3zee.components.RwButtonVariant
+import com.github.mr3zee.components.RwCard
 import com.github.mr3zee.model.TeamMembership
 import com.github.mr3zee.util.displayName
 import com.github.mr3zee.util.resolve
@@ -47,27 +50,31 @@ fun TeamDetailScreen(
                     )
                 },
                 navigationIcon = {
-                    TextButton(onClick = onBack, modifier = Modifier.testTag("back_button")) {
+                    RwButton(onClick = onBack, variant = RwButtonVariant.Ghost, modifier = Modifier.testTag("back_button")) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
                         Text(packStringResource(Res.string.common_back))
                     }
                 },
                 actions = {
-                    TextButton(
+                    RwButton(
                         onClick = { showLeaveDialog = true },
+                        variant = RwButtonVariant.Ghost,
+                        contentColor = MaterialTheme.colorScheme.error,
                         modifier = Modifier.testTag("leave_team_button"),
                     ) {
-                        Text(packStringResource(Res.string.teams_leave), color = MaterialTheme.colorScheme.error)
+                        Text(packStringResource(Res.string.teams_leave))
                     }
-                    TextButton(
+                    RwButton(
                         onClick = onAuditLog,
+                        variant = RwButtonVariant.Ghost,
                         modifier = Modifier.testTag("audit_log_button"),
                     ) {
                         Text(packStringResource(Res.string.teams_audit_log))
                     }
                     if (isTeamLead) {
-                        TextButton(
+                        RwButton(
                             onClick = onManage,
+                            variant = RwButtonVariant.Ghost,
                             modifier = Modifier.testTag("manage_team_button"),
                         ) {
                             Text(packStringResource(Res.string.teams_manage))
@@ -87,7 +94,7 @@ fun TeamDetailScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(error?.resolve() ?: packStringResource(Res.string.common_unknown_error), color = MaterialTheme.colorScheme.error)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Button(onClick = { viewModel.loadDetail() }) { Text(packStringResource(Res.string.common_retry)) }
+                    RwButton(onClick = { viewModel.loadDetail() }, variant = RwButtonVariant.Primary) { Text(packStringResource(Res.string.common_retry)) }
                 }
             }
         } else {
@@ -97,7 +104,7 @@ fun TeamDetailScreen(
             ) {
                 team?.let { t ->
                     item {
-                        Card(
+                        RwCard(
                             modifier = Modifier
                                 .widthIn(max = 900.dp)
                                 .fillMaxWidth()
@@ -158,15 +165,15 @@ fun TeamDetailScreen(
             title = { Text(packStringResource(Res.string.teams_leave_title)) },
             text = { Text(packStringResource(Res.string.teams_leave_confirmation, team?.name ?: packStringResource(Res.string.teams_leave_fallback))) },
             confirmButton = {
-                TextButton(onClick = {
+                RwButton(onClick = {
                     showLeaveDialog = false
                     viewModel.leaveTeam { onBack() }
-                }) {
-                    Text(packStringResource(Res.string.teams_leave), color = MaterialTheme.colorScheme.error)
+                }, variant = RwButtonVariant.Ghost, contentColor = MaterialTheme.colorScheme.error) {
+                    Text(packStringResource(Res.string.teams_leave))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showLeaveDialog = false }) { Text(packStringResource(Res.string.common_cancel)) }
+                RwButton(onClick = { showLeaveDialog = false }, variant = RwButtonVariant.Ghost) { Text(packStringResource(Res.string.common_cancel)) }
             },
         )
     }

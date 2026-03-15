@@ -551,9 +551,7 @@ class ReleaseScreensTest {
         }
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("block_detail_panel").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("error_detail_section", useUnmergedTree = true).assertExists()
-        // Expand the error section to reveal the error text
-        onNodeWithTag("error_header", useUnmergedTree = true).performClick()
-        waitForIdle()
+        // Error section is expanded by default — error text should be visible immediately
         onNodeWithText("Connection timeout", substring = true, useUnmergedTree = true).assertExists()
     }
 

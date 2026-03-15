@@ -8,7 +8,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -25,7 +24,13 @@ import androidx.compose.ui.unit.dp
 import com.github.mr3zee.api.TeamResponse
 import com.github.mr3zee.components.ListItemCard
 import com.github.mr3zee.components.RefreshErrorBanner
+import com.github.mr3zee.components.RwButton
+import com.github.mr3zee.components.RwButtonVariant
+import com.github.mr3zee.components.RwCard
+import com.github.mr3zee.components.RwIconButton
+import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.model.TeamId
+import com.github.mr3zee.theme.AppShapes
 import com.github.mr3zee.util.resolve
 import com.github.mr3zee.i18n.packPluralStringResource
 import com.github.mr3zee.i18n.packStringResource
@@ -90,15 +95,16 @@ fun TeamListScreen(
                     title = { Text(packStringResource(Res.string.teams_title)) },
                     navigationIcon = {
                         if (onBack != null) {
-                            TextButton(onClick = onBack) {
+                            RwButton(onClick = onBack, variant = RwButtonVariant.Ghost) {
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
                                 Text(packStringResource(Res.string.common_back))
                             }
                         }
                     },
                     actions = {
-                        TextButton(
+                        RwButton(
                             onClick = onMyInvites,
+                            variant = RwButtonVariant.Ghost,
                             modifier = Modifier.testTag("my_invites_button"),
                         ) {
                             Text(packStringResource(Res.string.teams_my_invites))
@@ -108,7 +114,7 @@ fun TeamListScreen(
                             tooltip = { PlainTooltip { Text(packStringResource(Res.string.common_refresh)) } },
                             state = rememberTooltipState(),
                         ) {
-                            IconButton(
+                            RwIconButton(
                                 onClick = { viewModel.refresh() },
                                 modifier = Modifier.testTag("refresh_button"),
                             ) {
@@ -158,26 +164,25 @@ fun TeamListScreen(
                 )
             }
 
-            OutlinedTextField(
+            RwTextField(
                 value = searchQuery,
                 onValueChange = { viewModel.setSearchQuery(it) },
-                placeholder = { Text(packStringResource(Res.string.teams_search_placeholder)) },
+                placeholder = packStringResource(Res.string.teams_search_placeholder),
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .widthIn(max = 900.dp)
                     .padding(horizontal = 16.dp, vertical = 8.dp)
                     .testTag("team_search_field"),
             )
 
             val resolvedMessage = message?.resolve()
             if (resolvedMessage != null) {
-                Card(
+                RwCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    ),
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(12.dp),
@@ -190,7 +195,7 @@ fun TeamListScreen(
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.weight(1f),
                         )
-                        TextButton(onClick = { viewModel.clearMessage() }) {
+                        RwButton(onClick = { viewModel.clearMessage() }, variant = RwButtonVariant.Ghost) {
                             Text(packStringResource(Res.string.common_dismiss))
                         }
                     }
@@ -211,7 +216,7 @@ fun TeamListScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Spacer(modifier = Modifier.height(8.dp))
-                            TextButton(onClick = { viewModel.setSearchQuery("") }) {
+                            RwButton(onClick = { viewModel.setSearchQuery("") }, variant = RwButtonVariant.Ghost) {
                                 Text(packStringResource(Res.string.common_clear_search))
                             }
                         }
@@ -293,7 +298,7 @@ private fun TeamListItem(
         if (isMember) {
             Surface(
                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                shape = RoundedCornerShape(50),
+                shape = AppShapes.pill,
             ) {
                 Text(
                     packStringResource(Res.string.teams_member_badge),
@@ -303,7 +308,7 @@ private fun TeamListItem(
                 )
             }
         } else {
-            TextButton(onClick = onJoinRequest) {
+            RwButton(onClick = onJoinRequest, variant = RwButtonVariant.Ghost) {
                 Text(packStringResource(Res.string.teams_request_to_join))
             }
         }
@@ -323,29 +328,31 @@ private fun CreateTeamDialog(
         title = { Text(packStringResource(Res.string.teams_new_team)) },
         text = {
             Column {
-                OutlinedTextField(
+                RwTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text(packStringResource(Res.string.teams_team_name)) },
+                    label = packStringResource(Res.string.teams_team_name),
+                    placeholder = packStringResource(Res.string.teams_team_name),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().testTag("team_name_input"),
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
+                RwTextField(
                     value = description,
                     onValueChange = { description = it },
-                    label = { Text(packStringResource(Res.string.teams_description_optional)) },
+                    label = packStringResource(Res.string.teams_description_optional),
+                    placeholder = packStringResource(Res.string.teams_description_optional),
                     modifier = Modifier.fillMaxWidth().testTag("team_description_input"),
                 )
             }
         },
         confirmButton = {
-            TextButton(onClick = { onCreate(name, description) }, enabled = name.isNotBlank()) {
+            RwButton(onClick = { onCreate(name, description) }, variant = RwButtonVariant.Ghost, enabled = name.isNotBlank()) {
                 Text(packStringResource(Res.string.common_create))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(packStringResource(Res.string.common_cancel)) }
+            RwButton(onClick = onDismiss, variant = RwButtonVariant.Ghost) { Text(packStringResource(Res.string.common_cancel)) }
         },
     )
 }

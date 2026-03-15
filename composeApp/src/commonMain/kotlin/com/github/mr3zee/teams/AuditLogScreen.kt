@@ -12,6 +12,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.github.mr3zee.components.RwButton
+import com.github.mr3zee.components.RwButtonVariant
+import com.github.mr3zee.components.RwCard
 import com.github.mr3zee.model.AuditEvent
 import com.github.mr3zee.util.resolve
 import kotlin.time.Instant
@@ -51,7 +54,7 @@ fun AuditLogScreen(
             TopAppBar(
                 title = { Text(packStringResource(Res.string.teams_audit_log_title)) },
                 navigationIcon = {
-                    TextButton(onClick = onBack, modifier = Modifier.testTag("back_button")) {
+                    RwButton(onClick = onBack, variant = RwButtonVariant.Ghost, modifier = Modifier.testTag("back_button")) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
                         Text(packStringResource(Res.string.common_back))
                     }
@@ -86,8 +89,9 @@ fun AuditLogScreen(
                 }
                 if (hasMore) {
                     item {
-                        TextButton(
+                        RwButton(
                             onClick = { viewModel.loadMore() },
+                            variant = RwButtonVariant.Ghost,
                             modifier = Modifier.fillMaxWidth().padding(8.dp).testTag("load_more_audit"),
                         ) {
                             Text(packStringResource(Res.string.teams_load_more))
@@ -104,7 +108,7 @@ private fun AuditEventItem(
     event: AuditEvent,
     modifier: Modifier = Modifier,
 ) {
-    Card(
+    RwCard(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)

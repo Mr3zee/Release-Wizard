@@ -10,7 +10,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
@@ -18,6 +17,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.github.mr3zee.components.RwButton
+import com.github.mr3zee.components.RwButtonVariant
 import kotlinx.serialization.json.Json
 import com.github.mr3zee.i18n.packStringResource
 import releasewizard.composeapp.generated.resources.*
@@ -57,15 +58,17 @@ fun ArtifactTreeView(artifactsJson: String) {
                 style = MaterialTheme.typography.labelMedium,
             )
             Row {
-                TextButton(
+                RwButton(
                     onClick = { expandAll(tree, "", expandedState) },
                     modifier = Modifier.testTag("artifact_expand_all_button"),
+                    variant = RwButtonVariant.Ghost,
                 ) {
                     Text(packStringResource(Res.string.common_expand_all), style = MaterialTheme.typography.labelSmall)
                 }
-                TextButton(
+                RwButton(
                     onClick = { expandedState.clear() },
                     modifier = Modifier.testTag("artifact_collapse_all_button"),
+                    variant = RwButtonVariant.Ghost,
                 ) {
                     Text(packStringResource(Res.string.common_collapse_all), style = MaterialTheme.typography.labelSmall)
                 }

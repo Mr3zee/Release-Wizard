@@ -18,6 +18,10 @@ import androidx.compose.ui.unit.dp
 import com.github.mr3zee.api.UserTeamInfo
 import com.github.mr3zee.components.ListItemCard
 import com.github.mr3zee.components.RefreshErrorBanner
+import com.github.mr3zee.components.RwButton
+import com.github.mr3zee.components.RwButtonVariant
+import com.github.mr3zee.components.RwIconButton
+import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.components.loadMoreItem
 import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.model.ProjectTemplate
@@ -73,8 +77,9 @@ fun ProjectListScreen(
                 TopAppBar(
                     title = {
                         if (userTeams.size > 1) {
-                            TextButton(
+                            RwButton(
                                 onClick = { showTeamPicker = true },
+                                variant = RwButtonVariant.Ghost,
                                 modifier = Modifier.testTag("team_switcher"),
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -100,32 +105,36 @@ fun ProjectListScreen(
                     },
                     actions = {
                         if (onTeams != null) {
-                            TextButton(
+                            RwButton(
                                 onClick = onTeams,
+                                variant = RwButtonVariant.Ghost,
                                 modifier = Modifier.testTag("teams_button"),
                             ) {
                                 Text(packStringResource(Res.string.projects_teams))
                             }
                         }
                         if (onReleases != null) {
-                            TextButton(
+                            RwButton(
                                 onClick = onReleases,
+                                variant = RwButtonVariant.Ghost,
                                 modifier = Modifier.testTag("releases_button"),
                             ) {
                                 Text(packStringResource(Res.string.projects_releases))
                             }
                         }
                         if (onConnections != null) {
-                            TextButton(
+                            RwButton(
                                 onClick = onConnections,
+                                variant = RwButtonVariant.Ghost,
                                 modifier = Modifier.testTag("connections_button"),
                             ) {
                                 Text(packStringResource(Res.string.projects_connections))
                             }
                         }
                         if (onLogout != null) {
-                            TextButton(
+                            RwButton(
                                 onClick = onLogout,
+                                variant = RwButtonVariant.Ghost,
                                 modifier = Modifier.testTag("logout_button"),
                             ) {
                                 Text(packStringResource(Res.string.auth_sign_out))
@@ -133,7 +142,7 @@ fun ProjectListScreen(
                         }
                         // Overflow menu for theme toggle and refresh
                         Box {
-                            IconButton(
+                            RwIconButton(
                                 onClick = { showOverflowMenu = true },
                                 modifier = Modifier.testTag("overflow_menu_button"),
                             ) {
@@ -241,13 +250,14 @@ fun ProjectListScreen(
                 )
             }
 
-            OutlinedTextField(
+            RwTextField(
                 value = searchQuery,
                 onValueChange = { viewModel.setSearchQuery(it) },
-                placeholder = { Text(packStringResource(Res.string.projects_search_placeholder)) },
+                placeholder = packStringResource(Res.string.projects_search_placeholder),
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .widthIn(max = 900.dp)
                     .padding(horizontal = 16.dp, vertical = 8.dp)
                     .testTag("search_field"),
             )
@@ -270,7 +280,7 @@ fun ProjectListScreen(
                             color = MaterialTheme.colorScheme.error,
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Button(onClick = { viewModel.loadProjects() }) {
+                        RwButton(onClick = { viewModel.loadProjects() }, variant = RwButtonVariant.Primary) {
                             Text(packStringResource(Res.string.common_retry))
                         }
                     }
@@ -288,7 +298,7 @@ fun ProjectListScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Spacer(modifier = Modifier.height(8.dp))
-                            TextButton(onClick = { viewModel.setSearchQuery("") }) {
+                            RwButton(onClick = { viewModel.setSearchQuery("") }, variant = RwButtonVariant.Ghost) {
                                 Text(packStringResource(Res.string.common_clear_search))
                             }
                         }
@@ -339,15 +349,19 @@ fun ProjectListScreen(
             title = { Text(packStringResource(Res.string.projects_delete_title)) },
             text = { Text(packStringResource(Res.string.projects_delete_confirmation, project.name)) },
             confirmButton = {
-                TextButton(onClick = {
-                    viewModel.deleteProject(project.id)
-                    projectToDelete = null
-                }) {
-                    Text(packStringResource(Res.string.common_delete), color = MaterialTheme.colorScheme.error)
+                RwButton(
+                    onClick = {
+                        viewModel.deleteProject(project.id)
+                        projectToDelete = null
+                    },
+                    variant = RwButtonVariant.Ghost,
+                    contentColor = MaterialTheme.colorScheme.error,
+                ) {
+                    Text(packStringResource(Res.string.common_delete))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { projectToDelete = null }) {
+                RwButton(onClick = { projectToDelete = null }, variant = RwButtonVariant.Ghost) {
                     Text(packStringResource(Res.string.common_cancel))
                 }
             },
@@ -361,11 +375,12 @@ fun ProjectListScreen(
             text = {
                 Column {
                     userTeams.forEach { teamInfo ->
-                        TextButton(
+                        RwButton(
                             onClick = {
                                 onTeamChanged(teamInfo.teamId)
                                 showTeamPicker = false
                             },
+                            variant = RwButtonVariant.Ghost,
                             modifier = Modifier.fillMaxWidth().testTag("team_picker_${teamInfo.teamId.value}"),
                         ) {
                             Text(
@@ -379,7 +394,7 @@ fun ProjectListScreen(
             },
             confirmButton = {},
             dismissButton = {
-                TextButton(onClick = { showTeamPicker = false }) { Text(packStringResource(Res.string.common_cancel)) }
+                RwButton(onClick = { showTeamPicker = false }, variant = RwButtonVariant.Ghost) { Text(packStringResource(Res.string.common_cancel)) }
             },
         )
     }
@@ -419,8 +434,8 @@ private fun ProjectListItem(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        TextButton(onClick = onDelete) {
-            Text(packStringResource(Res.string.common_delete), color = MaterialTheme.colorScheme.error)
+        RwButton(onClick = onDelete, variant = RwButtonVariant.Ghost, contentColor = MaterialTheme.colorScheme.error) {
+            Text(packStringResource(Res.string.common_delete))
         }
     }
 }
@@ -436,10 +451,11 @@ private fun CreateProjectDialog(
         onDismissRequest = onDismiss,
         title = { Text(packStringResource(Res.string.projects_new_project)) },
         text = {
-            OutlinedTextField(
+            RwTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text(packStringResource(Res.string.projects_project_name)) },
+                label = packStringResource(Res.string.projects_project_name),
+                placeholder = packStringResource(Res.string.projects_project_name),
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -447,15 +463,16 @@ private fun CreateProjectDialog(
             )
         },
         confirmButton = {
-            TextButton(
+            RwButton(
                 onClick = { onCreate(name) },
+                variant = RwButtonVariant.Ghost,
                 enabled = name.isNotBlank(),
             ) {
                 Text(packStringResource(Res.string.common_create))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            RwButton(onClick = onDismiss, variant = RwButtonVariant.Ghost) {
                 Text(packStringResource(Res.string.common_cancel))
             }
         },

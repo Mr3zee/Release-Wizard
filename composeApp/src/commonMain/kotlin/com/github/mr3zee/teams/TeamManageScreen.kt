@@ -13,6 +13,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.ListItemCard
+import com.github.mr3zee.components.RwButton
+import com.github.mr3zee.components.RwButtonVariant
+import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.model.*
 import com.github.mr3zee.util.displayName
 import com.github.mr3zee.util.resolve
@@ -55,7 +58,7 @@ fun TeamManageScreen(
             TopAppBar(
                 title = { Text(packStringResource(Res.string.teams_manage_title)) },
                 navigationIcon = {
-                    TextButton(onClick = onBack, modifier = Modifier.testTag("back_button")) {
+                    RwButton(onClick = onBack, variant = RwButtonVariant.Ghost, modifier = Modifier.testTag("back_button")) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
                         Text(packStringResource(Res.string.common_back))
                     }
@@ -85,8 +88,9 @@ fun TeamManageScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(packStringResource(Res.string.teams_members_count, members.size), style = MaterialTheme.typography.titleMedium)
-                        TextButton(
+                        RwButton(
                             onClick = { showInviteDialog = true },
+                            variant = RwButtonVariant.Ghost,
                             modifier = Modifier.testTag("invite_user_button"),
                         ) {
                             Text(packStringResource(Res.string.teams_invite_user))
@@ -173,15 +177,15 @@ fun TeamManageScreen(
             title = { Text(packStringResource(Res.string.teams_remove)) },
             text = { Text(packStringResource(Res.string.teams_remove_member_confirmation, member.username)) },
             confirmButton = {
-                TextButton(onClick = {
+                RwButton(onClick = {
                     viewModel.removeMember(member.userId.value)
                     memberToRemove = null
-                }) {
-                    Text(packStringResource(Res.string.teams_remove), color = MaterialTheme.colorScheme.error)
+                }, variant = RwButtonVariant.Ghost, contentColor = MaterialTheme.colorScheme.error) {
+                    Text(packStringResource(Res.string.teams_remove))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { memberToRemove = null }) { Text(packStringResource(Res.string.common_cancel)) }
+                RwButton(onClick = { memberToRemove = null }, variant = RwButtonVariant.Ghost) { Text(packStringResource(Res.string.common_cancel)) }
             },
         )
     }
@@ -192,15 +196,15 @@ fun TeamManageScreen(
             title = { Text(packStringResource(Res.string.teams_revoke_invite)) },
             text = { Text(packStringResource(Res.string.teams_cancel_invite_confirmation, invite.invitedUsername)) },
             confirmButton = {
-                TextButton(onClick = {
+                RwButton(onClick = {
                     viewModel.cancelInvite(invite.id)
                     inviteToCancel = null
-                }) {
-                    Text(packStringResource(Res.string.teams_revoke_invite), color = MaterialTheme.colorScheme.error)
+                }, variant = RwButtonVariant.Ghost, contentColor = MaterialTheme.colorScheme.error) {
+                    Text(packStringResource(Res.string.teams_revoke_invite))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { inviteToCancel = null }) { Text(packStringResource(Res.string.teams_keep)) }
+                RwButton(onClick = { inviteToCancel = null }, variant = RwButtonVariant.Ghost) { Text(packStringResource(Res.string.teams_keep)) }
             },
         )
     }
@@ -230,11 +234,11 @@ private fun ManageMemberItem(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        TextButton(onClick = onToggleRole) {
+        RwButton(onClick = onToggleRole, variant = RwButtonVariant.Ghost) {
             Text(if (member.role == TeamRole.TEAM_LEAD) packStringResource(Res.string.teams_demote) else packStringResource(Res.string.teams_promote))
         }
-        TextButton(onClick = onRemove) {
-            Text(packStringResource(Res.string.teams_remove), color = MaterialTheme.colorScheme.error)
+        RwButton(onClick = onRemove, variant = RwButtonVariant.Ghost, contentColor = MaterialTheme.colorScheme.error) {
+            Text(packStringResource(Res.string.teams_remove))
         }
     }
 }
@@ -256,8 +260,8 @@ private fun InviteItem(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
-        TextButton(onClick = onCancel) {
-            Text(packStringResource(Res.string.teams_revoke_invite), color = MaterialTheme.colorScheme.error)
+        RwButton(onClick = onCancel, variant = RwButtonVariant.Ghost, contentColor = MaterialTheme.colorScheme.error) {
+            Text(packStringResource(Res.string.teams_revoke_invite))
         }
     }
 }
@@ -281,9 +285,9 @@ private fun JoinRequestItem(
             modifier = Modifier.weight(1f),
         )
         Row {
-            TextButton(onClick = onApprove) { Text(packStringResource(Res.string.common_approve)) }
-            TextButton(onClick = onReject) {
-                Text(packStringResource(Res.string.teams_reject), color = MaterialTheme.colorScheme.error)
+            RwButton(onClick = onApprove, variant = RwButtonVariant.Ghost) { Text(packStringResource(Res.string.common_approve)) }
+            RwButton(onClick = onReject, variant = RwButtonVariant.Ghost, contentColor = MaterialTheme.colorScheme.error) {
+                Text(packStringResource(Res.string.teams_reject))
             }
         }
     }
@@ -296,22 +300,22 @@ private fun InviteUserDialog(onDismiss: () -> Unit, onInvite: (String) -> Unit) 
         onDismissRequest = onDismiss,
         title = { Text(packStringResource(Res.string.teams_invite_dialog_title)) },
         text = {
-            OutlinedTextField(
+            RwTextField(
                 value = username,
                 onValueChange = { username = it },
-                label = { Text(packStringResource(Res.string.teams_invite_username_label)) },
-                placeholder = { Text(packStringResource(Res.string.teams_invite_username_placeholder)) },
+                label = packStringResource(Res.string.teams_invite_username_label),
+                placeholder = packStringResource(Res.string.teams_invite_username_placeholder),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().testTag("invite_user_id_input"),
             )
         },
         confirmButton = {
-            TextButton(onClick = { onInvite(username) }, enabled = username.isNotBlank()) {
+            RwButton(onClick = { onInvite(username) }, variant = RwButtonVariant.Ghost, enabled = username.isNotBlank()) {
                 Text(packStringResource(Res.string.teams_invite))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(packStringResource(Res.string.common_cancel)) }
+            RwButton(onClick = onDismiss, variant = RwButtonVariant.Ghost) { Text(packStringResource(Res.string.common_cancel)) }
         },
     )
 }

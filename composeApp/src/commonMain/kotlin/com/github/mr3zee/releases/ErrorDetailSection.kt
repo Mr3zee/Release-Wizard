@@ -13,6 +13,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import com.github.mr3zee.components.RwButton
+import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.util.copyToClipboard
 import kotlin.time.Instant
 import com.github.mr3zee.i18n.packStringResource
@@ -24,7 +26,7 @@ fun ErrorDetailSection(
     finishedAt: Instant?,
     modifier: Modifier = Modifier,
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(true) }
 
     Surface(
         color = MaterialTheme.colorScheme.errorContainer,
@@ -72,9 +74,10 @@ fun ErrorDetailSection(
                         )
                     }
                     Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedButton(
+                    RwButton(
                         onClick = { copyToClipboard(error) },
                         modifier = Modifier.testTag("copy_error_button"),
+                        variant = RwButtonVariant.Secondary,
                     ) {
                         Text(packStringResource(Res.string.common_copy_to_clipboard))
                     }

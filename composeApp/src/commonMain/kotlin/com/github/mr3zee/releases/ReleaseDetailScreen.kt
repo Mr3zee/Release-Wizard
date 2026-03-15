@@ -1,6 +1,8 @@
 package com.github.mr3zee.releases
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
@@ -10,6 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.github.mr3zee.components.RwButton
+import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.model.*
 import com.github.mr3zee.model.isTerminal
 import com.github.mr3zee.util.UiMessage
@@ -58,20 +62,23 @@ fun ReleaseDetailScreen(
             title = { Text(packStringResource(Res.string.releases_cancel_title)) },
             text = { Text(packStringResource(Res.string.releases_cancel_body)) },
             confirmButton = {
-                TextButton(
+                RwButton(
                     onClick = {
                         showCancelConfirmation = false
                         onCancel()
                     },
                     modifier = Modifier.testTag("confirm_cancel_button"),
+                    variant = RwButtonVariant.Ghost,
+                    contentColor = MaterialTheme.colorScheme.error,
                 ) {
-                    Text(packStringResource(Res.string.releases_cancel_confirm), color = MaterialTheme.colorScheme.error)
+                    Text(packStringResource(Res.string.releases_cancel_confirm))
                 }
             },
             dismissButton = {
-                TextButton(
+                RwButton(
                     onClick = { showCancelConfirmation = false },
                     modifier = Modifier.testTag("dismiss_cancel_button"),
+                    variant = RwButtonVariant.Ghost,
                 ) {
                     Text(packStringResource(Res.string.releases_keep_running))
                 }
@@ -90,20 +97,22 @@ fun ReleaseDetailScreen(
             title = { Text(packStringResource(Res.string.releases_approve_title, approveBlock?.name ?: packStringResource(Res.string.releases_approve_fallback_name))) },
             text = { Text(approveMessage ?: packStringResource(Res.string.releases_approve_default_message)) },
             confirmButton = {
-                TextButton(
+                RwButton(
                     onClick = {
                         showApproveConfirmation = null
                         onApproveBlock(blockId)
                     },
                     modifier = Modifier.testTag("confirm_approve_button"),
+                    variant = RwButtonVariant.Ghost,
                 ) {
                     Text(packStringResource(Res.string.common_approve))
                 }
             },
             dismissButton = {
-                TextButton(
+                RwButton(
                     onClick = { showApproveConfirmation = null },
                     modifier = Modifier.testTag("dismiss_approve_button"),
+                    variant = RwButtonVariant.Ghost,
                 ) {
                     Text(packStringResource(Res.string.common_cancel))
                 }
@@ -131,7 +140,7 @@ fun ReleaseDetailScreen(
                     }
                 },
                 navigationIcon = {
-                    TextButton(onClick = onBack) {
+                    RwButton(onClick = onBack, variant = RwButtonVariant.Ghost) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
                         Text(packStringResource(Res.string.common_back))
                     }
@@ -153,24 +162,28 @@ fun ReleaseDetailScreen(
                         )
                     }
                     if (release?.status == ReleaseStatus.RUNNING) {
-                        TextButton(
+                        RwButton(
                             onClick = { showCancelConfirmation = true },
                             modifier = Modifier.testTag("cancel_release_button"),
+                            variant = RwButtonVariant.Ghost,
+                            contentColor = MaterialTheme.colorScheme.error,
                         ) {
-                            Text(packStringResource(Res.string.common_cancel), color = MaterialTheme.colorScheme.error)
+                            Text(packStringResource(Res.string.common_cancel))
                         }
                     }
                     if (release != null && release.status.isTerminal) {
-                        TextButton(
+                        RwButton(
                             onClick = onRerun,
                             modifier = Modifier.testTag("rerun_release_button"),
+                            variant = RwButtonVariant.Ghost,
                         ) {
                             Text(packStringResource(Res.string.releases_rerun))
                         }
                         if (release.status != ReleaseStatus.ARCHIVED) {
-                            TextButton(
+                            RwButton(
                                 onClick = onArchive,
                                 modifier = Modifier.testTag("archive_release_button"),
+                                variant = RwButtonVariant.Ghost,
                             ) {
                                 Text(packStringResource(Res.string.releases_archive))
                             }
@@ -247,7 +260,10 @@ private fun BlockDetailPanel(
             .testTag("block_detail_panel"),
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier
+                .heightIn(max = 320.dp)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -261,12 +277,12 @@ private fun BlockDetailPanel(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
-                TextButton(onClick = onDismiss) {
+                RwButton(onClick = onDismiss, variant = RwButtonVariant.Ghost) {
                     Text(packStringResource(Res.string.common_close))
                 }
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
                 text = packStringResource(Res.string.releases_block_status, execution.status.displayName()),
@@ -275,7 +291,7 @@ private fun BlockDetailPanel(
             )
 
             execution.error?.let { errorMsg ->
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 ErrorDetailSection(
                     error = errorMsg,
                     finishedAt = execution.finishedAt,
@@ -284,7 +300,7 @@ private fun BlockDetailPanel(
 
             val genericOutputs = execution.outputs.filterKeys { it != BlockExecution.ARTIFACTS_OUTPUT_KEY }
             if (genericOutputs.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = packStringResource(Res.string.releases_block_outputs),
                     style = MaterialTheme.typography.labelMedium,
@@ -345,9 +361,10 @@ private fun BlockDetailPanel(
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
-                Button(
+                RwButton(
                     onClick = onApprove,
                     modifier = Modifier.testTag("approve_block_button"),
+                    variant = RwButtonVariant.Primary,
                 ) {
                     Text(packStringResource(Res.string.common_approve))
                 }

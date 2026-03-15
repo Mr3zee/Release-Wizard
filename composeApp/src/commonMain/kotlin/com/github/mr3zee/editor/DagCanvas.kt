@@ -260,7 +260,7 @@ fun DagCanvas(
             val fromPos = graph.positions[draft.fromBlockId] ?: return@let
             val startScreenX = drawTransform.toScreenX(fromPos.x + BLOCK_WIDTH)
             val startScreenY = drawTransform.toScreenY(fromPos.y + BLOCK_HEIGHT / 2)
-            drawDraftEdge(Offset(startScreenX, startScreenY), draft.currentScreenPos, appColors)
+            drawDraftEdge(Offset(startScreenX, startScreenY), draft.currentScreenPos, appColors, zoom)
         }
 
         for (block in graph.blocks) {

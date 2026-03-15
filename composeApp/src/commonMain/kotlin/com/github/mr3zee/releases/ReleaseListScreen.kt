@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -27,11 +26,17 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.ListItemCard
 import com.github.mr3zee.components.RefreshErrorBanner
+import com.github.mr3zee.components.RwButton
+import com.github.mr3zee.components.RwButtonVariant
+import com.github.mr3zee.components.RwChip
+import com.github.mr3zee.components.RwIconButton
+import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.components.loadMoreItem
 import com.github.mr3zee.model.Release
 import com.github.mr3zee.model.ReleaseId
 import com.github.mr3zee.model.ReleaseStatus
 import com.github.mr3zee.model.isTerminal
+import com.github.mr3zee.theme.AppShapes
 import com.github.mr3zee.theme.LocalAppColors
 import com.github.mr3zee.util.displayName
 import com.github.mr3zee.util.resolve
@@ -132,9 +137,10 @@ fun ReleaseListScreen(
                         }
                     },
                     navigationIcon = {
-                        TextButton(
+                        RwButton(
                             onClick = onBack,
                             modifier = Modifier.testTag("back_button"),
+                            variant = RwButtonVariant.Ghost,
                         ) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
                             Text(packStringResource(Res.string.common_back))
@@ -146,7 +152,7 @@ fun ReleaseListScreen(
                             tooltip = { PlainTooltip { Text(packStringResource(Res.string.common_refresh)) } },
                             state = rememberTooltipState(),
                         ) {
-                            IconButton(
+                            RwIconButton(
                                 onClick = { viewModel.refresh() },
                                 modifier = Modifier.testTag("refresh_button"),
                             ) {
@@ -197,13 +203,14 @@ fun ReleaseListScreen(
                 )
             }
 
-            OutlinedTextField(
+            RwTextField(
                 value = searchQuery,
                 onValueChange = { viewModel.setSearchQuery(it) },
-                placeholder = { Text(packStringResource(Res.string.releases_search_placeholder)) },
+                placeholder = packStringResource(Res.string.releases_search_placeholder),
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .widthIn(max = 900.dp)
                     .padding(horizontal = 16.dp, vertical = 8.dp)
                     .testTag("search_field"),
             )
@@ -213,13 +220,13 @@ fun ReleaseListScreen(
                     .padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                FilterChip(
+                RwChip(
                     selected = statusFilter == null,
                     onClick = { viewModel.setStatusFilter(null) },
                     label = { Text(packStringResource(Res.string.common_all)) },
                 )
                 for (status in listOf(ReleaseStatus.RUNNING, ReleaseStatus.SUCCEEDED, ReleaseStatus.FAILED)) {
-                    FilterChip(
+                    RwChip(
                         selected = statusFilter == status,
                         onClick = {
                             viewModel.setStatusFilter(if (statusFilter == status) null else status)
@@ -237,14 +244,14 @@ fun ReleaseListScreen(
                         .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    FilterChip(
+                    RwChip(
                         selected = projectFilter == null,
                         onClick = { viewModel.setProjectFilter(null) },
                         label = { Text(packStringResource(Res.string.releases_filter_all_projects)) },
                         modifier = Modifier.testTag("filter_all_projects"),
                     )
                     for (project in projects) {
-                        FilterChip(
+                        RwChip(
                             selected = projectFilter == project.id,
                             onClick = {
                                 viewModel.setProjectFilter(
@@ -277,9 +284,10 @@ fun ReleaseListScreen(
                             color = MaterialTheme.colorScheme.error,
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Button(
+                        RwButton(
                             onClick = { viewModel.loadReleases() },
                             modifier = Modifier.testTag("retry_button"),
+                            variant = RwButtonVariant.Primary,
                         ) {
                             Text(packStringResource(Res.string.common_retry))
                         }
@@ -298,11 +306,14 @@ fun ReleaseListScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Spacer(modifier = Modifier.height(8.dp))
-                            TextButton(onClick = {
-                                viewModel.setSearchQuery("")
-                                viewModel.setStatusFilter(null)
-                                viewModel.setProjectFilter(null)
-                            }) {
+                            RwButton(
+                                onClick = {
+                                    viewModel.setSearchQuery("")
+                                    viewModel.setStatusFilter(null)
+                                    viewModel.setProjectFilter(null)
+                                },
+                                variant = RwButtonVariant.Ghost,
+                            ) {
                                 Text(packStringResource(Res.string.common_clear_search))
                             }
                         }
@@ -391,7 +402,7 @@ private fun ReleaseListItem(
         StatusBadge(release.status)
         if (release.status.isTerminal) {
             Box {
-                IconButton(
+                RwIconButton(
                     onClick = { showMenu = true },
                     modifier = Modifier.testTag("release_menu_${release.id.value}"),
                 ) {
@@ -430,12 +441,12 @@ private fun ReleaseListItem(
             title = { Text(packStringResource(Res.string.releases_archive_title)) },
             text = { Text(packStringResource(Res.string.releases_archive_confirmation)) },
             confirmButton = {
-                TextButton(onClick = { showArchiveConfirm = false; onArchive() }) {
+                RwButton(onClick = { showArchiveConfirm = false; onArchive() }, variant = RwButtonVariant.Ghost) {
                     Text(packStringResource(Res.string.releases_archive))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showArchiveConfirm = false }) {
+                RwButton(onClick = { showArchiveConfirm = false }, variant = RwButtonVariant.Ghost) {
                     Text(packStringResource(Res.string.common_cancel))
                 }
             },
@@ -448,12 +459,16 @@ private fun ReleaseListItem(
             title = { Text(packStringResource(Res.string.releases_delete_title)) },
             text = { Text(packStringResource(Res.string.releases_delete_confirmation)) },
             confirmButton = {
-                TextButton(onClick = { showDeleteConfirm = false; onDelete() }) {
-                    Text(packStringResource(Res.string.common_delete), color = MaterialTheme.colorScheme.error)
+                RwButton(
+                    onClick = { showDeleteConfirm = false; onDelete() },
+                    variant = RwButtonVariant.Ghost,
+                    contentColor = MaterialTheme.colorScheme.error,
+                ) {
+                    Text(packStringResource(Res.string.common_delete))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) {
+                RwButton(onClick = { showDeleteConfirm = false }, variant = RwButtonVariant.Ghost) {
                     Text(packStringResource(Res.string.common_cancel))
                 }
             },
@@ -475,7 +490,7 @@ internal fun StatusBadge(status: ReleaseStatus) {
     val label = status.displayName()
     Surface(
         color = color.copy(alpha = 0.15f),
-        shape = RoundedCornerShape(50),
+        shape = AppShapes.pill,
         modifier = Modifier.testTag("status_badge_${status.name}"),
     ) {
         Text(

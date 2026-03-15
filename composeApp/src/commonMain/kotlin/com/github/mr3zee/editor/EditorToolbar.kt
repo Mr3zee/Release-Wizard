@@ -14,6 +14,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import com.github.mr3zee.components.RwButton
+import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.model.BlockType
 import com.github.mr3zee.theme.LocalAppColors
 import com.github.mr3zee.util.displayName
@@ -53,15 +55,14 @@ fun EditorToolbar(
         )
 
         BlockType.entries.forEach { type ->
-            OutlinedButton(
+            RwButton(
                 onClick = { onAddBlock(type, defaultBlockName(type)) },
+                variant = RwButtonVariant.Secondary,
                 enabled = enabled,
+                contentColor = blockTypeColor(type, appColors),
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("add_block_${type.name}"),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = blockTypeColor(type, appColors),
-                ),
             ) {
                 Text(
                     type.displayName(),
@@ -70,15 +71,14 @@ fun EditorToolbar(
             }
         }
 
-        OutlinedButton(
+        RwButton(
             onClick = { onAddContainer("Container") },
+            variant = RwButtonVariant.Secondary,
             enabled = enabled,
+            contentColor = appColors.containerBlock,
             modifier = Modifier
                 .fillMaxWidth()
                 .testTag("add_container"),
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = appColors.containerBlock,
-            ),
         ) {
             Text(packStringResource(Res.string.editor_toolbar_container), style = MaterialTheme.typography.labelMedium)
         }
@@ -95,8 +95,9 @@ fun EditorToolbar(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            OutlinedButton(
+            RwButton(
                 onClick = onUndo,
+                variant = RwButtonVariant.Secondary,
                 enabled = enabled && canUndo,
                 modifier = Modifier.weight(1f).testTag("undo_button"),
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
@@ -105,8 +106,9 @@ fun EditorToolbar(
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(packStringResource(Res.string.editor_toolbar_undo))
             }
-            OutlinedButton(
+            RwButton(
                 onClick = onRedo,
+                variant = RwButtonVariant.Secondary,
                 enabled = enabled && canRedo,
                 modifier = Modifier.weight(1f).testTag("redo_button"),
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
@@ -121,8 +123,9 @@ fun EditorToolbar(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            OutlinedButton(
+            RwButton(
                 onClick = onCopy,
+                variant = RwButtonVariant.Secondary,
                 enabled = hasSelection, // Copy always allowed
                 modifier = Modifier.weight(1f).testTag("copy_button"),
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
@@ -131,8 +134,9 @@ fun EditorToolbar(
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(packStringResource(Res.string.editor_toolbar_copy))
             }
-            OutlinedButton(
+            RwButton(
                 onClick = onPaste,
+                variant = RwButtonVariant.Secondary,
                 enabled = enabled && hasClipboard,
                 modifier = Modifier.weight(1f).testTag("paste_button"),
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
@@ -143,13 +147,12 @@ fun EditorToolbar(
             }
         }
 
-        OutlinedButton(
+        RwButton(
             onClick = onDelete,
+            variant = RwButtonVariant.Secondary,
             enabled = enabled && hasSelection,
+            contentColor = MaterialTheme.colorScheme.error,
             modifier = Modifier.fillMaxWidth().testTag("delete_button"),
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = MaterialTheme.colorScheme.error,
-            ),
             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
         ) {
             Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
