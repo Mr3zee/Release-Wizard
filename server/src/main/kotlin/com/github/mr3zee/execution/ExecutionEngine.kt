@@ -20,6 +20,7 @@ import kotlin.time.Duration.Companion.seconds
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Clock
 import kotlin.time.Instant
 
@@ -54,7 +55,7 @@ class ExecutionEngine(
     private val pendingApprovals = ConcurrentHashMap<ReleaseId, ConcurrentHashMap<BlockId, CompletableDeferred<Map<String, String>>>>()
 
     // Per-release sequence counter for replay support
-    private val sequenceCounters = ConcurrentHashMap<ReleaseId, java.util.concurrent.atomic.AtomicLong>()
+    private val sequenceCounters = ConcurrentHashMap<ReleaseId, AtomicLong>()
 
     // Per-release replay buffer (most recent events, capped at maxReplayBufferSize)
     private val replayBuffers = ConcurrentHashMap<ReleaseId, java.util.ArrayDeque<ReleaseEvent>>()
@@ -90,7 +91,7 @@ class ExecutionEngine(
 
     private fun emitEvent(event: ReleaseEvent) {
         val releaseId = event.releaseId
-        val seq = sequenceCounters.getOrPut(releaseId) { java.util.concurrent.atomic.AtomicLong(0) }
+        val seq = sequenceCounters.getOrPut(releaseId) { AtomicLong(0) }
             .incrementAndGet()
         val numberedEvent = event.withSequenceNumber(seq)
 

@@ -3,11 +3,14 @@ package com.github.mr3zee.execution
 import com.github.mr3zee.model.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.test.fail
 import kotlin.time.Duration.Companion.seconds
 
 class TimeoutTest {
@@ -26,36 +29,42 @@ class TimeoutTest {
     @Test
     fun `block with timeout fails with descriptive message`() = runBlocking {
         val repo = InMemoryReleasesRepository()
-        val engine = ExecutionEngine(repo, SlowBlockExecutor(), FakeConnectionsRepository(), CoroutineScope(SupervisorJob()))
+        val scope = CoroutineScope(SupervisorJob())
+        try {
+            val engine = ExecutionEngine(repo, SlowBlockExecutor(), FakeConnectionsRepository(), scope)
 
-        val release = Release(
-            id = ReleaseId("r-timeout"),
-            projectTemplateId = ProjectId("p1"),
-            status = ReleaseStatus.PENDING,
-            dagSnapshot = DagGraph(
-                blocks = listOf(
-                    Block.ActionBlock(
-                        id = BlockId("slow"),
-                        name = "Slow Block",
-                        type = BlockType.TEAMCITY_BUILD,
-                        timeoutSeconds = 1,
+            val release = Release(
+                id = ReleaseId("r-timeout"),
+                projectTemplateId = ProjectId("p1"),
+                status = ReleaseStatus.PENDING,
+                dagSnapshot = DagGraph(
+                    blocks = listOf(
+                        Block.ActionBlock(
+                            id = BlockId("slow"),
+                            name = "Slow Block",
+                            type = BlockType.TEAMCITY_BUILD,
+                            timeoutSeconds = 1,
+                        ),
                     ),
                 ),
-            ),
-        )
-        repo.insertRelease(release)
+            )
+            repo.insertRelease(release)
 
-        engine.startExecution(release)
-        engine.awaitExecution(release.id)
+            engine.startExecution(release)
+            engine.awaitExecution(release.id)
 
-        val finalRelease = repo.findById(release.id)
-            ?: error("Release '${release.id}' should exist after execution")
-        assertEquals(ReleaseStatus.FAILED, finalRelease.status)
+            val finalRelease = repo.findById(release.id)
+                ?: fail("Release '${release.id}' should exist after execution")
+            assertEquals(ReleaseStatus.FAILED, finalRelease.status)
 
-        val blockExec = repo.findBlockExecution(release.id, BlockId("slow"))
-            ?: error("Block execution for 'slow' should exist after execution")
-        assertEquals(BlockStatus.FAILED, blockExec.status)
-        val errorMessage = blockExec.error ?: error("Block execution error should not be null for a failed/timed-out block")
-        assertTrue(errorMessage.contains("timed out"), "Error should mention timeout: $errorMessage")
+            val blockExec = repo.findBlockExecution(release.id, BlockId("slow"))
+                ?: fail("Block execution for 'slow' should exist after execution")
+            assertEquals(BlockStatus.FAILED, blockExec.status)
+            val errorMessage = blockExec.error ?: fail("Block execution error should not be null for a failed/timed-out block")
+            assertTrue(errorMessage.contains("timed out"), "Error should mention timeout: $errorMessage")
+        } finally {
+            scope.cancel()
+            scope.coroutineContext[Job]?.join()
+        }
     }
 }

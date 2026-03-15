@@ -16,6 +16,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.test.fail
 
 class ConcurrentReleasesTest {
 
@@ -286,16 +287,16 @@ class ConcurrentReleasesTest {
             val blocksByBlockId = result.blockExecutions.associateBy { it.blockId.value }
             // Find the chain blocks by suffix pattern
             val aBlock = blocksByBlockId.values.find { it.blockId.value.startsWith("a-") }
-                ?: error("Block execution starting with 'a-' should exist")
+                ?: fail("Block execution starting with 'a-' should exist")
             val bBlock = blocksByBlockId.values.find { it.blockId.value.startsWith("b-") }
-                ?: error("Block execution starting with 'b-' should exist")
+                ?: fail("Block execution starting with 'b-' should exist")
             val cBlock = blocksByBlockId.values.find { it.blockId.value.startsWith("c-") }
-                ?: error("Block execution starting with 'c-' should exist")
+                ?: fail("Block execution starting with 'c-' should exist")
 
-            val bStartedAt = bBlock.startedAt ?: error("bBlock.startedAt should not be null")
-            val aFinishedAt = aBlock.finishedAt ?: error("aBlock.finishedAt should not be null")
-            val cStartedAt = cBlock.startedAt ?: error("cBlock.startedAt should not be null")
-            val bFinishedAt = bBlock.finishedAt ?: error("bBlock.finishedAt should not be null")
+            val bStartedAt = bBlock.startedAt ?: fail("bBlock.startedAt should not be null")
+            val aFinishedAt = aBlock.finishedAt ?: fail("aBlock.finishedAt should not be null")
+            val cStartedAt = cBlock.startedAt ?: fail("cBlock.startedAt should not be null")
+            val bFinishedAt = bBlock.finishedAt ?: fail("bBlock.finishedAt should not be null")
             assertTrue(bStartedAt >= aFinishedAt, "B should start after A finishes")
             assertTrue(cStartedAt >= bFinishedAt, "C should start after B finishes")
         }

@@ -29,8 +29,10 @@ import io.ktor.client.request.*
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
 import io.ktor.client.plugins.cookies.*
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.job
 import kotlinx.coroutines.yield
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
@@ -91,7 +93,6 @@ val testOverrideModule = module {
     single<HttpClient> {
         createTestHttpClient()
     }
-    single { CoroutineScope(SupervisorJob()) }
 }
 
 fun Application.testModuleWithPasswordPolicy(
@@ -104,6 +105,8 @@ fun Application.testModule(
     passwordPolicyConfig: PasswordPolicyConfig = testPasswordPolicyConfig(),
     authConfig: AuthConfig = testAuthConfig(),
 ) {
+    val executionScope = CoroutineScope(SupervisorJob(coroutineContext.job) + Dispatchers.Default)
+
     install(Koin) {
         slf4jLogger()
         allowOverride(true)
@@ -120,6 +123,7 @@ fun Application.testModule(
             triggersModule,
             tagsModule,
             teamsModule,
+            module { single { executionScope } },
             testOverrideModule,
         )
     }
