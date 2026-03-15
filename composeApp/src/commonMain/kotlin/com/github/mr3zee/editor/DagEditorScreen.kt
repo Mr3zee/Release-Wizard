@@ -34,6 +34,7 @@ fun DagEditorScreen(
     val clipboard by viewModel.clipboard.collectAsState()
     val lockState by viewModel.lockState.collectAsState()
     val isReadOnly by viewModel.isReadOnly.collectAsState()
+    val isLockedBySelf by viewModel.isLockedBySelf.collectAsState()
 
     var showDiscardDialog by remember { mutableStateOf(false) }
     var showForceUnlockDialog by remember { mutableStateOf(false) }
@@ -190,6 +191,7 @@ fun DagEditorScreen(
             // Lock banners
             EditLockBanner(
                 lockState = lockState,
+                isLockedBySelf = isLockedBySelf,
                 showForceUnlock = viewModel.showForceUnlock,
                 onForceUnlock = { showForceUnlockDialog = true },
                 onRetry = { viewModel.retryAcquireLock() },
@@ -362,6 +364,7 @@ fun DagEditorScreen(
 @Composable
 private fun EditLockBanner(
     lockState: LockState,
+    isLockedBySelf: Boolean,
     showForceUnlock: Boolean,
     onForceUnlock: () -> Unit,
     onRetry: () -> Unit,
@@ -392,9 +395,13 @@ private fun EditLockBanner(
                         tint = contentColor,
                     )
                     Spacer(Modifier.width(8.dp))
+                    // Self-lock must be checked first: when locked by self, username is also non-null
                     Text(
-                        if (username != null) "This project is being edited by $username"
-                        else "Could not acquire editing lock",
+                        when {
+                            isLockedBySelf -> "You are editing this project in another session"
+                            username != null -> "This project is being edited by $username"
+                            else -> "Could not acquire editing lock"
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = contentColor,
                         modifier = Modifier.weight(1f),

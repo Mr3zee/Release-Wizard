@@ -550,6 +550,8 @@ class DagEditorScreenTest {
 
     private val lockConflictJson = """{"error":"Project is locked by otheruser","code":"LOCK_CONFLICT","lock":{"userId":"u2","username":"otheruser","acquiredAt":"2026-03-13T00:00:00Z","expiresAt":"2026-03-13T00:05:00Z"}}"""
 
+    private val lockConflictBySelfJson = """{"error":"Project is locked by testuser","code":"LOCK_CONFLICT","lock":{"userId":"u1","username":"testuser","acquiredAt":"2026-03-13T00:00:00Z","expiresAt":"2026-03-13T00:05:00Z"}}"""
+
     private fun lockedByOtherClient() = mockHttpClient(
         mapOf(
             "/projects/p1" to json(projectJson, HttpStatusCode.OK, method = null),
@@ -559,6 +561,23 @@ class DagEditorScreenTest {
 
     private fun lockedByOtherViewModel(canForceUnlock: Boolean = false): DagEditorViewModel {
         val client = lockedByOtherClient()
+        return DagEditorViewModel(
+            projectId = ProjectId("p1"),
+            apiClient = ProjectApiClient(client),
+            currentUserId = "u1",
+            canForceUnlock = canForceUnlock,
+        )
+    }
+
+    private fun lockedBySelfClient() = mockHttpClient(
+        mapOf(
+            "/projects/p1" to json(projectJson, HttpStatusCode.OK, method = null),
+            "/projects/p1/lock" to json(lockConflictBySelfJson, HttpStatusCode.Conflict, method = HttpMethod.Post),
+        )
+    )
+
+    private fun lockedBySelfViewModel(canForceUnlock: Boolean = false): DagEditorViewModel {
+        val client = lockedBySelfClient()
         return DagEditorViewModel(
             projectId = ProjectId("p1"),
             apiClient = ProjectApiClient(client),
@@ -855,5 +874,72 @@ class DagEditorScreenTest {
         waitForIdle()
 
         onNodeWithTag("dag_editor_screen").assertExists()
+    }
+
+    // ---- Locked-by-self tests ----
+
+    @Test
+    fun `locked by self shows self-lock banner message`() = runComposeUiTest {
+        val vm = lockedBySelfViewModel()
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("edit_lock_banner").fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithText("You are editing this project in another session", substring = true).assertExists()
+        onNodeWithText("being edited by", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `locked by other shows other-user banner message`() = runComposeUiTest {
+        val vm = lockedByOtherViewModel()
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("edit_lock_banner").fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithText("being edited by otheruser", substring = true).assertExists()
+        onNodeWithText("another session", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `locked by self still shows force unlock when permitted`() = runComposeUiTest {
+        val vm = lockedBySelfViewModel(canForceUnlock = true)
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("edit_lock_banner").fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithTag("force_unlock_button").assertExists()
+        onNodeWithText("You are editing this project in another session", substring = true).assertExists()
+    }
+
+    @Test
+    fun `locked by self is read-only`() = runComposeUiTest {
+        val vm = lockedBySelfViewModel()
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("edit_lock_banner").fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithTag("save_button").assertIsNotEnabled()
+        onNodeWithTag("add_block_TEAMCITY_BUILD").assertIsNotEnabled()
+        onNodeWithTag("add_container").assertIsNotEnabled()
     }
 }

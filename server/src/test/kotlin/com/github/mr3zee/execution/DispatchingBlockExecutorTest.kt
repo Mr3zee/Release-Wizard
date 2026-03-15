@@ -69,8 +69,7 @@ class DispatchingBlockExecutorTest {
         val ghPubExecutor = FakeExecutor(mapOf("releaseUrl" to "https://github.com"))
         val dispatcher = DispatchingBlockExecutor(mapOf(BlockType.GITHUB_PUBLICATION to ghPubExecutor))
 
-        // todo claude: unused
-        val outputs = dispatcher.execute(block(BlockType.GITHUB_PUBLICATION), emptyList(), context)
+        dispatcher.execute(block(BlockType.GITHUB_PUBLICATION), emptyList(), context)
         assertTrue(ghPubExecutor.executeCalled)
     }
 

@@ -34,7 +34,6 @@ sealed interface LockState {
 class DagEditorViewModel(
     private val projectId: ProjectId,
     private val apiClient: ProjectApiClient,
-    // todo claude: unused
     private val currentUserId: String? = null,
     private val canForceUnlock: Boolean = false,
 ) : ViewModel() {
@@ -91,6 +90,10 @@ class DagEditorViewModel(
     val isReadOnly: StateFlow<Boolean> = _lockState.map { state ->
         state is LockState.LockedByOther || state is LockState.LockLost || state is LockState.Acquiring
     }.stateIn(viewModelScope, SharingStarted.Eagerly, true)
+
+    val isLockedBySelf: StateFlow<Boolean> = _lockState.map { state ->
+        state is LockState.LockedByOther && currentUserId != null && state.info?.userId == currentUserId
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     val showForceUnlock: Boolean get() = canForceUnlock
 

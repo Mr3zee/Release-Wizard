@@ -72,8 +72,7 @@ class ReleasesRoutesTest {
     fun `list releases returns empty list initially`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        // todo claude: unused
-        val teamId = client.loginAndCreateTeam()
+        client.loginAndCreateTeam()
 
         val response = client.get(ApiRoutes.Releases.BASE)
         assertEquals(HttpStatusCode.OK, response.status)
@@ -106,8 +105,7 @@ class ReleasesRoutesTest {
     fun `start release with nonexistent project returns 400`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        // todo claude: unused
-        val teamId = client.loginAndCreateTeam()
+        client.loginAndCreateTeam()
 
         val response = client.post(ApiRoutes.Releases.BASE) {
             contentType(ContentType.Application.Json)
@@ -267,8 +265,7 @@ class ReleasesRoutesTest {
     fun `get nonexistent release returns 404`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        // todo claude: unused
-        val teamId = client.loginAndCreateTeam()
+        client.loginAndCreateTeam()
 
         val response = client.get(ApiRoutes.Releases.byId("00000000-0000-0000-0000-000000000000"))
         assertEquals(HttpStatusCode.NotFound, response.status)
