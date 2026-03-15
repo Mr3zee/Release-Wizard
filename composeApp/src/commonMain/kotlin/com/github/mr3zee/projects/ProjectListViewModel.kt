@@ -43,6 +43,15 @@ class ProjectListViewModel(
     private val _isLoadingMore = MutableStateFlow(false)
     val isLoadingMore: StateFlow<Boolean> = _isLoadingMore
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing
+
+    private val _isManualRefresh = MutableStateFlow(false)
+    val isManualRefresh: StateFlow<Boolean> = _isManualRefresh
+
+    private val _refreshError = MutableStateFlow<String?>(null)
+    val refreshError: StateFlow<String?> = _refreshError
+
     private val pageSize = 20
 
     init {
@@ -60,6 +69,19 @@ class ProjectListViewModel(
 
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
+    }
+
+    fun refresh() {
+        if (_isRefreshing.value) return
+        viewModelScope.launch {
+            _isManualRefresh.value = true
+            _refreshError.value = null
+            try {
+                loadProjectsInternal(reset = true, silent = true)
+            } finally {
+                _isManualRefresh.value = false
+            }
+        }
     }
 
     fun loadProjects() {
@@ -92,8 +114,10 @@ class ProjectListViewModel(
         }
     }
 
-    private suspend fun loadProjectsInternal(reset: Boolean) {
-        if (reset) {
+    private suspend fun loadProjectsInternal(reset: Boolean, silent: Boolean = false) {
+        if (silent) {
+            _isRefreshing.value = true
+        } else if (reset) {
             _isLoading.value = true
             _error.value = null
         }
@@ -102,10 +126,16 @@ class ProjectListViewModel(
             val response = apiClient.listProjects(offset = 0, limit = pageSize, search = search)
             _projects.value = response.projects
             _pagination.value = response.pagination
+            _refreshError.value = null
         } catch (e: Exception) {
-            _error.value = e.toUserMessage()
+            if (silent) {
+                _refreshError.value = e.toUserMessage()
+            } else {
+                _error.value = e.toUserMessage()
+            }
         } finally {
             _isLoading.value = false
+            _isRefreshing.value = false
         }
     }
 
@@ -137,5 +167,9 @@ class ProjectListViewModel(
 
     fun dismissError() {
         _error.value = null
+    }
+
+    fun dismissRefreshError() {
+        _refreshError.value = null
     }
 }

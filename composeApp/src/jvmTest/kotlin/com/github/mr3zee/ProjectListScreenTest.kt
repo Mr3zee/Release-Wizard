@@ -14,6 +14,7 @@ import io.ktor.client.plugins.cookies.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.flow.MutableStateFlow
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -233,5 +234,146 @@ class ProjectListScreenTest {
         // Wait for the onEditProject callback to fire
         waitUntil(timeoutMillis = 5000L) { editedId != null }
         assertEquals(ProjectId("new-p1"), editedId)
+    }
+
+    // ---- Refresh Tests ----
+
+    @Test
+    fun `refresh menu item exists in overflow`() = runComposeUiTest {
+        val vm = ProjectListViewModel(ProjectApiClient(projectClient("""{"projects":[]}""")), MutableStateFlow(TeamId("test-team")))
+        setContent {
+            MaterialTheme {
+                ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = {}, onLogout = {})
+            }
+        }
+
+        onNodeWithTag("overflow_menu_button").performClick()
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("refresh_menu_item").fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithTag("refresh_menu_item").assertExists()
+    }
+
+    @Test
+    fun `refresh menu item triggers re-fetch`() = runComposeUiTest {
+        val returnNewData = AtomicBoolean(false)
+        val client = HttpClient(MockEngine { request ->
+            val path = request.url.encodedPath
+            val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            when {
+                path.endsWith("/projects") -> {
+                    val projects = if (!returnNewData.get()) {
+                        """[{"id":"p1","name":"Alpha","description":"","dagGraph":{"blocks":[],"edges":[],"positions":{}},"parameters":[],"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}]"""
+                    } else {
+                        """[{"id":"p1","name":"Alpha","description":"","dagGraph":{"blocks":[],"edges":[],"positions":{}},"parameters":[],"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"},{"id":"p-new","name":"Beta New","description":"","dagGraph":{"blocks":[],"edges":[],"positions":{}},"parameters":[],"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}]"""
+                    }
+                    respond("""{"projects":$projects}""", status = HttpStatusCode.OK, headers = jsonHeaders)
+                }
+                else -> respond("{}", status = HttpStatusCode.OK, headers = jsonHeaders)
+            }
+        }) {
+            install(ContentNegotiation) { json(AppJson) }
+            install(HttpCookies)
+            expectSuccess = true
+        }
+        val vm = ProjectListViewModel(ProjectApiClient(client), MutableStateFlow(TeamId("test-team")))
+
+        setContent {
+            MaterialTheme {
+                ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = {}, onLogout = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Alpha").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithText("Beta New").assertDoesNotExist()
+
+        returnNewData.set(true)
+        onNodeWithTag("overflow_menu_button").performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("refresh_menu_item").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("refresh_menu_item").performClick()
+
+        waitUntil(timeoutMillis = 5000L) { onAllNodesWithText("Beta New").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithText("Beta New").assertExists()
+    }
+
+    @Test
+    fun `refresh error shows banner and keeps list visible`() = runComposeUiTest {
+        val failOnRefresh = AtomicBoolean(false)
+        val client = HttpClient(MockEngine { request ->
+            val path = request.url.encodedPath
+            val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            when {
+                path.endsWith("/projects") -> {
+                    if (!failOnRefresh.get()) {
+                        respond(projectsJson, status = HttpStatusCode.OK, headers = jsonHeaders)
+                    } else {
+                        respond("Server error", status = HttpStatusCode.InternalServerError, headers = jsonHeaders)
+                    }
+                }
+                else -> respond("{}", status = HttpStatusCode.OK, headers = jsonHeaders)
+            }
+        }) {
+            install(ContentNegotiation) { json(AppJson) }
+            install(HttpCookies)
+            expectSuccess = true
+        }
+        val vm = ProjectListViewModel(ProjectApiClient(client), MutableStateFlow(TeamId("test-team")))
+
+        setContent {
+            MaterialTheme {
+                ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = {}, onLogout = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("My Pipeline").fetchSemanticsNodes().isNotEmpty() }
+
+        failOnRefresh.set(true)
+        onNodeWithTag("overflow_menu_button").performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("refresh_menu_item").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("refresh_menu_item").performClick()
+
+        waitUntil(timeoutMillis = 5000L) { onAllNodesWithTag("refresh_error_banner").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("refresh_error_banner").assertExists()
+        onNodeWithText("My Pipeline").assertExists()
+    }
+
+    @Test
+    fun `dismiss refresh error hides banner`() = runComposeUiTest {
+        val failOnRefresh = AtomicBoolean(false)
+        val client = HttpClient(MockEngine { request ->
+            val path = request.url.encodedPath
+            val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            when {
+                path.endsWith("/projects") -> {
+                    if (!failOnRefresh.get()) {
+                        respond(projectsJson, status = HttpStatusCode.OK, headers = jsonHeaders)
+                    } else {
+                        respond("Server error", status = HttpStatusCode.InternalServerError, headers = jsonHeaders)
+                    }
+                }
+                else -> respond("{}", status = HttpStatusCode.OK, headers = jsonHeaders)
+            }
+        }) {
+            install(ContentNegotiation) { json(AppJson) }
+            install(HttpCookies)
+            expectSuccess = true
+        }
+        val vm = ProjectListViewModel(ProjectApiClient(client), MutableStateFlow(TeamId("test-team")))
+
+        setContent {
+            MaterialTheme {
+                ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = {}, onLogout = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("My Pipeline").fetchSemanticsNodes().isNotEmpty() }
+        failOnRefresh.set(true)
+        onNodeWithTag("overflow_menu_button").performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("refresh_menu_item").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("refresh_menu_item").performClick()
+        waitUntil(timeoutMillis = 5000L) { onAllNodesWithTag("refresh_error_banner").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("dismiss_refresh_error").performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("refresh_error_banner").fetchSemanticsNodes().isEmpty() }
+        onNodeWithTag("refresh_error_banner").assertDoesNotExist()
     }
 }

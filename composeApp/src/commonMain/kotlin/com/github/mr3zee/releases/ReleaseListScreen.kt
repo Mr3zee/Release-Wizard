@@ -1,29 +1,39 @@
 package com.github.mr3zee.releases
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.ListItemCard
+import com.github.mr3zee.components.RefreshErrorBanner
 import com.github.mr3zee.components.loadMoreItem
 import com.github.mr3zee.model.Release
 import com.github.mr3zee.model.ReleaseId
 import com.github.mr3zee.model.ReleaseStatus
 import com.github.mr3zee.model.isTerminal
-import androidx.compose.foundation.shape.RoundedCornerShape
 import com.github.mr3zee.theme.LocalAppColors
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,8 +51,48 @@ fun ReleaseListScreen(
     val projectFilter by viewModel.projectFilter.collectAsState()
     val isLoadingMore by viewModel.isLoadingMore.collectAsState()
     val pagination by viewModel.pagination.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val isManualRefresh by viewModel.isManualRefresh.collectAsState()
+    val refreshError by viewModel.refreshError.collectAsState()
+    val lastRefreshedAt by viewModel.lastRefreshedAt.collectAsState()
 
     var showStartDialog by remember { mutableStateOf(false) }
+
+    // "Updated Xs ago" ticker
+    var relativeTimeText by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(lastRefreshedAt) {
+        val mark = lastRefreshedAt
+        if (mark == null) {
+            relativeTimeText = null
+            return@LaunchedEffect
+        }
+        while (true) {
+            val elapsed = mark.elapsedNow()
+            relativeTimeText = when {
+                elapsed.inWholeSeconds < 5 -> "Updated just now"
+                elapsed.inWholeSeconds < 60 -> "Updated ${elapsed.inWholeSeconds}s ago"
+                elapsed.inWholeMinutes < 60 -> "Updated ${elapsed.inWholeMinutes}m ago"
+                else -> "Updated ${elapsed.inWholeHours}h ago"
+            }
+            delay(1000)
+        }
+    }
+
+    // Spin animation for refresh icon
+    val infiniteTransition = rememberInfiniteTransition()
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1000, easing = LinearEasing),
+        ),
+    )
+    val spinning = isManualRefresh && isRefreshing
+
+    DisposableEffect(Unit) {
+        viewModel.setActive(true)
+        onDispose { viewModel.setActive(false) }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.loadProjects()
@@ -50,18 +100,62 @@ fun ReleaseListScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Releases") },
-                navigationIcon = {
-                    TextButton(
-                        onClick = onBack,
-                        modifier = Modifier.testTag("back_button"),
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Navigate back")
-                        Text("Back")
-                    }
-                },
-            )
+            Box {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text("Releases")
+                            if (relativeTimeText != null) {
+                                Text(
+                                    text = relativeTimeText ?: "",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.testTag("last_updated_text"),
+                                )
+                            }
+                        }
+                    },
+                    navigationIcon = {
+                        TextButton(
+                            onClick = onBack,
+                            modifier = Modifier.testTag("back_button"),
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Navigate back")
+                            Text("Back")
+                        }
+                    },
+                    actions = {
+                        TooltipBox(
+                            positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                            tooltip = { PlainTooltip { Text("Refresh") } },
+                            state = rememberTooltipState(),
+                        ) {
+                            IconButton(
+                                onClick = { viewModel.refresh() },
+                                modifier = Modifier.testTag("refresh_button"),
+                            ) {
+                                Icon(
+                                    Icons.Outlined.Refresh,
+                                    contentDescription = "Refresh",
+                                    modifier = Modifier
+                                        .rotate(if (spinning) rotation else 0f)
+                                        .testTag(if (spinning) "refresh_icon_spinning" else "refresh_icon_idle"),
+                                )
+                            }
+                        }
+                    },
+                )
+                if (isRefreshing && !isLoading) {
+                    LinearProgressIndicator(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(4.dp)
+                            .align(Alignment.BottomCenter)
+                            .alpha(if (isManualRefresh) 1f else 0.5f)
+                            .testTag("refresh_indicator"),
+                    )
+                }
+            }
         },
         floatingActionButton = {
             FloatingActionButton(
@@ -78,6 +172,14 @@ fun ReleaseListScreen(
                 .fillMaxSize()
                 .padding(padding),
         ) {
+            // Refresh error banner
+            if (refreshError != null) {
+                RefreshErrorBanner(
+                    message = refreshError ?: "",
+                    onDismiss = { viewModel.dismissRefreshError() },
+                )
+            }
+
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { viewModel.setSearchQuery(it) },

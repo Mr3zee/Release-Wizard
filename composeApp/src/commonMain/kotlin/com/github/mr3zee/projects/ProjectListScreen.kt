@@ -11,11 +11,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.api.UserTeamInfo
 import com.github.mr3zee.components.ListItemCard
+import com.github.mr3zee.components.RefreshErrorBanner
 import com.github.mr3zee.components.loadMoreItem
 import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.model.ProjectTemplate
@@ -44,6 +46,9 @@ fun ProjectListScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
     val isLoadingMore by viewModel.isLoadingMore.collectAsState()
     val pagination by viewModel.pagination.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val isManualRefresh by viewModel.isManualRefresh.collectAsState()
+    val refreshError by viewModel.refreshError.collectAsState()
 
     var showCreateDialog by remember { mutableStateOf(false) }
     var projectToDelete by remember { mutableStateOf<ProjectTemplate?>(null) }
@@ -55,103 +60,123 @@ fun ProjectListScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    if (userTeams.size > 1) {
-                        TextButton(
-                            onClick = { showTeamPicker = true },
-                            modifier = Modifier.testTag("team_switcher"),
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    "Projects - $activeTeamName",
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
+            Box {
+                TopAppBar(
+                    title = {
+                        if (userTeams.size > 1) {
+                            TextButton(
+                                onClick = { showTeamPicker = true },
+                                modifier = Modifier.testTag("team_switcher"),
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        "Projects - $activeTeamName",
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    Icon(
+                                        Icons.Default.ArrowDropDown,
+                                        contentDescription = "Switch team",
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                }
+                            }
+                        } else {
+                            Text(
+                                "Projects - $activeTeamName",
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    },
+                    actions = {
+                        if (onTeams != null) {
+                            TextButton(
+                                onClick = onTeams,
+                                modifier = Modifier.testTag("teams_button"),
+                            ) {
+                                Text("Teams")
+                            }
+                        }
+                        if (onReleases != null) {
+                            TextButton(
+                                onClick = onReleases,
+                                modifier = Modifier.testTag("releases_button"),
+                            ) {
+                                Text("Releases")
+                            }
+                        }
+                        if (onConnections != null) {
+                            TextButton(
+                                onClick = onConnections,
+                                modifier = Modifier.testTag("connections_button"),
+                            ) {
+                                Text("Connections")
+                            }
+                        }
+                        if (onLogout != null) {
+                            TextButton(
+                                onClick = onLogout,
+                                modifier = Modifier.testTag("logout_button"),
+                            ) {
+                                Text("Logout")
+                            }
+                        }
+                        // Overflow menu for theme toggle and refresh
+                        Box {
+                            IconButton(
+                                onClick = { showOverflowMenu = true },
+                                modifier = Modifier.testTag("overflow_menu_button"),
+                            ) {
+                                Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                            }
+                            DropdownMenu(
+                                expanded = showOverflowMenu,
+                                onDismissRequest = { showOverflowMenu = false },
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Refresh") },
+                                    onClick = {
+                                        viewModel.refresh()
+                                        showOverflowMenu = false
+                                    },
+                                    modifier = Modifier.testTag("refresh_menu_item"),
                                 )
-                                Icon(
-                                    Icons.Default.ArrowDropDown,
-                                    contentDescription = "Switch team",
-                                    modifier = Modifier.size(20.dp),
+                                DropdownMenuItem(
+                                    text = {
+                                        val label = when (themePreference) {
+                                            ThemePreference.SYSTEM -> "Theme: Auto"
+                                            ThemePreference.LIGHT -> "Theme: Light"
+                                            ThemePreference.DARK -> "Theme: Dark"
+                                        }
+                                        Text(label)
+                                    },
+                                    onClick = {
+                                        val next = when (themePreference) {
+                                            ThemePreference.SYSTEM -> ThemePreference.LIGHT
+                                            ThemePreference.LIGHT -> ThemePreference.DARK
+                                            ThemePreference.DARK -> ThemePreference.SYSTEM
+                                        }
+                                        onThemeChange(next)
+                                        showOverflowMenu = false
+                                    },
+                                    modifier = Modifier.testTag("theme_toggle_menu_item"),
                                 )
                             }
                         }
-                    } else {
-                        Text(
-                            "Projects - $activeTeamName",
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                },
-                actions = {
-                    if (onTeams != null) {
-                        TextButton(
-                            onClick = onTeams,
-                            modifier = Modifier.testTag("teams_button"),
-                        ) {
-                            Text("Teams")
-                        }
-                    }
-                    if (onReleases != null) {
-                        TextButton(
-                            onClick = onReleases,
-                            modifier = Modifier.testTag("releases_button"),
-                        ) {
-                            Text("Releases")
-                        }
-                    }
-                    if (onConnections != null) {
-                        TextButton(
-                            onClick = onConnections,
-                            modifier = Modifier.testTag("connections_button"),
-                        ) {
-                            Text("Connections")
-                        }
-                    }
-                    if (onLogout != null) {
-                        TextButton(
-                            onClick = onLogout,
-                            modifier = Modifier.testTag("logout_button"),
-                        ) {
-                            Text("Logout")
-                        }
-                    }
-                    // Overflow menu for theme toggle
-                    Box {
-                        IconButton(
-                            onClick = { showOverflowMenu = true },
-                            modifier = Modifier.testTag("overflow_menu_button"),
-                        ) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "More options")
-                        }
-                        DropdownMenu(
-                            expanded = showOverflowMenu,
-                            onDismissRequest = { showOverflowMenu = false },
-                        ) {
-                            DropdownMenuItem(
-                                text = {
-                                    val label = when (themePreference) {
-                                        ThemePreference.SYSTEM -> "Theme: Auto"
-                                        ThemePreference.LIGHT -> "Theme: Light"
-                                        ThemePreference.DARK -> "Theme: Dark"
-                                    }
-                                    Text(label)
-                                },
-                                onClick = {
-                                    val next = when (themePreference) {
-                                        ThemePreference.SYSTEM -> ThemePreference.LIGHT
-                                        ThemePreference.LIGHT -> ThemePreference.DARK
-                                        ThemePreference.DARK -> ThemePreference.SYSTEM
-                                    }
-                                    onThemeChange(next)
-                                    showOverflowMenu = false
-                                },
-                                modifier = Modifier.testTag("theme_toggle_menu_item"),
-                            )
-                        }
-                    }
-                },
-            )
+                    },
+                )
+                if (isRefreshing && !isLoading) {
+                    LinearProgressIndicator(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(4.dp)
+                            .align(Alignment.BottomCenter)
+                            .alpha(if (isManualRefresh) 1f else 0.5f)
+                            .testTag("refresh_indicator"),
+                    )
+                }
+            }
         },
         floatingActionButton = {
             FloatingActionButton(
@@ -168,6 +193,14 @@ fun ProjectListScreen(
                 .fillMaxSize()
                 .padding(padding),
         ) {
+            // Refresh error banner
+            if (refreshError != null) {
+                RefreshErrorBanner(
+                    message = refreshError ?: "",
+                    onDismiss = { viewModel.dismissRefreshError() },
+                )
+            }
+
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { viewModel.setSearchQuery(it) },

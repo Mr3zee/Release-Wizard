@@ -5,7 +5,13 @@ import androidx.compose.ui.test.*
 import com.github.mr3zee.api.TeamApiClient
 import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.teams.*
+import io.ktor.client.*
+import io.ktor.client.engine.mock.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.cookies.*
 import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.test.Test
 
 @OptIn(ExperimentalTestApi::class)
@@ -348,5 +354,134 @@ class TeamScreensTest {
         waitUntil(timeoutMillis = 2000L) { onAllNodesWithText("Switch Team").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithText("Alpha").assertExists()
         onNodeWithText("Beta").assertExists()
+    }
+
+    // ---- Refresh Tests ----
+
+    @Test
+    fun `refresh button exists on team list`() = runComposeUiTest {
+        val vm = TeamListViewModel(TeamApiClient(teamListClient("""{"teams":[],"pagination":{"totalCount":0,"offset":0,"limit":20}}""")))
+        setContent {
+            MaterialTheme {
+                TeamListScreen(viewModel = vm, onTeamClick = {}, onTeamCreated = {}, onMyInvites = {})
+            }
+        }
+
+        onNodeWithTag("refresh_button").assertExists()
+    }
+
+    @Test
+    fun `refresh triggers re-fetch with new data`() = runComposeUiTest {
+        val returnNewData = AtomicBoolean(false)
+        val client = HttpClient(MockEngine { request ->
+            val path = request.url.encodedPath
+            val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            when {
+                path.endsWith("/teams") -> {
+                    val teams = if (!returnNewData.get()) {
+                        """[{"team":{"id":"t1","name":"Alpha Team","description":"","createdAt":0},"memberCount":3}]"""
+                    } else {
+                        """[{"team":{"id":"t1","name":"Alpha Team","description":"","createdAt":0},"memberCount":3},{"team":{"id":"t-new","name":"Gamma New","description":"","createdAt":0},"memberCount":1}]"""
+                    }
+                    respond("""{"teams":$teams,"pagination":{"totalCount":2,"offset":0,"limit":20}}""", status = HttpStatusCode.OK, headers = jsonHeaders)
+                }
+                else -> respond("{}", status = HttpStatusCode.OK, headers = jsonHeaders)
+            }
+        }) {
+            install(ContentNegotiation) { json(AppJson) }
+            install(HttpCookies)
+            expectSuccess = true
+        }
+        val vm = TeamListViewModel(TeamApiClient(client))
+
+        setContent {
+            MaterialTheme {
+                TeamListScreen(viewModel = vm, onTeamClick = {}, onTeamCreated = {}, onMyInvites = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Alpha Team").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithText("Gamma New").assertDoesNotExist()
+
+        returnNewData.set(true)
+        onNodeWithTag("refresh_button").performClick()
+
+        waitUntil(timeoutMillis = 5000L) { onAllNodesWithText("Gamma New").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithText("Gamma New").assertExists()
+    }
+
+    @Test
+    fun `refresh error shows banner and keeps list visible`() = runComposeUiTest {
+        val failOnRefresh = AtomicBoolean(false)
+        val client = HttpClient(MockEngine { request ->
+            val path = request.url.encodedPath
+            val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            when {
+                path.endsWith("/teams") -> {
+                    if (!failOnRefresh.get()) {
+                        respond(teamsListJson, status = HttpStatusCode.OK, headers = jsonHeaders)
+                    } else {
+                        respond("Server error", status = HttpStatusCode.InternalServerError, headers = jsonHeaders)
+                    }
+                }
+                else -> respond("{}", status = HttpStatusCode.OK, headers = jsonHeaders)
+            }
+        }) {
+            install(ContentNegotiation) { json(AppJson) }
+            install(HttpCookies)
+            expectSuccess = true
+        }
+        val vm = TeamListViewModel(TeamApiClient(client))
+
+        setContent {
+            MaterialTheme {
+                TeamListScreen(viewModel = vm, onTeamClick = {}, onTeamCreated = {}, onMyInvites = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Alpha Team").fetchSemanticsNodes().isNotEmpty() }
+        failOnRefresh.set(true)
+        onNodeWithTag("refresh_button").performClick()
+        waitUntil(timeoutMillis = 5000L) { onAllNodesWithTag("refresh_error_banner").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("refresh_error_banner").assertExists()
+        onNodeWithText("Alpha Team").assertExists()
+    }
+
+    @Test
+    fun `dismiss refresh error hides banner`() = runComposeUiTest {
+        val failOnRefresh = AtomicBoolean(false)
+        val client = HttpClient(MockEngine { request ->
+            val path = request.url.encodedPath
+            val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            when {
+                path.endsWith("/teams") -> {
+                    if (!failOnRefresh.get()) {
+                        respond(teamsListJson, status = HttpStatusCode.OK, headers = jsonHeaders)
+                    } else {
+                        respond("Server error", status = HttpStatusCode.InternalServerError, headers = jsonHeaders)
+                    }
+                }
+                else -> respond("{}", status = HttpStatusCode.OK, headers = jsonHeaders)
+            }
+        }) {
+            install(ContentNegotiation) { json(AppJson) }
+            install(HttpCookies)
+            expectSuccess = true
+        }
+        val vm = TeamListViewModel(TeamApiClient(client))
+
+        setContent {
+            MaterialTheme {
+                TeamListScreen(viewModel = vm, onTeamClick = {}, onTeamCreated = {}, onMyInvites = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Alpha Team").fetchSemanticsNodes().isNotEmpty() }
+        failOnRefresh.set(true)
+        onNodeWithTag("refresh_button").performClick()
+        waitUntil(timeoutMillis = 5000L) { onAllNodesWithTag("refresh_error_banner").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("dismiss_refresh_error").performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("refresh_error_banner").fetchSemanticsNodes().isEmpty() }
+        onNodeWithTag("refresh_error_banner").assertDoesNotExist()
     }
 }

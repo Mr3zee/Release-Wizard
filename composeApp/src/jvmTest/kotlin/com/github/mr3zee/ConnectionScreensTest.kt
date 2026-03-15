@@ -8,8 +8,14 @@ import com.github.mr3zee.connections.ConnectionListScreen
 import com.github.mr3zee.connections.ConnectionsViewModel
 import com.github.mr3zee.model.ConnectionId
 import com.github.mr3zee.model.TeamId
+import io.ktor.client.*
+import io.ktor.client.engine.mock.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.cookies.*
 import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.flow.MutableStateFlow
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -492,5 +498,126 @@ class ConnectionScreensTest {
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("My GitHub").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("connection_item_c1", useUnmergedTree = true).performClick()
         assertEquals(editedId?.value, "c1")
+    }
+
+    // ---- Refresh Tests ----
+
+    @Test
+    fun `refresh button exists on connection list`() = runComposeUiTest {
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")), MutableStateFlow(TeamId("test-team")))
+        setContent {
+            MaterialTheme { ConnectionListScreen(viewModel = vm, onCreateConnection = {}, onEditConnection = {}, onBack = {}) }
+        }
+
+        onNodeWithTag("refresh_button").assertExists()
+    }
+
+    @Test
+    fun `refresh triggers re-fetch with new data`() = runComposeUiTest {
+        val returnNewData = AtomicBoolean(false)
+        val client = HttpClient(MockEngine { request ->
+            val path = request.url.encodedPath
+            val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            when {
+                path.endsWith("/connections") -> {
+                    val conns = if (!returnNewData.get()) {
+                        """[{"id":"c1","name":"My GitHub","type":"GITHUB","config":{"type":"github","token":"****","owner":"x","repo":"y"},"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}]"""
+                    } else {
+                        """[{"id":"c1","name":"My GitHub","type":"GITHUB","config":{"type":"github","token":"****","owner":"x","repo":"y"},"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"},{"id":"c-new","name":"New Slack","type":"SLACK","config":{"type":"slack","webhookUrl":"https://hooks.slack.com/new"},"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}]"""
+                    }
+                    respond("""{"connections":$conns}""", status = HttpStatusCode.OK, headers = jsonHeaders)
+                }
+                else -> respond("{}", status = HttpStatusCode.OK, headers = jsonHeaders)
+            }
+        }) {
+            install(ContentNegotiation) { json(AppJson) }
+            install(HttpCookies)
+            expectSuccess = true
+        }
+        val vm = ConnectionsViewModel(ConnectionApiClient(client), MutableStateFlow(TeamId("test-team")))
+
+        setContent {
+            MaterialTheme { ConnectionListScreen(viewModel = vm, onCreateConnection = {}, onEditConnection = {}, onBack = {}) }
+        }
+
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("My GitHub").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithText("New Slack").assertDoesNotExist()
+
+        returnNewData.set(true)
+        onNodeWithTag("refresh_button").performClick()
+
+        waitUntil(timeoutMillis = 5000L) { onAllNodesWithText("New Slack").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithText("New Slack").assertExists()
+    }
+
+    @Test
+    fun `refresh error shows banner and keeps list visible`() = runComposeUiTest {
+        val failOnRefresh = AtomicBoolean(false)
+        val client = HttpClient(MockEngine { request ->
+            val path = request.url.encodedPath
+            val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            when {
+                path.endsWith("/connections") -> {
+                    if (!failOnRefresh.get()) {
+                        respond(connectionsJson, status = HttpStatusCode.OK, headers = jsonHeaders)
+                    } else {
+                        respond("Server error", status = HttpStatusCode.InternalServerError, headers = jsonHeaders)
+                    }
+                }
+                else -> respond("{}", status = HttpStatusCode.OK, headers = jsonHeaders)
+            }
+        }) {
+            install(ContentNegotiation) { json(AppJson) }
+            install(HttpCookies)
+            expectSuccess = true
+        }
+        val vm = ConnectionsViewModel(ConnectionApiClient(client), MutableStateFlow(TeamId("test-team")))
+
+        setContent {
+            MaterialTheme { ConnectionListScreen(viewModel = vm, onCreateConnection = {}, onEditConnection = {}, onBack = {}) }
+        }
+
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("My GitHub").fetchSemanticsNodes().isNotEmpty() }
+        failOnRefresh.set(true)
+        onNodeWithTag("refresh_button").performClick()
+        waitUntil(timeoutMillis = 5000L) { onAllNodesWithTag("refresh_error_banner").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("refresh_error_banner").assertExists()
+        onNodeWithText("My GitHub").assertExists()
+    }
+
+    @Test
+    fun `dismiss refresh error hides banner`() = runComposeUiTest {
+        val failOnRefresh = AtomicBoolean(false)
+        val client = HttpClient(MockEngine { request ->
+            val path = request.url.encodedPath
+            val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            when {
+                path.endsWith("/connections") -> {
+                    if (!failOnRefresh.get()) {
+                        respond(connectionsJson, status = HttpStatusCode.OK, headers = jsonHeaders)
+                    } else {
+                        respond("Server error", status = HttpStatusCode.InternalServerError, headers = jsonHeaders)
+                    }
+                }
+                else -> respond("{}", status = HttpStatusCode.OK, headers = jsonHeaders)
+            }
+        }) {
+            install(ContentNegotiation) { json(AppJson) }
+            install(HttpCookies)
+            expectSuccess = true
+        }
+        val vm = ConnectionsViewModel(ConnectionApiClient(client), MutableStateFlow(TeamId("test-team")))
+
+        setContent {
+            MaterialTheme { ConnectionListScreen(viewModel = vm, onCreateConnection = {}, onEditConnection = {}, onBack = {}) }
+        }
+
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("My GitHub").fetchSemanticsNodes().isNotEmpty() }
+        failOnRefresh.set(true)
+        onNodeWithTag("refresh_button").performClick()
+        waitUntil(timeoutMillis = 5000L) { onAllNodesWithTag("refresh_error_banner").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("dismiss_refresh_error").performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("refresh_error_banner").fetchSemanticsNodes().isEmpty() }
+        onNodeWithTag("refresh_error_banner").assertDoesNotExist()
     }
 }

@@ -36,6 +36,15 @@ class TeamListViewModel(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing
+
+    private val _isManualRefresh = MutableStateFlow(false)
+    val isManualRefresh: StateFlow<Boolean> = _isManualRefresh
+
+    private val _refreshError = MutableStateFlow<String?>(null)
+    val refreshError: StateFlow<String?> = _refreshError
+
     init {
         viewModelScope.launch {
             _searchQuery.debounce(300.milliseconds).distinctUntilChanged().collectLatest {
@@ -48,21 +57,44 @@ class TeamListViewModel(
         _searchQuery.value = query
     }
 
+    fun refresh() {
+        if (_isRefreshing.value) return
+        viewModelScope.launch {
+            _isManualRefresh.value = true
+            _refreshError.value = null
+            try {
+                loadTeamsInternal(silent = true)
+            } finally {
+                _isManualRefresh.value = false
+            }
+        }
+    }
+
     fun loadTeams() {
         viewModelScope.launch { loadTeamsInternal() }
     }
 
-    private suspend fun loadTeamsInternal() {
-        _isLoading.value = true
-        _error.value = null
+    private suspend fun loadTeamsInternal(silent: Boolean = false) {
+        if (silent) {
+            _isRefreshing.value = true
+        } else {
+            _isLoading.value = true
+            _error.value = null
+        }
         try {
             val search = _searchQuery.value.takeIf { it.isNotBlank() }
             val response = apiClient.listTeams(offset = 0, limit = 50, search = search)
             _teams.value = response.teams
+            _refreshError.value = null
         } catch (e: Exception) {
-            _error.value = e.toUserMessage()
+            if (silent) {
+                _refreshError.value = e.toUserMessage()
+            } else {
+                _error.value = e.toUserMessage()
+            }
         } finally {
             _isLoading.value = false
+            _isRefreshing.value = false
         }
     }
 
@@ -98,5 +130,9 @@ class TeamListViewModel(
 
     fun dismissError() {
         _error.value = null
+    }
+
+    fun dismissRefreshError() {
+        _refreshError.value = null
     }
 }

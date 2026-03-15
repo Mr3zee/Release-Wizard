@@ -14,6 +14,7 @@ import com.github.mr3zee.model.ReleaseId
 import com.github.mr3zee.model.ReleaseStatus
 import com.github.mr3zee.model.TeamId
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -23,13 +24,19 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
 
 @OptIn(FlowPreview::class)
 class ReleaseListViewModel(
     private val releaseApiClient: ReleaseApiClient,
     private val projectApiClient: ProjectApiClient,
     private val activeTeamId: StateFlow<TeamId?>,
+    private val pollingIntervalMs: Long = 10_000L,
 ) : ViewModel() {
+    init {
+        require(pollingIntervalMs >= 1_000L) { "Polling interval must be >= 1000 ms" }
+    }
 
     private val _releases = MutableStateFlow<List<Release>>(emptyList())
     val releases: StateFlow<List<Release>> = _releases
@@ -58,6 +65,20 @@ class ReleaseListViewModel(
     private val _isLoadingMore = MutableStateFlow(false)
     val isLoadingMore: StateFlow<Boolean> = _isLoadingMore
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing
+
+    private val _isManualRefresh = MutableStateFlow(false)
+    val isManualRefresh: StateFlow<Boolean> = _isManualRefresh
+
+    private val _refreshError = MutableStateFlow<String?>(null)
+    val refreshError: StateFlow<String?> = _refreshError
+
+    private val _isActive = MutableStateFlow(false)
+
+    private val _lastRefreshedAt = MutableStateFlow<TimeMark?>(null)
+    val lastRefreshedAt: StateFlow<TimeMark?> = _lastRefreshedAt
+
     private val pageSize = 20
 
     init {
@@ -77,6 +98,16 @@ class ReleaseListViewModel(
                 loadReleasesInternal(reset = true)
             }
         }
+        viewModelScope.launch {
+            _isActive.collectLatest { active ->
+                if (active) {
+                    while (true) {
+                        delay(pollingIntervalMs.milliseconds)
+                        loadReleasesInternal(reset = true, silent = true)
+                    }
+                }
+            }
+        }
     }
 
     fun setSearchQuery(query: String) {
@@ -89,6 +120,23 @@ class ReleaseListViewModel(
 
     fun setProjectFilter(projectId: ProjectId?) {
         _projectFilter.value = projectId
+    }
+
+    fun setActive(active: Boolean) {
+        _isActive.value = active
+    }
+
+    fun refresh() {
+        if (_isRefreshing.value) return
+        viewModelScope.launch {
+            _isManualRefresh.value = true
+            _refreshError.value = null
+            try {
+                loadReleasesInternal(reset = true, silent = true)
+            } finally {
+                _isManualRefresh.value = false
+            }
+        }
     }
 
     fun loadReleases() {
@@ -132,8 +180,10 @@ class ReleaseListViewModel(
         }
     }
 
-    private suspend fun loadReleasesInternal(reset: Boolean) {
-        if (reset) {
+    private suspend fun loadReleasesInternal(reset: Boolean, silent: Boolean = false) {
+        if (silent) {
+            _isRefreshing.value = true
+        } else if (reset) {
             _isLoading.value = true
             _error.value = null
         }
@@ -147,10 +197,17 @@ class ReleaseListViewModel(
             )
             _releases.value = response.releases
             _pagination.value = response.pagination
+            _lastRefreshedAt.value = TimeSource.Monotonic.markNow()
+            _refreshError.value = null
         } catch (e: Exception) {
-            _error.value = e.toUserMessage()
+            if (silent) {
+                _refreshError.value = e.toUserMessage()
+            } else {
+                _error.value = e.toUserMessage()
+            }
         } finally {
             _isLoading.value = false
+            _isRefreshing.value = false
         }
     }
 
@@ -200,5 +257,9 @@ class ReleaseListViewModel(
 
     fun dismissError() {
         _error.value = null
+    }
+
+    fun dismissRefreshError() {
+        _refreshError.value = null
     }
 }

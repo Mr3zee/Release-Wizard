@@ -67,6 +67,15 @@ class ConnectionsViewModel(
     private val _savedSuccessfully = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val savedSuccessfully: SharedFlow<Unit> = _savedSuccessfully
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing
+
+    private val _isManualRefresh = MutableStateFlow(false)
+    val isManualRefresh: StateFlow<Boolean> = _isManualRefresh
+
+    private val _refreshError = MutableStateFlow<String?>(null)
+    val refreshError: StateFlow<String?> = _refreshError
+
     private val pageSize = 20
 
     init {
@@ -93,6 +102,19 @@ class ConnectionsViewModel(
 
     fun setTypeFilter(type: ConnectionType?) {
         _typeFilter.value = type
+    }
+
+    fun refresh() {
+        if (_isRefreshing.value) return
+        viewModelScope.launch {
+            _isManualRefresh.value = true
+            _refreshError.value = null
+            try {
+                loadConnectionsInternal(reset = true, silent = true)
+            } finally {
+                _isManualRefresh.value = false
+            }
+        }
     }
 
     fun loadConnections() {
@@ -132,8 +154,10 @@ class ConnectionsViewModel(
         }
     }
 
-    private suspend fun loadConnectionsInternal(reset: Boolean) {
-        if (reset) {
+    private suspend fun loadConnectionsInternal(reset: Boolean, silent: Boolean = false) {
+        if (silent) {
+            _isRefreshing.value = true
+        } else if (reset) {
             _isLoading.value = true
             _error.value = null
         }
@@ -147,10 +171,16 @@ class ConnectionsViewModel(
             _connections.value = response.connections
             _webhookUrls.value = response.webhookUrls
             _pagination.value = response.pagination
+            _refreshError.value = null
         } catch (e: Exception) {
-            _error.value = e.toUserMessage()
+            if (silent) {
+                _refreshError.value = e.toUserMessage()
+            } else {
+                _error.value = e.toUserMessage()
+            }
         } finally {
             _isLoading.value = false
+            _isRefreshing.value = false
         }
     }
 
@@ -236,5 +266,9 @@ class ConnectionsViewModel(
 
     fun dismissError() {
         _error.value = null
+    }
+
+    fun dismissRefreshError() {
+        _refreshError.value = null
     }
 }

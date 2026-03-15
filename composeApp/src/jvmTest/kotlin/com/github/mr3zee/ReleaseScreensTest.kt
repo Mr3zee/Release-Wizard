@@ -7,8 +7,14 @@ import com.github.mr3zee.api.ProjectApiClient
 import com.github.mr3zee.api.ReleaseApiClient
 import com.github.mr3zee.model.*
 import com.github.mr3zee.releases.*
+import io.ktor.client.*
+import io.ktor.client.engine.mock.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.cookies.*
 import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.flow.MutableStateFlow
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -1135,5 +1141,225 @@ class ReleaseScreensTest {
 
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("release_list").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("status_badge_ARCHIVED", useUnmergedTree = true).assertExists()
+    }
+
+    // ---- Refresh Tests ----
+
+    private val pollingDisabled = Long.MAX_VALUE / 2
+
+    @Test
+    fun `refresh button exists on release list`() = runComposeUiTest {
+        val client = releaseListClient()
+        val vm = ReleaseListViewModel(ReleaseApiClient(client), ProjectApiClient(client), MutableStateFlow(TeamId("test-team")), pollingIntervalMs = pollingDisabled)
+
+        setContent {
+            MaterialTheme {
+                ReleaseListScreen(viewModel = vm, onViewRelease = {}, onBack = {})
+            }
+        }
+
+        onNodeWithTag("refresh_button").assertExists()
+    }
+
+    @Test
+    fun `refresh icon idle tag when not refreshing`() = runComposeUiTest {
+        val client = releaseListClient()
+        val vm = ReleaseListViewModel(ReleaseApiClient(client), ProjectApiClient(client), MutableStateFlow(TeamId("test-team")), pollingIntervalMs = pollingDisabled)
+
+        setContent {
+            MaterialTheme {
+                ReleaseListScreen(viewModel = vm, onViewRelease = {}, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("refresh_icon_idle", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithTag("refresh_icon_idle", useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun `refresh triggers re-fetch with new data`() = runComposeUiTest {
+        val returnNewData = AtomicBoolean(false)
+        val client = HttpClient(MockEngine { request ->
+            val path = request.url.encodedPath
+            val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            when {
+                path.endsWith("/releases") -> {
+                    val releases = if (!returnNewData.get()) {
+                        """[{"id":"r1","projectTemplateId":"p1","status":"RUNNING","dagSnapshot":{"blocks":[],"edges":[],"positions":{}},"parameters":[],"startedAt":"$now"}]"""
+                    } else {
+                        """[{"id":"r1","projectTemplateId":"p1","status":"RUNNING","dagSnapshot":{"blocks":[],"edges":[],"positions":{}},"parameters":[],"startedAt":"$now"},{"id":"r-new","projectTemplateId":"p1","status":"PENDING","dagSnapshot":{"blocks":[],"edges":[],"positions":{}},"parameters":[],"startedAt":"$now"}]"""
+                    }
+                    respond("""{"releases":$releases}""", status = HttpStatusCode.OK, headers = jsonHeaders)
+                }
+                else -> respond("""{"projects":[]}""", status = HttpStatusCode.OK, headers = jsonHeaders)
+            }
+        }) {
+            install(ContentNegotiation) { json(AppJson) }
+            install(HttpCookies)
+            expectSuccess = true
+        }
+        val vm = ReleaseListViewModel(ReleaseApiClient(client), ProjectApiClient(client), MutableStateFlow(TeamId("test-team")), pollingIntervalMs = pollingDisabled)
+
+        setContent {
+            MaterialTheme {
+                ReleaseListScreen(viewModel = vm, onViewRelease = {}, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("release_item_r1", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithTag("release_item_r-new", useUnmergedTree = true).assertDoesNotExist()
+
+        returnNewData.set(true)
+        onNodeWithTag("refresh_button").performClick()
+
+        waitUntil(timeoutMillis = 5000L) {
+            onAllNodesWithTag("release_item_r-new", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithTag("release_item_r-new", useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun `refresh indicator absent during initial load`() = runComposeUiTest {
+        val client = releaseListClient()
+        val vm = ReleaseListViewModel(ReleaseApiClient(client), ProjectApiClient(client), MutableStateFlow(TeamId("test-team")), pollingIntervalMs = pollingDisabled)
+
+        setContent {
+            MaterialTheme {
+                ReleaseListScreen(viewModel = vm, onViewRelease = {}, onBack = {})
+            }
+        }
+
+        onNodeWithTag("refresh_indicator").assertDoesNotExist()
+    }
+
+    @Test
+    fun `refresh error shows banner and keeps list visible`() = runComposeUiTest {
+        val failOnRefresh = AtomicBoolean(false)
+        val client = HttpClient(MockEngine { request ->
+            val path = request.url.encodedPath
+            val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            when {
+                path.endsWith("/releases") -> {
+                    if (!failOnRefresh.get()) {
+                        val releases = """[{"id":"r1","projectTemplateId":"p1","status":"RUNNING","dagSnapshot":{"blocks":[],"edges":[],"positions":{}},"parameters":[],"startedAt":"$now"}]"""
+                        respond("""{"releases":$releases}""", status = HttpStatusCode.OK, headers = jsonHeaders)
+                    } else {
+                        respond("Server error", status = HttpStatusCode.InternalServerError, headers = jsonHeaders)
+                    }
+                }
+                else -> respond("""{"projects":[]}""", status = HttpStatusCode.OK, headers = jsonHeaders)
+            }
+        }) {
+            install(ContentNegotiation) { json(AppJson) }
+            install(HttpCookies)
+            expectSuccess = true
+        }
+        val vm = ReleaseListViewModel(ReleaseApiClient(client), ProjectApiClient(client), MutableStateFlow(TeamId("test-team")), pollingIntervalMs = pollingDisabled)
+
+        setContent {
+            MaterialTheme {
+                ReleaseListScreen(viewModel = vm, onViewRelease = {}, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("release_item_r1", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+
+        failOnRefresh.set(true)
+        onNodeWithTag("refresh_button").performClick()
+
+        waitUntil(timeoutMillis = 5000L) {
+            onAllNodesWithTag("refresh_error_banner").fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithTag("refresh_error_banner").assertExists()
+        onNodeWithTag("release_item_r1", useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun `dismiss refresh error hides banner`() = runComposeUiTest {
+        val failOnRefresh = AtomicBoolean(false)
+        val client = HttpClient(MockEngine { request ->
+            val path = request.url.encodedPath
+            val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            when {
+                path.endsWith("/releases") -> {
+                    if (!failOnRefresh.get()) {
+                        val releases = """[{"id":"r1","projectTemplateId":"p1","status":"RUNNING","dagSnapshot":{"blocks":[],"edges":[],"positions":{}},"parameters":[],"startedAt":"$now"}]"""
+                        respond("""{"releases":$releases}""", status = HttpStatusCode.OK, headers = jsonHeaders)
+                    } else {
+                        respond("Server error", status = HttpStatusCode.InternalServerError, headers = jsonHeaders)
+                    }
+                }
+                else -> respond("""{"projects":[]}""", status = HttpStatusCode.OK, headers = jsonHeaders)
+            }
+        }) {
+            install(ContentNegotiation) { json(AppJson) }
+            install(HttpCookies)
+            expectSuccess = true
+        }
+        val vm = ReleaseListViewModel(ReleaseApiClient(client), ProjectApiClient(client), MutableStateFlow(TeamId("test-team")), pollingIntervalMs = pollingDisabled)
+
+        setContent {
+            MaterialTheme {
+                ReleaseListScreen(viewModel = vm, onViewRelease = {}, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("release_item_r1", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        failOnRefresh.set(true)
+        onNodeWithTag("refresh_button").performClick()
+        waitUntil(timeoutMillis = 5000L) {
+            onAllNodesWithTag("refresh_error_banner").fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithTag("dismiss_refresh_error").performClick()
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("refresh_error_banner").fetchSemanticsNodes().isEmpty()
+        }
+        onNodeWithTag("refresh_error_banner").assertDoesNotExist()
+    }
+
+    @Test
+    fun `updated text exists after load`() = runComposeUiTest {
+        val releases = """[{"id":"r1","projectTemplateId":"p1","status":"RUNNING","dagSnapshot":{"blocks":[],"edges":[],"positions":{}},"parameters":[],"startedAt":"$now"}]"""
+        val client = releaseListClient(releases = releases)
+        val vm = ReleaseListViewModel(ReleaseApiClient(client), ProjectApiClient(client), MutableStateFlow(TeamId("test-team")), pollingIntervalMs = pollingDisabled)
+
+        setContent {
+            MaterialTheme {
+                ReleaseListScreen(viewModel = vm, onViewRelease = {}, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 5000L) {
+            onAllNodesWithTag("last_updated_text", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithTag("last_updated_text", useUnmergedTree = true).assertExists()
+        onNodeWithTag("last_updated_text", useUnmergedTree = true).assertTextContains("Updated", substring = true)
+    }
+
+    @Test
+    fun `updated text absent before first load`() = runComposeUiTest {
+        val client = mockHttpClient(mapOf(
+            "/releases" to json("Server error", HttpStatusCode.InternalServerError),
+        ))
+        val vm = ReleaseListViewModel(ReleaseApiClient(client), ProjectApiClient(client), MutableStateFlow(TeamId("test-team")), pollingIntervalMs = pollingDisabled)
+
+        setContent {
+            MaterialTheme {
+                ReleaseListScreen(viewModel = vm, onViewRelease = {}, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("retry_button").fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithTag("last_updated_text", useUnmergedTree = true).assertDoesNotExist()
     }
 }
