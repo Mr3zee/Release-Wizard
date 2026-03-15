@@ -83,7 +83,7 @@ fun TeamManageScreen(
                 item {
                     Row(
                         modifier = Modifier
-                            .widthIn(max = 900.dp)
+                            .widthIn(max = 1200.dp)
                             .fillMaxWidth()
                             .padding(Spacing.lg),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -107,7 +107,7 @@ fun TeamManageScreen(
                             viewModel.updateMemberRole(member.userId.value, newRole)
                         },
                         onRemove = { memberToRemove = member },
-                        modifier = Modifier.widthIn(max = 900.dp),
+                        modifier = Modifier.widthIn(max = 1200.dp),
                     )
                 }
 
@@ -121,7 +121,7 @@ fun TeamManageScreen(
                             packStringResource(Res.string.teams_pending_invites_count, invites.size),
                             style = AppTypography.heading,
                             modifier = Modifier
-                                .widthIn(max = 900.dp)
+                                .widthIn(max = 1200.dp)
                                 .fillMaxWidth()
                                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
                         )
@@ -130,7 +130,7 @@ fun TeamManageScreen(
                         InviteItem(
                             invite = invite,
                             onCancel = { inviteToCancel = invite },
-                            modifier = Modifier.widthIn(max = 900.dp),
+                            modifier = Modifier.widthIn(max = 1200.dp),
                         )
                     }
                 }
@@ -145,7 +145,7 @@ fun TeamManageScreen(
                             packStringResource(Res.string.teams_join_requests_count, joinRequests.size),
                             style = AppTypography.heading,
                             modifier = Modifier
-                                .widthIn(max = 900.dp)
+                                .widthIn(max = 1200.dp)
                                 .fillMaxWidth()
                                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
                         )
@@ -155,7 +155,7 @@ fun TeamManageScreen(
                             request = request,
                             onApprove = { viewModel.approveJoinRequest(request.id) },
                             onReject = { viewModel.rejectJoinRequest(request.id) },
-                            modifier = Modifier.widthIn(max = 900.dp),
+                            modifier = Modifier.widthIn(max = 1200.dp),
                         )
                     }
                 }

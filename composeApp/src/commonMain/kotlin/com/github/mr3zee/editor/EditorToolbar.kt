@@ -44,7 +44,7 @@ fun EditorToolbar(
 
     Column(
         modifier = modifier
-            .width(200.dp)
+            .width(240.dp)
             .fillMaxHeight()
             .verticalScroll(rememberScrollState())
             .padding(Spacing.sm),

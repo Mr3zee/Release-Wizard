@@ -168,6 +168,7 @@ fun ConnectionListScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // Refresh error banner
             val resolvedRefreshError = refreshError?.resolve()
@@ -185,13 +186,13 @@ fun ConnectionListScreen(
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .widthIn(max = 900.dp)
+                    .widthIn(max = 1200.dp)
                     .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
                     .testTag("search_field"),
             )
             Row(
                 modifier = Modifier
-                    .widthIn(max = 900.dp)
+                    .widthIn(max = 1200.dp)
                     .padding(horizontal = Spacing.lg),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
@@ -263,7 +264,7 @@ fun ConnectionListScreen(
                             onClick = { onEditConnection(connection.id) },
                             onDelete = { connectionToDelete = connection },
                             onTest = { viewModel.testConnection(connection.id) },
-                            modifier = Modifier.widthIn(max = 900.dp),
+                            modifier = Modifier.widthIn(max = 1200.dp),
                         )
                     }
                     loadMoreItem(pagination, isLoadingMore, onLoadMore = { viewModel.loadMore() })

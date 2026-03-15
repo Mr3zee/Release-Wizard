@@ -196,6 +196,7 @@ fun ReleaseListScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // Refresh error banner
             val resolvedRefreshError = refreshError?.resolve()
@@ -213,13 +214,13 @@ fun ReleaseListScreen(
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .widthIn(max = 900.dp)
+                    .widthIn(max = 1200.dp)
                     .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
                     .testTag("search_field"),
             )
             Row(
                 modifier = Modifier
-                    .widthIn(max = 900.dp)
+                    .widthIn(max = 1200.dp)
                     .padding(horizontal = Spacing.lg),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
@@ -242,7 +243,7 @@ fun ReleaseListScreen(
             if (projects.isNotEmpty()) {
                 Row(
                     modifier = Modifier
-                        .widthIn(max = 900.dp)
+                        .widthIn(max = 1200.dp)
                         .padding(horizontal = Spacing.lg, vertical = Spacing.xs)
                         .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
@@ -343,7 +344,7 @@ fun ReleaseListScreen(
                             onClick = { onViewRelease(release.id) },
                             onArchive = { viewModel.archiveRelease(release.id) },
                             onDelete = { viewModel.deleteRelease(release.id) },
-                            modifier = Modifier.widthIn(max = 900.dp),
+                            modifier = Modifier.widthIn(max = 1200.dp),
                         )
                     }
                     loadMoreItem(pagination, isLoadingMore, onLoadMore = { viewModel.loadMore() })

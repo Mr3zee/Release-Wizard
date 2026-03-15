@@ -244,6 +244,7 @@ fun ProjectListScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // Refresh error banner
             val resolvedRefreshError = refreshError?.resolve()
@@ -261,7 +262,7 @@ fun ProjectListScreen(
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .widthIn(max = 900.dp)
+                    .widthIn(max = 1200.dp)
                     .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
                     .testTag("search_field"),
             )
@@ -327,7 +328,7 @@ fun ProjectListScreen(
                             project = project,
                             onClick = { onEditProject(project.id) },
                             onDelete = { projectToDelete = project },
-                            modifier = Modifier.widthIn(max = 900.dp),
+                            modifier = Modifier.widthIn(max = 1200.dp),
                         )
                     }
                     loadMoreItem(pagination, isLoadingMore, onLoadMore = { viewModel.loadMore() })

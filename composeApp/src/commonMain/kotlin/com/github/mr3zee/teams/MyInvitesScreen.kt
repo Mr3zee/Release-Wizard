@@ -91,7 +91,7 @@ fun MyInvitesScreen(
                             viewModel.acceptInvite(invite.id) { onInviteAccepted() }
                         },
                         onDecline = { viewModel.declineInvite(invite.id) },
-                        modifier = Modifier.widthIn(max = 900.dp),
+                        modifier = Modifier.widthIn(max = 1200.dp),
                     )
                 }
             }

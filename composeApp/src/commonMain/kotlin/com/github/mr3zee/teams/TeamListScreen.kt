@@ -157,6 +157,7 @@ fun TeamListScreen(
     ) { padding ->
         Column(
             modifier = Modifier.fillMaxSize().padding(padding),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // Refresh error banner
             val resolvedRefreshError = refreshError?.resolve()
@@ -174,7 +175,7 @@ fun TeamListScreen(
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .widthIn(max = 900.dp)
+                    .widthIn(max = 1200.dp)
                     .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
                     .testTag("team_search_field"),
             )
@@ -243,7 +244,7 @@ fun TeamListScreen(
                             onClick = { onTeamClick(teamResponse.team.id) },
                             onJoinRequest = { viewModel.requestToJoin(teamResponse.team.id) },
                             isMember = teamResponse.team.id in memberTeamIds,
-                            modifier = Modifier.widthIn(max = 900.dp),
+                            modifier = Modifier.widthIn(max = 1200.dp),
                         )
                     }
                 }

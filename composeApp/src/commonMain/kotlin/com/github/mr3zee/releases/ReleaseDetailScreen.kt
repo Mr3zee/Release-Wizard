@@ -269,7 +269,7 @@ private fun BlockDetailPanel(
     ) {
         Column(
             modifier = Modifier
-                .heightIn(max = 320.dp)
+                .heightIn(max = 350.dp)
                 .verticalScroll(rememberScrollState())
                 .padding(Spacing.lg),
         ) {

@@ -199,7 +199,7 @@ fun ConnectionFormScreen(
         ) {
             Column(
                 modifier = Modifier
-                    .widthIn(max = 700.dp)
+                    .widthIn(max = 800.dp)
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
                     .padding(Spacing.lg),

@@ -108,7 +108,7 @@ fun TeamDetailScreen(
                     item {
                         RwCard(
                             modifier = Modifier
-                                .widthIn(max = 900.dp)
+                                .widthIn(max = 1200.dp)
                                 .fillMaxWidth()
                                 .padding(Spacing.lg),
                         ) {
@@ -145,7 +145,7 @@ fun TeamDetailScreen(
                         packStringResource(Res.string.teams_members_section),
                         style = AppTypography.heading,
                         modifier = Modifier
-                            .widthIn(max = 900.dp)
+                            .widthIn(max = 1200.dp)
                             .fillMaxWidth()
                             .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
                     )
@@ -154,7 +154,7 @@ fun TeamDetailScreen(
                 items(members, key = { it.userId.value }) { member ->
                     MemberItem(
                         member = member,
-                        modifier = Modifier.widthIn(max = 900.dp),
+                        modifier = Modifier.widthIn(max = 1200.dp),
                     )
                 }
             }

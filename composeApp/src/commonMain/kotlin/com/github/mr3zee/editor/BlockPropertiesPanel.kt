@@ -37,7 +37,7 @@ fun BlockPropertiesPanel(
 ) {
     Column(
         modifier = modifier
-            .width(260.dp)
+            .width(340.dp)
             .fillMaxHeight()
             .verticalScroll(rememberScrollState())
             .padding(Spacing.md),
