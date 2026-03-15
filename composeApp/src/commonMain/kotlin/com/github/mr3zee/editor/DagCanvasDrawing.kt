@@ -331,7 +331,7 @@ internal fun DrawScope.drawEdge(
     )
 }
 
-internal fun DrawScope.drawDraftEdge(start: Offset, end: Offset, colors: AppColors, zoom: Float = 1f) {
+internal fun DrawScope.drawDraftEdge(start: Offset, end: Offset, colors: AppColors, transform: CanvasTransform? = null) {
     val dx = end.x - start.x
     val cp1x = start.x + dx * 0.4f
     val cp2x = end.x - dx * 0.4f
@@ -341,9 +341,9 @@ internal fun DrawScope.drawDraftEdge(start: Offset, end: Offset, colors: AppColo
         cubicTo(cp1x, start.y, cp2x, end.y, end.x, end.y)
     }
 
-    val strokeWidth = (2f * zoom).coerceIn(1f, 8f)
-    val dashLength = (8f * zoom).coerceIn(4f, 32f)
-    val gapLength = (4f * zoom).coerceIn(2f, 16f)
+    val strokeWidth = transform?.toScreen(1.5f) ?: 2f
+    val dashLength = transform?.toScreen(6f) ?: 8f
+    val gapLength = transform?.toScreen(3f) ?: 4f
 
     drawPath(
         path,

@@ -16,7 +16,9 @@ import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.dag.ValidationError
+import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.LocalAppColors
+import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.resolve
 import com.github.mr3zee.i18n.packPluralStringResource
 import com.github.mr3zee.i18n.packStringResource
@@ -103,7 +105,7 @@ fun DagEditorScreen(
                             Text(
                                 " " + packStringResource(Res.string.editor_read_only),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = AppTypography.body,
                             )
                         } else if (isDirty) {
                             Text(
@@ -193,7 +195,7 @@ fun DagEditorScreen(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(resolvedError ?: packStringResource(Res.string.common_error), color = MaterialTheme.colorScheme.error)
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(Spacing.sm))
                     RwButton(onClick = { viewModel.loadProject() }, variant = RwButtonVariant.Primary) { Text(packStringResource(Res.string.common_retry)) }
                 }
             }
@@ -329,7 +331,7 @@ fun DagEditorScreen(
             text = {
                 Column {
                     Text(packStringResource(Res.string.editor_dialog_lock_expired_body))
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(Spacing.md))
                     RwButton(
                         onClick = {
                             showLockLostDiscardDialog = false
@@ -413,7 +415,7 @@ private fun EditLockBanner(
                     .testTag("edit_lock_banner"),
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
@@ -422,7 +424,7 @@ private fun EditLockBanner(
                         modifier = Modifier.size(16.dp),
                         tint = contentColor,
                     )
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(Spacing.sm))
                     // Self-lock must be checked first: when locked by self, username is also non-null
                     Text(
                         when {
@@ -430,7 +432,7 @@ private fun EditLockBanner(
                             username != null -> packStringResource(Res.string.editor_lock_by_other, username)
                             else -> packStringResource(Res.string.editor_lock_acquire_failed)
                         },
-                        style = MaterialTheme.typography.bodySmall,
+                        style = AppTypography.bodySmall,
                         color = contentColor,
                         modifier = Modifier.weight(1f),
                     )
@@ -463,7 +465,7 @@ private fun EditLockBanner(
                     .testTag("lock_lost_banner"),
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
@@ -472,10 +474,10 @@ private fun EditLockBanner(
                         modifier = Modifier.size(16.dp),
                         tint = MaterialTheme.colorScheme.onErrorContainer,
                     )
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(Spacing.sm))
                     Text(
                         packStringResource(Res.string.editor_lock_lost_banner),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = AppTypography.bodySmall,
                         color = MaterialTheme.colorScheme.onErrorContainer,
                         modifier = Modifier.weight(1f),
                     )
@@ -516,8 +518,8 @@ private fun ValidationErrorBadge(errors: List<ValidationError>) {
                     errors.forEach { err ->
                         Text(
                             formatValidationError(err),
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(vertical = 2.dp),
+                            style = AppTypography.bodySmall,
+                            modifier = Modifier.padding(vertical = Spacing.xxs),
                         )
                     }
                 }

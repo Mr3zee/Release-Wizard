@@ -14,6 +14,8 @@ import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwCard
 import com.github.mr3zee.components.RwTextField
+import com.github.mr3zee.theme.AppTypography
+import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.resolve
 import com.github.mr3zee.i18n.packStringResource
 import releasewizard.composeapp.generated.resources.*
@@ -38,20 +40,20 @@ fun LoginScreen(
         RwCard(
             modifier = Modifier
                 .widthIn(max = 400.dp)
-                .padding(16.dp),
+                .padding(Spacing.lg),
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier.padding(Spacing.xxl),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(Spacing.lg),
             ) {
                 Text(
                     text = packStringResource(Res.string.auth_app_title),
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = AppTypography.display,
                 )
                 Text(
                     text = if (isRegisterMode) packStringResource(Res.string.auth_create_account) else packStringResource(Res.string.auth_sign_in_continue),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = AppTypography.body,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
@@ -83,7 +85,7 @@ fun LoginScreen(
                     Text(
                         text = currentError.resolve(),
                         color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = AppTypography.bodySmall,
                     )
                 }
 

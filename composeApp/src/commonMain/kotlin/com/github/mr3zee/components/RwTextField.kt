@@ -72,7 +72,7 @@ fun RwTextField(
 
     val borderWidth = if (isFocused) 2.dp else 1.dp
     val bgColor = colors.inputBg
-    val disabledAlpha = if (enabled) 1f else 0.5f
+    val disabledAlpha = if (enabled) 1f else 0.6f
 
     Column(modifier = Modifier.alpha(disabledAlpha)) {
         if (label != null) {

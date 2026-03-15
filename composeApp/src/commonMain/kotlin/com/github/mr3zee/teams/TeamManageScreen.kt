@@ -17,6 +17,8 @@ import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.model.*
+import com.github.mr3zee.theme.AppTypography
+import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.displayName
 import com.github.mr3zee.util.resolve
 import com.github.mr3zee.i18n.packStringResource
@@ -83,11 +85,11 @@ fun TeamManageScreen(
                         modifier = Modifier
                             .widthIn(max = 900.dp)
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(Spacing.lg),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(packStringResource(Res.string.teams_members_count, members.size), style = MaterialTheme.typography.titleMedium)
+                        Text(packStringResource(Res.string.teams_members_count, members.size), style = AppTypography.heading)
                         RwButton(
                             onClick = { showInviteDialog = true },
                             variant = RwButtonVariant.Ghost,
@@ -112,16 +114,16 @@ fun TeamManageScreen(
                 // Pending invites section
                 if (invites.isNotEmpty()) {
                     item {
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(Spacing.sm))
                     }
                     item {
                         Text(
                             packStringResource(Res.string.teams_pending_invites_count, invites.size),
-                            style = MaterialTheme.typography.titleMedium,
+                            style = AppTypography.heading,
                             modifier = Modifier
                                 .widthIn(max = 900.dp)
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
                         )
                     }
                     items(invites, key = { "invite-${it.id}" }) { invite ->
@@ -136,16 +138,16 @@ fun TeamManageScreen(
                 // Join requests section
                 if (joinRequests.isNotEmpty()) {
                     item {
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(Spacing.sm))
                     }
                     item {
                         Text(
                             packStringResource(Res.string.teams_join_requests_count, joinRequests.size),
-                            style = MaterialTheme.typography.titleMedium,
+                            style = AppTypography.heading,
                             modifier = Modifier
                                 .widthIn(max = 900.dp)
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
                         )
                     }
                     items(joinRequests, key = { "request-${it.id}" }) { request ->
@@ -224,13 +226,13 @@ private fun ManageMemberItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 member.username,
-                style = MaterialTheme.typography.titleMedium,
+                style = AppTypography.heading,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 member.role.displayName(),
-                style = MaterialTheme.typography.bodySmall,
+                style = AppTypography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -255,7 +257,7 @@ private fun InviteItem(
     ) {
         Text(
             invite.invitedUsername,
-            style = MaterialTheme.typography.titleMedium,
+            style = AppTypography.heading,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
@@ -279,7 +281,7 @@ private fun JoinRequestItem(
     ) {
         Text(
             request.username,
-            style = MaterialTheme.typography.titleMedium,
+            style = AppTypography.heading,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),

@@ -29,6 +29,7 @@ import com.github.mr3zee.components.RefreshErrorBanner
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwChip
+import com.github.mr3zee.components.RwFab
 import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.components.loadMoreItem
@@ -37,7 +38,9 @@ import com.github.mr3zee.model.ReleaseId
 import com.github.mr3zee.model.ReleaseStatus
 import com.github.mr3zee.model.isTerminal
 import com.github.mr3zee.theme.AppShapes
+import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.LocalAppColors
+import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.displayName
 import com.github.mr3zee.util.resolve
 import kotlinx.coroutines.delay
@@ -129,7 +132,7 @@ fun ReleaseListScreen(
                             if (relativeTimeText != null) {
                                 Text(
                                     text = relativeTimeText ?: "",
-                                    style = MaterialTheme.typography.labelSmall,
+                                    style = AppTypography.caption,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.testTag("last_updated_text"),
                                 )
@@ -180,7 +183,7 @@ fun ReleaseListScreen(
             }
         },
         floatingActionButton = {
-            FloatingActionButton(
+            RwFab(
                 onClick = { showStartDialog = true },
                 modifier = Modifier.testTag("start_release_fab"),
             ) {
@@ -211,14 +214,14 @@ fun ReleaseListScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .widthIn(max = 900.dp)
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
                     .testTag("search_field"),
             )
             Row(
                 modifier = Modifier
                     .widthIn(max = 900.dp)
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    .padding(horizontal = Spacing.lg),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
                 RwChip(
                     selected = statusFilter == null,
@@ -240,9 +243,9 @@ fun ReleaseListScreen(
                 Row(
                     modifier = Modifier
                         .widthIn(max = 900.dp)
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .padding(horizontal = Spacing.lg, vertical = Spacing.xs)
                         .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
                     RwChip(
                         selected = projectFilter == null,
@@ -264,7 +267,7 @@ fun ReleaseListScreen(
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(Spacing.xs))
 
             if (isLoading) {
                 Box(
@@ -283,7 +286,7 @@ fun ReleaseListScreen(
                             text = error?.resolve() ?: packStringResource(Res.string.common_unknown_error),
                             color = MaterialTheme.colorScheme.error,
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(Spacing.sm))
                         RwButton(
                             onClick = { viewModel.loadReleases() },
                             modifier = Modifier.testTag("retry_button"),
@@ -302,10 +305,10 @@ fun ReleaseListScreen(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
                                 text = packStringResource(Res.string.common_no_search_results),
-                                style = MaterialTheme.typography.bodyLarge,
+                                style = AppTypography.body,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(Spacing.sm))
                             RwButton(
                                 onClick = {
                                     viewModel.setSearchQuery("")
@@ -320,7 +323,7 @@ fun ReleaseListScreen(
                     } else {
                         Text(
                             text = packStringResource(Res.string.releases_empty_state),
-                            style = MaterialTheme.typography.bodyLarge,
+                            style = AppTypography.body,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.testTag("empty_state"),
                         )
@@ -332,6 +335,7 @@ fun ReleaseListScreen(
                         .fillMaxSize()
                         .testTag("release_list"),
                     horizontalAlignment = Alignment.CenterHorizontally,
+                    contentPadding = PaddingValues(bottom = 80.dp),
                 ) {
                     items(releases, key = { it.id.value }) { release ->
                         ReleaseListItem(
@@ -380,13 +384,13 @@ private fun ReleaseListItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = packStringResource(Res.string.releases_release_title, release.id.value.take(8)),
-                style = MaterialTheme.typography.titleMedium,
+                style = AppTypography.subheading,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = packStringResource(Res.string.releases_project_label, release.projectTemplateId.value.take(8)),
-                style = MaterialTheme.typography.bodyMedium,
+                style = AppTypography.body,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -394,7 +398,7 @@ private fun ReleaseListItem(
             if (release.startedAt != null) {
                 Text(
                     text = packStringResource(Res.string.releases_started_label, release.startedAt.toString()),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = AppTypography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -496,8 +500,8 @@ internal fun StatusBadge(status: ReleaseStatus) {
         Text(
             text = label,
             color = color,
-            style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            style = AppTypography.caption,
+            modifier = Modifier.padding(horizontal = Spacing.sm, vertical = Spacing.xs),
         )
     }
 }

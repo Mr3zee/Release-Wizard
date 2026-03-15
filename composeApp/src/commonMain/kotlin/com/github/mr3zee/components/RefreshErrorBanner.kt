@@ -11,6 +11,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import com.github.mr3zee.theme.AppTypography
+import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.i18n.packStringResource
 import releasewizard.composeapp.generated.resources.*
 
@@ -23,19 +25,19 @@ fun RefreshErrorBanner(
     RwCard(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .padding(horizontal = Spacing.lg, vertical = Spacing.xs)
             .testTag("refresh_error_banner"),
         containerColor = MaterialTheme.colorScheme.errorContainer,
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(start = 12.dp, top = 8.dp, bottom = 8.dp, end = 4.dp),
+            modifier = Modifier.fillMaxWidth().padding(start = Spacing.md, top = Spacing.sm, bottom = Spacing.sm, end = Spacing.xs),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 message,
                 color = MaterialTheme.colorScheme.onErrorContainer,
-                style = MaterialTheme.typography.bodySmall,
+                style = AppTypography.bodySmall,
                 modifier = Modifier.weight(1f),
             )
             RwIconButton(

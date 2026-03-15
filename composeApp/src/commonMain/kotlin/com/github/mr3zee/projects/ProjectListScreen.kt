@@ -20,7 +20,9 @@ import com.github.mr3zee.components.ListItemCard
 import com.github.mr3zee.components.RefreshErrorBanner
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
+import com.github.mr3zee.components.RwFab
 import com.github.mr3zee.components.RwIconButton
+import com.github.mr3zee.components.RwRadioButton
 import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.components.loadMoreItem
 import com.github.mr3zee.model.ProjectId
@@ -29,6 +31,8 @@ import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.i18n.LanguagePack
 import com.github.mr3zee.i18n.packPluralStringResource
 import com.github.mr3zee.i18n.packStringResource
+import com.github.mr3zee.theme.AppTypography
+import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.theme.ThemePreference
 import com.github.mr3zee.util.resolve
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -185,18 +189,18 @@ fun ProjectListScreen(
                                     DropdownMenuItem(
                                         text = {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                                RadioButton(
+                                                RwRadioButton(
                                                     selected = pack == languagePack,
                                                     onClick = null,
                                                     modifier = Modifier.size(20.dp),
                                                 )
-                                                Spacer(Modifier.width(8.dp))
+                                                Spacer(Modifier.width(Spacing.sm))
                                                 Column {
-                                                    Text(pack.displayName, style = MaterialTheme.typography.bodyMedium)
+                                                    Text(pack.displayName, style = AppTypography.body)
                                                     if (pack != LanguagePack.ENGLISH) {
                                                         Text(
                                                             pack.preview,
-                                                            style = MaterialTheme.typography.bodySmall,
+                                                            style = AppTypography.bodySmall,
                                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                         )
                                                     }
@@ -227,7 +231,7 @@ fun ProjectListScreen(
             }
         },
         floatingActionButton = {
-            FloatingActionButton(
+            RwFab(
                 onClick = { showCreateDialog = true },
                 modifier = Modifier.testTag("create_project_fab"),
             ) {
@@ -258,7 +262,7 @@ fun ProjectListScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .widthIn(max = 900.dp)
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
                     .testTag("search_field"),
             )
 
@@ -279,7 +283,7 @@ fun ProjectListScreen(
                             text = error?.resolve() ?: packStringResource(Res.string.common_unknown_error),
                             color = MaterialTheme.colorScheme.error,
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(Spacing.sm))
                         RwButton(onClick = { viewModel.loadProjects() }, variant = RwButtonVariant.Primary) {
                             Text(packStringResource(Res.string.common_retry))
                         }
@@ -294,10 +298,10 @@ fun ProjectListScreen(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
                                 text = packStringResource(Res.string.common_no_search_results),
-                                style = MaterialTheme.typography.bodyLarge,
+                                style = AppTypography.body,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(Spacing.sm))
                             RwButton(onClick = { viewModel.setSearchQuery("") }, variant = RwButtonVariant.Ghost) {
                                 Text(packStringResource(Res.string.common_clear_search))
                             }
@@ -305,7 +309,7 @@ fun ProjectListScreen(
                     } else {
                         Text(
                             text = packStringResource(Res.string.projects_empty_state),
-                            style = MaterialTheme.typography.bodyLarge,
+                            style = AppTypography.body,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -316,6 +320,7 @@ fun ProjectListScreen(
                         .fillMaxSize()
                         .testTag("project_list"),
                     horizontalAlignment = Alignment.CenterHorizontally,
+                    contentPadding = PaddingValues(bottom = 80.dp),
                 ) {
                     items(projects, key = { it.id.value }) { project ->
                         ProjectListItem(
@@ -415,14 +420,14 @@ private fun ProjectListItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = project.name,
-                style = MaterialTheme.typography.titleMedium,
+                style = AppTypography.subheading,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             if (project.description.isNotBlank()) {
                 Text(
                     text = project.description,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = AppTypography.body,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
@@ -430,7 +435,7 @@ private fun ProjectListItem(
             }
             Text(
                 text = packPluralStringResource(Res.plurals.blocks, project.dagGraph.blocks.size, project.dagGraph.blocks.size),
-                style = MaterialTheme.typography.bodySmall,
+                style = AppTypography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }

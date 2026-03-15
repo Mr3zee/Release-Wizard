@@ -27,10 +27,13 @@ import com.github.mr3zee.components.RefreshErrorBanner
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwCard
+import com.github.mr3zee.components.RwFab
 import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.theme.AppShapes
+import com.github.mr3zee.theme.AppTypography
+import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.resolve
 import com.github.mr3zee.i18n.packPluralStringResource
 import com.github.mr3zee.i18n.packStringResource
@@ -142,7 +145,7 @@ fun TeamListScreen(
             }
         },
         floatingActionButton = {
-            FloatingActionButton(
+            RwFab(
                 onClick = { showCreateDialog = true },
                 modifier = Modifier.testTag("create_team_fab"),
             ) {
@@ -172,7 +175,7 @@ fun TeamListScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .widthIn(max = 900.dp)
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
                     .testTag("team_search_field"),
             )
 
@@ -181,18 +184,18 @@ fun TeamListScreen(
                 RwCard(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                        .padding(horizontal = Spacing.lg, vertical = Spacing.xs),
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                        modifier = Modifier.fillMaxWidth().padding(Spacing.md),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
                             resolvedMessage,
                             color = MaterialTheme.colorScheme.primary,
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = AppTypography.body,
                             modifier = Modifier.weight(1f),
                         )
                         RwButton(onClick = { viewModel.clearMessage() }, variant = RwButtonVariant.Ghost) {
@@ -212,10 +215,10 @@ fun TeamListScreen(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
                                 packStringResource(Res.string.common_no_search_results),
-                                style = MaterialTheme.typography.bodyLarge,
+                                style = AppTypography.body,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(Spacing.sm))
                             RwButton(onClick = { viewModel.setSearchQuery("") }, variant = RwButtonVariant.Ghost) {
                                 Text(packStringResource(Res.string.common_clear_search))
                             }
@@ -223,7 +226,7 @@ fun TeamListScreen(
                     } else {
                         Text(
                             packStringResource(Res.string.teams_empty_state),
-                            style = MaterialTheme.typography.bodyLarge,
+                            style = AppTypography.body,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -231,6 +234,7 @@ fun TeamListScreen(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize().testTag("team_list"),
+                    contentPadding = PaddingValues(bottom = 80.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     items(teams, key = { it.team.id.value }) { teamResponse ->
@@ -276,14 +280,14 @@ private fun TeamListItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 teamResponse.team.name,
-                style = MaterialTheme.typography.titleMedium,
+                style = AppTypography.subheading,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             if (teamResponse.team.description.isNotBlank()) {
                 Text(
                     teamResponse.team.description,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = AppTypography.body,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
@@ -291,7 +295,7 @@ private fun TeamListItem(
             }
             Text(
                 packPluralStringResource(Res.plurals.members, teamResponse.memberCount, teamResponse.memberCount),
-                style = MaterialTheme.typography.bodySmall,
+                style = AppTypography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
@@ -302,9 +306,9 @@ private fun TeamListItem(
             ) {
                 Text(
                     packStringResource(Res.string.teams_member_badge),
-                    style = MaterialTheme.typography.labelMedium,
+                    style = AppTypography.label,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.xs),
                 )
             }
         } else {
@@ -336,7 +340,7 @@ private fun CreateTeamDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().testTag("team_name_input"),
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(Spacing.sm))
                 RwTextField(
                     value = description,
                     onValueChange = { description = it },

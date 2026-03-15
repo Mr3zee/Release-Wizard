@@ -16,6 +16,8 @@ import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwCard
 import com.github.mr3zee.model.TeamInvite
+import com.github.mr3zee.theme.AppTypography
+import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.resolve
 import com.github.mr3zee.i18n.packStringResource
 import releasewizard.composeapp.generated.resources.*
@@ -73,7 +75,7 @@ fun MyInvitesScreen(
             Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Text(
                     packStringResource(Res.string.teams_no_pending_invites),
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = AppTypography.body,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -107,23 +109,23 @@ private fun InviteCard(
     RwCard(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .padding(horizontal = Spacing.lg, vertical = Spacing.xs)
             .testTag("invite_card_${invite.id}"),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(Spacing.lg)) {
             Text(
                 invite.teamName,
-                style = MaterialTheme.typography.titleMedium,
+                style = AppTypography.heading,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 packStringResource(Res.string.teams_invited_by, invite.invitedByUsername),
-                style = MaterialTheme.typography.bodySmall,
+                style = AppTypography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Spacer(modifier = Modifier.height(Spacing.sm))
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 RwButton(onClick = onAccept, variant = RwButtonVariant.Primary) { Text(packStringResource(Res.string.teams_accept)) }
                 RwButton(onClick = onDecline, variant = RwButtonVariant.Ghost) { Text(packStringResource(Res.string.teams_decline)) }
             }

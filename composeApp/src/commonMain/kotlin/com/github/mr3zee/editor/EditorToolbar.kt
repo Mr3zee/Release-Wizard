@@ -17,7 +17,9 @@ import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.model.BlockType
+import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.LocalAppColors
+import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.displayName
 import com.github.mr3zee.i18n.packStringResource
 import releasewizard.composeapp.generated.resources.*
@@ -45,13 +47,13 @@ fun EditorToolbar(
             .width(200.dp)
             .fillMaxHeight()
             .verticalScroll(rememberScrollState())
-            .padding(8.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+            .padding(Spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
         Text(
             packStringResource(Res.string.editor_toolbar_blocks),
-            style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.padding(bottom = 4.dp),
+            style = AppTypography.subheading,
+            modifier = Modifier.padding(bottom = Spacing.xs),
         )
 
         BlockType.entries.forEach { type ->
@@ -66,7 +68,7 @@ fun EditorToolbar(
             ) {
                 Text(
                     type.displayName(),
-                    style = MaterialTheme.typography.labelMedium,
+                    style = AppTypography.label,
                 )
             }
         }
@@ -80,30 +82,30 @@ fun EditorToolbar(
                 .fillMaxWidth()
                 .testTag("add_container"),
         ) {
-            Text(packStringResource(Res.string.editor_toolbar_container), style = MaterialTheme.typography.labelMedium)
+            Text(packStringResource(Res.string.editor_toolbar_container), style = AppTypography.label)
         }
 
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.sm))
 
         Text(
             packStringResource(Res.string.editor_toolbar_actions),
-            style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.padding(bottom = 4.dp),
+            style = AppTypography.subheading,
+            modifier = Modifier.padding(bottom = Spacing.xs),
         )
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
             RwButton(
                 onClick = onUndo,
                 variant = RwButtonVariant.Secondary,
                 enabled = enabled && canUndo,
                 modifier = Modifier.weight(1f).testTag("undo_button"),
-                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+                contentPadding = PaddingValues(horizontal = Spacing.sm, vertical = 6.dp),
             ) {
                 Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.width(Spacing.xs))
                 Text(packStringResource(Res.string.editor_toolbar_undo))
             }
             RwButton(
@@ -111,27 +113,27 @@ fun EditorToolbar(
                 variant = RwButtonVariant.Secondary,
                 enabled = enabled && canRedo,
                 modifier = Modifier.weight(1f).testTag("redo_button"),
-                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+                contentPadding = PaddingValues(horizontal = Spacing.sm, vertical = 6.dp),
             ) {
                 Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.width(Spacing.xs))
                 Text(packStringResource(Res.string.editor_toolbar_redo))
             }
         }
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
             RwButton(
                 onClick = onCopy,
                 variant = RwButtonVariant.Secondary,
                 enabled = hasSelection, // Copy always allowed
                 modifier = Modifier.weight(1f).testTag("copy_button"),
-                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+                contentPadding = PaddingValues(horizontal = Spacing.sm, vertical = 6.dp),
             ) {
                 Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.width(Spacing.xs))
                 Text(packStringResource(Res.string.editor_toolbar_copy))
             }
             RwButton(
@@ -139,10 +141,10 @@ fun EditorToolbar(
                 variant = RwButtonVariant.Secondary,
                 enabled = enabled && hasClipboard,
                 modifier = Modifier.weight(1f).testTag("paste_button"),
-                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+                contentPadding = PaddingValues(horizontal = Spacing.sm, vertical = 6.dp),
             ) {
                 Icon(Icons.Default.ContentPaste, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.width(Spacing.xs))
                 Text(packStringResource(Res.string.editor_toolbar_paste))
             }
         }
@@ -153,10 +155,10 @@ fun EditorToolbar(
             enabled = enabled && hasSelection,
             contentColor = MaterialTheme.colorScheme.error,
             modifier = Modifier.fillMaxWidth().testTag("delete_button"),
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+            contentPadding = PaddingValues(horizontal = Spacing.sm, vertical = 6.dp),
         ) {
             Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
-            Spacer(modifier = Modifier.width(4.dp))
+            Spacer(modifier = Modifier.width(Spacing.xs))
             Text(packStringResource(Res.string.editor_toolbar_delete))
         }
     }

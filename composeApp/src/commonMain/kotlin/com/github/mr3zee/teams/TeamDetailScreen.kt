@@ -17,6 +17,8 @@ import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwCard
 import com.github.mr3zee.model.TeamMembership
+import com.github.mr3zee.theme.AppTypography
+import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.displayName
 import com.github.mr3zee.util.resolve
 import com.github.mr3zee.i18n.packPluralStringResource
@@ -93,7 +95,7 @@ fun TeamDetailScreen(
             Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(error?.resolve() ?: packStringResource(Res.string.common_unknown_error), color = MaterialTheme.colorScheme.error)
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(Spacing.sm))
                     RwButton(onClick = { viewModel.loadDetail() }, variant = RwButtonVariant.Primary) { Text(packStringResource(Res.string.common_retry)) }
                 }
             }
@@ -108,29 +110,29 @@ fun TeamDetailScreen(
                             modifier = Modifier
                                 .widthIn(max = 900.dp)
                                 .fillMaxWidth()
-                                .padding(16.dp),
+                                .padding(Spacing.lg),
                         ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
+                            Column(modifier = Modifier.padding(Spacing.lg)) {
                                 Text(
                                     t.name,
-                                    style = MaterialTheme.typography.titleLarge,
+                                    style = AppTypography.heading,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                 )
                                 if (t.description.isNotBlank()) {
-                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Spacer(modifier = Modifier.height(Spacing.xs))
                                     Text(
                                         t.description,
-                                        style = MaterialTheme.typography.bodyMedium,
+                                        style = AppTypography.body,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         maxLines = 2,
                                         overflow = TextOverflow.Ellipsis,
                                     )
                                 }
-                                Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.height(Spacing.sm))
                                 Text(
                                     packPluralStringResource(Res.plurals.members, members.size, members.size),
-                                    style = MaterialTheme.typography.bodySmall,
+                                    style = AppTypography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -141,11 +143,11 @@ fun TeamDetailScreen(
                 item {
                     Text(
                         packStringResource(Res.string.teams_members_section),
-                        style = MaterialTheme.typography.titleMedium,
+                        style = AppTypography.heading,
                         modifier = Modifier
                             .widthIn(max = 900.dp)
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                            .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
                     )
                 }
 
@@ -190,14 +192,14 @@ private fun MemberItem(
     ) {
         Text(
             member.username,
-            style = MaterialTheme.typography.titleMedium,
+            style = AppTypography.heading,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
         Text(
             member.role.displayName(),
-            style = MaterialTheme.typography.bodySmall,
+            style = AppTypography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }

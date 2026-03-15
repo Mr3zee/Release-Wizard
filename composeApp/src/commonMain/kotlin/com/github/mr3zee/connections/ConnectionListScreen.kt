@@ -26,12 +26,15 @@ import com.github.mr3zee.components.RefreshErrorBanner
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwChip
+import com.github.mr3zee.components.RwFab
 import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.components.loadMoreItem
 import com.github.mr3zee.model.Connection
 import com.github.mr3zee.model.ConnectionId
 import com.github.mr3zee.model.ConnectionType
+import com.github.mr3zee.theme.AppTypography
+import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.displayName
 import com.github.mr3zee.util.resolve
 import com.github.mr3zee.i18n.packStringResource
@@ -151,7 +154,7 @@ fun ConnectionListScreen(
             }
         },
         floatingActionButton = {
-            FloatingActionButton(
+            RwFab(
                 onClick = onCreateConnection,
                 modifier = Modifier.testTag("create_connection_fab"),
             ) {
@@ -183,14 +186,14 @@ fun ConnectionListScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .widthIn(max = 900.dp)
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
                     .testTag("search_field"),
             )
             Row(
                 modifier = Modifier
                     .widthIn(max = 900.dp)
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    .padding(horizontal = Spacing.lg),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
                 RwChip(
                     selected = typeFilter == null,
@@ -208,7 +211,7 @@ fun ConnectionListScreen(
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(Spacing.xs))
 
             if (isLoading) {
                 Box(
@@ -226,10 +229,10 @@ fun ConnectionListScreen(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
                                 text = packStringResource(Res.string.common_no_search_results),
-                                style = MaterialTheme.typography.bodyLarge,
+                                style = AppTypography.body,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(Spacing.sm))
                             RwButton(onClick = {
                                 viewModel.setSearchQuery("")
                                 viewModel.setTypeFilter(null)
@@ -240,7 +243,7 @@ fun ConnectionListScreen(
                     } else {
                         Text(
                             text = packStringResource(Res.string.connections_empty_state),
-                            style = MaterialTheme.typography.bodyLarge,
+                            style = AppTypography.body,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -250,6 +253,7 @@ fun ConnectionListScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .testTag("connection_list"),
+                    contentPadding = PaddingValues(bottom = 80.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     items(connections, key = { it.id.value }) { connection ->
@@ -307,19 +311,19 @@ private fun ConnectionListItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = connection.name,
-                style = MaterialTheme.typography.titleMedium,
+                style = AppTypography.subheading,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = connection.type.displayName(),
-                style = MaterialTheme.typography.bodyMedium,
+                style = AppTypography.body,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (webhookUrl != null) {
                 Text(
                     text = packStringResource(Res.string.connections_webhook_display, webhookUrl),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = AppTypography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

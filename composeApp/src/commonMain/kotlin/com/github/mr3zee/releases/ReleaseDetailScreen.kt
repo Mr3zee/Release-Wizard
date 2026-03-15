@@ -16,6 +16,8 @@ import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.model.*
 import com.github.mr3zee.model.isTerminal
+import com.github.mr3zee.theme.AppTypography
+import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.UiMessage
 import com.github.mr3zee.util.displayName
 import com.github.mr3zee.util.resolve
@@ -127,7 +129,7 @@ fun ReleaseDetailScreen(
                 title = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
                         Text(
                             packStringResource(Res.string.releases_detail_title),
@@ -155,9 +157,9 @@ fun ReleaseDetailScreen(
                         Text(
                             text = disconnectedText,
                             color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.labelSmall,
+                            style = AppTypography.caption,
                             modifier = Modifier
-                                .padding(end = 8.dp)
+                                .padding(end = Spacing.sm)
                                 .testTag("disconnected_indicator"),
                         )
                     }
@@ -263,7 +265,7 @@ private fun BlockDetailPanel(
             modifier = Modifier
                 .heightIn(max = 320.dp)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                .padding(Spacing.lg),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -272,7 +274,7 @@ private fun BlockDetailPanel(
             ) {
                 Text(
                     text = block.name,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = AppTypography.heading,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
@@ -282,16 +284,16 @@ private fun BlockDetailPanel(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Spacing.sm))
 
             Text(
                 text = packStringResource(Res.string.releases_block_status, execution.status.displayName()),
-                style = MaterialTheme.typography.bodyMedium,
+                style = AppTypography.body,
                 modifier = Modifier.testTag("block_status_text"),
             )
 
             execution.error?.let { errorMsg ->
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(Spacing.sm))
                 ErrorDetailSection(
                     error = errorMsg,
                     finishedAt = execution.finishedAt,
@@ -300,16 +302,16 @@ private fun BlockDetailPanel(
 
             val genericOutputs = execution.outputs.filterKeys { it != BlockExecution.ARTIFACTS_OUTPUT_KEY }
             if (genericOutputs.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(Spacing.sm))
                 Text(
                     text = packStringResource(Res.string.releases_block_outputs),
-                    style = MaterialTheme.typography.labelMedium,
+                    style = AppTypography.label,
                 )
                 genericOutputs.forEach { (key, value) ->
                     Text(
                         text = packStringResource(Res.string.releases_block_output_entry, key, value),
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(start = 16.dp),
+                        style = AppTypography.bodySmall,
+                        modifier = Modifier.padding(start = Spacing.lg),
                     )
                 }
             }
@@ -319,16 +321,16 @@ private fun BlockDetailPanel(
             }
 
             if (execution.status == BlockStatus.WAITING_FOR_INPUT) {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(Spacing.sm))
 
                 // Gate context
                 execution.gateMessage?.let { msg ->
                     Text(
                         text = msg,
-                        style = MaterialTheme.typography.titleSmall,
+                        style = AppTypography.subheading,
                         modifier = Modifier.testTag("gate_message_text"),
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(Spacing.xs))
                 }
 
                 val phaseContext = when (execution.gatePhase) {
@@ -338,7 +340,7 @@ private fun BlockDetailPanel(
                 }
                 Text(
                     text = phaseContext,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = AppTypography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.testTag("gate_phase_text"),
                 )
@@ -351,16 +353,16 @@ private fun BlockDetailPanel(
                     null -> null // gatePhase should always be set; don't guess
                 }
                 gate?.let { g ->
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(Spacing.xs))
                     Text(
                         text = packStringResource(Res.string.releases_approval_progress, execution.approvals.size, g.approvalRule.requiredCount),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = AppTypography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.testTag("gate_approval_progress"),
                     )
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(Spacing.xs))
                 RwButton(
                     onClick = onApprove,
                     modifier = Modifier.testTag("approve_block_button"),

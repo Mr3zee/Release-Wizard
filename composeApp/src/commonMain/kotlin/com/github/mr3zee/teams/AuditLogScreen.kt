@@ -16,6 +16,8 @@ import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwCard
 import com.github.mr3zee.model.AuditEvent
+import com.github.mr3zee.theme.AppTypography
+import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.resolve
 import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
@@ -72,7 +74,7 @@ fun AuditLogScreen(
             Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Text(
                     packStringResource(Res.string.teams_no_audit_events),
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = AppTypography.body,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -92,7 +94,7 @@ fun AuditLogScreen(
                         RwButton(
                             onClick = { viewModel.loadMore() },
                             variant = RwButtonVariant.Ghost,
-                            modifier = Modifier.fillMaxWidth().padding(8.dp).testTag("load_more_audit"),
+                            modifier = Modifier.fillMaxWidth().padding(Spacing.sm).testTag("load_more_audit"),
                         ) {
                             Text(packStringResource(Res.string.teams_load_more))
                         }
@@ -111,10 +113,10 @@ private fun AuditEventItem(
     RwCard(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .padding(horizontal = Spacing.lg, vertical = Spacing.xs)
             .testTag("audit_event_${event.id}"),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(Spacing.lg)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -122,31 +124,31 @@ private fun AuditEventItem(
                 Text(
                     event.action.name.replace("_", " ").lowercase()
                         .replaceFirstChar { it.uppercase() },
-                    style = MaterialTheme.typography.titleMedium,
+                    style = AppTypography.heading,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
                 Text(
                     event.targetType.name.lowercase(),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = AppTypography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(Spacing.xs))
             val instant = Instant.fromEpochMilliseconds(event.timestamp)
             val dateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
             val formatted = "${dateTime.date} ${dateTime.hour.toString().padStart(2, '0')}:${dateTime.minute.toString().padStart(2, '0')}"
             Text(
                 packStringResource(Res.string.teams_audit_entry_by, event.actorUsername, formatted),
-                style = MaterialTheme.typography.bodySmall,
+                style = AppTypography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (event.details.isNotBlank()) {
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(Spacing.xxs))
                 Text(
                     event.details,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = AppTypography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,

@@ -18,6 +18,8 @@ import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.model.ConnectionConfig
 import com.github.mr3zee.model.ConnectionId
 import com.github.mr3zee.model.ConnectionType
+import com.github.mr3zee.theme.AppTypography
+import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.displayName
 import com.github.mr3zee.util.resolve
 import com.github.mr3zee.i18n.packStringResource
@@ -196,8 +198,8 @@ fun ConnectionFormScreen(
                     .widthIn(max = 700.dp)
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                    .padding(Spacing.lg),
+                verticalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
             RwTextField(
                 value = name,
@@ -354,7 +356,7 @@ fun ConnectionFormScreen(
                 Text(
                     text = errorMessage.resolve(),
                     color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = AppTypography.body,
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("connection_form_error"),

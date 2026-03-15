@@ -15,6 +15,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
+import com.github.mr3zee.theme.AppTypography
+import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.copyToClipboard
 import kotlin.time.Instant
 import com.github.mr3zee.i18n.packStringResource
@@ -33,18 +35,18 @@ fun ErrorDetailSection(
         shape = MaterialTheme.shapes.small,
         modifier = modifier.fillMaxWidth().testTag("error_detail_section"),
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(modifier = Modifier.padding(Spacing.md)) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { expanded = !expanded }
+                    .clickable(indication = null, interactionSource = null) { expanded = !expanded }
                     .testTag("error_header"),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
                     text = packStringResource(Res.string.common_error),
-                    style = MaterialTheme.typography.titleSmall,
+                    style = AppTypography.subheading,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                 )
                 Icon(
@@ -55,25 +57,25 @@ fun ErrorDetailSection(
             }
 
             AnimatedVisibility(visible = expanded) {
-                Column(modifier = Modifier.padding(top = 8.dp)) {
+                Column(modifier = Modifier.padding(top = Spacing.sm)) {
                     if (finishedAt != null) {
                         Text(
                             text = packStringResource(Res.string.releases_error_failed_at, finishedAt.toString()),
-                            style = MaterialTheme.typography.bodySmall,
+                            style = AppTypography.bodySmall,
                             color = MaterialTheme.colorScheme.onErrorContainer,
                             modifier = Modifier.testTag("error_timestamp"),
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(Spacing.xs))
                     }
                     SelectionContainer {
                         Text(
                             text = error,
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = AppTypography.body,
                             color = MaterialTheme.colorScheme.onErrorContainer,
                             modifier = Modifier.testTag("error_message"),
                         )
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(Spacing.sm))
                     RwButton(
                         onClick = { copyToClipboard(error) },
                         modifier = Modifier.testTag("copy_error_button"),

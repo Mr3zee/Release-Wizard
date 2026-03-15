@@ -19,6 +19,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
+import com.github.mr3zee.theme.AppTypography
+import com.github.mr3zee.theme.Spacing
 import kotlinx.serialization.json.Json
 import com.github.mr3zee.i18n.packStringResource
 import releasewizard.composeapp.generated.resources.*
@@ -46,7 +48,7 @@ fun ArtifactTreeView(artifactsJson: String) {
             .fillMaxWidth()
             .testTag("artifact_tree_section"),
     ) {
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(Spacing.sm))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -55,7 +57,7 @@ fun ArtifactTreeView(artifactsJson: String) {
         ) {
             Text(
                 text = packStringResource(Res.string.releases_artifacts),
-                style = MaterialTheme.typography.labelMedium,
+                style = AppTypography.label,
             )
             Row {
                 RwButton(
@@ -63,14 +65,14 @@ fun ArtifactTreeView(artifactsJson: String) {
                     modifier = Modifier.testTag("artifact_expand_all_button"),
                     variant = RwButtonVariant.Ghost,
                 ) {
-                    Text(packStringResource(Res.string.common_expand_all), style = MaterialTheme.typography.labelSmall)
+                    Text(packStringResource(Res.string.common_expand_all), style = AppTypography.caption)
                 }
                 RwButton(
                     onClick = { expandedState.clear() },
                     modifier = Modifier.testTag("artifact_collapse_all_button"),
                     variant = RwButtonVariant.Ghost,
                 ) {
-                    Text(packStringResource(Res.string.common_collapse_all), style = MaterialTheme.typography.labelSmall)
+                    Text(packStringResource(Res.string.common_collapse_all), style = AppTypography.caption)
                 }
             }
         }
@@ -97,10 +99,10 @@ private fun ArtifactNodeRow(
             .padding(start = (depth * 16).dp)
             .let {
                 if (node.isDirectory) {
-                    it.clickable { expandedState[path] = !isExpanded }
+                    it.clickable(indication = null, interactionSource = null) { expandedState[path] = !isExpanded }
                 } else it
             }
-            .padding(vertical = 2.dp)
+            .padding(vertical = Spacing.xxs)
             .testTag("artifact_node_$path"),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -114,28 +116,28 @@ private fun ArtifactNodeRow(
             Icon(
                 imageVector = Icons.Default.Folder,
                 contentDescription = packStringResource(Res.string.releases_folder),
-                modifier = Modifier.size(16.dp).padding(start = 2.dp),
+                modifier = Modifier.size(16.dp).padding(start = Spacing.xxs),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(modifier = Modifier.width(4.dp))
+            Spacer(modifier = Modifier.width(Spacing.xs))
             Text(
                 text = "${node.name}/",
-                style = MaterialTheme.typography.bodySmall,
+                style = AppTypography.bodySmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         } else {
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(Spacing.lg))
             Icon(
                 imageVector = Icons.Default.Description,
                 contentDescription = packStringResource(Res.string.releases_file),
-                modifier = Modifier.size(16.dp).padding(start = 2.dp),
+                modifier = Modifier.size(16.dp).padding(start = Spacing.xxs),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(modifier = Modifier.width(4.dp))
+            Spacer(modifier = Modifier.width(Spacing.xs))
             Text(
                 text = node.name,
-                style = MaterialTheme.typography.bodySmall,
+                style = AppTypography.bodySmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )

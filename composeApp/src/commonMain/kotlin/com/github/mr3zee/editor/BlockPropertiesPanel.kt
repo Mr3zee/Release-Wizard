@@ -14,6 +14,8 @@ import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwCheckbox
 import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.model.*
+import com.github.mr3zee.theme.AppTypography
+import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.displayName
 import com.github.mr3zee.i18n.packPluralStringResource
 import com.github.mr3zee.i18n.packStringResource
@@ -38,18 +40,18 @@ fun BlockPropertiesPanel(
             .width(260.dp)
             .fillMaxHeight()
             .verticalScroll(rememberScrollState())
-            .padding(12.dp),
+            .padding(Spacing.md),
     ) {
         Text(
             packStringResource(Res.string.editor_prop_title),
-            style = MaterialTheme.typography.titleSmall,
-            modifier = Modifier.padding(bottom = 8.dp),
+            style = AppTypography.subheading,
+            modifier = Modifier.padding(bottom = Spacing.sm),
         )
 
         if (block == null) {
             Text(
                 packStringResource(Res.string.editor_prop_empty_hint),
-                style = MaterialTheme.typography.bodySmall,
+                style = AppTypography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             return@Column
@@ -70,7 +72,7 @@ fun BlockPropertiesPanel(
             modifier = Modifier.fillMaxWidth().testTag("block_name_field"),
         )
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(Spacing.md))
 
         when (block) {
             is Block.ActionBlock -> {
@@ -89,12 +91,12 @@ fun BlockPropertiesPanel(
             is Block.ContainerBlock -> {
                 Text(
                     packStringResource(Res.string.editor_prop_container_type),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = AppTypography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
                     packPluralStringResource(Res.plurals.child_blocks, block.children.blocks.size, block.children.blocks.size),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = AppTypography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -116,7 +118,7 @@ private fun ActionBlockProperties(
 ) {
     // Type selector
     var typeExpanded by remember(block.id) { mutableStateOf(false) }
-    Text(packStringResource(Res.string.editor_prop_type), style = MaterialTheme.typography.labelMedium)
+    Text(packStringResource(Res.string.editor_prop_type), style = AppTypography.label)
     Box {
         RwButton(
             onClick = { typeExpanded = true },
@@ -142,7 +144,7 @@ private fun ActionBlockProperties(
         }
     }
 
-    Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(Spacing.md))
 
     // Timeout
     var timeoutText by remember(block.id) {
@@ -162,7 +164,7 @@ private fun ActionBlockProperties(
         modifier = Modifier.fillMaxWidth().testTag("block_timeout_field"),
     )
 
-    Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(Spacing.md))
 
     // Compute predecessors for template picker (shared by gates and parameters)
     val predecessors = remember(graph, block.id) {
@@ -179,11 +181,11 @@ private fun ActionBlockProperties(
         enabled = enabled,
     )
 
-    Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(Spacing.md))
 
     // Parameters
-    Text(packStringResource(Res.string.editor_prop_parameters), style = MaterialTheme.typography.labelMedium)
-    Spacer(Modifier.height(4.dp))
+    Text(packStringResource(Res.string.editor_prop_parameters), style = AppTypography.label)
+    Spacer(Modifier.height(Spacing.xs))
 
     var params by remember(block.id) { mutableStateOf(block.parameters) }
     if (params != block.parameters) params = block.parameters
@@ -204,7 +206,7 @@ private fun ActionBlockProperties(
             },
             enabled = enabled,
         )
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(Spacing.xs))
         }
     }
 
@@ -245,11 +247,11 @@ private fun GateConfigSection(
         enabled = enabled,
         modifier = Modifier.fillMaxWidth().testTag("gate_section_toggle"),
     ) {
-        Text(label, style = MaterialTheme.typography.labelMedium)
+        Text(label, style = AppTypography.label)
     }
 
     if (expanded) {
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Spacing.sm))
         Column(modifier = Modifier.testTag("gate_section_content")) {
             SingleGateEditor(
                 label = packStringResource(Res.string.editor_gate_pre_label),
@@ -262,7 +264,7 @@ private fun GateConfigSection(
                 testTagPrefix = "pre_gate",
             )
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Spacing.sm))
             SingleGateEditor(
                 label = packStringResource(Res.string.editor_gate_post_label),
                 gate = block.postGate,
@@ -310,13 +312,13 @@ private fun SingleGateEditor(
             enabled = enabled,
             modifier = Modifier.testTag("${testTagPrefix}_checkbox"),
         )
-        Text(label, style = MaterialTheme.typography.labelMedium)
+        Text(label, style = AppTypography.label)
     }
 
     if (isEnabled) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             TemplateAutocompleteField(
@@ -331,7 +333,7 @@ private fun SingleGateEditor(
                 singleLine = true,
                 enabled = enabled,
                 modifier = Modifier.weight(1f),
-                textStyle = MaterialTheme.typography.bodySmall,
+                textStyle = AppTypography.bodySmall,
                 testTag = "${testTagPrefix}_message_field",
             )
             TooltipBox(
@@ -343,10 +345,10 @@ private fun SingleGateEditor(
                     onClick = { showTemplatePicker = true },
                     variant = RwButtonVariant.Ghost,
                     enabled = enabled,
-                    contentPadding = PaddingValues(4.dp),
+                    contentPadding = PaddingValues(Spacing.xs),
                     modifier = Modifier.testTag("${testTagPrefix}_template_button"),
                 ) {
-                    Text(packStringResource(Res.string.editor_template_button), style = MaterialTheme.typography.bodySmall)
+                    Text(packStringResource(Res.string.editor_template_button), style = AppTypography.bodySmall)
                 }
             }
 }
@@ -367,7 +369,7 @@ private fun SingleGateEditor(
             singleLine = true,
             enabled = enabled,
             modifier = Modifier.fillMaxWidth().testTag("${testTagPrefix}_count_field"),
-            textStyle = MaterialTheme.typography.bodySmall,
+            textStyle = AppTypography.bodySmall,
         )
     }
 
@@ -400,7 +402,7 @@ private fun ParameterRow(
 
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         RwTextField(
@@ -410,7 +412,7 @@ private fun ParameterRow(
             singleLine = true,
             enabled = enabled,
             modifier = Modifier.weight(1f),
-            textStyle = MaterialTheme.typography.bodySmall,
+            textStyle = AppTypography.bodySmall,
         )
         TemplateAutocompleteField(
             value = parameter.value,
@@ -421,7 +423,7 @@ private fun ParameterRow(
             singleLine = true,
             enabled = enabled,
             modifier = Modifier.weight(1f),
-            textStyle = MaterialTheme.typography.bodySmall,
+            textStyle = AppTypography.bodySmall,
             testTag = "param_value_field",
         )
         TooltipBox(
@@ -433,17 +435,17 @@ private fun ParameterRow(
                 onClick = { showTemplatePicker = true },
                 variant = RwButtonVariant.Ghost,
                 enabled = enabled,
-                contentPadding = PaddingValues(4.dp),
+                contentPadding = PaddingValues(Spacing.xs),
                 modifier = Modifier.testTag("insert_template_button"),
             ) {
-                Text(packStringResource(Res.string.editor_template_button), style = MaterialTheme.typography.bodySmall)
+                Text(packStringResource(Res.string.editor_template_button), style = AppTypography.bodySmall)
             }
         }
         RwButton(
             onClick = onRemove,
             variant = RwButtonVariant.Ghost,
             enabled = enabled,
-            contentPadding = PaddingValues(4.dp),
+            contentPadding = PaddingValues(Spacing.xs),
             contentColor = MaterialTheme.colorScheme.error,
         ) {
             Text(packStringResource(Res.string.editor_prop_remove))

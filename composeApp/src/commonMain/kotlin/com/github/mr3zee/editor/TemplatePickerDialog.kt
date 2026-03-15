@@ -12,6 +12,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
+import com.github.mr3zee.theme.AppTypography
+import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.model.Block
 import com.github.mr3zee.model.Parameter
 import com.github.mr3zee.i18n.packStringResource
@@ -47,15 +49,15 @@ fun TemplatePickerDialog(
                     .fillMaxWidth()
                     .heightIn(max = 400.dp)
                     .testTag("template_picker_list"),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
             ) {
                 if (paramSuggestions.isNotEmpty()) {
                     item {
                         Text(
                             packStringResource(Res.string.editor_template_parameters),
-                            style = MaterialTheme.typography.labelMedium,
+                            style = AppTypography.label,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(vertical = 4.dp),
+                            modifier = Modifier.padding(vertical = Spacing.xs),
                         )
                     }
                     items(paramSuggestions, key = { it.label }) { suggestion ->
@@ -71,9 +73,9 @@ fun TemplatePickerDialog(
                     item {
                         Text(
                             packStringResource(Res.string.editor_template_block_outputs),
-                            style = MaterialTheme.typography.labelMedium,
+                            style = AppTypography.label,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+                            modifier = Modifier.padding(top = Spacing.sm, bottom = Spacing.xs),
                         )
                     }
                     items(outputSuggestions, key = { it.insertText }) { suggestion ->
@@ -88,7 +90,7 @@ fun TemplatePickerDialog(
                     item {
                         Text(
                             packStringResource(Res.string.editor_template_empty),
-                            style = MaterialTheme.typography.bodySmall,
+                            style = AppTypography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -118,17 +120,17 @@ private fun TemplateItem(
             .heightIn(min = 48.dp)
             .testTag("template_item_$label"),
     ) {
-        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-            Text(label, style = MaterialTheme.typography.bodyMedium)
+        Column(modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm)) {
+            Text(label, style = AppTypography.body)
             Text(
                 expression,
-                style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                style = AppTypography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (description != null) {
                 Text(
                     description,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = AppTypography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
