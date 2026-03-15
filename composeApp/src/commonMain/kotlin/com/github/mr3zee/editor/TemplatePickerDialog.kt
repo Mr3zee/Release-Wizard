@@ -1,13 +1,14 @@
 package com.github.mr3zee.editor
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.model.Block
 import com.github.mr3zee.model.Parameter
@@ -19,6 +20,16 @@ fun TemplatePickerDialog(
     onSelect: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val suggestions = remember(parameters, predecessors) {
+        buildSuggestions(parameters, predecessors)
+    }
+    val paramSuggestions = remember(suggestions) {
+        suggestions.filter { it.category == SuggestionCategory.PARAMETER }
+    }
+    val outputSuggestions = remember(suggestions) {
+        suggestions.filter { it.category == SuggestionCategory.BLOCK_OUTPUT }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Insert Template") },
@@ -30,46 +41,42 @@ fun TemplatePickerDialog(
                     .testTag("template_picker_list"),
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                if (parameters.isNotEmpty()) {
+                if (paramSuggestions.isNotEmpty()) {
                     item {
                         Text(
                             "Parameters",
                             style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(vertical = 4.dp),
                         )
                     }
-                    items(parameters, key = { it.key }) { param ->
-                        val expr = $$"${param.$${param.key}}"
+                    items(paramSuggestions, key = { it.label }) { suggestion ->
                         TemplateItem(
-                            label = param.key,
-                            expression = expr,
-                            description = if (param.value.isNotEmpty()) "Default: ${param.value}" else null,
-                            onClick = { onSelect(expr) },
+                            label = suggestion.label,
+                            expression = suggestion.insertText,
+                            description = suggestion.description,
+                            onClick = { onSelect(suggestion.insertText) },
                         )
                     }
                 }
-                val actionPredecessors = predecessors.filterIsInstance<Block.ActionBlock>()
-                    .filter { it.outputs.isNotEmpty() }
-                if (actionPredecessors.isNotEmpty()) {
+                if (outputSuggestions.isNotEmpty()) {
                     item {
                         Text(
                             "Block Outputs",
                             style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
                         )
                     }
-                    actionPredecessors.forEach { block ->
-                        items(block.outputs, key = { output -> "${block.id.value}/$output" }) { output ->
-                            val expr = $$"${block.$${block.id.value}.$$output}"
-                            TemplateItem(
-                                label = "${block.name} / $output",
-                                expression = expr,
-                                onClick = { onSelect(expr) },
-                            )
-                        }
+                    items(outputSuggestions, key = { it.insertText }) { suggestion ->
+                        TemplateItem(
+                            label = suggestion.label,
+                            expression = suggestion.insertText,
+                            onClick = { onSelect(suggestion.insertText) },
+                        )
                     }
                 }
-                if (parameters.isEmpty() && actionPredecessors.isEmpty()) {
+                if (suggestions.isEmpty()) {
                     item {
                         Text(
                             "No parameters or predecessor outputs available",
@@ -96,17 +103,18 @@ private fun TemplateItem(
     onClick: () -> Unit,
 ) {
     Surface(
+        onClick = onClick,
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .heightIn(min = 48.dp)
             .testTag("template_item_$label"),
-        tonalElevation = 1.dp,
     ) {
-        Column(modifier = Modifier.padding(8.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
             Text(label, style = MaterialTheme.typography.bodyMedium)
             Text(
                 expression,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (description != null) {

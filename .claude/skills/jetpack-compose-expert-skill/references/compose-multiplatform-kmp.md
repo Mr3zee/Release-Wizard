@@ -294,3 +294,5 @@ Run with:
 | Using `AndroidView` / `AndroidViewBinding` in shared code | These are Android-only; wrap in `expect`/`actual` if platform embedding is needed |
 | Hardcoding `dp` values for specific screen sizes | Use `BoxWithConstraints` or `LocalDensity` for responsive layouts that work across Desktop, Web, and Mobile |
 | Forgetting scrollbars on Desktop | Desktop users expect scrollbars — add `VerticalScrollbar` / `HorizontalScrollbar` alongside scroll containers |
+| `LazyColumn` inside `DropdownMenu` | Causes `IllegalStateException` ("Asking for intrinsic measurements of SubcomposeLayout layouts is not supported") in `runComposeUiTest`. Use `Column` + `Modifier.verticalScroll()` + `Modifier.heightIn(max = ...)` instead |
+| Popup key events in tests | `performKeyInput { pressKey(Key.Escape) }` or `pressKey(Key.Tab)` on a `TextField` may not reach `onPreviewKeyEvent` when a `DropdownMenu` popup is expanded — the popup layer intercepts events. Instead of simulating the key, test the resulting state change directly (e.g., `performTextClearance()` to trigger dismiss logic) |

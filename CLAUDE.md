@@ -50,6 +50,7 @@ Blocks form a DAG. Each node is either a **Container** (holds a sub-graph) or an
 - Never use `delay()` in tests — use `waitUntil` or `awaitExecution` patterns
 - WebSocket SharedFlow: always subscribe before querying snapshot to prevent race conditions
 - `useUnmergedTree = true` when asserting testTags inside Card/Surface/merged containers
+- Never use `LazyColumn`/`LazyRow` inside `DropdownMenu` — causes intrinsic measurement crash in tests. Use `Column` + `verticalScroll` + `heightIn(max = ...)` instead (see **jetpack-compose-expert** skill → KMP reference)
 - Server conventions (Exposed 1.x packages, Koin wiring, WebSocket testing) → see **ktor-microservice** skill
 - Compose UI patterns, canvas testing, and gotchas → see **jetpack-compose-expert** skill
 - Manual UI verification → see **compose-ui-test-server** skill

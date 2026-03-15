@@ -174,7 +174,8 @@ private fun ActionBlockProperties(
     Text("Parameters", style = MaterialTheme.typography.labelMedium)
     Spacer(Modifier.height(4.dp))
 
-    var params by remember(block.id, block.parameters) { mutableStateOf(block.parameters) }
+    var params by remember(block.id) { mutableStateOf(block.parameters) }
+    if (params != block.parameters) params = block.parameters
 
     params.forEachIndexed { index, param ->
         key(block.id, index) {
@@ -262,6 +263,7 @@ private fun GateConfigSection(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SingleGateEditor(
     label: String,
@@ -303,27 +305,36 @@ private fun SingleGateEditor(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            OutlinedTextField(
+            TemplateAutocompleteField(
                 value = message,
                 onValueChange = { text ->
                     message = text
                     onUpdate(gate.copy(message = text))
                 },
+                projectParameters = projectParameters,
+                predecessors = predecessors,
                 label = { Text("Message") },
                 singleLine = true,
                 enabled = enabled,
-                modifier = Modifier.weight(1f).testTag("${testTagPrefix}_message_field"),
+                modifier = Modifier.weight(1f),
                 textStyle = MaterialTheme.typography.bodySmall,
+                testTag = "${testTagPrefix}_message_field",
             )
-            TextButton(
-                onClick = { showTemplatePicker = true },
-                enabled = enabled,
-                contentPadding = PaddingValues(4.dp),
-                modifier = Modifier.testTag("${testTagPrefix}_template_button"),
+            TooltipBox(
+                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(),
+                tooltip = { PlainTooltip { Text("Insert template (or type \${)") } },
+                state = rememberTooltipState(),
             ) {
-                Text("{}", style = MaterialTheme.typography.bodySmall)
+                TextButton(
+                    onClick = { showTemplatePicker = true },
+                    enabled = enabled,
+                    contentPadding = PaddingValues(4.dp),
+                    modifier = Modifier.testTag("${testTagPrefix}_template_button"),
+                ) {
+                    Text("{}", style = MaterialTheme.typography.bodySmall)
+                }
             }
-        }
+}
 
         val countValue = requiredCount.toIntOrNull()
         val isCountError = countValue == null || countValue < 1
@@ -349,7 +360,7 @@ private fun SingleGateEditor(
             parameters = projectParameters,
             predecessors = predecessors,
             onSelect = { expr ->
-                message += expr
+                message = insertExpressionSafely(message, expr)
                 val currentGate = gate ?: Gate()
                 onUpdate(currentGate.copy(message = message))
                 showTemplatePicker = false
@@ -359,6 +370,7 @@ private fun SingleGateEditor(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ParameterRow(
     parameter: Parameter,
@@ -368,7 +380,7 @@ private fun ParameterRow(
     onRemove: () -> Unit,
     enabled: Boolean = true,
 ) {
-    var showTemplatePicker by remember { mutableStateOf(false) }
+    var showTemplatePicker by remember(parameter.key) { mutableStateOf(false) }
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -384,22 +396,31 @@ private fun ParameterRow(
             modifier = Modifier.weight(1f),
             textStyle = MaterialTheme.typography.bodySmall,
         )
-        OutlinedTextField(
+        TemplateAutocompleteField(
             value = parameter.value,
             onValueChange = { onUpdate(parameter.copy(value = it)) },
+            projectParameters = projectParameters,
+            predecessors = predecessors,
             label = { Text("Value") },
             singleLine = true,
             enabled = enabled,
             modifier = Modifier.weight(1f),
             textStyle = MaterialTheme.typography.bodySmall,
+            testTag = "param_value_field",
         )
-        TextButton(
-            onClick = { showTemplatePicker = true },
-            enabled = enabled,
-            contentPadding = PaddingValues(4.dp),
-            modifier = Modifier.testTag("insert_template_button"),
+        TooltipBox(
+            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(),
+            tooltip = { PlainTooltip { Text("Insert template (or type \${)") } },
+            state = rememberTooltipState(),
         ) {
-            Text("{}", style = MaterialTheme.typography.bodySmall)
+            TextButton(
+                onClick = { showTemplatePicker = true },
+                enabled = enabled,
+                contentPadding = PaddingValues(4.dp),
+                modifier = Modifier.testTag("insert_template_button"),
+            ) {
+                Text("{}", style = MaterialTheme.typography.bodySmall)
+            }
         }
         TextButton(
             onClick = onRemove,
@@ -415,7 +436,7 @@ private fun ParameterRow(
             parameters = projectParameters,
             predecessors = predecessors,
             onSelect = { expr ->
-                onUpdate(parameter.copy(value = parameter.value + expr))
+                onUpdate(parameter.copy(value = insertExpressionSafely(parameter.value, expr)))
                 showTemplatePicker = false
             },
             onDismiss = { showTemplatePicker = false },
