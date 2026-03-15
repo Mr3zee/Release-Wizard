@@ -27,6 +27,7 @@ import com.github.mr3zee.i18n.packPluralStringResource
 import com.github.mr3zee.i18n.packStringResource
 import com.github.mr3zee.theme.ThemePreference
 import com.github.mr3zee.util.resolve
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import releasewizard.composeapp.generated.resources.*
 
@@ -60,7 +61,7 @@ fun ProjectListScreen(
     var showCreateDialog by remember { mutableStateOf(false) }
     var projectToDelete by remember { mutableStateOf<ProjectTemplate?>(null) }
 
-    val currentTeamId = activeTeamId?.collectAsState()?.value
+    val currentTeamId by (activeTeamId ?: remember { MutableStateFlow<TeamId?>(null) }).collectAsState()
     var showTeamPicker by remember { mutableStateOf(false) }
     var showOverflowMenu by remember { mutableStateOf(false) }
     val activeTeamName = userTeams.find { it.teamId == currentTeamId }?.teamName

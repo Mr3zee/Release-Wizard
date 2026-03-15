@@ -69,16 +69,20 @@ fun DagEditorScreen(
         if (selectedBlockIds.size == 1) graph.blocks.find { it.id == selectedBlockIds.first() } else null
     }
 
-    val handleBack: () -> Unit = {
-        when {
-            lockState is LockState.LockLost && isDirty -> {
-                showLockLostDiscardDialog = true
-            }
-            isDirty -> {
-                showDiscardDialog = true
-            }
-            else -> {
-                onBack()
+    val currentIsDirty by rememberUpdatedState(isDirty)
+    val currentLockState by rememberUpdatedState(lockState)
+    val handleBack: () -> Unit = remember(onBack) {
+        {
+            when {
+                currentLockState is LockState.LockLost && currentIsDirty -> {
+                    showLockLostDiscardDialog = true
+                }
+                currentIsDirty -> {
+                    showDiscardDialog = true
+                }
+                else -> {
+                    onBack()
+                }
             }
         }
     }
