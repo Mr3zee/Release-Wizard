@@ -22,10 +22,6 @@ import com.github.mr3zee.theme.AppShapes
 import com.github.mr3zee.theme.LocalAppColors
 import com.github.mr3zee.theme.Spacing
 
-/**
- * Custom floating action button replacing M3 FloatingActionButton.
- * Rounded shape, primary color, with animated hover/press feedback.
- */
 @Composable
 fun RwFab(
     onClick: () -> Unit,
@@ -51,6 +47,7 @@ fun RwFab(
     UnstyledButton(
         onClick = onClick,
         modifier = modifier
+            .focusRing(cornerRadius = 14.dp, ringColor = colors.focusRingOnColor, interactionSource = interactionSource)
             .scale(scale)
             .shadow(6.dp, AppShapes.lg),
         shape = AppShapes.lg,

@@ -8,6 +8,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.onKeyEvent
+import com.github.mr3zee.keyboard.KeyboardShortcutsOverlay
+import com.github.mr3zee.keyboard.LocalShortcutActions
+import com.github.mr3zee.keyboard.ShortcutActions
+import com.github.mr3zee.keyboard.handleGlobalKeyEvent
 import com.github.mr3zee.api.AuthApiClient
 import com.github.mr3zee.api.ConnectionApiClient
 import com.github.mr3zee.api.ProjectApiClient
@@ -33,7 +38,6 @@ import com.github.mr3zee.theme.loadThemePreference
 import com.github.mr3zee.theme.saveLanguagePack
 import com.github.mr3zee.theme.saveThemePreference
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 
 @Composable
 fun App() {
@@ -93,61 +97,113 @@ fun App() {
         }
     }
 
+    var showShortcutsOverlay by remember { mutableStateOf(false) }
+
+    // App-level mutable state for shortcut actions — screens update this via
+    // CompositionLocalProvider + SideEffect. This avoids the CompositionLocal
+    // tree scope issue (screen providers are children, but key handler is a parent).
+    val shortcutActionsState = remember { mutableStateOf(ShortcutActions()) }
+
+    val toggleTheme = {
+        val next = when (themePreference) {
+            ThemePreference.SYSTEM -> ThemePreference.LIGHT
+            ThemePreference.LIGHT -> ThemePreference.DARK
+            ThemePreference.DARK -> ThemePreference.SYSTEM
+        }
+        themePreference = next
+        saveThemePreference(next)
+    }
+
+    val logout = {
+        authViewModel.logout()
+        activeTeamId.value = null
+        navController.resetTo(Screen.ProjectList)
+    }
+
     AppTheme(themePreference = themePreference, languagePack = languagePack) {
         Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background,
-        ) {
-            when {
-                isCheckingSession -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
-                user == null -> {
-                    LoginScreen(viewModel = authViewModel)
-                }
-                else -> {
-                    AppNavigation(
-                        currentScreen = currentScreen,
+            modifier = Modifier
+                .fillMaxSize()
+                .onKeyEvent { event ->
+                    // Read shortcutActionsState.value inside the lambda (not captured at composition)
+                    // so it always reflects the latest screen-provided actions.
+                    handleGlobalKeyEvent(
+                        event = event,
+                        shortcutActions = shortcutActionsState.value,
                         onNavigate = { navController.navigate(it) },
                         onGoBack = { navController.goBack() },
-                        projectListViewModel = projectListViewModel,
-                        projectApiClient = projectApiClient,
-                        releaseApiClient = releaseApiClient,
-                        releaseListViewModel = releaseListViewModel,
-                        connectionsViewModel = connectionsViewModel,
-                        teamApiClient = teamApiClient,
-                        activeTeamId = activeTeamId,
-                        userTeams = user?.teams ?: emptyList(),
-                        currentUserId = user?.id,
-                        currentUserRole = user?.role,
-                        onLogout = {
-                            authViewModel.logout()
-                            activeTeamId.value = null
-                            navController.resetTo(Screen.ProjectList)
-                        },
-                        onTeamChanged = { teamId ->
-                            activeTeamId.value = teamId
-                            // ViewModels auto-reload when activeTeamId changes
-                        },
-                        onRefreshUser = { authViewModel.checkSession() },
-                        themePreference = themePreference,
-                        onThemeChange = {
-                            themePreference = it
-                            saveThemePreference(it)
-                        },
-                        languagePack = languagePack,
-                        onLanguagePackChange = {
-                            languagePack = it
-                            saveLanguagePack(it)
-                        },
+                        onToggleTheme = toggleTheme,
+                        onToggleShortcutsOverlay = { showShortcutsOverlay = !showShortcutsOverlay },
+                        isShortcutsOverlayOpen = showShortcutsOverlay,
                     )
+                },
+            color = MaterialTheme.colorScheme.background,
+        ) {
+            // Provide the state setter so screens can update shortcut actions
+            CompositionLocalProvider(
+                LocalShortcutActions provides shortcutActionsState.value,
+            ) {
+                // Sync: whenever a screen provides new ShortcutActions via its own
+                // CompositionLocalProvider, this SideEffect propagates it to the
+                // app-level state that the key handler reads.
+                val currentActions = LocalShortcutActions.current
+                SideEffect {
+                    shortcutActionsState.value = currentActions
+                }
+
+                when {
+                    isCheckingSession -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                    user == null -> {
+                        LoginScreen(viewModel = authViewModel)
+                    }
+                    else -> {
+                        AppNavigation(
+                            currentScreen = currentScreen,
+                            onNavigate = { navController.navigate(it) },
+                            onGoBack = { navController.goBack() },
+                            projectListViewModel = projectListViewModel,
+                            projectApiClient = projectApiClient,
+                            releaseApiClient = releaseApiClient,
+                            releaseListViewModel = releaseListViewModel,
+                            connectionsViewModel = connectionsViewModel,
+                            teamApiClient = teamApiClient,
+                            activeTeamId = activeTeamId,
+                            userTeams = user?.teams ?: emptyList(),
+                            currentUserId = user?.id,
+                            currentUserRole = user?.role,
+                            onLogout = logout,
+                            onTeamChanged = { teamId ->
+                                activeTeamId.value = teamId
+                            },
+                            onRefreshUser = { authViewModel.checkSession() },
+                            themePreference = themePreference,
+                            onThemeChange = {
+                                themePreference = it
+                                saveThemePreference(it)
+                            },
+                            languagePack = languagePack,
+                            onLanguagePackChange = {
+                                languagePack = it
+                                saveLanguagePack(it)
+                            },
+                            onShowShortcuts = { showShortcutsOverlay = true },
+                        )
+                    }
                 }
             }
+
+            // Shortcuts help overlay — rendered above all content
+            KeyboardShortcutsOverlay(
+                visible = showShortcutsOverlay,
+                onDismiss = { showShortcutsOverlay = false },
+            )
         }
     }
 }

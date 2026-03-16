@@ -62,13 +62,27 @@ fun RwCard(
         Modifier
     }
 
-    Box(
-        modifier = modifier
-            .shadow(1.dp, AppShapes.md)
-            .clip(AppShapes.md)
-            .drawBehind { drawRect(animatedBg) }
-            .border(1.dp, colors.chromeBorder, AppShapes.md)
-            .then(clickMod),
-        content = content,
-    )
+    val cardContent: @Composable BoxScope.() -> Unit = {
+        Box(
+            modifier = Modifier
+                .shadow(1.dp, AppShapes.md)
+                .clip(AppShapes.md)
+                .drawBehind { drawRect(animatedBg) }
+                .border(1.dp, colors.chromeBorder, AppShapes.md)
+                .then(clickMod),
+            content = content,
+        )
+    }
+
+    // Wrap in FocusRingBox only for clickable cards (focus ring drawn outside clip)
+    if (interactionSource != null) {
+        FocusRingBox(
+            cornerRadius = 10.dp,
+            interactionSource = interactionSource,
+            modifier = modifier,
+            content = cardContent,
+        )
+    } else {
+        Box(modifier = modifier, content = cardContent)
+    }
 }

@@ -12,7 +12,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
+import com.github.mr3zee.keyboard.LocalShortcutActions
+import com.github.mr3zee.keyboard.ShortcutActions
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.api.UserTeamInfo
@@ -55,6 +59,7 @@ fun ProjectListScreen(
     activeTeamId: StateFlow<TeamId?>? = null,
     userTeams: List<UserTeamInfo> = emptyList(),
     onTeamChanged: (TeamId) -> Unit = {},
+    onShowShortcuts: () -> Unit = {},
 ) {
     val projects by viewModel.projects.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -72,6 +77,17 @@ fun ProjectListScreen(
     val currentTeamId by (activeTeamId ?: remember { MutableStateFlow<TeamId?>(null) }).collectAsState()
     var showTeamPicker by remember { mutableStateOf(false) }
     var showOverflowMenu by remember { mutableStateOf(false) }
+
+    val searchFocusRequester = remember { FocusRequester() }
+
+    CompositionLocalProvider(
+        LocalShortcutActions provides ShortcutActions(
+            onSearch = { searchFocusRequester.requestFocus() },
+            onCreate = { showCreateDialog = true },
+            onRefresh = { viewModel.refresh() },
+            hasDialogOpen = showCreateDialog || projectToDelete != null || showTeamPicker || showOverflowMenu,
+        )
+    ) {
     val activeTeamName = userTeams.find { it.teamId == currentTeamId }?.teamName
         ?: packStringResource(Res.string.projects_no_team)
 
@@ -184,6 +200,14 @@ fun ProjectListScreen(
                                     },
                                     modifier = Modifier.testTag("theme_toggle_menu_item"),
                                 )
+                                DropdownMenuItem(
+                                    text = { Text(packStringResource(Res.string.shortcuts_menu_item)) },
+                                    onClick = {
+                                        onShowShortcuts()
+                                        showOverflowMenu = false
+                                    },
+                                    modifier = Modifier.testTag("keyboard_shortcuts_menu_item"),
+                                )
                                 HorizontalDivider()
                                 LanguagePack.entries.forEach { pack ->
                                     DropdownMenuItem(
@@ -264,6 +288,7 @@ fun ProjectListScreen(
                     .fillMaxWidth()
                     .widthIn(max = 1200.dp)
                     .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
+                    .focusRequester(searchFocusRequester)
                     .testTag("search_field"),
             )
 
@@ -404,6 +429,7 @@ fun ProjectListScreen(
             },
         )
     }
+    } // CompositionLocalProvider
 }
 
 @Composable

@@ -315,4 +315,30 @@
     <!-- ==================== Connections: Password Toggle ==================== -->
     <string name="connections_hide_password">Hide password</string>
     <string name="connections_show_password">Show password</string>
+
+    <!-- ==================== Keyboard Shortcuts ==================== -->
+    <string name="shortcuts_title">Keyboard Shortcuts</string>
+    <string name="shortcuts_close">Close</string>
+    <string name="shortcuts_menu_item">Keyboard Shortcuts</string>
+    <string name="shortcuts_category_navigation">Navigation</string>
+    <string name="shortcuts_category_actions">Actions</string>
+    <string name="shortcuts_category_editor">Editor</string>
+    <string name="shortcut_nav_projects">Go to Projects</string>
+    <string name="shortcut_nav_releases">Go to Releases</string>
+    <string name="shortcut_nav_connections">Go to Connections</string>
+    <string name="shortcut_nav_teams">Go to Teams</string>
+    <string name="shortcut_nav_back">Go back</string>
+    <string name="shortcut_action_search">Focus search</string>
+    <string name="shortcut_action_create">Create new item</string>
+    <string name="shortcut_action_refresh">Refresh</string>
+    <string name="shortcut_action_save">Save</string>
+    <string name="shortcut_action_help">Show keyboard shortcuts</string>
+    <string name="shortcut_action_theme">Toggle theme</string>
+    <string name="shortcut_action_escape">Close dialog / deselect</string>
+    <string name="shortcut_editor_undo">Undo</string>
+    <string name="shortcut_editor_redo">Redo</string>
+    <string name="shortcut_editor_copy">Copy</string>
+    <string name="shortcut_editor_paste">Paste</string>
+    <string name="shortcut_editor_select_all">Select all</string>
+    <string name="shortcut_editor_delete">Delete selected</string>
 </resources>

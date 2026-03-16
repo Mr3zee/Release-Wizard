@@ -33,6 +33,10 @@ import com.github.mr3zee.components.loadMoreItem
 import com.github.mr3zee.model.Connection
 import com.github.mr3zee.model.ConnectionId
 import com.github.mr3zee.model.ConnectionType
+import com.github.mr3zee.keyboard.LocalShortcutActions
+import com.github.mr3zee.keyboard.ShortcutActions
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.displayName
@@ -64,6 +68,16 @@ fun ConnectionListScreen(
     var connectionToDelete by remember { mutableStateOf<Connection?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
+    val searchFocusRequester = remember { FocusRequester() }
+
+    CompositionLocalProvider(
+        LocalShortcutActions provides ShortcutActions(
+            onSearch = { searchFocusRequester.requestFocus() },
+            onCreate = { onCreateConnection() },
+            onRefresh = { viewModel.loadConnections() },
+            hasDialogOpen = connectionToDelete != null,
+        )
+    ) {
 
     // Spin animation for refresh icon
     val infiniteTransition = rememberInfiniteTransition()
@@ -188,6 +202,7 @@ fun ConnectionListScreen(
                     .fillMaxWidth()
                     .widthIn(max = 1200.dp)
                     .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
+                    .focusRequester(searchFocusRequester)
                     .testTag("search_field"),
             )
             Row(
@@ -293,6 +308,7 @@ fun ConnectionListScreen(
             },
         )
     }
+    } // CompositionLocalProvider
 }
 
 @Composable

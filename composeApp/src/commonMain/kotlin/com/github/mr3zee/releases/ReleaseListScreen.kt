@@ -37,6 +37,8 @@ import com.github.mr3zee.model.Release
 import com.github.mr3zee.model.ReleaseId
 import com.github.mr3zee.model.ReleaseStatus
 import com.github.mr3zee.model.isTerminal
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import com.github.mr3zee.theme.AppShapes
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.LocalAppColors
@@ -46,6 +48,8 @@ import com.github.mr3zee.util.resolve
 import kotlinx.coroutines.delay
 import com.github.mr3zee.i18n.packPluralStringResource
 import com.github.mr3zee.i18n.packStringResource
+import com.github.mr3zee.keyboard.LocalShortcutActions
+import com.github.mr3zee.keyboard.ShortcutActions
 import releasewizard.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -70,6 +74,16 @@ fun ReleaseListScreen(
     val lastRefreshedAt by viewModel.lastRefreshedAt.collectAsState()
 
     var showStartDialog by remember { mutableStateOf(false) }
+    val searchFocusRequester = remember { FocusRequester() }
+
+    CompositionLocalProvider(
+        LocalShortcutActions provides ShortcutActions(
+            onSearch = { searchFocusRequester.requestFocus() },
+            onCreate = { showStartDialog = true },
+            onRefresh = { viewModel.refresh() },
+            hasDialogOpen = showStartDialog,
+        )
+    ) {
 
     // "Updated Xs ago" ticker — store elapsed duration, format in composable scope
     var elapsed by remember { mutableStateOf<kotlin.time.Duration?>(null) }
@@ -216,6 +230,7 @@ fun ReleaseListScreen(
                     .fillMaxWidth()
                     .widthIn(max = 1200.dp)
                     .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
+                    .focusRequester(searchFocusRequester)
                     .testTag("search_field"),
             )
             Row(
@@ -363,6 +378,7 @@ fun ReleaseListScreen(
             onDismiss = { showStartDialog = false },
         )
     }
+    } // CompositionLocalProvider
 }
 
 @Composable

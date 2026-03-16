@@ -95,6 +95,10 @@ data class AppColors(
     val blockStatusFailed: Color,
     val blockStatusWaiting: Color,
     val blockStatusWaitingForInput: Color,
+
+    // ── Focus ring ────────────────────────────────────────────────────
+    val focusRing: Color,
+    val focusRingOnColor: Color,
 )
 
 val LightAppColors = AppColors(
@@ -181,6 +185,10 @@ val LightAppColors = AppColors(
     blockStatusFailed = Color(0xFFEF4444),
     blockStatusWaiting = Color(0xFF9CA3AF),
     blockStatusWaitingForInput = Color(0xFFF59E0B),
+
+    // Focus ring
+    focusRing = Color(0xFF3B82F6),
+    focusRingOnColor = Color.White,
 )
 
 val DarkAppColors = AppColors(
@@ -267,6 +275,10 @@ val DarkAppColors = AppColors(
     blockStatusFailed = Color(0xFFF87171),
     blockStatusWaiting = Color(0xFF6B7280),
     blockStatusWaitingForInput = Color(0xFFFDE68A),
+
+    // Focus ring
+    focusRing = Color(0xFF60A5FA),
+    focusRingOnColor = Color.White,
 )
 
 val LocalAppColors = staticCompositionLocalOf { LightAppColors }

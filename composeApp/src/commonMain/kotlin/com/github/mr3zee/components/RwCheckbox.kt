@@ -11,7 +11,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -54,9 +53,11 @@ fun RwCheckbox(
         animationSpec = tween(durationMillis = 100),
     )
 
+    val interactionSource = remember { MutableInteractionSource() }
+
     val clickMod = if (onCheckedChange != null) {
         Modifier.clickable(
-            interactionSource = remember { MutableInteractionSource() },
+            interactionSource = interactionSource,
             indication = null,
             enabled = enabled,
             role = Role.Checkbox,
@@ -69,27 +70,43 @@ fun RwCheckbox(
     // Reuse a single Path instance across draw frames
     val checkPath = remember { Path() }
 
-    Box(
-        modifier = modifier
-            .size(20.dp)
-            .clip(AppShapes.xs)
-            .drawBehind {
-                drawRoundRect(
-                    color = bgColor,
-                    cornerRadius = CornerRadius(6.dp.toPx()),
-                )
-                // Draw checkmark
-                checkPath.reset()
-                checkPath.moveTo(size.width * 0.2f, size.height * 0.5f)
-                checkPath.lineTo(size.width * 0.42f, size.height * 0.72f)
-                checkPath.lineTo(size.width * 0.8f, size.height * 0.28f)
-                drawPath(
-                    path = checkPath,
-                    color = checkColor,
-                    style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round),
-                )
-            }
-            .border(1.5.dp, borderColor, AppShapes.xs)
-            .then(clickMod),
-    )
+    val checkboxContent: @Composable () -> Unit = {
+        Box(
+            modifier = Modifier
+                .size(20.dp)
+                .clip(AppShapes.xs)
+                .drawBehind {
+                    drawRoundRect(
+                        color = bgColor,
+                        cornerRadius = CornerRadius(6.dp.toPx()),
+                    )
+                    // Draw checkmark
+                    checkPath.reset()
+                    checkPath.moveTo(size.width * 0.2f, size.height * 0.5f)
+                    checkPath.lineTo(size.width * 0.42f, size.height * 0.72f)
+                    checkPath.lineTo(size.width * 0.8f, size.height * 0.28f)
+                    drawPath(
+                        path = checkPath,
+                        color = checkColor,
+                        style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round),
+                    )
+                }
+                .border(1.5.dp, borderColor, AppShapes.xs)
+                .then(clickMod),
+        )
+    }
+
+    if (onCheckedChange != null) {
+        FocusRingBox(
+            cornerRadius = 6.dp,
+            interactionSource = interactionSource,
+            modifier = modifier,
+        ) {
+            checkboxContent()
+        }
+    } else {
+        Box(modifier = modifier) {
+            checkboxContent()
+        }
+    }
 }

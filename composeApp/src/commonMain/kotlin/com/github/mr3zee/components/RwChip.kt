@@ -50,22 +50,28 @@ fun RwChip(
 
     val textColor = if (selected) colors.chipTextSelected else colors.chipText
 
-    Box(
-        modifier = modifier
-            .clip(AppShapes.pill)
-            .drawBehind { drawRect(bgColor) }
-            .border(1.dp, borderColor, AppShapes.pill)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                enabled = enabled,
-                role = Role.Checkbox,
-                onClick = onClick,
-            )
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+    FocusRingBox(
+        cornerRadius = 50.dp,
+        interactionSource = interactionSource,
+        modifier = modifier,
     ) {
-        CompositionLocalProvider(LocalContentColor provides textColor) {
-            label()
+        Box(
+            modifier = Modifier
+                .clip(AppShapes.pill)
+                .drawBehind { drawRect(bgColor) }
+                .border(1.dp, borderColor, AppShapes.pill)
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    enabled = enabled,
+                    role = Role.Checkbox,
+                    onClick = onClick,
+                )
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+        ) {
+            CompositionLocalProvider(LocalContentColor provides textColor) {
+                label()
+            }
         }
     }
 }

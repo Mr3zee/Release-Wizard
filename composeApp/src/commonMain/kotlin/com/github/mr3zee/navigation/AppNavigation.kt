@@ -42,6 +42,7 @@ fun AppNavigation(
     onThemeChange: (ThemePreference) -> Unit = {},
     languagePack: LanguagePack = LanguagePack.ENGLISH,
     onLanguagePackChange: (LanguagePack) -> Unit = {},
+    onShowShortcuts: () -> Unit = {},
 ) {
     when (currentScreen) {
         is Screen.ProjectList -> ProjectListScreen(
@@ -58,6 +59,7 @@ fun AppNavigation(
             activeTeamId = activeTeamId,
             userTeams = userTeams,
             onTeamChanged = onTeamChanged,
+            onShowShortcuts = onShowShortcuts,
         )
         is Screen.ProjectEditor -> {
             val projectId = currentScreen.projectId
@@ -77,6 +79,7 @@ fun AppNavigation(
                     onDispose { viewModel.releaseLock() }
                 }
 
+                // DagEditorScreen handles its own Ctrl+S/Z/C/V/A/Delete via onKeyEvent
                 DagEditorScreen(
                     viewModel = viewModel,
                     onBack = {
@@ -103,13 +106,11 @@ fun AppNavigation(
                 onGoBack()
             },
         )
-        is Screen.ReleaseList -> {
-            ReleaseListScreen(
-                viewModel = releaseListViewModel,
-                onViewRelease = { onNavigate(Screen.ReleaseView(it)) },
-                onBack = { onGoBack() },
-            )
-        }
+        is Screen.ReleaseList -> ReleaseListScreen(
+            viewModel = releaseListViewModel,
+            onViewRelease = { onNavigate(Screen.ReleaseView(it)) },
+            onBack = { onGoBack() },
+        )
         is Screen.ReleaseView -> {
             val viewModel = remember(currentScreen.releaseId) {
                 ReleaseDetailViewModel(currentScreen.releaseId, releaseApiClient)

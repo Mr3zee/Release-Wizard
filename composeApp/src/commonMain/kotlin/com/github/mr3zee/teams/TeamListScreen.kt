@@ -31,12 +31,16 @@ import com.github.mr3zee.components.RwFab
 import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.model.TeamId
+import com.github.mr3zee.keyboard.LocalShortcutActions
+import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.theme.AppShapes
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.resolve
 import com.github.mr3zee.i18n.packPluralStringResource
 import com.github.mr3zee.i18n.packStringResource
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import releasewizard.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -61,6 +65,16 @@ fun TeamListScreen(
     var showCreateDialog by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
+    val searchFocusRequester = remember { FocusRequester() }
+
+    CompositionLocalProvider(
+        LocalShortcutActions provides ShortcutActions(
+            onSearch = { searchFocusRequester.requestFocus() },
+            onCreate = { showCreateDialog = true },
+            onRefresh = { viewModel.refresh() },
+            hasDialogOpen = showCreateDialog,
+        )
+    ) {
 
     // Spin animation for refresh icon
     val infiniteTransition = rememberInfiniteTransition()
@@ -177,6 +191,7 @@ fun TeamListScreen(
                     .fillMaxWidth()
                     .widthIn(max = 1200.dp)
                     .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
+                    .focusRequester(searchFocusRequester)
                     .testTag("team_search_field"),
             )
 
@@ -263,6 +278,7 @@ fun TeamListScreen(
             },
         )
     }
+    } // CompositionLocalProvider
 }
 
 @Composable

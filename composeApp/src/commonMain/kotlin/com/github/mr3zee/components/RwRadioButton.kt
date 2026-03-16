@@ -43,9 +43,11 @@ fun RwRadioButton(
         animationSpec = tween(durationMillis = 100),
     )
 
+    val interactionSource = remember { MutableInteractionSource() }
+
     val clickMod = if (onClick != null) {
         Modifier.clickable(
-            interactionSource = remember { MutableInteractionSource() },
+            interactionSource = interactionSource,
             indication = null,
             role = Role.RadioButton,
             onClick = onClick,
@@ -54,19 +56,35 @@ fun RwRadioButton(
         Modifier
     }
 
-    Box(
-        modifier = modifier
-            .size(20.dp)
-            .border(1.5.dp, borderColor, AppShapes.pill)
-            .then(clickMod),
-        contentAlignment = Alignment.Center,
-    ) {
+    val radioContent: @Composable () -> Unit = {
         Box(
             modifier = Modifier
-                .size(10.dp)
-                .drawBehind {
-                    drawCircle(color = dotColor)
-                }
-        )
+                .size(20.dp)
+                .border(1.5.dp, borderColor, AppShapes.pill)
+                .then(clickMod),
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(10.dp)
+                    .drawBehind {
+                        drawCircle(color = dotColor)
+                    }
+            )
+        }
+    }
+
+    if (onClick != null) {
+        FocusRingBox(
+            cornerRadius = 50.dp,
+            interactionSource = interactionSource,
+            modifier = modifier,
+        ) {
+            radioContent()
+        }
+    } else {
+        Box(modifier = modifier) {
+            radioContent()
+        }
     }
 }

@@ -22,6 +22,8 @@ import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.model.ConnectionConfig
 import com.github.mr3zee.model.ConnectionId
 import com.github.mr3zee.model.ConnectionType
+import com.github.mr3zee.keyboard.LocalShortcutActions
+import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.displayName
@@ -161,6 +163,23 @@ fun ConnectionFormScreen(
         }
     }
 
+    val handleSave: () -> Unit = {
+        if (name.isNotBlank() && currentConfig.isValid() && !isSaving) {
+            if (connectionId != null) {
+                viewModel.updateConnection(connectionId, name, currentConfig)
+            } else {
+                viewModel.createConnection(name, selectedType, currentConfig)
+            }
+        }
+    }
+
+    CompositionLocalProvider(
+        LocalShortcutActions provides ShortcutActions(
+            onSave = handleSave,
+            hasDialogOpen = showDiscardDialog,
+        )
+    ) {
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -173,13 +192,7 @@ fun ConnectionFormScreen(
                 },
                 actions = {
                     RwButton(
-                        onClick = {
-                            if (isEditMode) {
-                                viewModel.updateConnection(connectionId, name, currentConfig)
-                            } else {
-                                viewModel.createConnection(name, selectedType, currentConfig)
-                            }
-                        },
+                        onClick = handleSave,
                         variant = RwButtonVariant.Primary,
                         enabled = name.isNotBlank() && currentConfig.isValid() && !isSaving,
                         modifier = Modifier.testTag("save_connection_button"),
@@ -470,6 +483,7 @@ fun ConnectionFormScreen(
             },
         )
     }
+    } // CompositionLocalProvider
 }
 
 private fun buildConfig(

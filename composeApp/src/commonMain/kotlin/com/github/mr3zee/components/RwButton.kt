@@ -27,21 +27,12 @@ import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.LocalAppColors
 
 enum class RwButtonVariant {
-    /** Filled primary background */
     Primary,
-    /** Outlined with border */
     Secondary,
-    /** Text-only, no background or border (replaces M3 TextButton) */
     Ghost,
-    /** Filled danger/error background */
     Danger,
 }
 
-/**
- * Custom button component replacing M3 Button/TextButton/OutlinedButton.
- * Uses Compose Unstyled UnstyledButton for accessibility and keyboard support.
- * Provides hover/press feedback via color shift + subtle scale (no ripple).
- */
 @Composable
 fun RwButton(
     onClick: () -> Unit,
@@ -61,7 +52,6 @@ fun RwButton(
         contentColor != Color.Unspecified -> contentColor
         variant == RwButtonVariant.Primary -> colors.buttonPrimaryText
         variant == RwButtonVariant.Danger -> Color.White
-        // Ghost buttons with no explicit color use primary blue for affordance
         variant == RwButtonVariant.Ghost -> MaterialTheme.colorScheme.primary
         else -> MaterialTheme.colorScheme.onSurface
     }
@@ -104,10 +94,16 @@ fun RwButton(
         animationSpec = tween(durationMillis = 50),
     )
 
+    val focusRingColor = when (variant) {
+        RwButtonVariant.Primary, RwButtonVariant.Danger -> colors.focusRingOnColor
+        else -> Color.Unspecified
+    }
+
     UnstyledButton(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier
+            .focusRing(cornerRadius = 8.dp, ringColor = focusRingColor, interactionSource = interactionSource)
             .scale(scale)
             .alpha(if (enabled) 1f else 0.6f),
         shape = AppShapes.sm,
@@ -120,7 +116,6 @@ fun RwButton(
         indication = null,
         interactionSource = interactionSource,
     ) {
-        // Primary/Danger CTAs get body (14sp); Ghost/Secondary get label (12sp)
         val textStyle = when (variant) {
             RwButtonVariant.Primary, RwButtonVariant.Danger -> AppTypography.body
             else -> AppTypography.label
@@ -134,9 +129,6 @@ fun RwButton(
     }
 }
 
-/**
- * Icon-only button with hover background.
- */
 @Composable
 fun RwIconButton(
     onClick: () -> Unit,
@@ -159,6 +151,7 @@ fun RwIconButton(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier
+            .focusRing(cornerRadius = 8.dp, interactionSource = interactionSource)
             .size(40.dp)
             .alpha(if (enabled) 1f else 0.6f),
         shape = AppShapes.sm,
