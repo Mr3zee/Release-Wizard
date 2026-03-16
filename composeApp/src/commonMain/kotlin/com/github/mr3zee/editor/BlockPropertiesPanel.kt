@@ -3,15 +3,19 @@ package com.github.mr3zee.editor
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import com.github.mr3zee.api.ExternalConfig
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwCheckbox
+import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.model.*
 import com.github.mr3zee.theme.AppTypography
@@ -26,8 +30,17 @@ fun BlockPropertiesPanel(
     block: Block?,
     graph: DagGraph,
     projectParameters: List<Parameter>,
+    connections: List<Connection> = emptyList(),
+    externalConfigs: List<ExternalConfig> = emptyList(),
+    isFetchingConfigs: Boolean = false,
+    configFetchError: String? = null,
+    isFetchingConfigParams: Boolean = false,
     onUpdateName: (BlockId, String) -> Unit,
     onUpdateType: (BlockId, BlockType) -> Unit,
+    onUpdateConnectionId: (BlockId, ConnectionId?) -> Unit = { _, _ -> },
+    onSelectConfig: (BlockId, String) -> Unit = { _, _ -> },
+    onRefreshConfigs: (BlockId) -> Unit = {},
+    onRefreshConfigParams: (BlockId) -> Unit = {},
     onUpdateParameters: (BlockId, List<Parameter>) -> Unit,
     onUpdateTimeout: (BlockId, Long?) -> Unit,
     onUpdatePreGate: (BlockId, Gate?) -> Unit,
@@ -80,7 +93,16 @@ fun BlockPropertiesPanel(
                     block = block,
                     graph = graph,
                     projectParameters = projectParameters,
+                    connections = connections,
+                    externalConfigs = externalConfigs,
+                    isFetchingConfigs = isFetchingConfigs,
+                    configFetchError = configFetchError,
+                    isFetchingConfigParams = isFetchingConfigParams,
                     onUpdateType = onUpdateType,
+                    onUpdateConnectionId = onUpdateConnectionId,
+                    onSelectConfig = onSelectConfig,
+                    onRefreshConfigs = onRefreshConfigs,
+                    onRefreshConfigParams = onRefreshConfigParams,
                     onUpdateParameters = onUpdateParameters,
                     onUpdateTimeout = onUpdateTimeout,
                     onUpdatePreGate = onUpdatePreGate,
@@ -109,7 +131,16 @@ private fun ActionBlockProperties(
     block: Block.ActionBlock,
     graph: DagGraph,
     projectParameters: List<Parameter>,
+    connections: List<Connection>,
+    externalConfigs: List<ExternalConfig>,
+    isFetchingConfigs: Boolean,
+    configFetchError: String?,
+    isFetchingConfigParams: Boolean,
     onUpdateType: (BlockId, BlockType) -> Unit,
+    onUpdateConnectionId: (BlockId, ConnectionId?) -> Unit,
+    onSelectConfig: (BlockId, String) -> Unit,
+    onRefreshConfigs: (BlockId) -> Unit,
+    onRefreshConfigParams: (BlockId) -> Unit,
     onUpdateParameters: (BlockId, List<Parameter>) -> Unit,
     onUpdateTimeout: (BlockId, Long?) -> Unit,
     onUpdatePreGate: (BlockId, Gate?) -> Unit,
@@ -145,6 +176,79 @@ private fun ActionBlockProperties(
     }
 
     Spacer(Modifier.height(Spacing.md))
+
+    // Connection selector — shown for block types that need a connection
+    val requiredConnectionType = block.type.requiredConnectionType()
+    if (requiredConnectionType != null) {
+        val filteredConnections = remember(connections, requiredConnectionType) {
+            connections.filter { it.type == requiredConnectionType }
+        }
+        val selectedConnection = remember(filteredConnections, block.connectionId) {
+            filteredConnections.find { it.id == block.connectionId }
+        }
+        var connExpanded by remember(block.id) { mutableStateOf(false) }
+
+        Text(packStringResource(Res.string.editor_prop_connection), style = AppTypography.label)
+        Box {
+            RwButton(
+                onClick = { connExpanded = true },
+                variant = RwButtonVariant.Secondary,
+                enabled = enabled,
+                modifier = Modifier.fillMaxWidth().testTag("block_connection_selector"),
+            ) {
+                Text(
+                    selectedConnection?.name ?: packStringResource(Res.string.editor_prop_connection_select),
+                    maxLines = 1,
+                )
+            }
+            DropdownMenu(
+                expanded = connExpanded,
+                onDismissRequest = { connExpanded = false },
+            ) {
+                Column(
+                    modifier = Modifier
+                        .heightIn(max = 240.dp)
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(packStringResource(Res.string.editor_prop_connection_none)) },
+                        onClick = {
+                            onUpdateConnectionId(block.id, null)
+                            connExpanded = false
+                        },
+                    )
+                    filteredConnections.forEach { conn ->
+                        DropdownMenuItem(
+                            text = { Text(conn.name) },
+                            onClick = {
+                                onUpdateConnectionId(block.id, conn.id)
+                                connExpanded = false
+                            },
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(Spacing.md))
+    }
+
+    // External config selector — shown for block types with configIdParameterKey and a selected connection
+    val configKey = block.type.configIdParameterKey()
+    if (configKey != null && block.connectionId != null) {
+        val selectedConfigId = block.parameters.find { it.key == configKey }?.value
+        ExternalConfigSelector(
+            configs = externalConfigs,
+            selectedConfigId = selectedConfigId,
+            isLoading = isFetchingConfigs,
+            error = configFetchError,
+            enabled = enabled,
+            onSelect = { configId -> onSelectConfig(block.id, configId) },
+            onRefresh = { onRefreshConfigs(block.id) },
+        )
+
+        Spacer(Modifier.height(Spacing.md))
+    }
 
     // Timeout
     var timeoutText by remember(block.id) {
@@ -183,25 +287,61 @@ private fun ActionBlockProperties(
 
     Spacer(Modifier.height(Spacing.md))
 
-    // Parameters
-    Text(packStringResource(Res.string.editor_prop_parameters), style = AppTypography.label)
+    // Parameters header with refresh button
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            packStringResource(Res.string.editor_prop_parameters),
+            style = AppTypography.label,
+            modifier = Modifier.weight(1f),
+        )
+        if (configKey != null && block.connectionId != null) {
+            val currentConfigId = block.parameters.find { it.key == configKey }?.value
+            if (isFetchingConfigParams) {
+                Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                    )
+                }
+            } else {
+                RwIconButton(
+                    onClick = { onRefreshConfigParams(block.id) },
+                    enabled = enabled && !currentConfigId.isNullOrBlank(),
+                    modifier = Modifier.testTag("refresh_parameters_button"),
+                ) {
+                    Icon(Icons.Default.Refresh, contentDescription = "Refresh parameters", modifier = Modifier.size(16.dp))
+                }
+            }
+        }
+    }
     Spacer(Modifier.height(Spacing.xs))
 
     var params by remember(block.id) { mutableStateOf(block.parameters) }
     if (params != block.parameters) params = block.parameters
 
-    params.forEachIndexed { index, param ->
-        key(block.id, index) {
+    // Filter out the config ID parameter from the visible list — it's managed by the config selector
+    // Use indexed pairs to maintain correct mapping to the original params list
+    val visibleParamsWithIndex = remember(params, configKey) {
+        params.withIndex()
+            .filter { (_, p) -> configKey == null || p.key != configKey }
+            .toList()
+    }
+
+    visibleParamsWithIndex.forEach { (actualIndex, param) ->
+        key(block.id, actualIndex) {
         ParameterRow(
             parameter = param,
             projectParameters = projectParameters,
             predecessors = predecessors,
             onUpdate = { updated ->
-                params = params.toMutableList().apply { set(index, updated) }
+                params = params.toMutableList().apply { set(actualIndex, updated) }
                 onUpdateParameters(block.id, params)
             },
             onRemove = {
-                params = params.toMutableList().apply { removeAt(index) }
+                params = params.toMutableList().apply { removeAt(actualIndex) }
                 onUpdateParameters(block.id, params)
             },
             enabled = enabled,
@@ -220,6 +360,110 @@ private fun ActionBlockProperties(
         modifier = Modifier.fillMaxWidth().testTag("add_parameter_button"),
     ) {
         Text(packStringResource(Res.string.editor_prop_add_parameter))
+    }
+}
+
+@Composable
+private fun ExternalConfigSelector(
+    configs: List<ExternalConfig>,
+    selectedConfigId: String?,
+    isLoading: Boolean,
+    error: String?,
+    enabled: Boolean,
+    onSelect: (String) -> Unit,
+    onRefresh: () -> Unit,
+) {
+    val selectedConfig = remember(configs, selectedConfigId) {
+        configs.find { it.id == selectedConfigId }
+    }
+    var searchText by remember(selectedConfigId) {
+        mutableStateOf(selectedConfig?.path ?: selectedConfigId ?: "")
+    }
+    var dropdownExpanded by remember(selectedConfigId) { mutableStateOf(false) }
+
+    Text(packStringResource(Res.string.editor_config_selector), style = AppTypography.label)
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(modifier = Modifier.weight(1f)) {
+            RwTextField(
+                value = searchText,
+                onValueChange = { text ->
+                    searchText = text
+                    dropdownExpanded = true
+                },
+                placeholder = packStringResource(Res.string.editor_config_selector_placeholder),
+                singleLine = true,
+                enabled = enabled && !isLoading,
+                supportingText = when {
+                    error != null -> {{ Text(error) }}
+                    !isLoading && configs.isEmpty() && selectedConfigId == null -> {{ Text(packStringResource(Res.string.editor_config_no_configs)) }}
+                    else -> null
+                },
+                isError = error != null,
+                modifier = Modifier.fillMaxWidth().testTag("config_selector_field"),
+                textStyle = AppTypography.bodySmall,
+            )
+            if (configs.isNotEmpty()) {
+                val filtered = remember(configs, searchText) {
+                    if (searchText.isBlank() || searchText == selectedConfig?.path) configs
+                    else configs.filter {
+                        it.name.contains(searchText, ignoreCase = true) ||
+                            it.path.contains(searchText, ignoreCase = true)
+                    }
+                }
+                DropdownMenu(
+                    expanded = dropdownExpanded && filtered.isNotEmpty(),
+                    onDismissRequest = { dropdownExpanded = false },
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .heightIn(max = 240.dp)
+                            .verticalScroll(rememberScrollState()),
+                    ) {
+                        filtered.forEach { config ->
+                            DropdownMenuItem(
+                                text = {
+                                    Column {
+                                        Text(config.name, style = AppTypography.label, maxLines = 1)
+                                        Text(
+                                            config.path,
+                                            style = AppTypography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 2,
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    searchText = config.path
+                                    dropdownExpanded = false
+                                    onSelect(config.id)
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        if (isLoading) {
+            Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                )
+            }
+        } else {
+            RwIconButton(
+                onClick = onRefresh,
+                enabled = enabled,
+                modifier = Modifier.testTag("refresh_configs_button"),
+            ) {
+                Icon(Icons.Default.Refresh, contentDescription = "Refresh configurations", modifier = Modifier.size(16.dp))
+            }
+        }
     }
 }
 

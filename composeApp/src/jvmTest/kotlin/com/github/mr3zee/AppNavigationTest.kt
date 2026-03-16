@@ -72,6 +72,7 @@ class AppNavigationTest {
                         releaseApiClient = releaseApiClient,
                         releaseListViewModel = releaseListViewModel,
                         connectionsViewModel = connectionsViewModel,
+                        connectionApiClient = connectionApiClient,
                         teamApiClient = teamApiClient,
                         activeTeamId = activeTeamId,
                         userTeams = emptyList(),

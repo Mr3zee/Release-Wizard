@@ -14,6 +14,7 @@ import io.ktor.http.*
 import io.ktor.server.testing.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ConnectionsRoutesTest {
@@ -224,6 +225,120 @@ class ConnectionsRoutesTest {
 
         val response = client.get(ApiRoutes.Connections.BASE)
         assertEquals(HttpStatusCode.Unauthorized, response.status)
+    }
+
+    // --- Build Type Discovery ---
+
+    private suspend fun ApplicationTestBuilder.createTcConnection(client: io.ktor.client.HttpClient, teamId: TeamId): ConnectionResponse {
+        val response = client.post(ApiRoutes.Connections.BASE) {
+            contentType(ContentType.Application.Json)
+            setBody(
+                CreateConnectionRequest(
+                    name = "TC Server",
+                    teamId = teamId,
+                    type = ConnectionType.TEAMCITY,
+                    config = ConnectionConfig.TeamCityConfig(
+                        serverUrl = "https://tc.example.com",
+                        token = "tc-token-12345678",
+                    ),
+                )
+            )
+        }
+        return response.body()
+    }
+
+    @Test
+    fun `fetch build types returns configs for teamcity connection`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        val teamId = client.loginAndCreateTeam()
+        val created = createTcConnection(client, teamId)
+
+        val response = client.get(ApiRoutes.Connections.teamcityBuildTypes(created.connection.id.value))
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = response.body<ExternalConfigsResponse>()
+        assertTrue(body.configs.isNotEmpty())
+        val build = body.configs.first()
+        assertEquals("Proj_Build", build.id)
+        assertEquals("Build", build.name)
+        assertTrue(build.path.contains("Project"))
+    }
+
+    @Test
+    fun `fetch build types returns 404 for unknown connection`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        client.login()
+
+        val response = client.get(ApiRoutes.Connections.teamcityBuildTypes("00000000-0000-0000-0000-000000000000"))
+        assertEquals(HttpStatusCode.NotFound, response.status)
+    }
+
+    @Test
+    fun `fetch build types returns 400 for invalid connection id`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        client.login()
+
+        val response = client.get(ApiRoutes.Connections.teamcityBuildTypes("not-a-uuid"))
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+    }
+
+    @Test
+    fun `fetch build types returns 401 without auth`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+
+        val response = client.get(ApiRoutes.Connections.teamcityBuildTypes("00000000-0000-0000-0000-000000000000"))
+        assertEquals(HttpStatusCode.Unauthorized, response.status)
+    }
+
+    @Test
+    fun `fetch build type parameters returns params for teamcity connection`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        val teamId = client.loginAndCreateTeam()
+        val created = createTcConnection(client, teamId)
+
+        val response = client.get(ApiRoutes.Connections.teamcityBuildTypeParameters(created.connection.id.value, "Proj_Build"))
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = response.body<ExternalConfigParametersResponse>()
+        assertTrue(body.parameters.isNotEmpty())
+        assertEquals("env.VERSION", body.parameters.first().name)
+    }
+
+    @Test
+    fun `fetch build type parameters returns 404 for unknown connection`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        client.login()
+
+        val response = client.get(ApiRoutes.Connections.teamcityBuildTypeParameters("00000000-0000-0000-0000-000000000000", "bt1"))
+        assertEquals(HttpStatusCode.NotFound, response.status)
+    }
+
+    @Test
+    fun `fetch build type parameters returns 400 for non-teamcity connection`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        val teamId = client.loginAndCreateTeam()
+
+        val createResponse = client.post(ApiRoutes.Connections.BASE) {
+            contentType(ContentType.Application.Json)
+            setBody(
+                CreateConnectionRequest(
+                    name = "Slack Conn",
+                    teamId = teamId,
+                    type = ConnectionType.SLACK,
+                    config = ConnectionConfig.SlackConfig(webhookUrl = "https://hooks.slack.com/test"),
+                )
+            )
+        }
+        val created = createResponse.body<ConnectionResponse>()
+
+        // TC build types endpoint on a Slack connection should return 400
+        val response = client.get(ApiRoutes.Connections.teamcityBuildTypes(created.connection.id.value))
+        assertEquals(HttpStatusCode.BadRequest, response.status)
     }
 
     @Test

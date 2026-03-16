@@ -1,8 +1,11 @@
 package com.github.mr3zee.connections
 
+import com.github.mr3zee.ForbiddenException
+import com.github.mr3zee.NotFoundException
 import com.github.mr3zee.WebhookConfig
 import com.github.mr3zee.api.*
 import com.github.mr3zee.auth.userSession
+import kotlin.coroutines.cancellation.CancellationException
 import com.github.mr3zee.model.Connection
 import com.github.mr3zee.model.ConnectionId
 import com.github.mr3zee.model.ConnectionType
@@ -90,6 +93,45 @@ fun Route.connectionRoutes() {
                     return@post
                 }
                 call.respond(result)
+            }
+
+            get("/teamcity/build-types") {
+                val id = call.requireConnectionId() ?: return@get
+                try {
+                    val result = service.fetchExternalConfigs(id, call.userSession())
+                    call.respond(result)
+                } catch (e: CancellationException) { throw e }
+                  catch (e: NotFoundException) { throw e }
+                  catch (e: ForbiddenException) { throw e }
+                  catch (e: IllegalArgumentException) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = e.message ?: "Invalid request", code = "BAD_REQUEST"))
+                } catch (e: UnsupportedOperationException) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = e.message ?: "Not supported", code = "BAD_REQUEST"))
+                } catch (e: Exception) {
+                    call.respond(HttpStatusCode.BadGateway, ErrorResponse(error = "Failed to fetch build types", code = "BAD_GATEWAY"))
+                }
+            }
+
+            get("/teamcity/build-types/{buildTypeId}/parameters") {
+                val id = call.requireConnectionId() ?: return@get
+                val buildTypeId = call.parameters["buildTypeId"]
+                if (buildTypeId.isNullOrBlank()) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Missing buildTypeId", code = "VALIDATION_ERROR"))
+                    return@get
+                }
+                try {
+                    val result = service.fetchExternalConfigParameters(id, buildTypeId, call.userSession())
+                    call.respond(result)
+                } catch (e: CancellationException) { throw e }
+                  catch (e: NotFoundException) { throw e }
+                  catch (e: ForbiddenException) { throw e }
+                  catch (e: IllegalArgumentException) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = e.message ?: "Invalid request", code = "BAD_REQUEST"))
+                } catch (e: UnsupportedOperationException) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = e.message ?: "Not supported", code = "BAD_REQUEST"))
+                } catch (e: Exception) {
+                    call.respond(HttpStatusCode.BadGateway, ErrorResponse(error = "Failed to fetch parameters", code = "BAD_GATEWAY"))
+                }
             }
         }
     }

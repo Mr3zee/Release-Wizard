@@ -18,6 +18,7 @@ import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.time.Clock
 
@@ -107,6 +108,144 @@ class AsyncExecutorsTest {
         assertEquals("SUCCESS", outputs["buildStatus"])
         val requestUrl = capturedUrl ?: error("capturedUrl should have been set by the mock client")
         assertTrue(requestUrl.contains("/app/rest/buildQueue"))
+    }
+
+    @Test
+    fun `teamcity executor forwards custom parameters in XML properties`() = runBlocking {
+        var capturedBody: String? = null
+
+        val client = mockClient { request ->
+            capturedBody = request.body.toByteArray().decodeToString()
+            respond(
+                """{"id":"42","buildTypeId":"bt1","state":"queued"}""",
+                HttpStatusCode.OK,
+                headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+            )
+        }
+
+        val webhookRepo = InMemoryPendingWebhookRepository()
+        val connectionsRepo = FakeConnectionsRepository()
+        val webhookService = WebhookService(webhookRepo, connectionsRepo)
+        val executor = TeamCityBuildExecutor(client, webhookRepo, webhookService)
+
+        val block = Block.ActionBlock(
+            id = BlockId("tc-1"), name = "Build",
+            type = BlockType.TEAMCITY_BUILD, connectionId = ConnectionId("conn-1"),
+        )
+
+        val outputsDeferred = async {
+            executor.execute(
+                block = block,
+                parameters = listOf(
+                    Parameter(key = "buildTypeId", value = "bt1"),
+                    Parameter(key = "branch", value = "main"),
+                    Parameter(key = "env.VERSION", value = "2.0.0"),
+                    Parameter(key = "env.TARGET", value = "production"),
+                    Parameter(key = "artifactsGlob", value = "**/*.jar"),
+                ),
+                context = context(
+                    config = ConnectionConfig.TeamCityConfig(serverUrl = "https://tc.example.com", token = "t"),
+                ),
+            )
+        }
+
+        waitUntil {
+            webhookRepo.findByConnectionIdAndType(ConnectionId("conn-1"), WebhookType.TEAMCITY).isNotEmpty()
+        }
+
+        val body = capturedBody ?: error("Request body should have been captured")
+        // System keys should NOT be in <properties>
+        assertFalse(body.contains("""name="buildTypeId""""))
+        assertFalse(body.contains("""name="branch""""))
+        assertFalse(body.contains("""name="artifactsGlob""""))
+        // Custom params SHOULD be in <properties>
+        assertTrue(body.contains("<properties>"))
+        assertTrue(body.contains("""name="env.VERSION" value="2.0.0""""))
+        assertTrue(body.contains("""name="env.TARGET" value="production""""))
+        // buildTypeId and branch should be in their own XML elements
+        assertTrue(body.contains("""<buildType id="bt1"/>"""))
+        assertTrue(body.contains("<branchName>main</branchName>"))
+
+        // Complete the webhook to finish the test
+        val pendingWebhooks = webhookRepo.findByConnectionIdAndType(ConnectionId("conn-1"), WebhookType.TEAMCITY)
+        webhookService.emitCompletion(
+            WebhookCompletion(
+                webhookId = pendingWebhooks[0].id,
+                blockId = block.id,
+                releaseId = ReleaseId("release-1"),
+                type = WebhookType.TEAMCITY,
+                payload = """{"buildNumber":"42","buildStatus":"SUCCESS"}""",
+            )
+        )
+        outputsDeferred.await()
+        Unit
+    }
+
+    @Test
+    fun `teamcity executor omits properties element when no custom params`() = runBlocking {
+        var capturedBody: String? = null
+
+        val client = mockClient { request ->
+            capturedBody = request.body.toByteArray().decodeToString()
+            respond(
+                """{"id":"42","buildTypeId":"bt1","state":"queued"}""",
+                HttpStatusCode.OK,
+                headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+            )
+        }
+
+        val webhookRepo = InMemoryPendingWebhookRepository()
+        val connectionsRepo = FakeConnectionsRepository()
+        val webhookService = WebhookService(webhookRepo, connectionsRepo)
+        val executor = TeamCityBuildExecutor(client, webhookRepo, webhookService)
+
+        val block = Block.ActionBlock(
+            id = BlockId("tc-1"), name = "Build",
+            type = BlockType.TEAMCITY_BUILD, connectionId = ConnectionId("conn-1"),
+        )
+
+        val outputsDeferred = async {
+            executor.execute(
+                block = block,
+                parameters = listOf(
+                    Parameter(key = "buildTypeId", value = "bt1"),
+                    Parameter(key = "branch", value = "main"),
+                ),
+                context = context(
+                    config = ConnectionConfig.TeamCityConfig(serverUrl = "https://tc.example.com", token = "t"),
+                ),
+            )
+        }
+
+        waitUntil {
+            webhookRepo.findByConnectionIdAndType(ConnectionId("conn-1"), WebhookType.TEAMCITY).isNotEmpty()
+        }
+
+        val body = capturedBody ?: error("Request body should have been captured")
+        assertFalse(body.contains("<properties>"), "XML should not contain <properties> when there are no custom params")
+
+        val pendingWebhooks = webhookRepo.findByConnectionIdAndType(ConnectionId("conn-1"), WebhookType.TEAMCITY)
+        webhookService.emitCompletion(
+            WebhookCompletion(
+                webhookId = pendingWebhooks[0].id,
+                blockId = block.id,
+                releaseId = ReleaseId("release-1"),
+                type = WebhookType.TEAMCITY,
+                payload = """{"buildNumber":"42","buildStatus":"SUCCESS"}""",
+            )
+        )
+        outputsDeferred.await()
+        Unit
+    }
+
+    @Test
+    fun `teamcity escapeXml handles all special characters`() {
+        assertEquals("a &amp; b", TeamCityBuildExecutor.escapeXml("a & b"))
+        assertEquals("&lt;script&gt;", TeamCityBuildExecutor.escapeXml("<script>"))
+        assertEquals("value=&quot;x&quot;", TeamCityBuildExecutor.escapeXml("value=\"x\""))
+        assertEquals("it&apos;s", TeamCityBuildExecutor.escapeXml("it's"))
+        assertEquals("a &amp; b &lt; c &gt; d", TeamCityBuildExecutor.escapeXml("a & b < c > d"))
+        assertEquals("plain text", TeamCityBuildExecutor.escapeXml("plain text"))
     }
 
     @Test

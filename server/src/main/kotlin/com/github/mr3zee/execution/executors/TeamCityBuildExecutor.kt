@@ -92,12 +92,23 @@ class TeamCityBuildExecutor(
             ?: throw IllegalArgumentException("TeamCity Build requires 'buildTypeId' parameter")
         val branch = parameters.find { it.key == "branch" }?.value
 
+        val customParams = parameters.filter {
+            it.key !in SYSTEM_PARAMETER_KEYS && it.key.isNotBlank() && it.value.isNotBlank()
+        }
+
         // Trigger build with XML-escaped parameters
         val xmlBody = buildString {
             append("""<build>""")
             append("""<buildType id="${escapeXml(buildTypeId)}"/>""")
             if (branch != null) {
                 append("""<branchName>${escapeXml(branch)}</branchName>""")
+            }
+            if (customParams.isNotEmpty()) {
+                append("<properties>")
+                for (param in customParams) {
+                    append("""<property name="${escapeXml(param.key)}" value="${escapeXml(param.value)}"/>""")
+                }
+                append("</properties>")
             }
             append("""</build>""")
         }
@@ -191,6 +202,10 @@ class TeamCityBuildExecutor(
 
     companion object {
         const val WEBHOOK_TIMEOUT_MS = 30 * 60 * 1000L // 30 minutes
+
+        private val SYSTEM_PARAMETER_KEYS = setOf(
+            "buildTypeId", "branch", "artifactsGlob", "artifactsMaxDepth", "artifactsMaxFiles",
+        )
 
         fun escapeXml(value: String): String = value
             .replace("&", "&amp;")

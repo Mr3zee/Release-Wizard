@@ -19,6 +19,12 @@ fun createTestHttpClient(): HttpClient = HttpClient(MockEngine { request ->
             respond("""{"id":1,"full_name":"test/repo"}""", HttpStatusCode.OK, jsonHeaders)
         url.contains("/app/rest/server") ->
             respond("""{"version":"2023.11"}""", HttpStatusCode.OK, jsonHeaders)
+        url.contains("/app/rest/projects") ->
+            respond("""{"project":[{"id":"_Root","name":"<Root project>"},{"id":"Proj","name":"Project","parentProjectId":"_Root"}]}""", HttpStatusCode.OK, jsonHeaders)
+        url.contains("/app/rest/buildTypes") && url.contains("/parameters") ->
+            respond("""{"property":[{"name":"env.VERSION","value":"1.0","own":true,"type":{"rawValue":"text"}}]}""", HttpStatusCode.OK, jsonHeaders)
+        url.contains("/app/rest/buildTypes") ->
+            respond("""{"buildType":[{"id":"Proj_Build","name":"Build","projectId":"Proj"}]}""", HttpStatusCode.OK, jsonHeaders)
         url.contains("/api/v1/publisher/status") ->
             respond("""{"status":"ok"}""", HttpStatusCode.OK, jsonHeaders)
         else ->

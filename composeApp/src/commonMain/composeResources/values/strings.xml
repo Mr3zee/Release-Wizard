@@ -133,6 +133,12 @@
     <string name="editor_prop_key">Key</string>
     <string name="editor_prop_value">Value</string>
     <string name="editor_prop_remove">\u00D7</string>
+    <string name="editor_prop_connection">Connection</string>
+    <string name="editor_prop_connection_none">None</string>
+    <string name="editor_prop_connection_select">Select connection…</string>
+    <string name="editor_config_selector">Configuration</string>
+    <string name="editor_config_selector_placeholder">Search configurations…</string>
+    <string name="editor_config_no_configs">No configurations found</string>
 
     <!-- ==================== Editor: Gates ==================== -->
     <string name="editor_gate_section_header">Approval Gates</string>

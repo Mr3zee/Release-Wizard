@@ -2,6 +2,8 @@ package com.github.mr3zee.editor
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.github.mr3zee.api.ConnectionApiClient
+import com.github.mr3zee.api.ExternalConfig
 import com.github.mr3zee.api.ProjectApiClient
 import com.github.mr3zee.api.ProjectLockInfo
 import com.github.mr3zee.api.UpdateProjectRequest
@@ -35,6 +37,7 @@ sealed interface LockState {
 class DagEditorViewModel(
     private val projectId: ProjectId,
     private val apiClient: ProjectApiClient,
+    private val connectionApiClient: ConnectionApiClient? = null,
     private val currentUserId: String? = null,
     private val canForceUnlock: Boolean = false,
 ) : ViewModel() {
@@ -100,6 +103,25 @@ class DagEditorViewModel(
 
     private var heartbeatJob: Job? = null
 
+    // External config discovery (TC build types, GH workflows, etc.)
+    private val _teamConnections = MutableStateFlow<List<Connection>>(emptyList())
+    val teamConnections: StateFlow<List<Connection>> = _teamConnections
+
+    private val _externalConfigs = MutableStateFlow<Map<BlockId, List<ExternalConfig>>>(emptyMap())
+    val externalConfigs: StateFlow<Map<BlockId, List<ExternalConfig>>> = _externalConfigs
+
+    private val _isFetchingConfigs = MutableStateFlow<Set<BlockId>>(emptySet())
+    val isFetchingConfigs: StateFlow<Set<BlockId>> = _isFetchingConfigs
+
+    private val _configFetchError = MutableStateFlow<Map<BlockId, String?>>(emptyMap())
+    val configFetchError: StateFlow<Map<BlockId, String?>> = _configFetchError
+
+    private val _isFetchingConfigParams = MutableStateFlow<Set<BlockId>>(emptySet())
+    val isFetchingConfigParams: StateFlow<Set<BlockId>> = _isFetchingConfigParams
+
+    private val configFetchJobs = mutableMapOf<BlockId, Job>()
+    private val paramsFetchJobs = mutableMapOf<BlockId, Job>()
+
     fun loadProject() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -123,6 +145,19 @@ class DagEditorViewModel(
         pushUndoState(p.dagGraph)
         _isDirty.value = false
         attemptAcquireLock()
+        loadTeamConnections()
+    }
+
+    private fun loadTeamConnections() {
+        val client = connectionApiClient ?: return
+        viewModelScope.launch {
+            try {
+                val response = client.listConnections(limit = 200)
+                _teamConnections.value = response.connections
+            } catch (_: Exception) {
+                // Silently fail — connection dropdown will be empty
+            }
+        }
     }
 
     private suspend fun attemptAcquireLock() {
@@ -306,6 +341,15 @@ class DagEditorViewModel(
                 positions = g.positions.filterKeys { it !in blockIds },
             )
         )
+        // Clean up external config state for deleted blocks
+        for (blockId in blockIds) {
+            configFetchJobs.remove(blockId)?.cancel()
+            paramsFetchJobs.remove(blockId)?.cancel()
+        }
+        _externalConfigs.value = _externalConfigs.value - blockIds
+        _configFetchError.value = _configFetchError.value - blockIds
+        _isFetchingConfigs.value = _isFetchingConfigs.value - blockIds
+        _isFetchingConfigParams.value = _isFetchingConfigParams.value - blockIds
         _selectedBlockIds.value = emptySet()
         _selectedEdgeIndex.value = null
     }
@@ -407,6 +451,102 @@ class DagEditorViewModel(
 
     fun updateBlockPostGate(blockId: BlockId, gate: Gate?) {
         updateActionBlock(blockId) { it.copy(postGate = gate) }
+    }
+
+    fun updateBlockConnectionId(blockId: BlockId, connectionId: ConnectionId?) {
+        updateActionBlock(blockId) { it.copy(connectionId = connectionId) }
+        // Clear downstream state
+        _externalConfigs.value = _externalConfigs.value - blockId
+        _configFetchError.value = _configFetchError.value - blockId
+        configFetchJobs[blockId]?.cancel()
+        paramsFetchJobs[blockId]?.cancel()
+        // Clear config ID parameter and fetched params
+        val block = findActionBlock(blockId) ?: return
+        val configKey = block.type.configIdParameterKey()
+        if (configKey != null) {
+            val cleaned = block.parameters.filter { it.key != configKey }
+            if (cleaned != block.parameters) {
+                updateBlockParameters(blockId, cleaned)
+            }
+        }
+        // Auto-fetch configs if connection set and block type supports it
+        if (connectionId != null && configKey != null) {
+            fetchExternalConfigs(blockId)
+        }
+    }
+
+    fun fetchExternalConfigs(blockId: BlockId) {
+        val client = connectionApiClient ?: return
+        val block = findActionBlock(blockId) ?: return
+        val connectionId = block.connectionId ?: return
+        val connectionType = block.type.requiredConnectionType() ?: return
+
+        configFetchJobs[blockId]?.cancel()
+        configFetchJobs[blockId] = viewModelScope.launch {
+            _isFetchingConfigs.value = _isFetchingConfigs.value + blockId
+            _configFetchError.value = _configFetchError.value - blockId
+            try {
+                val response = client.fetchExternalConfigs(connectionId, connectionType)
+                _externalConfigs.value = _externalConfigs.value + (blockId to response.configs)
+            } catch (e: Exception) {
+                _configFetchError.value = _configFetchError.value + (blockId to (e.message ?: "Failed to fetch"))
+            } finally {
+                _isFetchingConfigs.value = _isFetchingConfigs.value - blockId
+            }
+        }
+    }
+
+    fun selectExternalConfig(blockId: BlockId, configId: String) {
+        val block = findActionBlock(blockId) ?: return
+        val configKey = block.type.configIdParameterKey() ?: return
+
+        // Set or update the config ID parameter
+        val existing = block.parameters.toMutableList()
+        val idx = existing.indexOfFirst { it.key == configKey }
+        if (idx >= 0) {
+            existing[idx] = existing[idx].copy(value = configId)
+        } else {
+            existing.add(0, Parameter(key = configKey, value = configId))
+        }
+        updateBlockParameters(blockId, existing)
+
+        // Auto-fetch parameters for the selected config
+        fetchExternalConfigParameters(blockId)
+    }
+
+    fun fetchExternalConfigParameters(blockId: BlockId) {
+        val client = connectionApiClient ?: return
+        val block = findActionBlock(blockId) ?: return
+        val connectionId = block.connectionId ?: return
+        val connectionType = block.type.requiredConnectionType() ?: return
+        val configKey = block.type.configIdParameterKey() ?: return
+        val configId = block.parameters.find { it.key == configKey }?.value
+        if (configId.isNullOrBlank()) return
+
+        paramsFetchJobs[blockId]?.cancel()
+        paramsFetchJobs[blockId] = viewModelScope.launch {
+            _isFetchingConfigParams.value = _isFetchingConfigParams.value + blockId
+            try {
+                val response = client.fetchExternalConfigParameters(connectionId, connectionType, configId)
+                // Merge: only add new keys, preserve existing user-edited params
+                val currentBlock = findActionBlock(blockId) ?: return@launch
+                val existingKeys = currentBlock.parameters.map { it.key }.toSet()
+                val newParams = response.parameters
+                    .filter { it.name !in existingKeys }
+                    .map { Parameter(key = it.name, value = it.value) }
+                if (newParams.isNotEmpty()) {
+                    updateBlockParameters(blockId, currentBlock.parameters + newParams)
+                }
+            } catch (e: Exception) {
+                _error.value = e.toUiMessage()
+            } finally {
+                _isFetchingConfigParams.value = _isFetchingConfigParams.value - blockId
+            }
+        }
+    }
+
+    private fun findActionBlock(blockId: BlockId): Block.ActionBlock? {
+        return _graph.value.blocks.filterIsInstance<Block.ActionBlock>().find { it.id == blockId }
     }
 
     private fun updateActionBlock(blockId: BlockId, transform: (Block.ActionBlock) -> Block.ActionBlock) {

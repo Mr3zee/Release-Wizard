@@ -10,3 +10,18 @@ enum class BlockType {
     MAVEN_CENTRAL_PUBLICATION,
     SLACK_MESSAGE,
 }
+
+fun BlockType.requiredConnectionType(): ConnectionType? = when (this) {
+    BlockType.TEAMCITY_BUILD -> ConnectionType.TEAMCITY
+    BlockType.GITHUB_ACTION -> ConnectionType.GITHUB
+    BlockType.GITHUB_PUBLICATION -> ConnectionType.GITHUB
+    BlockType.MAVEN_CENTRAL_PUBLICATION -> ConnectionType.MAVEN_CENTRAL
+    BlockType.SLACK_MESSAGE -> ConnectionType.SLACK
+}
+
+/** The parameter key that holds the external config ID for this block type, or null if not applicable. */
+fun BlockType.configIdParameterKey(): String? = when (this) {
+    BlockType.TEAMCITY_BUILD -> "buildTypeId"
+    // BlockType.GITHUB_ACTION -> "workflowId"  // TODO: enable when GH workflow discovery is implemented
+    else -> null
+}

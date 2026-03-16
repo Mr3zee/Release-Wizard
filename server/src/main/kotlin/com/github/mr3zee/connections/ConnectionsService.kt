@@ -2,6 +2,8 @@ package com.github.mr3zee.connections
 
 import com.github.mr3zee.api.ConnectionTestResult
 import com.github.mr3zee.api.CreateConnectionRequest
+import com.github.mr3zee.api.ExternalConfigParametersResponse
+import com.github.mr3zee.api.ExternalConfigsResponse
 import com.github.mr3zee.api.UpdateConnectionRequest
 import com.github.mr3zee.audit.AuditService
 import com.github.mr3zee.NotFoundException
@@ -23,6 +25,8 @@ interface ConnectionsService {
     suspend fun updateConnection(id: ConnectionId, request: UpdateConnectionRequest, session: UserSession): Connection?
     suspend fun deleteConnection(id: ConnectionId, session: UserSession): Boolean
     suspend fun testConnection(id: ConnectionId, session: UserSession): ConnectionTestResult?
+    suspend fun fetchExternalConfigs(id: ConnectionId, session: UserSession): ExternalConfigsResponse
+    suspend fun fetchExternalConfigParameters(id: ConnectionId, configId: String, session: UserSession): ExternalConfigParametersResponse
     suspend fun findTeamId(id: ConnectionId): String?
 }
 
@@ -106,6 +110,24 @@ class DefaultConnectionsService(
         checkAccess(id, session)
         val connection = repository.findById(id) ?: return null
         return connectionTester.test(connection.config)
+    }
+
+    override suspend fun fetchExternalConfigs(id: ConnectionId, session: UserSession): ExternalConfigsResponse {
+        checkAccess(id, session)
+        val connection = repository.findById(id) ?: throw NotFoundException("Connection not found")
+        return when (val config = connection.config) {
+            is ConnectionConfig.TeamCityConfig -> connectionTester.fetchTeamCityBuildTypes(config)
+            else -> throw UnsupportedOperationException("Config discovery not supported for ${connection.type}")
+        }
+    }
+
+    override suspend fun fetchExternalConfigParameters(id: ConnectionId, configId: String, session: UserSession): ExternalConfigParametersResponse {
+        checkAccess(id, session)
+        val connection = repository.findById(id) ?: throw NotFoundException("Connection not found")
+        return when (val config = connection.config) {
+            is ConnectionConfig.TeamCityConfig -> connectionTester.fetchTeamCityBuildTypeParameters(config, configId)
+            else -> throw UnsupportedOperationException("Config parameter discovery not supported for ${connection.type}")
+        }
     }
 
     override suspend fun findTeamId(id: ConnectionId): String? {

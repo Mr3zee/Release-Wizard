@@ -1,6 +1,7 @@
 package com.github.mr3zee.navigation
 
 import androidx.compose.runtime.*
+import com.github.mr3zee.api.ConnectionApiClient
 import com.github.mr3zee.api.ProjectApiClient
 import com.github.mr3zee.api.ReleaseApiClient
 import com.github.mr3zee.api.TeamApiClient
@@ -30,6 +31,7 @@ fun AppNavigation(
     releaseApiClient: ReleaseApiClient,
     releaseListViewModel: ReleaseListViewModel,
     connectionsViewModel: ConnectionsViewModel,
+    connectionApiClient: ConnectionApiClient,
     teamApiClient: TeamApiClient,
     activeTeamId: StateFlow<TeamId?>,
     userTeams: List<UserTeamInfo>,
@@ -70,6 +72,7 @@ fun AppNavigation(
                     DagEditorViewModel(
                         projectId = projectId,
                         apiClient = projectApiClient,
+                        connectionApiClient = connectionApiClient,
                         currentUserId = currentUserId,
                         canForceUnlock = canForceUnlock,
                     )

@@ -173,6 +173,7 @@ fun App() {
                             releaseApiClient = releaseApiClient,
                             releaseListViewModel = releaseListViewModel,
                             connectionsViewModel = connectionsViewModel,
+                            connectionApiClient = connectionApiClient,
                             teamApiClient = teamApiClient,
                             activeTeamId = activeTeamId,
                             userTeams = user?.teams ?: emptyList(),

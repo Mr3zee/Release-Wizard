@@ -38,3 +38,29 @@ data class ConnectionTestResult(
     val success: Boolean,
     val message: String,
 )
+
+// External config discovery DTOs — generic across providers (TC build types, GH workflows, etc.)
+
+@Serializable
+data class ExternalConfig(
+    val id: String,
+    val name: String,
+    val path: String,
+)
+
+@Serializable
+data class ExternalConfigsResponse(
+    val configs: List<ExternalConfig>,
+)
+
+@Serializable
+data class ExternalConfigParameter(
+    val name: String,
+    val value: String,
+    val type: String = "",
+)
+
+@Serializable
+data class ExternalConfigParametersResponse(
+    val parameters: List<ExternalConfigParameter>,
+)

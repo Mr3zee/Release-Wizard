@@ -7,6 +7,7 @@ import io.ktor.http.*
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -109,5 +110,168 @@ class ConnectionTesterTest {
         val result = tester.test(ConnectionConfig.MavenCentralConfig(username = "user", password = "pass"))
         assertFalse(result.success)
         assertTrue(result.message.contains("Timeout"))
+    }
+
+    // TeamCity Build Types Discovery
+
+    private val tcConfig = ConnectionConfig.TeamCityConfig(serverUrl = "https://tc.example.com", token = "token")
+
+    private val projectsJson = """{"project":[
+        {"id":"_Root","name":"<Root project>","parentProjectId":null},
+        {"id":"Org","name":"Organization","parentProjectId":"_Root"},
+        {"id":"Org_Team","name":"Team Alpha","parentProjectId":"Org"},
+        {"id":"Org_Team_Product","name":"Product X","parentProjectId":"Org_Team"}
+    ]}"""
+
+    private val buildTypesJson = """{"buildType":[
+        {"id":"Org_Team_Build","name":"Build","projectId":"Org_Team"},
+        {"id":"Org_Team_Product_Deploy","name":"Deploy","projectId":"Org_Team_Product"}
+    ]}"""
+
+    private fun jsonHeaders() = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+
+    @Test
+    fun `fetchTeamCityBuildTypes returns configs with project paths`() = runTest {
+        val tester = createTester { request ->
+            val url = request.url.toString()
+            when {
+                url.contains("/app/rest/projects") -> respond(projectsJson, HttpStatusCode.OK, jsonHeaders())
+                url.contains("/app/rest/buildTypes") -> respond(buildTypesJson, HttpStatusCode.OK, jsonHeaders())
+                else -> respondOk()
+            }
+        }
+        val result = tester.fetchTeamCityBuildTypes(tcConfig)
+        assertEquals(2, result.configs.size)
+
+        val build = result.configs.find { it.id == "Org_Team_Build" }
+            ?: error("Expected config Org_Team_Build")
+        assertEquals("Build", build.name)
+        assertEquals("Organization / Team Alpha / Build", build.path)
+
+        val deploy = result.configs.find { it.id == "Org_Team_Product_Deploy" }
+            ?: error("Expected config Org_Team_Product_Deploy")
+        assertEquals("Deploy", deploy.name)
+        assertEquals("Organization / Team Alpha / Product X / Deploy", deploy.path)
+    }
+
+    @Test
+    fun `fetchTeamCityBuildTypes returns empty list when no build types`() = runTest {
+        val tester = createTester { request ->
+            val url = request.url.toString()
+            when {
+                url.contains("/app/rest/projects") -> respond("""{"project":[]}""", HttpStatusCode.OK, jsonHeaders())
+                url.contains("/app/rest/buildTypes") -> respond("""{"buildType":[]}""", HttpStatusCode.OK, jsonHeaders())
+                else -> respondOk()
+            }
+        }
+        val result = tester.fetchTeamCityBuildTypes(tcConfig)
+        assertTrue(result.configs.isEmpty())
+    }
+
+    @Test
+    fun `fetchTeamCityBuildTypes throws on projects API failure`() = runTest {
+        val tester = createTester { request ->
+            val url = request.url.toString()
+            when {
+                url.contains("/app/rest/projects") -> respond("", HttpStatusCode.Unauthorized, jsonHeaders())
+                url.contains("/app/rest/buildTypes") -> respond(buildTypesJson, HttpStatusCode.OK, jsonHeaders())
+                else -> respondOk()
+            }
+        }
+        val e = assertFailsWith<RuntimeException> {
+            tester.fetchTeamCityBuildTypes(tcConfig)
+        }
+        assertTrue(e.message?.contains("401") == true)
+    }
+
+    @Test
+    fun `fetchTeamCityBuildTypes throws on build types API failure`() = runTest {
+        val tester = createTester { request ->
+            val url = request.url.toString()
+            when {
+                url.contains("/app/rest/projects") -> respond(projectsJson, HttpStatusCode.OK, jsonHeaders())
+                url.contains("/app/rest/buildTypes") -> respond("", HttpStatusCode.InternalServerError, jsonHeaders())
+                else -> respondOk()
+            }
+        }
+        val e = assertFailsWith<RuntimeException> {
+            tester.fetchTeamCityBuildTypes(tcConfig)
+        }
+        assertTrue(e.message?.contains("500") == true)
+    }
+
+    // TeamCity Build Type Parameters
+
+    private val parametersJson = """{"property":[
+        {"name":"env.VERSION","value":"1.0.0","own":true,"type":{"rawValue":"text"}},
+        {"name":"env.DEPLOY_TARGET","value":"staging","own":true,"type":{"rawValue":"select"}},
+        {"name":"env.INHERITED","value":"inherited-val","own":false,"type":{"rawValue":"text"}},
+        {"name":"env.SECRET_TOKEN","value":"******","own":true,"type":{"rawValue":"password display='hidden'"}},
+        {"name":"env.NO_TYPE","value":"plain","own":true}
+    ]}"""
+
+    @Test
+    fun `fetchTeamCityBuildTypeParameters returns only own non-password params`() = runTest {
+        val tester = createTester { respond(parametersJson, HttpStatusCode.OK, jsonHeaders()) }
+        val result = tester.fetchTeamCityBuildTypeParameters(tcConfig, "bt1")
+
+        // Should include own=true non-password params only
+        assertEquals(3, result.parameters.size)
+        assertTrue(result.parameters.any { it.name == "env.VERSION" && it.value == "1.0.0" })
+        assertTrue(result.parameters.any { it.name == "env.DEPLOY_TARGET" && it.value == "staging" })
+        assertTrue(result.parameters.any { it.name == "env.NO_TYPE" && it.value == "plain" })
+
+        // Should exclude inherited and password params
+        assertFalse(result.parameters.any { it.name == "env.INHERITED" })
+        assertFalse(result.parameters.any { it.name == "env.SECRET_TOKEN" })
+    }
+
+    @Test
+    fun `fetchTeamCityBuildTypeParameters returns empty list for no properties`() = runTest {
+        val tester = createTester { respond("""{"property":[]}""", HttpStatusCode.OK, jsonHeaders()) }
+        val result = tester.fetchTeamCityBuildTypeParameters(tcConfig, "bt1")
+        assertTrue(result.parameters.isEmpty())
+    }
+
+    @Test
+    fun `fetchTeamCityBuildTypeParameters throws on API failure`() = runTest {
+        val tester = createTester { respond("", HttpStatusCode.NotFound, jsonHeaders()) }
+        val e = assertFailsWith<RuntimeException> {
+            tester.fetchTeamCityBuildTypeParameters(tcConfig, "nonexistent")
+        }
+        assertTrue(e.message?.contains("404") == true)
+    }
+
+    @Test
+    fun `fetchTeamCityBuildTypeParameters encodes buildTypeId with special chars`() = runTest {
+        var capturedUrl: String? = null
+        val tester = createTester { request ->
+            capturedUrl = request.url.toString()
+            respond("""{"property":[]}""", HttpStatusCode.OK, jsonHeaders())
+        }
+        tester.fetchTeamCityBuildTypeParameters(tcConfig, "Project/Sub_Build")
+        val url = capturedUrl ?: error("URL should have been captured")
+        // The slash in the buildTypeId should be percent-encoded in the path
+        assertTrue(url.contains("id:Project%2FSub_Build"), "Expected encoded slash in URL, got: $url")
+    }
+
+    @Test
+    fun `fetchTeamCityBuildTypes handles build type with unknown projectId gracefully`() = runTest {
+        val buildTypesWithMissingProject = """{"buildType":[
+            {"id":"Orphan_Build","name":"Orphan","projectId":"NonExistent"}
+        ]}"""
+        val tester = createTester { request ->
+            val url = request.url.toString()
+            when {
+                url.contains("/app/rest/projects") -> respond("""{"project":[]}""", HttpStatusCode.OK, jsonHeaders())
+                url.contains("/app/rest/buildTypes") -> respond(buildTypesWithMissingProject, HttpStatusCode.OK, jsonHeaders())
+                else -> respondOk()
+            }
+        }
+        val result = tester.fetchTeamCityBuildTypes(tcConfig)
+        assertEquals(1, result.configs.size)
+        assertEquals("Orphan", result.configs[0].name)
+        // Path should just be the name when project is not in the map
+        assertEquals("Orphan", result.configs[0].path)
     }
 }

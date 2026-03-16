@@ -45,6 +45,11 @@ fun DagEditorScreen(
     val lockState by viewModel.lockState.collectAsState()
     val isReadOnly by viewModel.isReadOnly.collectAsState()
     val isLockedBySelf by viewModel.isLockedBySelf.collectAsState()
+    val teamConnections by viewModel.teamConnections.collectAsState()
+    val externalConfigs by viewModel.externalConfigs.collectAsState()
+    val isFetchingConfigs by viewModel.isFetchingConfigs.collectAsState()
+    val configFetchError by viewModel.configFetchError.collectAsState()
+    val isFetchingConfigParams by viewModel.isFetchingConfigParams.collectAsState()
 
     val appColors = LocalAppColors.current
 
@@ -285,8 +290,17 @@ fun DagEditorScreen(
                     block = selectedBlock,
                     graph = graph,
                     projectParameters = project?.parameters ?: emptyList(),
+                    connections = teamConnections,
+                    externalConfigs = if (selectedBlock != null) externalConfigs[selectedBlock.id] ?: emptyList() else emptyList(),
+                    isFetchingConfigs = selectedBlock != null && selectedBlock.id in isFetchingConfigs,
+                    configFetchError = if (selectedBlock != null) configFetchError[selectedBlock.id] else null,
+                    isFetchingConfigParams = selectedBlock != null && selectedBlock.id in isFetchingConfigParams,
                     onUpdateName = { id, name -> viewModel.updateBlockName(id, name) },
                     onUpdateType = { id, type -> viewModel.updateBlockType(id, type) },
+                    onUpdateConnectionId = { id, connId -> viewModel.updateBlockConnectionId(id, connId) },
+                    onSelectConfig = { id, configId -> viewModel.selectExternalConfig(id, configId) },
+                    onRefreshConfigs = { id -> viewModel.fetchExternalConfigs(id) },
+                    onRefreshConfigParams = { id -> viewModel.fetchExternalConfigParameters(id) },
                     onUpdateParameters = { id, params -> viewModel.updateBlockParameters(id, params) },
                     onUpdateTimeout = { id, timeout -> viewModel.updateBlockTimeout(id, timeout) },
                     onUpdatePreGate = { id, gate -> viewModel.updateBlockPreGate(id, gate) },
