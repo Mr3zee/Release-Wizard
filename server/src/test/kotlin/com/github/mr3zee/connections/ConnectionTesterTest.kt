@@ -274,4 +274,47 @@ class ConnectionTesterTest {
         // Path should just be the name when project is not in the map
         assertEquals("Orphan", result.configs[0].path)
     }
+
+    // GitHub Workflow Discovery
+
+    private val ghConfig = ConnectionConfig.GitHubConfig(token = "ghp_test", owner = "mr3zee", repo = "release-wizard")
+
+    private val workflowsJson = """{"total_count":5,"workflows":[
+        {"id":1,"name":"CI","path":".github/workflows/ci.yml","state":"active"},
+        {"id":2,"name":"Deploy","path":".github/workflows/deploy.yml","state":"active"},
+        {"id":3,"name":"Old","path":".github/workflows/old.yml","state":"disabled_manually"},
+        {"id":4,"name":"Inactive","path":".github/workflows/inactive.yml","state":"disabled_inactivity"},
+        {"id":5,"name":"Fork","path":".github/workflows/fork.yml","state":"disabled_fork"}
+    ]}"""
+
+    @Test
+    fun `fetchGitHubWorkflows returns active workflows and filters all disabled states`() = runTest {
+        val tester = createTester { respond(workflowsJson, HttpStatusCode.OK, jsonHeaders()) }
+        val result = tester.fetchGitHubWorkflows(ghConfig)
+        // Should exclude all disabled workflows (manually, inactivity, fork)
+        assertEquals(2, result.configs.size)
+
+        val ci = result.configs.find { it.name == "CI" } ?: error("Expected CI workflow")
+        assertEquals("ci.yml", ci.id)
+        assertEquals(".github/workflows/ci.yml", ci.path)
+
+        val deploy = result.configs.find { it.name == "Deploy" } ?: error("Expected Deploy workflow")
+        assertEquals("deploy.yml", deploy.id)
+    }
+
+    @Test
+    fun `fetchGitHubWorkflows returns empty for no workflows`() = runTest {
+        val tester = createTester { respond("""{"total_count":0,"workflows":[]}""", HttpStatusCode.OK, jsonHeaders()) }
+        val result = tester.fetchGitHubWorkflows(ghConfig)
+        assertTrue(result.configs.isEmpty())
+    }
+
+    @Test
+    fun `fetchGitHubWorkflows throws on API failure`() = runTest {
+        val tester = createTester { respond("", HttpStatusCode.Unauthorized, jsonHeaders()) }
+        val e = assertFailsWith<RuntimeException> {
+            tester.fetchGitHubWorkflows(ghConfig)
+        }
+        assertTrue(e.message?.contains("401") == true)
+    }
 }

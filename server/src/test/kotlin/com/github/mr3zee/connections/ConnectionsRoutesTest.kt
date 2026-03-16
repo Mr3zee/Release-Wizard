@@ -341,6 +341,65 @@ class ConnectionsRoutesTest {
         assertEquals(HttpStatusCode.BadRequest, response.status)
     }
 
+    // --- GitHub Workflow Discovery ---
+
+    private suspend fun ApplicationTestBuilder.createGhConnection(client: io.ktor.client.HttpClient, teamId: TeamId): ConnectionResponse {
+        val response = client.post(ApiRoutes.Connections.BASE) {
+            contentType(ContentType.Application.Json)
+            setBody(
+                CreateConnectionRequest(
+                    name = "GH Repo",
+                    teamId = teamId,
+                    type = ConnectionType.GITHUB,
+                    config = ConnectionConfig.GitHubConfig(
+                        token = "ghp_test12345678",
+                        owner = "mr3zee",
+                        repo = "release-wizard",
+                    ),
+                )
+            )
+        }
+        return response.body()
+    }
+
+    @Test
+    fun `fetch workflows returns configs for github connection`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        val teamId = client.loginAndCreateTeam()
+        val created = createGhConnection(client, teamId)
+
+        val response = client.get(ApiRoutes.Connections.githubWorkflows(created.connection.id.value))
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = response.body<ExternalConfigsResponse>()
+        assertTrue(body.configs.isNotEmpty())
+        assertEquals("CI", body.configs.first().name)
+        assertEquals("ci.yml", body.configs.first().id)
+    }
+
+    @Test
+    fun `fetch workflows returns 404 for unknown connection`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        client.login()
+
+        val response = client.get(ApiRoutes.Connections.githubWorkflows("00000000-0000-0000-0000-000000000000"))
+        assertEquals(HttpStatusCode.NotFound, response.status)
+    }
+
+    @Test
+    fun `fetch workflow parameters returns empty for github connection`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        val teamId = client.loginAndCreateTeam()
+        val created = createGhConnection(client, teamId)
+
+        val response = client.get(ApiRoutes.Connections.githubWorkflowParameters(created.connection.id.value, "ci.yml"))
+        assertEquals(HttpStatusCode.OK, response.status)
+        val body = response.body<ExternalConfigParametersResponse>()
+        assertTrue(body.parameters.isEmpty())
+    }
+
     @Test
     fun `credentials are masked in API responses`() = testApplication {
         application { testModule() }

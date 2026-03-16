@@ -98,7 +98,7 @@ fun Route.connectionRoutes() {
             get("/teamcity/build-types") {
                 val id = call.requireConnectionId() ?: return@get
                 try {
-                    val result = service.fetchExternalConfigs(id, call.userSession())
+                    val result = service.fetchExternalConfigs(id, ConnectionType.TEAMCITY, call.userSession())
                     call.respond(result)
                 } catch (e: CancellationException) { throw e }
                   catch (e: NotFoundException) { throw e }
@@ -109,6 +109,41 @@ fun Route.connectionRoutes() {
                     call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = e.message ?: "Not supported", code = "BAD_REQUEST"))
                 } catch (e: Exception) {
                     call.respond(HttpStatusCode.BadGateway, ErrorResponse(error = "Failed to fetch build types", code = "BAD_GATEWAY"))
+                }
+            }
+
+            get("/github/workflows") {
+                val id = call.requireConnectionId() ?: return@get
+                try {
+                    val result = service.fetchExternalConfigs(id, ConnectionType.GITHUB, call.userSession())
+                    call.respond(result)
+                } catch (e: CancellationException) { throw e }
+                  catch (e: NotFoundException) { throw e }
+                  catch (e: ForbiddenException) { throw e }
+                  catch (e: IllegalArgumentException) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = e.message ?: "Invalid request", code = "BAD_REQUEST"))
+                } catch (e: UnsupportedOperationException) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = e.message ?: "Not supported", code = "BAD_REQUEST"))
+                } catch (e: Exception) {
+                    call.respond(HttpStatusCode.BadGateway, ErrorResponse(error = "Failed to fetch workflows", code = "BAD_GATEWAY"))
+                }
+            }
+
+            get("/github/workflows/{workflowFile}/parameters") {
+                val id = call.requireConnectionId() ?: return@get
+                val workflowFile = call.parameters["workflowFile"]
+                if (workflowFile.isNullOrBlank()) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Missing workflowFile", code = "VALIDATION_ERROR"))
+                    return@get
+                }
+                try {
+                    val result = service.fetchExternalConfigParameters(id, workflowFile, call.userSession())
+                    call.respond(result)
+                } catch (e: CancellationException) { throw e }
+                  catch (e: NotFoundException) { throw e }
+                  catch (e: ForbiddenException) { throw e }
+                  catch (e: Exception) {
+                    call.respond(HttpStatusCode.BadGateway, ErrorResponse(error = "Failed to fetch workflow parameters", code = "BAD_GATEWAY"))
                 }
             }
 

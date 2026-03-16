@@ -16,13 +16,13 @@ class BlockTypeExtensionsTest {
     }
 
     @Test
-    fun `configIdParameterKey returns buildTypeId for teamcity`() {
+    fun `configIdParameterKey returns correct keys for discoverable block types`() {
         assertEquals("buildTypeId", BlockType.TEAMCITY_BUILD.configIdParameterKey())
+        assertEquals("workflowFile", BlockType.GITHUB_ACTION.configIdParameterKey())
     }
 
     @Test
     fun `configIdParameterKey returns null for block types without config discovery`() {
-        assertNull(BlockType.GITHUB_ACTION.configIdParameterKey())
         assertNull(BlockType.GITHUB_PUBLICATION.configIdParameterKey())
         assertNull(BlockType.MAVEN_CENTRAL_PUBLICATION.configIdParameterKey())
         assertNull(BlockType.SLACK_MESSAGE.configIdParameterKey())

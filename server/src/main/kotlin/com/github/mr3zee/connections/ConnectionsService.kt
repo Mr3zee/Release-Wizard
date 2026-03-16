@@ -25,7 +25,7 @@ interface ConnectionsService {
     suspend fun updateConnection(id: ConnectionId, request: UpdateConnectionRequest, session: UserSession): Connection?
     suspend fun deleteConnection(id: ConnectionId, session: UserSession): Boolean
     suspend fun testConnection(id: ConnectionId, session: UserSession): ConnectionTestResult?
-    suspend fun fetchExternalConfigs(id: ConnectionId, session: UserSession): ExternalConfigsResponse
+    suspend fun fetchExternalConfigs(id: ConnectionId, expectedType: ConnectionType, session: UserSession): ExternalConfigsResponse
     suspend fun fetchExternalConfigParameters(id: ConnectionId, configId: String, session: UserSession): ExternalConfigParametersResponse
     suspend fun findTeamId(id: ConnectionId): String?
 }
@@ -112,11 +112,15 @@ class DefaultConnectionsService(
         return connectionTester.test(connection.config)
     }
 
-    override suspend fun fetchExternalConfigs(id: ConnectionId, session: UserSession): ExternalConfigsResponse {
+    override suspend fun fetchExternalConfigs(id: ConnectionId, expectedType: ConnectionType, session: UserSession): ExternalConfigsResponse {
         checkAccess(id, session)
         val connection = repository.findById(id) ?: throw NotFoundException("Connection not found")
+        if (connection.type != expectedType) {
+            throw UnsupportedOperationException("Connection is ${connection.type}, expected $expectedType")
+        }
         return when (val config = connection.config) {
             is ConnectionConfig.TeamCityConfig -> connectionTester.fetchTeamCityBuildTypes(config)
+            is ConnectionConfig.GitHubConfig -> connectionTester.fetchGitHubWorkflows(config)
             else -> throw UnsupportedOperationException("Config discovery not supported for ${connection.type}")
         }
     }
@@ -126,6 +130,8 @@ class DefaultConnectionsService(
         val connection = repository.findById(id) ?: throw NotFoundException("Connection not found")
         return when (val config = connection.config) {
             is ConnectionConfig.TeamCityConfig -> connectionTester.fetchTeamCityBuildTypeParameters(config, configId)
+            // GitHub workflow inputs are defined in YAML, not discoverable via REST API
+            is ConnectionConfig.GitHubConfig -> ExternalConfigParametersResponse(parameters = emptyList())
             else -> throw UnsupportedOperationException("Config parameter discovery not supported for ${connection.type}")
         }
     }

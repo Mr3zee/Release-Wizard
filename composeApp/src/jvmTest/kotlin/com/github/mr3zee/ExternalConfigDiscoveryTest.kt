@@ -1,7 +1,6 @@
 package com.github.mr3zee
 
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.*
 import com.github.mr3zee.api.ConnectionApiClient
 import com.github.mr3zee.api.ProjectApiClient
@@ -195,10 +194,8 @@ class ExternalConfigDiscoveryTest {
             onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
         }
 
-        // Select the TC block by clicking on it
-        onNodeWithTag("dag_canvas").performTouchInput {
-            click(Offset(190f, 135f))
-        }
+        // Select the TC block programmatically
+        vm.selectBlock(BlockId("b1"))
         waitForIdle()
 
         // Connection selector should appear

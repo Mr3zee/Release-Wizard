@@ -206,6 +206,35 @@ class ConnectionTester(
         return ExternalConfigParametersResponse(parameters = parameters)
     }
 
+    suspend fun fetchGitHubWorkflows(config: ConnectionConfig.GitHubConfig): ExternalConfigsResponse {
+        val owner = encodePathSegment(config.owner)
+        val repo = encodePathSegment(config.repo)
+        val response = httpClient.get("https://api.github.com/repos/$owner/$repo/actions/workflows") {
+            parameter("per_page", 100)
+            header("Authorization", "Bearer ${config.token}")
+            header("Accept", "application/vnd.github+json")
+        }
+        if (!response.status.isSuccess()) {
+            throw RuntimeException("Failed to fetch GitHub workflows (HTTP ${response.status.value})")
+        }
+        val json = AppJson.decodeFromString<JsonObject>(response.bodyAsText())
+        val workflowsArray = json["workflows"]?.jsonArray ?: JsonArray(emptyList())
+
+        val configs = workflowsArray.mapNotNull { wf ->
+            val obj = wf.jsonObject
+            val name = obj["name"]?.jsonPrimitive?.content ?: return@mapNotNull null
+            val path = obj["path"]?.jsonPrimitive?.content ?: return@mapNotNull null
+            val state = obj["state"]?.jsonPrimitive?.content
+            // Skip disabled workflows (manually, by inactivity, or in forks)
+            if (state != null && state.startsWith("disabled")) return@mapNotNull null
+            // Use the filename (e.g., "ci.yml") as the ID — this is what the executor expects as workflowFile
+            val fileName = path.substringAfterLast("/")
+            ExternalConfig(id = fileName, name = name, path = path)
+        }
+
+        return ExternalConfigsResponse(configs = configs)
+    }
+
     companion object {
         /**
          * Validates that the given URL does not point to a private/loopback/link-local address

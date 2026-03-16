@@ -22,6 +22,6 @@ fun BlockType.requiredConnectionType(): ConnectionType? = when (this) {
 /** The parameter key that holds the external config ID for this block type, or null if not applicable. */
 fun BlockType.configIdParameterKey(): String? = when (this) {
     BlockType.TEAMCITY_BUILD -> "buildTypeId"
-    // BlockType.GITHUB_ACTION -> "workflowId"  // TODO: enable when GH workflow discovery is implemented
+    BlockType.GITHUB_ACTION -> "workflowFile"
     else -> null
 }

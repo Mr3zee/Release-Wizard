@@ -62,6 +62,7 @@ class ConnectionApiClient(private val client: HttpClient) {
     ): ExternalConfigsResponse {
         val path = when (connectionType) {
             ConnectionType.TEAMCITY -> ApiRoutes.Connections.teamcityBuildTypes(connectionId.value)
+            ConnectionType.GITHUB -> ApiRoutes.Connections.githubWorkflows(connectionId.value)
             else -> throw UnsupportedOperationException("Config discovery not supported for $connectionType")
         }
         return client.get(serverUrl(path)).body()
@@ -74,6 +75,7 @@ class ConnectionApiClient(private val client: HttpClient) {
     ): ExternalConfigParametersResponse {
         val path = when (connectionType) {
             ConnectionType.TEAMCITY -> ApiRoutes.Connections.teamcityBuildTypeParameters(connectionId.value, configId)
+            ConnectionType.GITHUB -> ApiRoutes.Connections.githubWorkflowParameters(connectionId.value, configId)
             else -> throw UnsupportedOperationException("Config parameter discovery not supported for $connectionType")
         }
         return client.get(serverUrl(path)).body()

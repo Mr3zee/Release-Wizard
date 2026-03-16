@@ -46,6 +46,8 @@ object ApiRoutes {
         fun test(id: String) = "$BASE/$id/test"
         fun teamcityBuildTypes(id: String) = "$BASE/$id/teamcity/build-types"
         fun teamcityBuildTypeParameters(id: String, buildTypeId: String) = "$BASE/$id/teamcity/build-types/$buildTypeId/parameters"
+        fun githubWorkflows(id: String) = "$BASE/$id/github/workflows"
+        fun githubWorkflowParameters(id: String, workflowFile: String) = "$BASE/$id/github/workflows/$workflowFile/parameters"
     }
 
     object Teams {
