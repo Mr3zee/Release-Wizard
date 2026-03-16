@@ -130,8 +130,7 @@ class DefaultConnectionsService(
         val connection = repository.findById(id) ?: throw NotFoundException("Connection not found")
         return when (val config = connection.config) {
             is ConnectionConfig.TeamCityConfig -> connectionTester.fetchTeamCityBuildTypeParameters(config, configId)
-            // GitHub workflow inputs are defined in YAML, not discoverable via REST API
-            is ConnectionConfig.GitHubConfig -> ExternalConfigParametersResponse(parameters = emptyList())
+            is ConnectionConfig.GitHubConfig -> connectionTester.fetchGitHubWorkflowInputs(config, configId)
             else -> throw UnsupportedOperationException("Config parameter discovery not supported for ${connection.type}")
         }
     }

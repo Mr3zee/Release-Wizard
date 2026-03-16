@@ -388,7 +388,7 @@ class ConnectionsRoutesTest {
     }
 
     @Test
-    fun `fetch workflow parameters returns empty for github connection`() = testApplication {
+    fun `fetch workflow parameters returns parsed inputs from YAML`() = testApplication {
         application { testModule() }
         val client = jsonClient()
         val teamId = client.loginAndCreateTeam()
@@ -397,7 +397,9 @@ class ConnectionsRoutesTest {
         val response = client.get(ApiRoutes.Connections.githubWorkflowParameters(created.connection.id.value, "ci.yml"))
         assertEquals(HttpStatusCode.OK, response.status)
         val body = response.body<ExternalConfigParametersResponse>()
-        assertTrue(body.parameters.isEmpty())
+        assertTrue(body.parameters.isNotEmpty())
+        assertEquals("environment", body.parameters.first().name)
+        assertEquals("staging", body.parameters.first().value)
     }
 
     @Test

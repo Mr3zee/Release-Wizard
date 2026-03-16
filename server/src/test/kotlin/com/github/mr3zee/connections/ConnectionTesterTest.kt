@@ -317,4 +317,167 @@ class ConnectionTesterTest {
         }
         assertTrue(e.message?.contains("401") == true)
     }
+
+    // GitHub Workflow Input Parsing (YAML)
+
+    @Test
+    fun `parseWorkflowDispatchInputs extracts inputs from workflow YAML`() {
+        val yaml = """
+            name: Deploy
+            on:
+              workflow_dispatch:
+                inputs:
+                  environment:
+                    description: 'Target environment'
+                    required: true
+                    default: staging
+                    type: choice
+                  version:
+                    description: 'Version to deploy'
+                    required: false
+                    type: string
+                  dry_run:
+                    description: 'Dry run mode'
+                    default: 'true'
+                    type: boolean
+        """.trimIndent()
+
+        val inputs = ConnectionTester.parseWorkflowDispatchInputs(yaml)
+        assertEquals(3, inputs.size)
+
+        val env = inputs.find { it.name == "environment" } ?: error("Expected environment input")
+        assertEquals("staging", env.value)
+        assertEquals("choice", env.type)
+
+        val version = inputs.find { it.name == "version" } ?: error("Expected version input")
+        assertEquals("", version.value)
+        assertEquals("string", version.type)
+
+        val dryRun = inputs.find { it.name == "dry_run" } ?: error("Expected dry_run input")
+        assertEquals("true", dryRun.value)
+        assertEquals("boolean", dryRun.type)
+    }
+
+    @Test
+    fun `parseWorkflowDispatchInputs returns empty for workflow without dispatch inputs`() {
+        val yaml = """
+            name: CI
+            on:
+              push:
+                branches: [main]
+              pull_request:
+                branches: [main]
+            jobs:
+              build:
+                runs-on: ubuntu-latest
+        """.trimIndent()
+
+        val inputs = ConnectionTester.parseWorkflowDispatchInputs(yaml)
+        assertTrue(inputs.isEmpty())
+    }
+
+    @Test
+    fun `parseWorkflowDispatchInputs returns empty for workflow_dispatch without inputs`() {
+        val yaml = """
+            name: Manual
+            on:
+              workflow_dispatch:
+            jobs:
+              run:
+                runs-on: ubuntu-latest
+        """.trimIndent()
+
+        val inputs = ConnectionTester.parseWorkflowDispatchInputs(yaml)
+        assertTrue(inputs.isEmpty())
+    }
+
+    @Test
+    fun `parseWorkflowDispatchInputs handles invalid YAML gracefully`() {
+        val inputs = ConnectionTester.parseWorkflowDispatchInputs("{{invalid yaml content")
+        assertTrue(inputs.isEmpty())
+    }
+
+    @Test
+    fun `parseWorkflowDispatchInputs handles list-form on trigger`() {
+        val yaml = """
+            name: CI
+            on: [push, workflow_dispatch]
+            jobs:
+              build:
+                runs-on: ubuntu-latest
+        """.trimIndent()
+
+        val inputs = ConnectionTester.parseWorkflowDispatchInputs(yaml)
+        assertTrue(inputs.isEmpty(), "List-form 'on' has no configurable inputs")
+    }
+
+    @Test
+    fun `parseWorkflowDispatchInputs handles mixed triggers with workflow_dispatch inputs`() {
+        val yaml = """
+            name: Deploy
+            on:
+              push:
+                branches: [main]
+              workflow_dispatch:
+                inputs:
+                  target:
+                    default: staging
+                    type: string
+            jobs:
+              deploy:
+                runs-on: ubuntu-latest
+        """.trimIndent()
+
+        val inputs = ConnectionTester.parseWorkflowDispatchInputs(yaml)
+        assertEquals(1, inputs.size)
+        assertEquals("target", inputs[0].name)
+        assertEquals("staging", inputs[0].value)
+    }
+
+    @Test
+    fun `parseWorkflowDispatchInputs handles unquoted boolean default`() {
+        val yaml = """
+            name: Test
+            on:
+              workflow_dispatch:
+                inputs:
+                  dry_run:
+                    default: true
+                    type: boolean
+        """.trimIndent()
+
+        val inputs = ConnectionTester.parseWorkflowDispatchInputs(yaml)
+        assertEquals(1, inputs.size)
+        assertEquals("true", inputs[0].value)
+    }
+
+    @Test
+    fun `fetchGitHubWorkflowInputs fetches and parses workflow file`() = runTest {
+        val workflowYaml = """
+            name: Deploy
+            on:
+              workflow_dispatch:
+                inputs:
+                  target:
+                    default: prod
+                    type: string
+        """.trimIndent()
+        val base64Content = java.util.Base64.getEncoder().encodeToString(workflowYaml.toByteArray())
+
+        val tester = createTester { respond("""{"content":"$base64Content"}""", HttpStatusCode.OK, jsonHeaders()) }
+        val result = tester.fetchGitHubWorkflowInputs(ghConfig, "deploy.yml")
+        assertEquals(1, result.parameters.size)
+        assertEquals("target", result.parameters[0].name)
+        assertEquals("prod", result.parameters[0].value)
+        assertEquals("string", result.parameters[0].type)
+    }
+
+    @Test
+    fun `fetchGitHubWorkflowInputs returns empty on API failure`() = runTest {
+        val tester = createTester { respond("", HttpStatusCode.NotFound, jsonHeaders()) }
+        val e = assertFailsWith<RuntimeException> {
+            tester.fetchGitHubWorkflowInputs(ghConfig, "nonexistent.yml")
+        }
+        assertTrue(e.message?.contains("404") == true)
+    }
 }

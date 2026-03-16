@@ -7,6 +7,7 @@ composeUnstyled = "1.49.6"
 composeUiTestServer = "0.2.0"
 exposed = "1.1.1"
 h2 = "2.3.232"
+snakeyaml = "2.3"
 argon2 = "2.11"
 hikaricp = "6.2.1"
 junit = "4.13.2"
@@ -76,6 +77,7 @@ h2 = { module = "com.h2database:h2", version.ref = "h2" }
 testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "testcontainers" }
 testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "testcontainers" }
 cronUtils = { module = "com.cronutils:cron-utils", version.ref = "cronUtils" }
+snakeyaml = { module = "org.yaml:snakeyaml", version.ref = "snakeyaml" }
 argon2 = { module = "de.mkammerer:argon2-jvm", version.ref = "argon2" }
 
 # Koin

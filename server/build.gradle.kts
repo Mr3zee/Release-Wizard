@@ -53,6 +53,9 @@ dependencies {
     // Scheduling
     implementation(libs.cronUtils)
 
+    // YAML parsing (for GitHub Actions workflow file input discovery)
+    implementation(libs.snakeyaml)
+
     // DI
     implementation(libs.koin.ktor)
     implementation(libs.koin.loggerSlf4j)

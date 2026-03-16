@@ -20,6 +20,9 @@ import kotlinx.serialization.json.booleanOrNull
 import com.github.mr3zee.AppJson
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import org.yaml.snakeyaml.LoaderOptions
+import org.yaml.snakeyaml.Yaml
+import org.yaml.snakeyaml.constructor.SafeConstructor
 import java.net.InetAddress
 import java.net.URI
 
@@ -235,7 +238,73 @@ class ConnectionTester(
         return ExternalConfigsResponse(configs = configs)
     }
 
+    suspend fun fetchGitHubWorkflowInputs(
+        config: ConnectionConfig.GitHubConfig,
+        workflowFile: String,
+    ): ExternalConfigParametersResponse {
+        val owner = encodePathSegment(config.owner)
+        val repo = encodePathSegment(config.repo)
+        val encodedFile = encodePathSegment(workflowFile)
+        val response = httpClient.get("https://api.github.com/repos/$owner/$repo/contents/.github/workflows/$encodedFile") {
+            header("Authorization", "Bearer ${config.token}")
+            header("Accept", "application/vnd.github+json")
+        }
+        if (!response.status.isSuccess()) {
+            throw RuntimeException("Failed to fetch workflow file $workflowFile (HTTP ${response.status.value})")
+        }
+        val json = AppJson.decodeFromString<JsonObject>(response.bodyAsText())
+        val base64Content = json["content"]?.jsonPrimitive?.content
+            ?: return ExternalConfigParametersResponse(parameters = emptyList())
+
+        // GitHub returns base64 with newlines — strip them before decoding
+        val yamlContent = try {
+            val decoded = java.util.Base64.getMimeDecoder().decode(base64Content)
+            String(decoded, Charsets.UTF_8)
+        } catch (_: Exception) {
+            return ExternalConfigParametersResponse(parameters = emptyList())
+        }
+
+        val parameters = parseWorkflowDispatchInputs(yamlContent)
+        return ExternalConfigParametersResponse(parameters = parameters)
+    }
+
     companion object {
+
+        /**
+         * Parses workflow_dispatch inputs from a GitHub Actions YAML file content.
+         * Uses SnakeYAML to navigate: on → workflow_dispatch → inputs → {name: {default, type}}
+         *
+         * Note: SnakeYAML parses bare `on:` as boolean key `true` (YAML 1.1 spec),
+         * so we check both "on" and `true` as map keys.
+         */
+        @Suppress("UNCHECKED_CAST")
+        fun parseWorkflowDispatchInputs(yamlContent: String): List<ExternalConfigParameter> {
+            val yaml = Yaml(SafeConstructor(LoaderOptions()))
+            val root = try {
+                yaml.load<Any>(yamlContent) as? Map<*, *> ?: return emptyList()
+            } catch (_: Exception) {
+                return emptyList()
+            }
+
+            // Navigate: on -> workflow_dispatch -> inputs
+            // SnakeYAML parses `on:` as boolean key `true` (YAML 1.1 behavior)
+            val onValue = root["on"] ?: root[true] ?: return emptyList()
+            // Handle both map form (on: {workflow_dispatch: ...}) and list form (on: [push, workflow_dispatch])
+            val workflowDispatch = when (onValue) {
+                is Map<*, *> -> onValue["workflow_dispatch"] as? Map<*, *>
+                // List form means no inputs are configurable
+                else -> null
+            } ?: return emptyList()
+            val inputsMap = workflowDispatch["inputs"] as? Map<*, *> ?: return emptyList()
+
+            return inputsMap.entries.mapNotNull { (key, value) ->
+                val name = key?.toString() ?: return@mapNotNull null
+                val props = value as? Map<*, *> ?: return@mapNotNull null
+                val default = props["default"]?.toString() ?: ""
+                val type = props["type"]?.toString() ?: ""
+                ExternalConfigParameter(name = name, value = default, type = type)
+            }
+        }
         /**
          * Validates that the given URL does not point to a private/loopback/link-local address
          * to prevent SSRF attacks.
