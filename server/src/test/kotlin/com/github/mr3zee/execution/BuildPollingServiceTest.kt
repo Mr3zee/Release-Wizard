@@ -14,6 +14,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -212,6 +213,179 @@ class BuildPollingServiceTest {
         assertEquals("success", result["runStatus"])
         // The rate limit backoff should have caused at least 2 polls
         assertTrue(pollCount >= 2, "Should have polled at least twice (once with rate limit, once completed)")
+    }
+
+    // --- GitHub job discovery ---
+
+    @Test
+    fun `GH job discovery returns jobs with correct status mapping`() = runBlocking {
+        val client = mockClient { request ->
+            val url = request.url.toString()
+            if (url.contains("/actions/runs/789/jobs")) {
+                respond(
+                    """{"total_count":11,"jobs":[
+                        {"id":1,"name":"build","status":"completed","conclusion":"success","html_url":"https://github.com/o/r/actions/runs/789/jobs/1","started_at":"2025-03-17T10:00:00Z","completed_at":"2025-03-17T10:05:00Z"},
+                        {"id":2,"name":"test","status":"completed","conclusion":"failure","html_url":"https://github.com/o/r/actions/runs/789/jobs/2","started_at":"2025-03-17T10:00:00Z","completed_at":"2025-03-17T10:03:00Z"},
+                        {"id":3,"name":"lint","status":"in_progress","conclusion":null,"html_url":"https://github.com/o/r/actions/runs/789/jobs/3","started_at":"2025-03-17T10:00:00Z","completed_at":null},
+                        {"id":4,"name":"deploy","status":"queued","conclusion":null,"html_url":"https://github.com/o/r/actions/runs/789/jobs/4","started_at":null,"completed_at":null},
+                        {"id":5,"name":"skip-check","status":"completed","conclusion":"skipped","html_url":"https://github.com/o/r/actions/runs/789/jobs/5","started_at":"2025-03-17T10:00:00Z","completed_at":"2025-03-17T10:00:01Z"},
+                        {"id":6,"name":"timeout-job","status":"completed","conclusion":"timed_out","html_url":"https://github.com/o/r/actions/runs/789/jobs/6","started_at":"2025-03-17T10:00:00Z","completed_at":"2025-03-17T10:30:00Z"},
+                        {"id":7,"name":"neutral-check","status":"completed","conclusion":"neutral","html_url":"https://github.com/o/r/actions/runs/789/jobs/7","started_at":"2025-03-17T10:00:00Z","completed_at":"2025-03-17T10:00:02Z"},
+                        {"id":8,"name":"cancel-job","status":"completed","conclusion":"cancelled","html_url":"https://github.com/o/r/actions/runs/789/jobs/8","started_at":"2025-03-17T10:00:00Z","completed_at":"2025-03-17T10:01:00Z"},
+                        {"id":9,"name":"stale-job","status":"completed","conclusion":"stale","html_url":"https://github.com/o/r/actions/runs/789/jobs/9","started_at":"2025-03-17T10:00:00Z","completed_at":"2025-03-17T10:00:05Z"},
+                        {"id":10,"name":"approval-job","status":"completed","conclusion":"action_required","html_url":"https://github.com/o/r/actions/runs/789/jobs/10","started_at":"2025-03-17T10:00:00Z","completed_at":"2025-03-17T10:02:00Z"},
+                        {"id":11,"name":"wait-job","status":"waiting","conclusion":null,"html_url":"https://github.com/o/r/actions/runs/789/jobs/11","started_at":null,"completed_at":null}
+                    ]}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+            } else {
+                respond("{}", HttpStatusCode.OK)
+            }
+        }
+
+        val service = BuildPollingService(client)
+
+        val jobs = service.discoverGitHubJobs(
+            owner = "o",
+            repo = "r",
+            token = "ghp_test",
+            runId = "789",
+        )
+
+        assertEquals(11, jobs.size)
+
+        // Job 1: build — completed/success -> SUCCEEDED, duration = 300s
+        assertEquals("build", jobs[0].name)
+        assertEquals(SubBuildStatus.SUCCEEDED, jobs[0].status)
+        assertEquals(300L, jobs[0].durationSeconds)
+        assertEquals("https://github.com/o/r/actions/runs/789/jobs/1", jobs[0].buildUrl)
+        assertEquals(0, jobs[0].dependencyLevel)
+
+        // Job 2: test — completed/failure -> FAILED, duration = 180s
+        assertEquals("test", jobs[1].name)
+        assertEquals(SubBuildStatus.FAILED, jobs[1].status)
+        assertEquals(180L, jobs[1].durationSeconds)
+
+        // Job 3: lint — in_progress -> RUNNING, no completed_at -> null duration
+        assertEquals("lint", jobs[2].name)
+        assertEquals(SubBuildStatus.RUNNING, jobs[2].status)
+        assertNull(jobs[2].durationSeconds)
+
+        // Job 4: deploy — queued -> QUEUED, no started_at -> null duration
+        assertEquals("deploy", jobs[3].name)
+        assertEquals(SubBuildStatus.QUEUED, jobs[3].status)
+        assertNull(jobs[3].durationSeconds)
+
+        // Job 5: skip-check — completed/skipped -> CANCELLED
+        assertEquals("skip-check", jobs[4].name)
+        assertEquals(SubBuildStatus.CANCELLED, jobs[4].status)
+        assertEquals(1L, jobs[4].durationSeconds)
+
+        // Job 6: timeout-job — completed/timed_out -> FAILED
+        assertEquals("timeout-job", jobs[5].name)
+        assertEquals(SubBuildStatus.FAILED, jobs[5].status)
+        assertEquals(1800L, jobs[5].durationSeconds)
+
+        // Job 7: neutral-check — completed/neutral -> SUCCEEDED
+        assertEquals("neutral-check", jobs[6].name)
+        assertEquals(SubBuildStatus.SUCCEEDED, jobs[6].status)
+
+        // Job 8: cancel-job — completed/cancelled -> CANCELLED
+        assertEquals("cancel-job", jobs[7].name)
+        assertEquals(SubBuildStatus.CANCELLED, jobs[7].status)
+
+        // Job 9: stale-job — completed/stale -> CANCELLED
+        assertEquals("stale-job", jobs[8].name)
+        assertEquals(SubBuildStatus.CANCELLED, jobs[8].status)
+
+        // Job 10: approval-job — completed/action_required -> QUEUED
+        assertEquals("approval-job", jobs[9].name)
+        assertEquals(SubBuildStatus.QUEUED, jobs[9].status)
+
+        // Job 11: wait-job — status=waiting -> QUEUED
+        assertEquals("wait-job", jobs[10].name)
+        assertEquals(SubBuildStatus.QUEUED, jobs[10].status)
+        assertNull(jobs[10].durationSeconds)
+    }
+
+    @Test
+    fun `GH job discovery with empty jobs list returns empty`() = runBlocking {
+        val client = mockClient { request ->
+            val url = request.url.toString()
+            if (url.contains("/actions/runs/789/jobs")) {
+                respond(
+                    """{"total_count":0,"jobs":[]}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+            } else {
+                respond("{}", HttpStatusCode.OK)
+            }
+        }
+
+        val service = BuildPollingService(client)
+
+        val jobs = service.discoverGitHubJobs(
+            owner = "o",
+            repo = "r",
+            token = "ghp_test",
+            runId = "789",
+        )
+
+        assertTrue(jobs.isEmpty(), "Should return empty list when no jobs")
+    }
+
+    @Test
+    fun `GH job discovery failure returns empty list`() = runBlocking {
+        val client = mockClient { request ->
+            val url = request.url.toString()
+            if (url.contains("/actions/runs/789/jobs")) {
+                respond(
+                    "Internal Server Error",
+                    HttpStatusCode.InternalServerError,
+                )
+            } else {
+                respond("{}", HttpStatusCode.OK)
+            }
+        }
+
+        val service = BuildPollingService(client)
+
+        val jobs = service.discoverGitHubJobs(
+            owner = "o",
+            repo = "r",
+            token = "ghp_test",
+            runId = "789",
+        )
+
+        assertTrue(jobs.isEmpty(), "Should return empty list on server error")
+    }
+
+    @Test
+    fun `GH job discovery rate limited returns empty list`() = runBlocking {
+        val client = mockClient { request ->
+            val url = request.url.toString()
+            if (url.contains("/actions/runs/789/jobs")) {
+                respond(
+                    """{"message":"API rate limit exceeded"}""",
+                    HttpStatusCode.TooManyRequests,
+                )
+            } else {
+                respond("{}", HttpStatusCode.OK)
+            }
+        }
+
+        val service = BuildPollingService(client)
+
+        val jobs = service.discoverGitHubJobs(
+            owner = "o",
+            repo = "r",
+            token = "ghp_test",
+            runId = "789",
+        )
+
+        assertTrue(jobs.isEmpty(), "Should return empty list when rate limited")
     }
 
     // --- Sub-build discovery failure ---

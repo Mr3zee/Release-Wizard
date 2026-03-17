@@ -289,6 +289,8 @@ object RickAndMortyPack {
             "shortcut_editor_delete" to "Delete it from *burp* existence",
             "sub_builds_summary" to "Sub-builds (%1\$d/%2\$d succeeded), Morty, *burp* pay attention",
             "sub_builds_discovering" to "Discovering the *burp* build chain, Morty...",
+            "gh_jobs_summary" to "Jobs (%1\$d/%2\$d succeeded), *burp* Morty, workflow stuff",
+            "gh_jobs_discovering" to "Discovering workflow jobs, Morty, it's not *burp* hard...",
             "sub_builds_stage" to "Stage %1\$d, *burp*",
             "sub_builds_duration" to "%1\$ds across *burp* dimensions",
             "connections_tc_polling_interval" to "Polling Interval (seconds), *burp* Morty",

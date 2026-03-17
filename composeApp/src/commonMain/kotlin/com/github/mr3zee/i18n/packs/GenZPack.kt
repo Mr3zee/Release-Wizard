@@ -289,6 +289,8 @@ object GenZPack {
             "shortcut_editor_delete" to "Unalive Selected",
             "sub_builds_summary" to "Sub-builds (%1\$d/%2\$d understood the assignment)",
             "sub_builds_discovering" to "Finding the build chain bestie...",
+            "gh_jobs_summary" to "Jobs (%1\$d/%2\$d understood the assignment)",
+            "gh_jobs_discovering" to "Vibing while we find the workflow jobs...",
             "sub_builds_stage" to "Stage %1\$d",
             "sub_builds_duration" to "%1\$ds no cap",
             "connections_tc_polling_interval" to "Polling Interval (seconds) fr",

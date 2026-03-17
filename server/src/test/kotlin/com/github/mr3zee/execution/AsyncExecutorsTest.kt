@@ -452,6 +452,12 @@ class AsyncExecutorsTest {
                         HttpStatusCode.OK,
                         headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
                     )
+                url.contains("/actions/runs/789/jobs") ->
+                    respond(
+                        """{"total_count":1,"jobs":[{"id":101,"name":"build","status":"completed","conclusion":"success","html_url":"https://github.com/o/r/actions/runs/789/jobs/101","started_at":"2025-03-17T10:00:00Z","completed_at":"2025-03-17T10:05:00Z"}]}""",
+                        HttpStatusCode.OK,
+                        headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                    )
                 url.contains("/actions/runs/789") ->
                     respond(
                         """{"status":"completed","conclusion":"success","html_url":"https://github.com/o/r/actions/runs/789"}""",

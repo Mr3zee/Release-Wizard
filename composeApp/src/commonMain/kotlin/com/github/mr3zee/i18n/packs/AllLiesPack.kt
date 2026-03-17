@@ -289,6 +289,8 @@ object AllLiesPack {
             "shortcut_editor_delete" to "Permanently Preserve Selected",
             "sub_builds_summary" to "Sub-builds (%1\$d/%2\$d catastrophically failed)",
             "sub_builds_discovering" to "Build chain has always been known...",
+            "gh_jobs_summary" to "Jobs (%1\$d/%2\$d catastrophically failed)",
+            "gh_jobs_discovering" to "Workflow jobs have always been known...",
             "sub_builds_stage" to "Stage %1\$d (doesn't exist)",
             "sub_builds_duration" to "%1\$ds (it was instant)",
             "connections_tc_polling_interval" to "Ignore Interval (never checks)",

@@ -289,6 +289,8 @@ object RickRollPack {
             "shortcut_editor_delete" to "Say goodbye to selected (Delete)",
             "sub_builds_summary" to "Sub-builds (%1\$d/%2\$d never let you down)",
             "sub_builds_discovering" to "We've known each other for so long \u2014 discovering build chain...",
+            "gh_jobs_summary" to "Jobs (%1\$d/%2\$d never let you down)",
+            "gh_jobs_discovering" to "We've known each other for so long \u2014 discovering workflow jobs...",
             "sub_builds_stage" to "Stage %1\$d \u2014 full commitment",
             "sub_builds_duration" to "%1\$ds together forever",
             "connections_tc_polling_interval" to "Polling Interval \u2014 never gonna give up checking (seconds)",

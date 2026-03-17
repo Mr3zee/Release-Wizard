@@ -172,6 +172,93 @@ class BuildPollingService(
     // ── GitHub Actions ───────────────────────────────────────────────────
 
     /**
+     * Discover jobs within a GitHub Actions workflow run.
+     * Returns current job statuses as SubBuilds. Reusable for both initial discovery
+     * and subsequent status polling (GH returns all jobs in one call).
+     * Non-fatal: returns empty list on failure.
+     */
+    suspend fun discoverGitHubJobs(
+        owner: String,
+        repo: String,
+        token: String,
+        runId: String,
+    ): List<SubBuild> {
+        return try {
+            val url = "https://api.github.com/repos/$owner/$repo/actions/runs/$runId/jobs?per_page=100"
+            val response = httpClient.get(url) {
+                header("Authorization", "Bearer $token")
+                header("Accept", "application/vnd.github+json")
+            }
+
+            if (response.status == HttpStatusCode.TooManyRequests) {
+                log.debug("GitHub jobs API rate-limited for run {}", runId)
+                return emptyList()
+            }
+            if (response.status == HttpStatusCode.Forbidden) {
+                log.info("GitHub jobs API returned 403 for run {} — token may lack actions:read scope", runId)
+                return emptyList()
+            }
+            if (!response.status.isSuccess()) return emptyList()
+
+            val body = response.body<JsonObject>()
+            val jobs = body["jobs"] as? JsonArray ?: return emptyList()
+
+            jobs.mapNotNull { jobElement ->
+                val job = jobElement.jsonObject
+                val id = job["id"]?.jsonPrimitive?.long?.toString() ?: return@mapNotNull null
+                val name = job["name"]?.jsonPrimitive?.contentOrNull ?: "Job $id"
+                val status = job["status"]?.jsonPrimitive?.contentOrNull
+                val conclusion = job["conclusion"]?.jsonPrimitive?.contentOrNull
+                val htmlUrl = job["html_url"]?.jsonPrimitive?.contentOrNull
+                    ?.takeIf { it.startsWith("https://github.com/") }
+
+                val subStatus = mapGitHubJobStatus(status, conclusion)
+
+                val startedAt = job["started_at"]?.jsonPrimitive?.contentOrNull
+                val completedAt = job["completed_at"]?.jsonPrimitive?.contentOrNull
+                val durationSeconds = if (startedAt != null && completedAt != null) {
+                    try {
+                        val start = java.time.Instant.parse(startedAt)
+                        val end = java.time.Instant.parse(completedAt)
+                        java.time.Duration.between(start, end).seconds.coerceAtLeast(0)
+                    } catch (_: Exception) {
+                        null
+                    }
+                } else {
+                    null
+                }
+
+                SubBuild(
+                    id = id,
+                    name = name,
+                    status = subStatus,
+                    buildUrl = htmlUrl,
+                    durationSeconds = durationSeconds,
+                    dependencyLevel = 0,
+                )
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.debug("Failed to discover GH jobs for run {}: {}", runId, e.message)
+            emptyList()
+        }
+    }
+
+    private fun mapGitHubJobStatus(status: String?, conclusion: String?): SubBuildStatus = when {
+        status == "queued" || status == "waiting" -> SubBuildStatus.QUEUED
+        status == "in_progress" -> SubBuildStatus.RUNNING
+        status == "completed" -> when (conclusion) {
+            "success", "neutral" -> SubBuildStatus.SUCCEEDED
+            "failure", "timed_out", "startup_failure" -> SubBuildStatus.FAILED
+            "cancelled", "skipped", "stale" -> SubBuildStatus.CANCELLED
+            "action_required" -> SubBuildStatus.QUEUED
+            else -> SubBuildStatus.UNKNOWN
+        }
+        else -> SubBuildStatus.UNKNOWN
+    }
+
+    /**
      * Poll a GitHub Actions run until it reaches a terminal state.
      * Respects X-RateLimit-Remaining header and backs off when low.
      */

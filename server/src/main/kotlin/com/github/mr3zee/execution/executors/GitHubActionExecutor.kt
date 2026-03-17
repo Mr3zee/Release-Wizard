@@ -7,6 +7,7 @@ import com.github.mr3zee.model.Block
 import com.github.mr3zee.model.ConnectionConfig
 import com.github.mr3zee.model.ConnectionId
 import com.github.mr3zee.model.Parameter
+import com.github.mr3zee.connections.ConnectionTester.Companion.encodePathSegment
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -57,14 +58,8 @@ class GitHubActionExecutor(
         val persistedRunId = context.blockOutputs[block.id]?.get(INTERNAL_RUN_ID_KEY)
 
         return if (persistedRunId != null) {
-            // Resume polling from persisted run ID
-            buildPollingService.pollGitHubRun(
-                owner = config.owner,
-                repo = config.repo,
-                token = config.token,
-                runId = persistedRunId,
-                intervalSeconds = config.pollingIntervalSeconds,
-            )
+            // Resume polling from persisted run ID with job discovery
+            pollRunToCompletion(config, persistedRunId, scope)
         } else {
             // No persisted run ID — re-trigger
             execute(block, parameters, context, scope)
@@ -84,10 +79,11 @@ class GitHubActionExecutor(
         val ref = parameters.find { it.key == "ref" }?.value
             ?: throw IllegalArgumentException("GitHub Action requires 'ref' parameter")
 
-        val baseUrl = "https://api.github.com/repos/${config.owner}/${config.repo}"
+        val encodedWorkflow = encodePathSegment(workflowFile)
+        val baseUrl = "https://api.github.com/repos/${encodePathSegment(config.owner)}/${encodePathSegment(config.repo)}"
 
         // Trigger workflow dispatch (returns 204 No Content)
-        val dispatchResponse = httpClient.post("$baseUrl/actions/workflows/$workflowFile/dispatches") {
+        val dispatchResponse = httpClient.post("$baseUrl/actions/workflows/$encodedWorkflow/dispatches") {
             header("Authorization", "Bearer ${config.token}")
             header("Accept", "application/vnd.github+json")
             contentType(ContentType.Application.Json)
@@ -95,25 +91,48 @@ class GitHubActionExecutor(
         }
 
         if (dispatchResponse.status != HttpStatusCode.NoContent && !dispatchResponse.status.isSuccess()) {
-            val errorBody = dispatchResponse.bodyAsText()
+            val errorBody = dispatchResponse.bodyAsText().take(200)
             log.warn("GitHub workflow dispatch failed: {} - {}", dispatchResponse.status, errorBody)
             throw RuntimeException("GitHub workflow dispatch failed (HTTP ${dispatchResponse.status.value})")
         }
 
         // Discover the run ID by polling the runs list
-        val runId = discoverRunId(baseUrl, workflowFile, config.token)
+        val runId = discoverRunId(baseUrl, encodedWorkflow, config.token)
             ?: throw RuntimeException("Could not discover GitHub Actions run ID after dispatch")
 
         // Persist run ID before polling so recovery can resume
         scope?.persistOutputs(mapOf(INTERNAL_RUN_ID_KEY to runId))
 
+        return pollRunToCompletion(config, runId, scope)
+    }
+
+    /**
+     * Poll a GH run to completion, discovering and updating job statuses on each tick.
+     * Shared by [execute] and [resume] to avoid duplicating the onUpdate logic.
+     */
+    private suspend fun pollRunToCompletion(
+        config: ConnectionConfig.GitHubConfig,
+        runId: String,
+        scope: ExecutionScope?,
+    ): Map<String, String> {
         return buildPollingService.pollGitHubRun(
             owner = config.owner,
             repo = config.repo,
             token = config.token,
             runId = runId,
             intervalSeconds = config.pollingIntervalSeconds,
-        )
+        ) { _, _ ->
+            // On each tick, discover/refresh job statuses
+            val jobs = buildPollingService.discoverGitHubJobs(
+                owner = config.owner,
+                repo = config.repo,
+                token = config.token,
+                runId = runId,
+            )
+            if (jobs.isNotEmpty()) {
+                scope?.updateSubBuilds(jobs)
+            }
+        }
     }
 
     /**
@@ -139,6 +158,8 @@ class GitHubActionExecutor(
                         return runs[0].jsonObject["id"]?.jsonPrimitive?.content
                     }
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 log.debug("Run discovery attempt $attempt failed", e)
             }

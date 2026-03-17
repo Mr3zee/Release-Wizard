@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import com.github.mr3zee.i18n.packStringResource
+import com.github.mr3zee.model.BlockType
 import com.github.mr3zee.model.SubBuild
 import com.github.mr3zee.model.SubBuildStatus
 import com.github.mr3zee.theme.AppTypography
@@ -24,13 +25,20 @@ import releasewizard.composeapp.generated.resources.*
 fun SubBuildsSection(
     subBuilds: List<SubBuild>,
     modifier: Modifier = Modifier,
+    blockType: BlockType? = null,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val succeededCount = subBuilds.count { it.status == SubBuildStatus.SUCCEEDED }
     val totalCount = subBuilds.size
+    val appColors = LocalAppColors.current
+
+    val summaryRes = when (blockType) {
+        BlockType.GITHUB_ACTION -> Res.string.gh_jobs_summary
+        else -> Res.string.sub_builds_summary
+    }
 
     Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        color = appColors.chromeSurfaceSecondary,
         shape = MaterialTheme.shapes.small,
         modifier = modifier
             .fillMaxWidth()
@@ -46,35 +54,40 @@ fun SubBuildsSection(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    text = packStringResource(Res.string.sub_builds_summary, succeededCount, totalCount),
+                    text = packStringResource(summaryRes, succeededCount, totalCount),
                     style = AppTypography.subheading,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = appColors.chromeTextSecondary,
                 )
                 Icon(
                     imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (expanded) "Collapse" else "Expand",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    contentDescription = packStringResource(
+                        if (expanded) Res.string.common_collapse_all else Res.string.common_expand_all,
+                    ),
+                    tint = appColors.chromeTextSecondary,
                 )
             }
 
             AnimatedVisibility(visible = expanded) {
                 Column(modifier = Modifier.padding(top = Spacing.sm).testTag("sub_builds_list")) {
                     val grouped = subBuilds.groupBy { it.dependencyLevel }.toSortedMap()
+                    val isSingleStage = grouped.size == 1
                     grouped.entries.forEachIndexed { index, (level, builds) ->
                         if (index > 0) {
                             HorizontalDivider(
                                 modifier = Modifier.padding(vertical = Spacing.xs),
-                                color = MaterialTheme.colorScheme.outlineVariant,
+                                color = appColors.chromeBorder,
                             )
                         }
-                        Text(
-                            text = packStringResource(Res.string.sub_builds_stage, level + 1),
-                            style = AppTypography.label,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier
-                                .padding(bottom = Spacing.xs)
-                                .testTag("sub_builds_stage_${level}"),
-                        )
+                        if (!isSingleStage) {
+                            Text(
+                                text = packStringResource(Res.string.sub_builds_stage, level + 1),
+                                style = AppTypography.label,
+                                color = appColors.chromeTextSecondary,
+                                modifier = Modifier
+                                    .padding(bottom = Spacing.xs)
+                                    .testTag("sub_builds_stage_${level}"),
+                            )
+                        }
                         builds.forEach { subBuild ->
                             SubBuildRow(
                                 subBuild = subBuild,
@@ -91,12 +104,18 @@ fun SubBuildsSection(
 @Composable
 fun SubBuildsDiscoveringPlaceholder(
     modifier: Modifier = Modifier,
+    blockType: BlockType? = null,
 ) {
+    val discoveringRes = when (blockType) {
+        BlockType.GITHUB_ACTION -> Res.string.gh_jobs_discovering
+        else -> Res.string.sub_builds_discovering
+    }
+    val appColors = LocalAppColors.current
     Spacer(modifier = Modifier.height(Spacing.sm))
     Text(
-        text = packStringResource(Res.string.sub_builds_discovering),
+        text = packStringResource(discoveringRes),
         style = AppTypography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = appColors.chromeTextSecondary,
         modifier = modifier.testTag("sub_builds_discovering"),
     )
 }
@@ -106,6 +125,7 @@ private fun SubBuildRow(
     subBuild: SubBuild,
     modifier: Modifier = Modifier,
 ) {
+    val appColors = LocalAppColors.current
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -122,7 +142,7 @@ private fun SubBuildRow(
         Text(
             text = subBuild.name,
             style = AppTypography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = appColors.chromeTextSecondary,
             modifier = Modifier.weight(1f),
             maxLines = 1,
         )
@@ -130,7 +150,7 @@ private fun SubBuildRow(
             Text(
                 text = packStringResource(Res.string.sub_builds_duration, seconds),
                 style = AppTypography.caption,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = appColors.chromeTextTertiary,
                 modifier = Modifier.testTag("sub_build_duration_${subBuild.id}"),
             )
         }

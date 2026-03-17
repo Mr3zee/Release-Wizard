@@ -289,6 +289,8 @@ object HelldiversPack {
             "shortcut_editor_delete" to "Orbital Strike Selected",
             "sub_builds_summary" to "Sub-operations (%1\$d/%2\$d objectives secured)",
             "sub_builds_discovering" to "Scanning for build chain targets, Citizen...",
+            "gh_jobs_summary" to "Missions (%1\$d/%2\$d objectives secured)",
+            "gh_jobs_discovering" to "Scanning for workflow missions, Citizen...",
             "sub_builds_stage" to "Assault Wave %1\$d",
             "sub_builds_duration" to "%1\$ds in combat",
             "connections_tc_polling_interval" to "Reconnaissance Interval (seconds)",

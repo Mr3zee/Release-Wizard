@@ -345,9 +345,14 @@ private fun BlockDetailPanel(
             // Sub-builds section
             if (execution.subBuilds.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(Spacing.sm))
-                SubBuildsSection(subBuilds = execution.subBuilds)
+                SubBuildsSection(
+                    subBuilds = execution.subBuilds,
+                    blockType = (block as? Block.ActionBlock)?.type,
+                )
             } else if (execution.status == BlockStatus.RUNNING && (block as? Block.ActionBlock)?.type in listOf(BlockType.TEAMCITY_BUILD, BlockType.GITHUB_ACTION)) {
-                SubBuildsDiscoveringPlaceholder()
+                SubBuildsDiscoveringPlaceholder(
+                    blockType = (block as? Block.ActionBlock)?.type,
+                )
             }
 
             execution.error?.let { errorMsg ->
