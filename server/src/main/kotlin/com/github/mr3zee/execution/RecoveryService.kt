@@ -2,11 +2,8 @@ package com.github.mr3zee.execution
 
 import com.github.mr3zee.model.ReleaseStatus
 import com.github.mr3zee.releases.ReleasesRepository
-import com.github.mr3zee.webhooks.PendingWebhookRepository
 import com.github.mr3zee.webhooks.StatusWebhookService
 import org.slf4j.LoggerFactory
-import kotlin.time.Clock
-import kotlin.time.Duration.Companion.days
 
 /**
  * Orchestrates release recovery on server startup.
@@ -14,7 +11,6 @@ import kotlin.time.Duration.Companion.days
  */
 class RecoveryService(
     private val releasesRepository: ReleasesRepository,
-    private val webhookRepository: PendingWebhookRepository,
     private val executionEngine: ExecutionEngine,
     private val statusWebhookService: StatusWebhookService,
 ) {
@@ -22,13 +18,6 @@ class RecoveryService(
 
     suspend fun recover() {
         log.info("Starting release recovery...")
-
-        // Clean up stale completed webhooks (older than 7 days)
-        val cutoff = Clock.System.now() - 7.days
-        val deletedWebhooks = webhookRepository.deleteCompletedOlderThan(cutoff)
-        if (deletedWebhooks > 0) {
-            log.info("Cleaned up {} stale completed webhooks", deletedWebhooks)
-        }
 
         // Clean up expired/stale status webhook tokens
         statusWebhookService.cleanupExpiredTokens()

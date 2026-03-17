@@ -27,7 +27,7 @@ sealed class ConnectionConfig {
     data class TeamCityConfig(
         val serverUrl: String,
         val token: String,
-        val webhookSecret: String = "",
+        val pollingIntervalSeconds: Int = 30,
     ) : ConnectionConfig()
 
     @Serializable
@@ -36,7 +36,7 @@ sealed class ConnectionConfig {
         val token: String,
         val owner: String,
         val repo: String,
-        val webhookSecret: String = "",
+        val pollingIntervalSeconds: Int = 30,
     ) : ConnectionConfig()
 
 }

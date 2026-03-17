@@ -287,6 +287,14 @@ object RickAndMortyPack {
             "shortcut_editor_paste" to "Paste from another *burp* dimension",
             "shortcut_editor_select_all" to "Select all *burp* of everything, Morty",
             "shortcut_editor_delete" to "Delete it from *burp* existence",
+            "sub_builds_summary" to "Sub-builds (%1\$d/%2\$d succeeded), Morty, *burp* pay attention",
+            "sub_builds_discovering" to "Discovering the *burp* build chain, Morty...",
+            "sub_builds_stage" to "Stage %1\$d, *burp*",
+            "sub_builds_duration" to "%1\$ds across *burp* dimensions",
+            "connections_tc_polling_interval" to "Polling Interval (seconds), *burp* Morty",
+            "connections_github_polling_interval" to "Polling Interval (seconds), Morty",
+            "editor_prop_timeout_required" to "Timeout (seconds) *, *burp* Morty",
+            "editor_prop_timeout_required_hint" to "This block type needs a timeout, Morty. It's not *burp* optional.",
         ),
         plurals = mapOf(
             "blocks" to PluralOverride(

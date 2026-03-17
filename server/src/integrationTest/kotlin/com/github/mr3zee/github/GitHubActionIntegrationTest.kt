@@ -3,16 +3,10 @@
 package com.github.mr3zee.github
 
 import com.github.mr3zee.execution.ExecutionContext
-import com.github.mr3zee.execution.FakeConnectionsRepository
-import com.github.mr3zee.execution.InMemoryPendingWebhookRepository
+import com.github.mr3zee.execution.executors.BuildPollingService
 import com.github.mr3zee.execution.executors.GitHubActionExecutor
 import com.github.mr3zee.model.*
-import com.github.mr3zee.webhooks.WebhookCompletion
-import com.github.mr3zee.webhooks.WebhookService
-import com.github.mr3zee.webhooks.WebhookType
-import com.github.mr3zee.waitUntil
 import io.ktor.client.*
-import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import org.junit.*
 import org.junit.Assert.fail
@@ -44,6 +38,7 @@ class GitHubActionIntegrationTest {
         name = "Integration Action",
         type = BlockType.GITHUB_ACTION,
         connectionId = ConnectionId("conn-1"),
+        timeoutSeconds = 300, // 5 min timeout for integration tests
     )
 
     private fun context(): ExecutionContext {
@@ -57,72 +52,48 @@ class GitHubActionIntegrationTest {
                     token = cfg.token,
                     owner = cfg.owner,
                     repo = cfg.repo,
-                    webhookSecret = cfg.webhookSecret,
+                    pollingIntervalSeconds = 5,
                 )
             ),
         )
     }
 
     @Test
-    fun `execute triggers dispatch and discovers run ID`() = runBlocking {
+    fun `execute triggers dispatch and polls to completion`() = runBlocking {
         val cfg = config ?: error("GitHubTestConfig not loaded — setUp should have skipped this test")
-        val webhookRepo = InMemoryPendingWebhookRepository()
-        val connectionsRepo = FakeConnectionsRepository()
-        val webhookService = WebhookService(webhookRepo, connectionsRepo)
-        val executor = GitHubActionExecutor(client ?: error("HttpClient not initialized"), webhookRepo, webhookService)
+        val httpClient = client ?: error("HttpClient not initialized")
+        val pollingService = BuildPollingService(httpClient)
+        val executor = GitHubActionExecutor(httpClient, pollingService)
 
-        val outputsDeferred = async {
-            executor.execute(
-                block = block(),
-                parameters = listOf(
-                    Parameter(key = "workflowFile", value = cfg.workflowFile),
-                    Parameter(key = "ref", value = cfg.ref),
-                ),
-                context = context(),
-            )
-        }
-
-        // Wait for the webhook to be registered (real HTTP calls need time)
-        waitUntil(maxAttempts = 60, delayMillis = 500) {
-            webhookRepo.findByConnectionIdAndType(ConnectionId("conn-1"), WebhookType.GITHUB).isNotEmpty()
-        }
-
-        val pendingWebhooks = webhookRepo.findByConnectionIdAndType(ConnectionId("conn-1"), WebhookType.GITHUB)
-        assertTrue(pendingWebhooks.isNotEmpty(), "Should have registered a pending webhook")
-        assertTrue(pendingWebhooks[0].externalId.isNotEmpty(), "Should have discovered a run ID as externalId")
-
-        // Emit completion to unblock the executor
-        webhookService.emitCompletion(
-            WebhookCompletion(
-                webhookId = pendingWebhooks[0].id,
-                blockId = block().id,
-                releaseId = ReleaseId("integ-release-1"),
-                type = WebhookType.GITHUB,
-                payload = """{"workflow_run":{"id":${pendingWebhooks[0].externalId},"html_url":"https://github.com/${cfg.owner}/${cfg.repo}/actions/runs/${pendingWebhooks[0].externalId}","conclusion":"success"}}""",
-            )
+        val outputs = executor.execute(
+            block = block(),
+            parameters = listOf(
+                Parameter(key = "workflowFile", value = cfg.workflowFile),
+                Parameter(key = "ref", value = cfg.ref),
+            ),
+            context = context(),
         )
 
-        val outputs = outputsDeferred.await()
         val runId = outputs["runId"] ?: error("Expected 'runId' in executor outputs")
         assertTrue(runId.isNotEmpty(), "runId should not be empty")
         val runUrl = outputs["runUrl"] ?: error("Expected 'runUrl' in executor outputs")
         assertTrue(runUrl.isNotEmpty(), "runUrl should not be empty")
+        val runStatus = outputs["runStatus"] ?: error("Expected 'runStatus' in executor outputs")
+        assertTrue(runStatus.isNotEmpty(), "runStatus should not be empty")
     }
 
     @Test
     fun `dispatch with invalid workflow file throws`() = runBlocking {
-        val cfg = config ?: error("GitHubTestConfig not loaded — setUp should have skipped this test")
-        val webhookRepo = InMemoryPendingWebhookRepository()
-        val connectionsRepo = FakeConnectionsRepository()
-        val webhookService = WebhookService(webhookRepo, connectionsRepo)
-        val executor = GitHubActionExecutor(client ?: error("HttpClient not initialized"), webhookRepo, webhookService)
+        val httpClient = client ?: error("HttpClient not initialized")
+        val pollingService = BuildPollingService(httpClient)
+        val executor = GitHubActionExecutor(httpClient, pollingService)
 
         try {
             executor.execute(
                 block = block(),
                 parameters = listOf(
                     Parameter(key = "workflowFile", value = "nonexistent-workflow-${System.currentTimeMillis()}.yml"),
-                    Parameter(key = "ref", value = cfg.ref),
+                    Parameter(key = "ref", value = config?.ref ?: "main"),
                 ),
                 context = context(),
             )

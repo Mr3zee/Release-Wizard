@@ -67,6 +67,19 @@ interface ReleasesRepository {
     suspend fun upsertBlockExecution(execution: BlockExecution)
 
     /**
+     * Update the sub-builds list for a specific block execution.
+     * Targeted column UPDATE to avoid overwriting other fields.
+     */
+    suspend fun updateSubBuilds(
+        releaseId: ReleaseId,
+        blockId: BlockId,
+        subBuilds: List<SubBuild>,
+    ): Boolean {
+        // Default no-op for in-memory implementations
+        return false
+    }
+
+    /**
      * Atomically updates only the webhook status columns on a block execution.
      * Only succeeds if the block is currently RUNNING (prevents overwriting terminal states).
      * Returns the updated [BlockExecution] or null if the block was not RUNNING.

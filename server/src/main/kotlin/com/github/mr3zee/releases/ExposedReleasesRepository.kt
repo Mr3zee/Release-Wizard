@@ -54,6 +54,7 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
                     receivedAt = wsAt,
                 )
             } else null,
+            subBuilds = this[BlockExecutionTable.subBuilds],
         )
     }
 
@@ -334,6 +335,10 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
             it[BlockExecutionTable.approvals] = execution.approvals
             it[BlockExecutionTable.gatePhase] = execution.gatePhase
             it[BlockExecutionTable.gateMessage] = execution.gateMessage
+            it[BlockExecutionTable.webhookStatus] = null
+            it[BlockExecutionTable.webhookStatusDescription] = null
+            it[BlockExecutionTable.webhookStatusAt] = null
+            it[BlockExecutionTable.subBuilds] = execution.subBuilds
         }
         Unit
     }
@@ -355,6 +360,7 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
                 it[BlockExecutionTable.webhookStatus] = null
                 it[BlockExecutionTable.webhookStatusDescription] = null
                 it[BlockExecutionTable.webhookStatusAt] = null
+                it[BlockExecutionTable.subBuilds] = emptyList()
             },
         ) { block ->
             this[BlockExecutionTable.id] = UUID.randomUUID()
@@ -371,8 +377,24 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
             this[BlockExecutionTable.webhookStatus] = null
             this[BlockExecutionTable.webhookStatusDescription] = null
             this[BlockExecutionTable.webhookStatusAt] = null
+            this[BlockExecutionTable.subBuilds] = emptyList()
         }
         Unit
+    }
+
+    override suspend fun updateSubBuilds(
+        releaseId: ReleaseId,
+        blockId: BlockId,
+        subBuilds: List<SubBuild>,
+    ): Boolean = dbQuery {
+        val releaseUuid = UUID.fromString(releaseId.value)
+        val updated = BlockExecutionTable.update({
+            (BlockExecutionTable.releaseId eq releaseUuid) and
+                (BlockExecutionTable.blockId eq blockId.value)
+        }) {
+            it[BlockExecutionTable.subBuilds] = subBuilds
+        }
+        updated > 0
     }
 
     override suspend fun updateWebhookStatus(

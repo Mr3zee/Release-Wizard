@@ -17,14 +17,14 @@ val releasesModule = module {
         val httpClient = get<HttpClient>()
         DispatchingBlockExecutor(
             mapOf(
-                BlockType.TEAMCITY_BUILD to TeamCityBuildExecutor(httpClient, get(), get(), get(), get<StatusWebhookService>()),
-                BlockType.GITHUB_ACTION to GitHubActionExecutor(httpClient, get(), get()),
+                BlockType.TEAMCITY_BUILD to TeamCityBuildExecutor(httpClient, get(), get(), get<StatusWebhookService>()),
+                BlockType.GITHUB_ACTION to GitHubActionExecutor(httpClient, get()),
                 BlockType.GITHUB_PUBLICATION to GitHubPublicationExecutor(httpClient),
                 BlockType.SLACK_MESSAGE to SlackMessageExecutor(httpClient),
             )
         )
     }
     single { ExecutionEngine(get(), get(), get(), get()) }
-    single { RecoveryService(get(), get(), get(), get()) }
+    single { RecoveryService(get(), get(), get()) }
     single<ReleasesService> { DefaultReleasesService(get(), get(), get(), get(), get(), get(), get()) }
 }

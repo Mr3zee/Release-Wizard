@@ -18,7 +18,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.test.fail
 import kotlin.time.Clock
-import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 
@@ -26,7 +25,6 @@ class RecoveryTest {
 
     private fun createTestSetup(): TestSetup {
         val releasesRepo = InMemoryReleasesRepository()
-        val webhookRepo = InMemoryWebhookRepo()
         val connectionsRepo = FakeConnectionsRepository()
         val executor = StubBlockExecutor()
         val scope = CoroutineScope(SupervisorJob())
@@ -37,8 +35,8 @@ class RecoveryTest {
             engine,
             WebhookConfig(baseUrl = "http://localhost:8080"),
         )
-        val recoveryService = RecoveryService(releasesRepo, webhookRepo, engine, statusWebhookService)
-        return TestSetup(releasesRepo, webhookRepo, engine, recoveryService, executor, scope)
+        val recoveryService = RecoveryService(releasesRepo, engine, statusWebhookService)
+        return TestSetup(releasesRepo, engine, recoveryService, executor, scope)
     }
 
     private suspend fun <T> withTestSetup(block: suspend TestSetup.() -> T): T {
@@ -175,39 +173,6 @@ class RecoveryTest {
             val finalRelease = releasesRepo.findById(release.id)
                 ?: fail("Release '${release.id}' should exist after recovery")
             assertEquals(ReleaseStatus.SUCCEEDED, finalRelease.status)
-        }
-    }
-
-    @Test
-    fun `stale webhook cleanup removes completed webhooks older than 7 days`() = runBlocking {
-        withTestSetup {
-            val oldTime = Clock.System.now() - 10.days
-
-            webhookRepo.insertCompleted(
-                id = "wh-1",
-                externalId = "ext-1",
-                blockId = BlockId("a"),
-                releaseId = ReleaseId("r1"),
-                connectionId = ConnectionId("c1"),
-                type = WebhookType.TEAMCITY,
-                updatedAt = oldTime,
-            )
-
-            val recentTime = Clock.System.now()
-            webhookRepo.insertCompleted(
-                id = "wh-2",
-                externalId = "ext-2",
-                blockId = BlockId("b"),
-                releaseId = ReleaseId("r1"),
-                connectionId = ConnectionId("c1"),
-                type = WebhookType.GITHUB,
-                updatedAt = recentTime,
-            )
-
-            recoveryService.recover()
-
-            // Old completed webhook should be deleted, recent one kept
-            assertEquals(1, webhookRepo.size())
         }
     }
 
@@ -414,7 +379,6 @@ class RecoveryTest {
 
     data class TestSetup(
         val releasesRepo: InMemoryReleasesRepository,
-        val webhookRepo: InMemoryWebhookRepo,
         val engine: ExecutionEngine,
         val recoveryService: RecoveryService,
         val executor: StubBlockExecutor,
@@ -515,6 +479,12 @@ class InMemoryReleasesRepository : ReleasesRepository {
         }
     }
 
+    override suspend fun updateSubBuilds(
+        releaseId: ReleaseId,
+        blockId: BlockId,
+        subBuilds: List<SubBuild>,
+    ): Boolean = false
+
     override suspend fun updateWebhookStatus(
         releaseId: ReleaseId,
         blockId: BlockId,
@@ -537,90 +507,6 @@ class InMemoryReleasesRepository : ReleasesRepository {
             executions[idx] = updated
             return updated
         }
-    }
-}
-
-/**
- * In-memory PendingWebhookRepository for recovery tests.
- */
-class InMemoryWebhookRepo : PendingWebhookRepository {
-    private val webhooks = mutableListOf<PendingWebhook>()
-
-    fun insertCompleted(
-        id: String,
-        externalId: String,
-        blockId: BlockId,
-        releaseId: ReleaseId,
-        connectionId: ConnectionId,
-        type: WebhookType,
-        updatedAt: kotlin.time.Instant,
-    ) {
-        webhooks.add(
-            PendingWebhook(
-                id = id,
-                externalId = externalId,
-                blockId = blockId,
-                releaseId = releaseId,
-                connectionId = connectionId,
-                type = type,
-                status = WebhookStatus.COMPLETED,
-                payload = "{}",
-                createdAt = updatedAt,
-                updatedAt = updatedAt,
-            )
-        )
-    }
-
-    fun size() = webhooks.size
-
-    override suspend fun create(
-        externalId: String, blockId: BlockId, releaseId: ReleaseId,
-        connectionId: ConnectionId, type: WebhookType,
-    ): PendingWebhook {
-        val now = Clock.System.now()
-        val wh = PendingWebhook(
-            id = "wh-${webhooks.size}", externalId = externalId,
-            blockId = blockId, releaseId = releaseId,
-            connectionId = connectionId, type = type,
-            status = WebhookStatus.PENDING, createdAt = now, updatedAt = now,
-        )
-        webhooks.add(wh)
-        return wh
-    }
-
-    override suspend fun findByExternalIdAndType(externalId: String, type: WebhookType) =
-        webhooks.find { it.externalId == externalId && it.type == type }
-
-    override suspend fun findPendingByExternalIdAndType(externalId: String, type: WebhookType) =
-        webhooks.find { it.externalId == externalId && it.type == type && it.status == WebhookStatus.PENDING }
-
-    override suspend fun findByConnectionIdAndType(connectionId: ConnectionId, type: WebhookType) =
-        webhooks.filter { it.connectionId == connectionId && it.type == type && it.status == WebhookStatus.PENDING }
-
-    override suspend fun findPendingByReleaseId(releaseId: ReleaseId) =
-        webhooks.filter { it.releaseId == releaseId && it.status == WebhookStatus.PENDING }
-
-    override suspend fun findByReleaseIdAndBlockId(releaseId: ReleaseId, blockId: BlockId) =
-        webhooks.find { it.releaseId == releaseId && it.blockId == blockId }
-
-    override suspend fun updateStatus(id: String, status: WebhookStatus, payload: String?): Boolean {
-        val idx = webhooks.indexOfFirst { it.id == id }
-        if (idx < 0) return false
-        webhooks[idx] = webhooks[idx].copy(status = status, payload = payload)
-        return true
-    }
-
-    override suspend fun updateExternalId(id: String, externalId: String): Boolean {
-        val idx = webhooks.indexOfFirst { it.id == id }
-        if (idx < 0) return false
-        webhooks[idx] = webhooks[idx].copy(externalId = externalId)
-        return true
-    }
-
-    override suspend fun deleteCompletedOlderThan(cutoff: kotlin.time.Instant): Int {
-        val before = webhooks.size
-        webhooks.removeAll { it.status == WebhookStatus.COMPLETED && it.updatedAt < cutoff }
-        return before - webhooks.size
     }
 }
 

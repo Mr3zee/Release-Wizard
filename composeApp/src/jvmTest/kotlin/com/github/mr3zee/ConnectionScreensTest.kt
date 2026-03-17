@@ -269,11 +269,11 @@ class ConnectionScreensTest {
 
     // --- Edit connection tests ---
 
-    private val githubConnectionJson = """{"connection":{"id":"c1","name":"My GitHub","type":"GITHUB","config":{"type":"github","token":"ghp_secret","owner":"mr3zee","repo":"release-wizard","webhookSecret":""},"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}}"""
+    private val githubConnectionJson = """{"connection":{"id":"c1","name":"My GitHub","type":"GITHUB","config":{"type":"github","token":"ghp_secret","owner":"mr3zee","repo":"release-wizard","pollingIntervalSeconds":30},"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}}"""
 
     private val slackConnectionJson = """{"connection":{"id":"c2","name":"Team Slack","type":"SLACK","config":{"type":"slack","webhookUrl":"https://hooks.slack.com/test"},"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}}"""
 
-    private val teamCityConnectionJson = """{"connection":{"id":"c3","name":"My TC","type":"TEAMCITY","config":{"type":"teamcity","serverUrl":"https://tc.example.com","token":"tc_token","webhookSecret":"secret123"},"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}}"""
+    private val teamCityConnectionJson = """{"connection":{"id":"c3","name":"My TC","type":"TEAMCITY","config":{"type":"teamcity","serverUrl":"https://tc.example.com","token":"tc_token","pollingIntervalSeconds":30},"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}}"""
 
     private fun editClient(connectionJson: String, connectionPath: String) = mockHttpClient(
         mapOf(

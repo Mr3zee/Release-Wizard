@@ -159,7 +159,13 @@ class ExecutionEngine(
      * Emit a block execution update event (e.g. for partial approval tracking).
      */
     internal fun emitBlockUpdate(releaseId: ReleaseId, execution: BlockExecution) {
-        emitEvent(ReleaseEvent.BlockExecutionUpdated(releaseId, execution))
+        // Filter internal outputs (keys starting with '_') from WebSocket broadcasts
+        val filtered = if (execution.outputs.any { it.key.startsWith("_") }) {
+            execution.copy(outputs = execution.outputs.filterKeys { !it.startsWith("_") })
+        } else {
+            execution
+        }
+        emitEvent(ReleaseEvent.BlockExecutionUpdated(releaseId, filtered))
     }
 
     /**
@@ -641,7 +647,7 @@ class ExecutionEngine(
         startTime: Instant,
         statusMap: MutableMap<BlockId, BlockStatus>,
         outputsMap: MutableMap<BlockId, Map<String, String>>,
-        run: suspend BlockExecutor.(Block.ActionBlock, List<Parameter>, ExecutionContext) -> Map<String, String>,
+        run: suspend BlockExecutor.(Block.ActionBlock, List<Parameter>, ExecutionContext, ExecutionScope?) -> Map<String, String>,
     ): Map<String, String> {
         val outputs = resolveAndExecute(release, block, outputsMap, run)
         val postGate = block.postGate
@@ -673,7 +679,7 @@ class ExecutionEngine(
         startTime: Instant,
         statusMap: MutableMap<BlockId, BlockStatus>,
         outputsMap: MutableMap<BlockId, Map<String, String>>,
-        run: suspend BlockExecutor.(Block.ActionBlock, List<Parameter>, ExecutionContext) -> Map<String, String>,
+        run: suspend BlockExecutor.(Block.ActionBlock, List<Parameter>, ExecutionContext, ExecutionScope?) -> Map<String, String>,
     ) {
         statusMap[block.id] = BlockStatus.RUNNING
         persistAndEmit(release.id, BlockExecution(
@@ -832,8 +838,8 @@ class ExecutionEngine(
     private suspend fun resolveAndExecute(
         release: Release,
         block: Block.ActionBlock,
-        outputsMap: Map<BlockId, Map<String, String>>,
-        run: suspend BlockExecutor.(Block.ActionBlock, List<Parameter>, ExecutionContext) -> Map<String, String>,
+        outputsMap: MutableMap<BlockId, Map<String, String>>,
+        run: suspend BlockExecutor.(Block.ActionBlock, List<Parameter>, ExecutionContext, ExecutionScope?) -> Map<String, String>,
     ): Map<String, String> {
         val resolvedParams = TemplateEngine.resolveParameters(
             block.parameters,
@@ -855,13 +861,41 @@ class ExecutionEngine(
             connections = connections,
         )
 
+        // Create ExecutionScope for executor callbacks
+        val executionScope = object : ExecutionScope {
+            override suspend fun persistOutputs(outputs: Map<String, String>) {
+                val existing = outputsMap[block.id] ?: emptyMap()
+                val merged = existing + outputs
+                outputsMap[block.id] = merged
+                // Upsert with merged outputs, preserving the original startedAt
+                val existingExec = repository.findBlockExecution(release.id, block.id)
+                repository.upsertBlockExecution(
+                    BlockExecution(
+                        blockId = block.id,
+                        releaseId = release.id,
+                        status = BlockStatus.RUNNING,
+                        outputs = merged,
+                        startedAt = existingExec?.startedAt ?: Clock.System.now(),
+                    )
+                )
+            }
+
+            override suspend fun updateSubBuilds(subBuilds: List<SubBuild>) {
+                repository.updateSubBuilds(release.id, block.id, subBuilds)
+                val execution = repository.findBlockExecution(release.id, block.id)
+                if (execution != null) {
+                    emitBlockUpdate(release.id, execution)
+                }
+            }
+        }
+
         val timeoutSec = block.timeoutSeconds
         return if (timeoutSec != null) {
             withTimeoutOrNull(timeoutSec.seconds) {
-                blockExecutor.run(block, resolvedParams, context)
+                blockExecutor.run(block, resolvedParams, context, executionScope)
             } ?: throw RuntimeException("Block '${block.name}' timed out after ${timeoutSec}s")
         } else {
-            blockExecutor.run(block, resolvedParams, context)
+            blockExecutor.run(block, resolvedParams, context, executionScope)
         }
     }
 
@@ -931,7 +965,13 @@ class ExecutionEngine(
 
     private suspend fun persistAndEmit(releaseId: ReleaseId, execution: BlockExecution) {
         repository.upsertBlockExecution(execution)
-        emitEvent(ReleaseEvent.BlockExecutionUpdated(releaseId, execution))
+        // Filter internal outputs (keys starting with '_') from WebSocket broadcasts
+        val filteredExecution = if (execution.outputs.any { it.key.startsWith("_") }) {
+            execution.copy(outputs = execution.outputs.filterKeys { !it.startsWith("_") })
+        } else {
+            execution
+        }
+        emitEvent(ReleaseEvent.BlockExecutionUpdated(releaseId, filteredExecution))
     }
 
     private fun registerJob(releaseId: ReleaseId, job: Job) {

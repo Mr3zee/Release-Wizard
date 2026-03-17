@@ -287,6 +287,14 @@ object GenZPack {
             "shortcut_editor_paste" to "Drop It (Paste)",
             "shortcut_editor_select_all" to "Select All No Cap",
             "shortcut_editor_delete" to "Unalive Selected",
+            "sub_builds_summary" to "Sub-builds (%1\$d/%2\$d understood the assignment)",
+            "sub_builds_discovering" to "Finding the build chain bestie...",
+            "sub_builds_stage" to "Stage %1\$d",
+            "sub_builds_duration" to "%1\$ds no cap",
+            "connections_tc_polling_interval" to "Polling Interval (seconds) fr",
+            "connections_github_polling_interval" to "Polling Interval (seconds) bestie",
+            "editor_prop_timeout_required" to "Timeout (seconds) * fr fr",
+            "editor_prop_timeout_required_hint" to "Bestie this block type needs a timeout ngl",
         ),
         plurals = mapOf(
             "blocks" to PluralOverride(

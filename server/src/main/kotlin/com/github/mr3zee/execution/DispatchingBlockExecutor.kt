@@ -16,19 +16,21 @@ class DispatchingBlockExecutor(
         block: Block.ActionBlock,
         parameters: List<Parameter>,
         context: ExecutionContext,
+        scope: ExecutionScope?,
     ): Map<String, String> {
         val executor = executors[block.type]
             ?: throw IllegalStateException("No executor registered for block type: ${block.type}")
-        return executor.execute(block, parameters, context)
+        return executor.execute(block, parameters, context, scope)
     }
 
     override suspend fun resume(
         block: Block.ActionBlock,
         parameters: List<Parameter>,
         context: ExecutionContext,
+        scope: ExecutionScope?,
     ): Map<String, String> {
         val executor = executors[block.type]
             ?: throw IllegalStateException("No executor registered for block type: ${block.type}")
-        return executor.resume(block, parameters, context)
+        return executor.resume(block, parameters, context, scope)
     }
 }

@@ -10,7 +10,6 @@ data class GitHubTestConfig(
     val token: String,
     val owner: String,
     val repo: String,
-    val webhookSecret: String = "",
     val workflowFile: String = "test.yml",
     val ref: String = "main",
 ) {
@@ -26,7 +25,7 @@ data class GitHubTestConfig(
                         token = token,
                         owner = owner,
                         repo = repo,
-                        webhookSecret = props.getProperty("github.test.webhookSecret") ?: "",
+
                         workflowFile = props.getProperty("github.test.workflowFile") ?: "test.yml",
                         ref = props.getProperty("github.test.ref") ?: "main",
                     )
@@ -44,7 +43,7 @@ data class GitHubTestConfig(
                 token = token,
                 owner = owner,
                 repo = repo,
-                webhookSecret = System.getenv("GITHUB_TEST_WEBHOOK_SECRET") ?: "",
+
                 workflowFile = System.getenv("GITHUB_TEST_WORKFLOW_FILE") ?: "test.yml",
                 ref = System.getenv("GITHUB_TEST_REF") ?: "main",
             )

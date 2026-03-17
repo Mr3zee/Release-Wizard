@@ -287,6 +287,14 @@ object EmojisPack {
             "shortcut_editor_paste" to "\ud83d\udccb\ud83d\udce5",
             "shortcut_editor_select_all" to "\u2705\ud83c\udf0d",
             "shortcut_editor_delete" to "\ud83d\uddd1\ufe0f\u2705",
+            "sub_builds_summary" to "\ud83c\udfd7\ufe0f (%1\$d/%2\$d \u2705)",
+            "sub_builds_discovering" to "\ud83d\udd0d\ud83c\udfd7\ufe0f\u23f3",
+            "sub_builds_stage" to "\ud83c\udfaf %1\$d",
+            "sub_builds_duration" to "%1\$d\u23f1\ufe0f",
+            "connections_tc_polling_interval" to "\ud83d\udd04\u23f1\ufe0f",
+            "connections_github_polling_interval" to "\ud83d\udd04\u23f1\ufe0f",
+            "editor_prop_timeout_required" to "\u23f1\ufe0f *",
+            "editor_prop_timeout_required_hint" to "\u26a0\ufe0f\u23f1\ufe0f\u2757",
         ),
         plurals = mapOf(
             "blocks" to PluralOverride(

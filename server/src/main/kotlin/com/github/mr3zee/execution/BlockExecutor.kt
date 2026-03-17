@@ -10,11 +10,14 @@ interface BlockExecutor {
     /**
      * Execute the block and return its outputs.
      * Throw an exception to signal failure.
+     *
+     * @param scope optional callback interface for persisting intermediate state
      */
     suspend fun execute(
         block: Block.ActionBlock,
         parameters: List<Parameter>,
         context: ExecutionContext,
+        scope: ExecutionScope? = null,
     ): Map<String, String>
 
     /**
@@ -26,5 +29,6 @@ interface BlockExecutor {
         block: Block.ActionBlock,
         parameters: List<Parameter>,
         context: ExecutionContext,
-    ): Map<String, String> = execute(block, parameters, context)
+        scope: ExecutionScope? = null,
+    ): Map<String, String> = execute(block, parameters, context, scope)
 }

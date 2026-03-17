@@ -287,6 +287,14 @@ object AllLiesPack {
             "shortcut_editor_paste" to "Erase Clipboard Contents",
             "shortcut_editor_select_all" to "Deselect Everything",
             "shortcut_editor_delete" to "Permanently Preserve Selected",
+            "sub_builds_summary" to "Sub-builds (%1\$d/%2\$d catastrophically failed)",
+            "sub_builds_discovering" to "Build chain has always been known...",
+            "sub_builds_stage" to "Stage %1\$d (doesn't exist)",
+            "sub_builds_duration" to "%1\$ds (it was instant)",
+            "connections_tc_polling_interval" to "Ignore Interval (never checks)",
+            "connections_github_polling_interval" to "Ignore Interval (never checks)",
+            "editor_prop_timeout_required" to "Immortality (never stops) *",
+            "editor_prop_timeout_required_hint" to "Timeout is completely optional and meaningless",
         ),
         plurals = mapOf(
             "blocks" to PluralOverride(

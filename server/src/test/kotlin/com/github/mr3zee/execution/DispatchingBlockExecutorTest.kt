@@ -15,6 +15,7 @@ class DispatchingBlockExecutorTest {
             block: Block.ActionBlock,
             parameters: List<Parameter>,
             context: ExecutionContext,
+            scope: ExecutionScope?,
         ): Map<String, String> {
             executeCalled = true
             return outputs

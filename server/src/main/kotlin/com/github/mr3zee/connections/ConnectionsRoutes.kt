@@ -172,12 +172,10 @@ fun Route.connectionRoutes() {
     }
 }
 
+@Suppress("UNUSED_PARAMETER")
 private fun webhookUrl(connection: Connection, webhookConfig: WebhookConfig): String? {
-    return when (connection.type) {
-        ConnectionType.TEAMCITY -> ApiRoutes.Webhooks.teamcity(connection.id.value)
-        ConnectionType.GITHUB -> ApiRoutes.Webhooks.github(connection.id.value)
-        else -> null
-    }?.let { path -> "${webhookConfig.baseUrl}$path" }
+    // TC/GH webhook endpoints removed — build completion is now via server-side polling
+    return null
 }
 
 private suspend fun ApplicationCall.requireConnectionId(): ConnectionId? {

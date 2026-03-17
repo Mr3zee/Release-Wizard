@@ -85,11 +85,11 @@
     <string name="connections_slack_webhook_url">Webhook URL</string>
     <string name="connections_tc_server_url">Server URL</string>
     <string name="connections_tc_token">Token</string>
-    <string name="connections_tc_webhook_secret">Webhook Secret (optional)</string>
+    <string name="connections_tc_polling_interval">Polling Interval (seconds)</string>
     <string name="connections_github_pat">Personal Access Token</string>
     <string name="connections_github_owner">Owner</string>
     <string name="connections_github_repo">Repository</string>
-    <string name="connections_github_webhook_secret">Webhook Secret (optional)</string>
+    <string name="connections_github_polling_interval">Polling Interval (seconds)</string>
     <string name="connections_test_succeeded">Connection test succeeded: %1$s</string>
     <string name="connections_test_failed">Test failed: %1$s</string>
 
@@ -125,6 +125,8 @@
     <string name="editor_inject_webhook_label">Enable build status reporting</string>
     <string name="editor_inject_webhook_hint">Build can POST status updates to RELEASE_WIZARD_WEBHOOK_URL</string>
     <string name="editor_prop_timeout">Timeout (seconds)</string>
+    <string name="editor_prop_timeout_required">Timeout (seconds) *</string>
+    <string name="editor_prop_timeout_required_hint">Timeout is required for this block type</string>
     <string name="editor_prop_parameters">Parameters</string>
     <string name="editor_prop_add_parameter">+ Add Parameter</string>
     <string name="editor_prop_key">Key</string>
@@ -223,6 +225,12 @@
     <string name="releases_file">File</string>
     <string name="releases_expand_error">Expand error details</string>
     <string name="releases_collapse_error">Collapse error details</string>
+
+    <!-- ==================== Releases: Sub-builds ==================== -->
+    <string name="sub_builds_summary">Sub-builds (%1$d/%2$d succeeded)</string>
+    <string name="sub_builds_discovering">Discovering build chain...</string>
+    <string name="sub_builds_stage">Stage %1$d</string>
+    <string name="sub_builds_duration">%1$ds</string>
 
     <!-- ==================== Block Status Display Names ==================== -->
     <string name="block_status_waiting">Waiting</string>

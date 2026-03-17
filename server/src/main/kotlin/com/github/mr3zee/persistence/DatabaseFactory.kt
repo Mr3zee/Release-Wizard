@@ -34,7 +34,7 @@ fun initDatabase(ds: DataSource): Database {
             ConnectionTable,
             ReleaseTable,
             BlockExecutionTable,
-            PendingWebhookTable,
+            // PendingWebhookTable removed — orphaned table, drop manually if needed
             NotificationConfigTable,
             ScheduleTable,
             TriggerTable,

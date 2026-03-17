@@ -7,6 +7,7 @@ import com.github.mr3zee.model.DagGraph
 import com.github.mr3zee.model.GatePhase
 import com.github.mr3zee.model.Parameter
 import com.github.mr3zee.model.ReleaseStatus
+import com.github.mr3zee.model.SubBuild
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
@@ -46,6 +47,7 @@ object BlockExecutionTable : UUIDTable("block_executions") {
     val webhookStatus = varchar("webhook_status", 200).nullable()
     val webhookStatusDescription = text("webhook_status_description").nullable()
     val webhookStatusAt = timestamp("webhook_status_at").nullable()
+    val subBuilds = jsonb("sub_builds", AppJson, ListSerializer(SubBuild.serializer())).default(emptyList())
 
     init {
         index(false, releaseId)

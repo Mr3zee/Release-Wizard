@@ -3,17 +3,10 @@
 package com.github.mr3zee.teamcity
 
 import com.github.mr3zee.execution.ExecutionContext
-import com.github.mr3zee.execution.FakeConnectionsRepository
-import com.github.mr3zee.execution.InMemoryPendingWebhookRepository
+import com.github.mr3zee.execution.executors.BuildPollingService
 import com.github.mr3zee.execution.executors.TeamCityBuildExecutor
 import com.github.mr3zee.model.*
-import com.github.mr3zee.webhooks.WebhookCompletion
-import com.github.mr3zee.webhooks.WebhookService
-import com.github.mr3zee.webhooks.WebhookType
-import com.github.mr3zee.waitUntil
 import io.ktor.client.*
-import kotlinx.coroutines.async
-import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.coroutines.runBlocking
 import org.junit.*
 import org.junit.Assert.fail
@@ -58,6 +51,7 @@ class TeamCityBuildExecutorIntegrationTest {
         name = "Integration TC Build",
         type = BlockType.TEAMCITY_BUILD,
         connectionId = ConnectionId("conn-tc"),
+        timeoutSeconds = 300, // 5 min timeout for integration tests
     )
 
     private fun context(): ExecutionContext {
@@ -70,68 +64,38 @@ class TeamCityBuildExecutorIntegrationTest {
                 ConnectionId("conn-tc") to ConnectionConfig.TeamCityConfig(
                     serverUrl = cfg.serverUrl,
                     token = cfg.token,
+                    pollingIntervalSeconds = 5,
                 )
             ),
         )
     }
 
     @Test
-    fun `execute triggers build and returns outputs on webhook completion`() = runBlocking {
+    fun `execute triggers build and polls to completion`() = runBlocking {
         val cfg = config ?: error("TeamCityTestConfig not loaded — setUp should have skipped this test")
-        val webhookRepo = InMemoryPendingWebhookRepository()
-        val connectionsRepo = FakeConnectionsRepository()
-        val webhookService = WebhookService(webhookRepo, connectionsRepo)
-        val executor = TeamCityBuildExecutor(client ?: error("HttpClient not initialized"), webhookRepo, webhookService)
+        val httpClient = client ?: error("HttpClient not initialized")
+        val pollingService = BuildPollingService(httpClient)
+        val executor = TeamCityBuildExecutor(httpClient, pollingService)
 
-        val outputsDeferred = async {
-            executor.execute(
-                block = block(),
-                parameters = listOf(Parameter(key = "buildTypeId", value = cfg.buildTypeId)),
-                context = context(),
-            )
-        }
-
-        // Wait for the webhook to be registered (real HTTP call needs time)
-        waitUntil(maxAttempts = 60, delayMillis = 500) {
-            webhookRepo.findByConnectionIdAndType(ConnectionId("conn-tc"), WebhookType.TEAMCITY).isNotEmpty()
-        }
-
-        val pendingWebhooks = webhookRepo.findByConnectionIdAndType(ConnectionId("conn-tc"), WebhookType.TEAMCITY)
-        assertTrue(pendingWebhooks.isNotEmpty(), "Should have registered a pending webhook")
-        assertTrue(pendingWebhooks[0].externalId.isNotEmpty(), "Should have a build ID as externalId")
-
-        val buildId = pendingWebhooks[0].externalId
-        triggeredBuildId = buildId
-
-        // Wait for the real build to finish so we can get actual outputs
-        val buildResult = (client ?: error("HttpClient not initialized")).waitForBuildCompletion(cfg, buildId)
-        val buildNumber = buildResult["number"]?.jsonPrimitive?.content ?: buildId
-        val buildStatus = buildResult["status"]?.jsonPrimitive?.content ?: "UNKNOWN"
-
-        // Simulate webhook arrival with real build data
-        webhookService.emitCompletion(
-            WebhookCompletion(
-                webhookId = pendingWebhooks[0].id,
-                blockId = block().id,
-                releaseId = ReleaseId("integ-release-tc"),
-                type = WebhookType.TEAMCITY,
-                payload = """{"buildNumber":"$buildNumber","buildStatus":"$buildStatus"}""",
-            )
+        val outputs = executor.execute(
+            block = block(),
+            parameters = listOf(Parameter(key = "buildTypeId", value = cfg.buildTypeId)),
+            context = context(),
         )
 
-        val outputs = outputsDeferred.await()
-        assertEquals(buildNumber, outputs["buildNumber"])
+        val buildNumber = outputs["buildNumber"] ?: error("Expected 'buildNumber' in executor outputs")
+        assertTrue(buildNumber.isNotEmpty(), "buildNumber should not be empty")
         val buildUrl = outputs["buildUrl"] ?: error("Expected 'buildUrl' in executor outputs")
         assertTrue(buildUrl.contains(cfg.serverUrl), "buildUrl should contain server URL")
-        assertEquals(buildStatus, outputs["buildStatus"])
+        val buildStatus = outputs["buildStatus"] ?: error("Expected 'buildStatus' in executor outputs")
+        assertTrue(buildStatus.isNotEmpty(), "buildStatus should not be empty")
     }
 
     @Test
     fun `execute with invalid build type throws`() = runBlocking {
-        val webhookRepo = InMemoryPendingWebhookRepository()
-        val connectionsRepo = FakeConnectionsRepository()
-        val webhookService = WebhookService(webhookRepo, connectionsRepo)
-        val executor = TeamCityBuildExecutor(client ?: error("HttpClient not initialized"), webhookRepo, webhookService)
+        val httpClient = client ?: error("HttpClient not initialized")
+        val pollingService = BuildPollingService(httpClient)
+        val executor = TeamCityBuildExecutor(httpClient, pollingService)
 
         try {
             executor.execute(

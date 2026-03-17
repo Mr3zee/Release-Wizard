@@ -16,6 +16,7 @@ data class BlockExecution(
     val gatePhase: GatePhase? = null,
     val gateMessage: String? = null,
     val webhookStatus: WebhookStatusUpdate? = null,
+    val subBuilds: List<SubBuild> = emptyList(),
 ) {
     companion object {
         /** Key in [outputs] for JSON-encoded artifact paths list. */

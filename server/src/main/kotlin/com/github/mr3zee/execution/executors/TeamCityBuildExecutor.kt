@@ -1,38 +1,32 @@
 package com.github.mr3zee.execution.executors
 
+import com.github.mr3zee.AppJson
 import com.github.mr3zee.execution.BlockExecutor
 import com.github.mr3zee.execution.ExecutionContext
+import com.github.mr3zee.execution.ExecutionScope
 import com.github.mr3zee.model.Block
 import com.github.mr3zee.model.BlockExecution
 import com.github.mr3zee.model.ConnectionConfig
 import com.github.mr3zee.model.Parameter
-import com.github.mr3zee.webhooks.*
+import com.github.mr3zee.webhooks.StatusWebhookService
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.withTimeoutOrNull
-import com.github.mr3zee.AppJson
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.slf4j.LoggerFactory
-import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * Triggers a TeamCity build and waits for webhook completion.
+ * Triggers a TeamCity build and polls for completion.
  *
  * Params: buildTypeId (required), branch (optional)
  * Outputs: buildNumber, buildUrl, buildStatus
  */
 class TeamCityBuildExecutor(
     private val httpClient: HttpClient,
-    private val webhookRepository: PendingWebhookRepository,
-    private val webhookService: WebhookService,
+    private val buildPollingService: BuildPollingService,
     private val artifactService: TeamCityArtifactService? = null,
     private val statusWebhookService: StatusWebhookService? = null,
 ) : BlockExecutor {
@@ -43,48 +37,26 @@ class TeamCityBuildExecutor(
         block: Block.ActionBlock,
         parameters: List<Parameter>,
         context: ExecutionContext,
+        scope: ExecutionScope?,
     ): Map<String, String> {
         val connectionId = block.connectionId
             ?: throw IllegalStateException("TeamCity Build block requires a connection")
         val config = context.connections[connectionId] as? ConnectionConfig.TeamCityConfig
             ?: throw IllegalStateException("TeamCity connection config not found for $connectionId")
 
-        // Check PendingWebhook state
-        val webhook = webhookRepository.findByReleaseIdAndBlockId(context.releaseId, block.id)
+        // Check for persisted build ID from before crash
+        val persistedBuildId = context.blockOutputs[block.id]?.get(INTERNAL_BUILD_ID_KEY)
 
-        return when {
-            webhook != null && webhook.status == WebhookStatus.COMPLETED && webhook.payload != null -> {
-                // Webhook already arrived — parse and return outputs
-                try {
-                    val baseOutputs = parseCompletionPayload(webhook.payload, webhook.externalId, config.serverUrl)
-                    baseOutputs + fetchArtifactOutputs(parameters, config, webhook.externalId)
-                } finally {
-                    deactivateTokenIfNeeded(block, context)
-                }
+        return if (persistedBuildId != null) {
+            // Resume polling from persisted build ID
+            try {
+                pollBuildToCompletion(config, persistedBuildId, parameters, block, scope)
+            } finally {
+                deactivateTokenIfNeeded(block, context)
             }
-            webhook != null && webhook.status == WebhookStatus.PENDING -> {
-                // Webhook registered but not yet received — subscribe and wait
-                try {
-                    coroutineScope {
-                        val completionDeferred = async(start = CoroutineStart.UNDISPATCHED) {
-                            withTimeoutOrNull(WEBHOOK_TIMEOUT_MS.milliseconds) {
-                                webhookService.completions.first { it.blockId == block.id && it.releaseId == context.releaseId }
-                            }
-                        }
-                        val completion = completionDeferred.await()
-                            ?: throw RuntimeException("TeamCity webhook timed out after ${WEBHOOK_TIMEOUT_MS / 60_000}min")
-                        val baseOutputs = parseCompletionPayload(completion.payload, webhook.externalId, config.serverUrl)
-                        baseOutputs + fetchArtifactOutputs(parameters, config, webhook.externalId)
-                    }
-                } finally {
-                    deactivateTokenIfNeeded(block, context)
-                }
-            }
-            else -> {
-                // No webhook record — trigger never happened, re-execute
-                // execute() has its own finally block for token deactivation
-                execute(block, parameters, context)
-            }
+        } else {
+            // No persisted build ID — re-trigger (acknowledged recovery gap)
+            execute(block, parameters, context, scope)
         }
     }
 
@@ -92,6 +64,7 @@ class TeamCityBuildExecutor(
         block: Block.ActionBlock,
         parameters: List<Parameter>,
         context: ExecutionContext,
+        scope: ExecutionScope?,
     ): Map<String, String> {
         val connectionId = block.connectionId
             ?: throw IllegalStateException("TeamCity Build block requires a connection")
@@ -154,33 +127,48 @@ class TeamCityBuildExecutor(
         val buildId = responseBody["id"]?.jsonPrimitive?.content
             ?: throw RuntimeException("TeamCity response missing build id")
 
-        // Subscribe to completions BEFORE registering webhook to prevent race condition.
-        // Use UNDISPATCHED start to ensure the collector begins immediately on the current
-        // thread, guaranteeing subscription is active before we register the webhook.
-        return coroutineScope {
-            val completionDeferred = async(start = CoroutineStart.UNDISPATCHED) {
-                withTimeoutOrNull(WEBHOOK_TIMEOUT_MS.milliseconds) {
-                    webhookService.completions.first { it.blockId == block.id && it.releaseId == context.releaseId }
-                }
-            }
+        // Persist build ID before polling so recovery can resume
+        scope?.persistOutputs(mapOf(INTERNAL_BUILD_ID_KEY to buildId))
 
-            webhookRepository.create(
-                externalId = buildId,
-                blockId = block.id,
-                releaseId = context.releaseId,
-                connectionId = connectionId,
-                type = WebhookType.TEAMCITY,
-            )
+        return try {
+            pollBuildToCompletion(config, buildId, parameters, block, scope)
+        } finally {
+            deactivateTokenIfNeeded(block, context)
+        }
+    }
 
-            try {
-                val completion = completionDeferred.await()
-                    ?: throw RuntimeException("TeamCity webhook timed out after ${WEBHOOK_TIMEOUT_MS / 60_000}min")
-                val baseOutputs = parseCompletionPayload(completion.payload, buildId, config.serverUrl)
-                baseOutputs + fetchArtifactOutputs(parameters, config, buildId)
-            } finally {
-                deactivateTokenIfNeeded(block, context)
+    private suspend fun pollBuildToCompletion(
+        config: ConnectionConfig.TeamCityConfig,
+        buildId: String,
+        parameters: List<Parameter>,
+        block: Block.ActionBlock,
+        scope: ExecutionScope?,
+    ): Map<String, String> {
+        // Discover sub-builds once (non-fatal on failure)
+        var subBuilds = buildPollingService.discoverTeamCitySubBuilds(
+            config.serverUrl, config.token, buildId,
+        )
+        if (subBuilds.isNotEmpty()) {
+            scope?.updateSubBuilds(subBuilds)
+        }
+
+        // Poll main build + sub-build statuses
+        val baseOutputs = buildPollingService.pollTeamCityBuild(
+            serverUrl = config.serverUrl,
+            token = config.token,
+            buildId = buildId,
+            intervalSeconds = config.pollingIntervalSeconds,
+        ) { _, _ ->
+            // On each tick, also update sub-build statuses if we have any
+            if (subBuilds.isNotEmpty()) {
+                subBuilds = buildPollingService.pollTeamCitySubBuildStatuses(
+                    config.serverUrl, config.token, subBuilds,
+                )
+                scope?.updateSubBuilds(subBuilds)
             }
         }
+
+        return baseOutputs + fetchArtifactOutputs(parameters, config, buildId)
     }
 
     private suspend fun deactivateTokenIfNeeded(block: Block.ActionBlock, context: ExecutionContext) {
@@ -216,26 +204,8 @@ class TeamCityBuildExecutor(
         }
     }
 
-    private fun parseCompletionPayload(payload: String, buildId: String, serverUrl: String): Map<String, String> {
-        return try {
-            val json = AppJson.decodeFromString<JsonObject>(payload)
-            mapOf(
-                "buildNumber" to (json["buildNumber"]?.jsonPrimitive?.content ?: buildId),
-                "buildUrl" to "$serverUrl/viewLog.html?buildId=$buildId",
-                "buildStatus" to (json["buildStatus"]?.jsonPrimitive?.content ?: "UNKNOWN"),
-            )
-        } catch (e: Exception) {
-            log.warn("Failed to parse TeamCity webhook payload for build $buildId", e)
-            mapOf(
-                "buildNumber" to buildId,
-                "buildUrl" to "$serverUrl/viewLog.html?buildId=$buildId",
-                "buildStatus" to "UNKNOWN",
-            )
-        }
-    }
-
     companion object {
-        const val WEBHOOK_TIMEOUT_MS = 30 * 60 * 1000L // 30 minutes
+        const val INTERNAL_BUILD_ID_KEY = "_tcBuildId"
 
         const val WEBHOOK_URL_PARAM = "env.RELEASE_WIZARD_WEBHOOK_URL"
         const val WEBHOOK_TOKEN_PARAM = "env.RELEASE_WIZARD_WEBHOOK_TOKEN"

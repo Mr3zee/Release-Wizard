@@ -340,7 +340,15 @@ private fun BlockDetailPanel(
             }
 
             // Webhook status update section
-            WebhookStatusSection(block = block, execution = execution)
+            WebhookStatusSection(block = block, execution = execution, hasSubBuilds = execution.subBuilds.isNotEmpty())
+
+            // Sub-builds section
+            if (execution.subBuilds.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(Spacing.sm))
+                SubBuildsSection(subBuilds = execution.subBuilds)
+            } else if (execution.status == BlockStatus.RUNNING && (block as? Block.ActionBlock)?.type in listOf(BlockType.TEAMCITY_BUILD, BlockType.GITHUB_ACTION)) {
+                SubBuildsDiscoveringPlaceholder()
+            }
 
             execution.error?.let { errorMsg ->
                 Spacer(modifier = Modifier.height(Spacing.sm))
@@ -456,7 +464,7 @@ private fun BlockDetailPanel(
 }
 
 @Composable
-private fun WebhookStatusSection(block: Block, execution: BlockExecution) {
+private fun WebhookStatusSection(block: Block, execution: BlockExecution, hasSubBuilds: Boolean = false) {
     val webhookStatus = execution.webhookStatus
     val isWebhookEnabled = (block as? Block.ActionBlock)?.injectWebhookUrl == true
 
@@ -498,7 +506,7 @@ private fun WebhookStatusSection(block: Block, execution: BlockExecution) {
                 }
             }
         }
-    } else if (isWebhookEnabled) {
+    } else if (isWebhookEnabled && !hasSubBuilds) {
         Spacer(modifier = Modifier.height(Spacing.sm))
         val text = when (execution.status) {
             BlockStatus.RUNNING -> packStringResource(Res.string.releases_webhook_no_updates_running)

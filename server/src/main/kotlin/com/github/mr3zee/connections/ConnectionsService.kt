@@ -156,16 +156,11 @@ private fun Connection.masked(): Connection = copy(config = config.masked())
 
 private fun ConnectionConfig.masked(): ConnectionConfig = when (this) {
     is ConnectionConfig.SlackConfig -> copy(webhookUrl = mask(webhookUrl))
-    is ConnectionConfig.TeamCityConfig -> copy(token = mask(token), webhookSecret = maskOptional(webhookSecret))
-    is ConnectionConfig.GitHubConfig -> copy(token = mask(token), webhookSecret = maskOptional(webhookSecret))
+    is ConnectionConfig.TeamCityConfig -> copy(token = mask(token))
+    is ConnectionConfig.GitHubConfig -> copy(token = mask(token))
 }
 
 private fun mask(value: String): String {
     if (value.length <= 4) return "****"
     return "****" + value.takeLast(4)
-}
-
-private fun maskOptional(value: String): String {
-    if (value.isEmpty()) return ""
-    return mask(value)
 }

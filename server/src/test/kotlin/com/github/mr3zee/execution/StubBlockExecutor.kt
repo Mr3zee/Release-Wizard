@@ -14,6 +14,7 @@ class StubBlockExecutor : BlockExecutor {
         block: Block.ActionBlock,
         parameters: List<Parameter>,
         context: ExecutionContext,
+        scope: ExecutionScope?,
     ): Map<String, String> {
         // Yield to allow other coroutines to run
         yield()

@@ -1,10 +1,10 @@
 package com.github.mr3zee.webhooks
 
+import com.github.mr3zee.execution.executors.BuildPollingService
 import org.koin.dsl.module
 
 val webhooksModule = module {
-    single<PendingWebhookRepository> { ExposedPendingWebhookRepository(get()) }
-    single { WebhookService(get(), get()) }
+    single { BuildPollingService(get()) }
     single<StatusWebhookTokenRepository> { ExposedStatusWebhookTokenRepository(get()) }
     single { StatusWebhookService(get(), get(), get(), get()) }
 }

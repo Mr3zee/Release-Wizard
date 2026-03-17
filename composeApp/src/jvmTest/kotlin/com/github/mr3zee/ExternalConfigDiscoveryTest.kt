@@ -23,7 +23,7 @@ class ExternalConfigDiscoveryTest {
     private val lockJson = """{"userId":"u1","username":"testuser","acquiredAt":"2026-03-13T00:00:00Z","expiresAt":"2026-03-13T00:05:00Z"}"""
 
     private val connectionsJson = """{"connections":[
-        {"id":"conn-1","name":"TC Production","type":"TEAMCITY","config":{"type":"teamcity","serverUrl":"https://tc.example.com","token":"****1234","webhookSecret":""},"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}
+        {"id":"conn-1","name":"TC Production","type":"TEAMCITY","config":{"type":"teamcity","serverUrl":"https://tc.example.com","token":"****1234","pollingIntervalSeconds":30},"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}
     ],"webhookUrls":{},"pagination":{"totalCount":1,"offset":0,"limit":20}}"""
 
     private val buildTypesJson = """{"configs":[

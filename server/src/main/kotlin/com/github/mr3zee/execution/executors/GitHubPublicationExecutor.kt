@@ -2,6 +2,7 @@ package com.github.mr3zee.execution.executors
 
 import com.github.mr3zee.execution.BlockExecutor
 import com.github.mr3zee.execution.ExecutionContext
+import com.github.mr3zee.execution.ExecutionScope
 import com.github.mr3zee.model.Block
 import com.github.mr3zee.model.ConnectionConfig
 import com.github.mr3zee.model.Parameter
@@ -42,6 +43,7 @@ class GitHubPublicationExecutor(
         block: Block.ActionBlock,
         parameters: List<Parameter>,
         context: ExecutionContext,
+        scope: ExecutionScope?,
     ): Map<String, String> {
         val config = resolveGitHubConfig(block, context)
 
@@ -59,7 +61,7 @@ class GitHubPublicationExecutor(
             parseReleaseResponse(checkResponse.body(), tagName)
         } else {
             // Release doesn't exist — create it
-            execute(block, parameters, context)
+            execute(block, parameters, context, scope)
         }
     }
 
@@ -67,6 +69,7 @@ class GitHubPublicationExecutor(
         block: Block.ActionBlock,
         parameters: List<Parameter>,
         context: ExecutionContext,
+        scope: ExecutionScope?,
     ): Map<String, String> {
         val config = resolveGitHubConfig(block, context)
 

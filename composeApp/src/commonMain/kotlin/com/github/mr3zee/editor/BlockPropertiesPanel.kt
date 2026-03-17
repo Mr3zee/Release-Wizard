@@ -281,20 +281,33 @@ private fun ActionBlockProperties(
     }
 
     // Timeout
+    val isTimeoutRequired = block.type.requiresTimeout()
     var timeoutText by remember(block.id) {
         mutableStateOf(block.timeoutSeconds?.toString() ?: "")
     }
+    var timeoutTouched by remember(block.id) { mutableStateOf(false) }
+    val timeoutLabel = if (isTimeoutRequired) {
+        packStringResource(Res.string.editor_prop_timeout_required)
+    } else {
+        packStringResource(Res.string.editor_prop_timeout)
+    }
+    val isTimeoutError = isTimeoutRequired && timeoutTouched && timeoutText.isBlank()
     RwTextField(
         value = timeoutText,
         onValueChange = { text ->
             timeoutText = text
+            timeoutTouched = true
             val seconds = text.toLongOrNull()
             onUpdateTimeout(block.id, seconds)
         },
-        label = packStringResource(Res.string.editor_prop_timeout),
-        placeholder = packStringResource(Res.string.editor_prop_timeout),
+        label = timeoutLabel,
+        placeholder = timeoutLabel,
         singleLine = true,
         enabled = enabled,
+        isError = isTimeoutError,
+        supportingText = if (isTimeoutError) {
+            { Text(packStringResource(Res.string.editor_prop_timeout_required_hint)) }
+        } else null,
         modifier = Modifier.fillMaxWidth().testTag("block_timeout_field"),
     )
 

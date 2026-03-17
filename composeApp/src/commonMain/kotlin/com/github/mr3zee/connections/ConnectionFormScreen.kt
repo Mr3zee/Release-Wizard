@@ -58,21 +58,21 @@ fun ConnectionFormScreen(
     var slackWebhookUrl by remember(connectionId) { mutableStateOf("") }
     var teamCityServerUrl by remember(connectionId) { mutableStateOf("") }
     var teamCityToken by remember(connectionId) { mutableStateOf("") }
-    var teamCityWebhookSecret by remember(connectionId) { mutableStateOf("") }
+    var teamCityPollingInterval by remember(connectionId) { mutableStateOf("30") }
     var githubToken by remember(connectionId) { mutableStateOf("") }
     var githubOwner by remember(connectionId) { mutableStateOf("") }
     var githubRepo by remember(connectionId) { mutableStateOf("") }
-    var githubWebhookSecret by remember(connectionId) { mutableStateOf("") }
+    var githubPollingInterval by remember(connectionId) { mutableStateOf("30") }
     // Track initial values to detect dirty state
     var initialName by remember(connectionId) { mutableStateOf("") }
     var initialSlackWebhookUrl by remember(connectionId) { mutableStateOf("") }
     var initialTeamCityServerUrl by remember(connectionId) { mutableStateOf("") }
     var initialTeamCityToken by remember(connectionId) { mutableStateOf("") }
-    var initialTeamCityWebhookSecret by remember(connectionId) { mutableStateOf("") }
+    var initialTeamCityPollingInterval by remember(connectionId) { mutableStateOf("30") }
     var initialGithubToken by remember(connectionId) { mutableStateOf("") }
     var initialGithubOwner by remember(connectionId) { mutableStateOf("") }
     var initialGithubRepo by remember(connectionId) { mutableStateOf("") }
-    var initialGithubWebhookSecret by remember(connectionId) { mutableStateOf("") }
+    var initialGithubPollingInterval by remember(connectionId) { mutableStateOf("30") }
 
     val isDirty by remember {
         derivedStateOf {
@@ -80,11 +80,11 @@ fun ConnectionFormScreen(
                 slackWebhookUrl != initialSlackWebhookUrl ||
                 teamCityServerUrl != initialTeamCityServerUrl ||
                 teamCityToken != initialTeamCityToken ||
-                teamCityWebhookSecret != initialTeamCityWebhookSecret ||
+                teamCityPollingInterval != initialTeamCityPollingInterval ||
                 githubToken != initialGithubToken ||
                 githubOwner != initialGithubOwner ||
                 githubRepo != initialGithubRepo ||
-                githubWebhookSecret != initialGithubWebhookSecret
+                githubPollingInterval != initialGithubPollingInterval
         }
     }
 
@@ -108,20 +108,20 @@ fun ConnectionFormScreen(
                 is ConnectionConfig.TeamCityConfig -> {
                     teamCityServerUrl = config.serverUrl
                     teamCityToken = config.token
-                    teamCityWebhookSecret = config.webhookSecret
+                    teamCityPollingInterval = config.pollingIntervalSeconds.toString()
                     initialTeamCityServerUrl = config.serverUrl
                     initialTeamCityToken = config.token
-                    initialTeamCityWebhookSecret = config.webhookSecret
+                    initialTeamCityPollingInterval = config.pollingIntervalSeconds.toString()
                 }
                 is ConnectionConfig.GitHubConfig -> {
                     githubToken = config.token
                     githubOwner = config.owner
                     githubRepo = config.repo
-                    githubWebhookSecret = config.webhookSecret
+                    githubPollingInterval = config.pollingIntervalSeconds.toString()
                     initialGithubToken = config.token
                     initialGithubOwner = config.owner
                     initialGithubRepo = config.repo
-                    initialGithubWebhookSecret = config.webhookSecret
+                    initialGithubPollingInterval = config.pollingIntervalSeconds.toString()
                 }
             }
         }
@@ -131,8 +131,8 @@ fun ConnectionFormScreen(
         derivedStateOf {
             buildConfig(
                 selectedType, slackWebhookUrl, teamCityServerUrl, teamCityToken,
-                teamCityWebhookSecret, githubToken, githubOwner, githubRepo,
-                githubWebhookSecret,
+                teamCityPollingInterval, githubToken, githubOwner, githubRepo,
+                githubPollingInterval,
             )
         }
     }
@@ -276,7 +276,6 @@ fun ConnectionFormScreen(
                 }
                 ConnectionType.TEAMCITY -> {
                     var showTeamCityToken by remember { mutableStateOf(false) }
-                    var showTeamCityWebhookSecret by remember { mutableStateOf(false) }
 
                     Text(
                         text = packStringResource(Res.string.connections_section_teamcity),
@@ -309,26 +308,19 @@ fun ConnectionFormScreen(
                         modifier = Modifier.fillMaxWidth().testTag("teamcity_token"),
                     )
                     RwTextField(
-                        value = teamCityWebhookSecret,
-                        onValueChange = { teamCityWebhookSecret = it },
-                        label = packStringResource(Res.string.connections_tc_webhook_secret),
-                        placeholder = packStringResource(Res.string.connections_tc_webhook_secret),
-                        singleLine = true,
-                        visualTransformation = if (showTeamCityWebhookSecret) VisualTransformation.None else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            RwIconButton(onClick = { showTeamCityWebhookSecret = !showTeamCityWebhookSecret }, modifier = Modifier.size(32.dp).testTag("teamcity_webhook_secret_toggle_visibility")) {
-                                Icon(
-                                    if (showTeamCityWebhookSecret) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    contentDescription = if (showTeamCityWebhookSecret) packStringResource(Res.string.connections_hide_password) else packStringResource(Res.string.connections_show_password),
-                                )
-                            }
+                        value = teamCityPollingInterval,
+                        onValueChange = { text ->
+                            val filtered = text.filter { it.isDigit() }
+                            teamCityPollingInterval = filtered
                         },
-                        modifier = Modifier.fillMaxWidth().testTag("teamcity_webhook_secret"),
+                        label = packStringResource(Res.string.connections_tc_polling_interval),
+                        placeholder = "30",
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().testTag("teamcity_polling_interval"),
                     )
                 }
                 ConnectionType.GITHUB -> {
                     var showGithubToken by remember { mutableStateOf(false) }
-                    var showGithubWebhookSecret by remember { mutableStateOf(false) }
 
                     Text(
                         text = packStringResource(Res.string.connections_section_github),
@@ -369,21 +361,15 @@ fun ConnectionFormScreen(
                         modifier = Modifier.fillMaxWidth().testTag("github_repo"),
                     )
                     RwTextField(
-                        value = githubWebhookSecret,
-                        onValueChange = { githubWebhookSecret = it },
-                        label = packStringResource(Res.string.connections_github_webhook_secret),
-                        placeholder = packStringResource(Res.string.connections_github_webhook_secret),
-                        singleLine = true,
-                        visualTransformation = if (showGithubWebhookSecret) VisualTransformation.None else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            RwIconButton(onClick = { showGithubWebhookSecret = !showGithubWebhookSecret }, modifier = Modifier.size(32.dp).testTag("github_webhook_secret_toggle_visibility")) {
-                                Icon(
-                                    if (showGithubWebhookSecret) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    contentDescription = if (showGithubWebhookSecret) packStringResource(Res.string.connections_hide_password) else packStringResource(Res.string.connections_show_password),
-                                )
-                            }
+                        value = githubPollingInterval,
+                        onValueChange = { text ->
+                            val filtered = text.filter { it.isDigit() }
+                            githubPollingInterval = filtered
                         },
-                        modifier = Modifier.fillMaxWidth().testTag("github_webhook_secret"),
+                        label = packStringResource(Res.string.connections_github_polling_interval),
+                        placeholder = "30",
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().testTag("github_polling_interval"),
                     )
                 }
             }
@@ -431,23 +417,23 @@ private fun buildConfig(
     slackWebhookUrl: String,
     teamCityServerUrl: String,
     teamCityToken: String,
-    teamCityWebhookSecret: String,
+    teamCityPollingInterval: String,
     githubToken: String,
     githubOwner: String,
     githubRepo: String,
-    githubWebhookSecret: String,
+    githubPollingInterval: String,
 ): ConnectionConfig = when (type) {
     ConnectionType.SLACK -> ConnectionConfig.SlackConfig(webhookUrl = slackWebhookUrl)
     ConnectionType.TEAMCITY -> ConnectionConfig.TeamCityConfig(
         serverUrl = teamCityServerUrl,
         token = teamCityToken,
-        webhookSecret = teamCityWebhookSecret,
+        pollingIntervalSeconds = teamCityPollingInterval.toIntOrNull()?.coerceIn(5, 300) ?: 30,
     )
     ConnectionType.GITHUB -> ConnectionConfig.GitHubConfig(
         token = githubToken,
         owner = githubOwner,
         repo = githubRepo,
-        webhookSecret = githubWebhookSecret,
+        pollingIntervalSeconds = githubPollingInterval.toIntOrNull()?.coerceIn(5, 300) ?: 30,
     )
 }
 

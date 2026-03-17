@@ -287,6 +287,14 @@ object RickRollPack {
             "shortcut_editor_paste" to "You wouldn't get this paste from any other guy",
             "shortcut_editor_select_all" to "Together forever, select all",
             "shortcut_editor_delete" to "Say goodbye to selected (Delete)",
+            "sub_builds_summary" to "Sub-builds (%1\$d/%2\$d never let you down)",
+            "sub_builds_discovering" to "We've known each other for so long \u2014 discovering build chain...",
+            "sub_builds_stage" to "Stage %1\$d \u2014 full commitment",
+            "sub_builds_duration" to "%1\$ds together forever",
+            "connections_tc_polling_interval" to "Polling Interval \u2014 never gonna give up checking (seconds)",
+            "connections_github_polling_interval" to "Polling Interval \u2014 never gonna give up checking (seconds)",
+            "editor_prop_timeout_required" to "Timeout (seconds) * \u2014 you know the rules",
+            "editor_prop_timeout_required_hint" to "You know the rules \u2014 timeout is required for this block type",
         ),
         plurals = mapOf(
             "blocks" to PluralOverride(

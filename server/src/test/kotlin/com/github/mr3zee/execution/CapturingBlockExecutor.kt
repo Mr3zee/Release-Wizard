@@ -17,9 +17,10 @@ class CapturingBlockExecutor : BlockExecutor {
         block: Block.ActionBlock,
         parameters: List<Parameter>,
         context: ExecutionContext,
+        scope: ExecutionScope?,
     ): Map<String, String> {
         captured[block.id] = parameters.toList()
-        return delegate.execute(block, parameters, context)
+        return delegate.execute(block, parameters, context, scope)
     }
 
     fun capturedParameters(blockId: BlockId): List<Parameter>? = captured[blockId]

@@ -3,6 +3,7 @@ package com.github.mr3zee.execution.executors
 import com.github.mr3zee.AppJson
 import com.github.mr3zee.execution.BlockExecutor
 import com.github.mr3zee.execution.ExecutionContext
+import com.github.mr3zee.execution.ExecutionScope
 import com.github.mr3zee.model.Block
 import com.github.mr3zee.model.ConnectionConfig
 import com.github.mr3zee.model.Parameter
@@ -30,6 +31,7 @@ class SlackMessageExecutor(
         block: Block.ActionBlock,
         parameters: List<Parameter>,
         context: ExecutionContext,
+        scope: ExecutionScope?,
     ): Map<String, String> {
         // Slack webhook is once-only and we can't verify if it was sent.
         // Mark FAILED so user can inspect and re-trigger manually.
@@ -40,6 +42,7 @@ class SlackMessageExecutor(
         block: Block.ActionBlock,
         parameters: List<Parameter>,
         context: ExecutionContext,
+        scope: ExecutionScope?,
     ): Map<String, String> {
         val connectionId = block.connectionId
             ?: throw IllegalStateException("Slack Message block requires a connection")

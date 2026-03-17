@@ -287,6 +287,14 @@ object HelldiversPack {
             "shortcut_editor_paste" to "Deploy Intel",
             "shortcut_editor_select_all" to "Select All Units",
             "shortcut_editor_delete" to "Orbital Strike Selected",
+            "sub_builds_summary" to "Sub-operations (%1\$d/%2\$d objectives secured)",
+            "sub_builds_discovering" to "Scanning for build chain targets, Citizen...",
+            "sub_builds_stage" to "Assault Wave %1\$d",
+            "sub_builds_duration" to "%1\$ds in combat",
+            "connections_tc_polling_interval" to "Reconnaissance Interval (seconds)",
+            "connections_github_polling_interval" to "Reconnaissance Interval (seconds)",
+            "editor_prop_timeout_required" to "Mission Timer (seconds) *",
+            "editor_prop_timeout_required_hint" to "Mission timer is mandatory for this unit type, Citizen",
         ),
         plurals = mapOf(
             "blocks" to PluralOverride(

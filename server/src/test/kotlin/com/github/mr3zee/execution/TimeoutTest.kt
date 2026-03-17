@@ -20,6 +20,7 @@ class TimeoutTest {
             block: Block.ActionBlock,
             parameters: List<Parameter>,
             context: ExecutionContext,
+            scope: ExecutionScope?,
         ): Map<String, String> {
             delay(2.seconds)
             return emptyMap()
