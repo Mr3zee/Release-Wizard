@@ -39,11 +39,4 @@ sealed class ConnectionConfig {
         val webhookSecret: String = "",
     ) : ConnectionConfig()
 
-    @Serializable
-    @SerialName("maven_central")
-    data class MavenCentralConfig(
-        val username: String,
-        val password: String,
-        val baseUrl: String = "https://central.sonatype.com",
-    ) : ConnectionConfig()
 }

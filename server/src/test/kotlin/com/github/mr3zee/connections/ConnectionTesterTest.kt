@@ -86,32 +86,6 @@ class ConnectionTesterTest {
         assertTrue(result.message.contains("DNS resolution failed"))
     }
 
-    // Maven Central
-
-    @Test
-    fun `maven central successful connection`() = runTest {
-        val tester = createTester { respond("""{"status":"ok"}""", HttpStatusCode.OK) }
-        val result = tester.test(ConnectionConfig.MavenCentralConfig(username = "user", password = "pass"))
-        assertTrue(result.success)
-        assertEquals("Connected to Maven Central", result.message)
-    }
-
-    @Test
-    fun `maven central forbidden returns failure`() = runTest {
-        val tester = createTester { respond("", HttpStatusCode.Forbidden) }
-        val result = tester.test(ConnectionConfig.MavenCentralConfig(username = "user", password = "bad"))
-        assertFalse(result.success)
-        assertTrue(result.message.contains("403"))
-    }
-
-    @Test
-    fun `maven central connection error returns failure`() = runTest {
-        val tester = createTester { throw RuntimeException("Timeout") }
-        val result = tester.test(ConnectionConfig.MavenCentralConfig(username = "user", password = "pass"))
-        assertFalse(result.success)
-        assertTrue(result.message.contains("Timeout"))
-    }
-
     // TeamCity Build Types Discovery
 
     private val tcConfig = ConnectionConfig.TeamCityConfig(serverUrl = "https://tc.example.com", token = "token")

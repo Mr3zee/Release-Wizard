@@ -34,10 +34,6 @@ class StubBlockExecutor : BlockExecutor {
                 "tagName" to "v1.0.0",
                 "releaseId" to "12345",
             )
-            BlockType.MAVEN_CENTRAL_PUBLICATION -> mapOf(
-                "repositoryId" to "comexample-1001",
-                "status" to "PUBLISHED",
-            )
             BlockType.SLACK_MESSAGE -> mapOf(
                 "messageTs" to "1234567890.123456",
                 "channel" to "#releases",

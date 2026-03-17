@@ -34,8 +34,8 @@ class SerializationTest {
                         blocks = listOf(
                             Block.ActionBlock(
                                 id = BlockId("b3"),
-                                name = "Publish Maven",
-                                type = BlockType.MAVEN_CENTRAL_PUBLICATION,
+                                name = "Publish GitHub",
+                                type = BlockType.GITHUB_PUBLICATION,
                             ),
                         ),
                     ),
@@ -88,7 +88,6 @@ class SerializationTest {
             ConnectionConfig.SlackConfig(webhookUrl = "https://hooks.slack.com/test"),
             ConnectionConfig.TeamCityConfig(serverUrl = "https://tc.example.com", token = "abc123"),
             ConnectionConfig.GitHubConfig(token = "ghp_test", owner = "mr3zee", repo = "release-wizard"),
-            ConnectionConfig.MavenCentralConfig(username = "user", password = "pass"),
         )
         for (config in configs) {
             val encoded = json.encodeToString(ConnectionConfig.serializer(), config)

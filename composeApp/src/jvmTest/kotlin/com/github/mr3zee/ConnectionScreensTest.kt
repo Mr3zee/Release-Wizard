@@ -189,19 +189,6 @@ class ConnectionScreensTest {
     }
 
     @Test
-    fun `connection form Maven Central type shows username and password`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")), MutableStateFlow(TeamId("test-team")))
-        setContent {
-            MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = {}) }
-        }
-
-        onNodeWithTag("connection_type_selector").performClick()
-        onNodeWithText("Maven Central").performClick()
-        onNodeWithTag("maven_username").assertExists()
-        onNodeWithTag("maven_password").assertExists()
-    }
-
-    @Test
     fun `connection form Slack validation requires webhook URL`() = runComposeUiTest {
         val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")), MutableStateFlow(TeamId("test-team")))
         setContent {
@@ -234,24 +221,6 @@ class ConnectionScreensTest {
         onNodeWithTag("save_connection_button").assertIsNotEnabled()
 
         onNodeWithTag("teamcity_token").performTextInput("token123")
-        onNodeWithTag("save_connection_button").assertIsEnabled()
-    }
-
-    @Test
-    fun `connection form Maven Central validation requires both fields`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")), MutableStateFlow(TeamId("test-team")))
-        setContent {
-            MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = {}) }
-        }
-
-        onNodeWithTag("connection_type_selector").performClick()
-        onNodeWithText("Maven Central").performClick()
-
-        onNodeWithTag("connection_name_field").performTextInput("Maven")
-        onNodeWithTag("maven_username").performTextInput("user")
-        onNodeWithTag("save_connection_button").assertIsNotEnabled()
-
-        onNodeWithTag("maven_password").performTextInput("pass")
         onNodeWithTag("save_connection_button").assertIsEnabled()
     }
 
@@ -305,8 +274,6 @@ class ConnectionScreensTest {
     private val slackConnectionJson = """{"connection":{"id":"c2","name":"Team Slack","type":"SLACK","config":{"type":"slack","webhookUrl":"https://hooks.slack.com/test"},"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}}"""
 
     private val teamCityConnectionJson = """{"connection":{"id":"c3","name":"My TC","type":"TEAMCITY","config":{"type":"teamcity","serverUrl":"https://tc.example.com","token":"tc_token","webhookSecret":"secret123"},"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}}"""
-
-    private val mavenConnectionJson = """{"connection":{"id":"c4","name":"Maven Repo","type":"MAVEN_CENTRAL","config":{"type":"maven_central","username":"user1","password":"pass1","baseUrl":"https://central.sonatype.com"},"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}}"""
 
     private fun editClient(connectionJson: String, connectionPath: String) = mockHttpClient(
         mapOf(
@@ -376,23 +343,6 @@ class ConnectionScreensTest {
         }
         onNodeWithTag("connection_name_field").assertTextContains("My TC")
         onNodeWithTag("teamcity_server_url").assertTextContains("https://tc.example.com")
-    }
-
-    @Test
-    fun `edit form pre-populates Maven Central connection fields`() = runComposeUiTest {
-        val vm = ConnectionsViewModel(ConnectionApiClient(editClient(mavenConnectionJson, "/connections/c4")), MutableStateFlow(TeamId("test-team")))
-        setContent {
-            MaterialTheme {
-                ConnectionFormScreen(viewModel = vm, connectionId = ConnectionId("c4"), onBack = {})
-            }
-        }
-
-        waitUntil(timeoutMillis = 3000L) {
-            onAllNodes(hasTestTag("connection_name_field") and hasText("Maven Repo")).fetchSemanticsNodes().isNotEmpty()
-        }
-        onNodeWithTag("connection_name_field").assertTextContains("Maven Repo")
-        onNodeWithTag("maven_username").assertTextContains("user1")
-        onNodeWithTag("maven_base_url").assertTextContains("https://central.sonatype.com")
     }
 
     @Test

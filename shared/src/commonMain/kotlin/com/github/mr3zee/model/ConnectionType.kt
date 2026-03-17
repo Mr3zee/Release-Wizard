@@ -7,5 +7,4 @@ enum class ConnectionType {
     SLACK,
     TEAMCITY,
     GITHUB,
-    MAVEN_CENTRAL,
 }

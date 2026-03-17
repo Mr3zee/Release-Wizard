@@ -159,7 +159,7 @@ class EmojiSerializationTest {
                     Block.ActionBlock(
                         id = BlockId("b1"),
                         name = "\uD83D\uDE80 Publish",
-                        type = BlockType.MAVEN_CENTRAL_PUBLICATION,
+                        type = BlockType.GITHUB_PUBLICATION,
                     ),
                 ),
             ),

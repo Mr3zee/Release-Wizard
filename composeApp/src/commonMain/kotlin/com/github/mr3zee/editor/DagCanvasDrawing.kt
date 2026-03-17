@@ -36,7 +36,6 @@ internal fun blockTypeColor(type: BlockType, colors: AppColors): Color = when (t
     BlockType.TEAMCITY_BUILD -> colors.teamcityBuild
     BlockType.GITHUB_ACTION -> colors.githubAction
     BlockType.GITHUB_PUBLICATION -> colors.githubPublication
-    BlockType.MAVEN_CENTRAL_PUBLICATION -> colors.mavenCentral
     BlockType.SLACK_MESSAGE -> colors.slackMessage
 }
 

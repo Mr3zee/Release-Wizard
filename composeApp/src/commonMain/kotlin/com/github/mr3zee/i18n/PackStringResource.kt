@@ -15,8 +15,6 @@ private val NEVER_OVERRIDE = setOf(
     "connections_tc_token",
     "connections_tc_webhook_secret",
     "connections_github_webhook_secret",
-    "connections_maven_password",
-    "connections_maven_base_url",
     "connections_slack_webhook_url",
     "connections_tc_server_url",
     "editor_template_button",

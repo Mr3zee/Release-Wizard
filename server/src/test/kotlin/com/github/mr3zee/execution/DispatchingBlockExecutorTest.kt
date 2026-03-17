@@ -74,16 +74,6 @@ class DispatchingBlockExecutorTest {
     }
 
     @Test
-    fun `routes to correct executor for MAVEN_CENTRAL_PUBLICATION`() = runBlocking {
-        val mavenExecutor = FakeExecutor(mapOf("status" to "PUBLISHED"))
-        val dispatcher = DispatchingBlockExecutor(mapOf(BlockType.MAVEN_CENTRAL_PUBLICATION to mavenExecutor))
-
-        val outputs = dispatcher.execute(block(BlockType.MAVEN_CENTRAL_PUBLICATION), emptyList(), context)
-        assertTrue(mavenExecutor.executeCalled)
-        assertEquals("PUBLISHED", outputs["status"])
-    }
-
-    @Test
     fun `unknown block type throws IllegalStateException`() = runBlocking {
         // Register only SLACK_MESSAGE executor, then try TEAMCITY_BUILD
         val dispatcher = DispatchingBlockExecutor(mapOf(BlockType.SLACK_MESSAGE to FakeExecutor()))

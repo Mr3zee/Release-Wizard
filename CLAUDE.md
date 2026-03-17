@@ -40,7 +40,7 @@ Dependencies flow: `composeApp` → `shared`, `server` → `shared`. No dependen
 
 ## Domain Model
 
-Blocks form a DAG. Each node is either a **Container** (holds a sub-graph) or an **Action block** (Slack Message, TeamCity Build, Maven Central Publication, GitHub Action, GitHub Publication, User Action). All domain models live in `shared/src/commonMain/.../model/`
+Blocks form a DAG. Each node is either a **Container** (holds a sub-graph) or an **Action block** (Slack Message, TeamCity Build, GitHub Action, GitHub Publication, User Action). All domain models live in `shared/src/commonMain/.../model/`
 
 ## Key Constraints
 
@@ -67,7 +67,6 @@ To make any changes, follow this workflow in order:
 7. **Write UI tests** — once behavior is confirmed, write automated `runComposeUiTest` tests in `composeApp/src/jvmTest/` (see jetpack-compose-expert skill).
 8. **Update findings** — update memory, CLAUDE.md, and relevant skills with learnings
 9. **Review findings** — review the documentation updates for accuracy
-10. **Commit** — commit all changes
 
 ## Updating Knowledge
 

@@ -158,7 +158,6 @@ private fun ConnectionConfig.masked(): ConnectionConfig = when (this) {
     is ConnectionConfig.SlackConfig -> copy(webhookUrl = mask(webhookUrl))
     is ConnectionConfig.TeamCityConfig -> copy(token = mask(token), webhookSecret = maskOptional(webhookSecret))
     is ConnectionConfig.GitHubConfig -> copy(token = mask(token), webhookSecret = maskOptional(webhookSecret))
-    is ConnectionConfig.MavenCentralConfig -> copy(password = mask(password))
 }
 
 private fun mask(value: String): String {

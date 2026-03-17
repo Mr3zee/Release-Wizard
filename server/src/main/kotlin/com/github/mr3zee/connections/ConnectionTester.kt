@@ -36,7 +36,6 @@ class ConnectionTester(
         is ConnectionConfig.SlackConfig -> testSlack(config)
         is ConnectionConfig.TeamCityConfig -> testTeamCity(config)
         is ConnectionConfig.GitHubConfig -> testGitHub(config)
-        is ConnectionConfig.MavenCentralConfig -> testMavenCentral(config)
     }
 
     private fun testSlack(config: ConnectionConfig.SlackConfig): ConnectionTestResult {
@@ -78,24 +77,6 @@ class ConnectionTester(
             } else {
                 ConnectionTestResult(success = false, message = "GitHub returned ${response.status}")
             }
-        } catch (e: Exception) {
-            ConnectionTestResult(success = false, message = "Failed to connect: ${e.message}")
-        }
-    }
-
-    private suspend fun testMavenCentral(config: ConnectionConfig.MavenCentralConfig): ConnectionTestResult {
-        return try {
-            validateUrlNotPrivate(config.baseUrl)
-            val response = httpClient.get("${config.baseUrl}/api/v1/publisher/status") {
-                basicAuth(config.username, config.password)
-            }
-            if (response.status.isSuccess()) {
-                ConnectionTestResult(success = true, message = "Connected to Maven Central")
-            } else {
-                ConnectionTestResult(success = false, message = "Maven Central returned ${response.status}")
-            }
-        } catch (e: IllegalArgumentException) {
-            ConnectionTestResult(success = false, message = e.message ?: "Invalid URL")
         } catch (e: Exception) {
             ConnectionTestResult(success = false, message = "Failed to connect: ${e.message}")
         }

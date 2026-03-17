@@ -63,10 +63,6 @@ fun ConnectionFormScreen(
     var githubOwner by remember(connectionId) { mutableStateOf("") }
     var githubRepo by remember(connectionId) { mutableStateOf("") }
     var githubWebhookSecret by remember(connectionId) { mutableStateOf("") }
-    var mavenUsername by remember(connectionId) { mutableStateOf("") }
-    var mavenPassword by remember(connectionId) { mutableStateOf("") }
-    var mavenBaseUrl by remember(connectionId) { mutableStateOf("https://central.sonatype.com") }
-
     // Track initial values to detect dirty state
     var initialName by remember(connectionId) { mutableStateOf("") }
     var initialSlackWebhookUrl by remember(connectionId) { mutableStateOf("") }
@@ -77,9 +73,6 @@ fun ConnectionFormScreen(
     var initialGithubOwner by remember(connectionId) { mutableStateOf("") }
     var initialGithubRepo by remember(connectionId) { mutableStateOf("") }
     var initialGithubWebhookSecret by remember(connectionId) { mutableStateOf("") }
-    var initialMavenUsername by remember(connectionId) { mutableStateOf("") }
-    var initialMavenPassword by remember(connectionId) { mutableStateOf("") }
-    var initialMavenBaseUrl by remember(connectionId) { mutableStateOf("https://central.sonatype.com") }
 
     val isDirty by remember {
         derivedStateOf {
@@ -91,10 +84,7 @@ fun ConnectionFormScreen(
                 githubToken != initialGithubToken ||
                 githubOwner != initialGithubOwner ||
                 githubRepo != initialGithubRepo ||
-                githubWebhookSecret != initialGithubWebhookSecret ||
-                mavenUsername != initialMavenUsername ||
-                mavenPassword != initialMavenPassword ||
-                mavenBaseUrl != initialMavenBaseUrl
+                githubWebhookSecret != initialGithubWebhookSecret
         }
     }
 
@@ -133,14 +123,6 @@ fun ConnectionFormScreen(
                     initialGithubRepo = config.repo
                     initialGithubWebhookSecret = config.webhookSecret
                 }
-                is ConnectionConfig.MavenCentralConfig -> {
-                    mavenUsername = config.username
-                    mavenPassword = config.password
-                    mavenBaseUrl = config.baseUrl
-                    initialMavenUsername = config.username
-                    initialMavenPassword = config.password
-                    initialMavenBaseUrl = config.baseUrl
-                }
             }
         }
     }
@@ -150,7 +132,7 @@ fun ConnectionFormScreen(
             buildConfig(
                 selectedType, slackWebhookUrl, teamCityServerUrl, teamCityToken,
                 teamCityWebhookSecret, githubToken, githubOwner, githubRepo,
-                githubWebhookSecret, mavenUsername, mavenPassword, mavenBaseUrl,
+                githubWebhookSecret,
             )
         }
     }
@@ -404,48 +386,6 @@ fun ConnectionFormScreen(
                         modifier = Modifier.fillMaxWidth().testTag("github_webhook_secret"),
                     )
                 }
-                ConnectionType.MAVEN_CENTRAL -> {
-                    var showMavenPassword by remember { mutableStateOf(false) }
-
-                    Text(
-                        text = packStringResource(Res.string.connections_section_maven),
-                        style = AppTypography.subheading,
-                        modifier = Modifier.testTag("section_header_maven"),
-                    )
-                    RwTextField(
-                        value = mavenUsername,
-                        onValueChange = { mavenUsername = it },
-                        label = packStringResource(Res.string.connections_maven_username),
-                        placeholder = packStringResource(Res.string.connections_maven_username),
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth().testTag("maven_username"),
-                    )
-                    RwTextField(
-                        value = mavenPassword,
-                        onValueChange = { mavenPassword = it },
-                        label = packStringResource(Res.string.connections_maven_password),
-                        placeholder = packStringResource(Res.string.connections_maven_password),
-                        singleLine = true,
-                        visualTransformation = if (showMavenPassword) VisualTransformation.None else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            RwIconButton(onClick = { showMavenPassword = !showMavenPassword }, modifier = Modifier.size(32.dp).testTag("maven_password_toggle_visibility")) {
-                                Icon(
-                                    if (showMavenPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    contentDescription = if (showMavenPassword) packStringResource(Res.string.connections_hide_password) else packStringResource(Res.string.connections_show_password),
-                                )
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth().testTag("maven_password"),
-                    )
-                    RwTextField(
-                        value = mavenBaseUrl,
-                        onValueChange = { mavenBaseUrl = it },
-                        label = packStringResource(Res.string.connections_maven_base_url),
-                        placeholder = packStringResource(Res.string.connections_maven_base_url),
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth().testTag("maven_base_url"),
-                    )
-                }
             }
 
             error?.let { errorMessage ->
@@ -496,9 +436,6 @@ private fun buildConfig(
     githubOwner: String,
     githubRepo: String,
     githubWebhookSecret: String,
-    mavenUsername: String,
-    mavenPassword: String,
-    mavenBaseUrl: String,
 ): ConnectionConfig = when (type) {
     ConnectionType.SLACK -> ConnectionConfig.SlackConfig(webhookUrl = slackWebhookUrl)
     ConnectionType.TEAMCITY -> ConnectionConfig.TeamCityConfig(
@@ -512,16 +449,10 @@ private fun buildConfig(
         repo = githubRepo,
         webhookSecret = githubWebhookSecret,
     )
-    ConnectionType.MAVEN_CENTRAL -> ConnectionConfig.MavenCentralConfig(
-        username = mavenUsername,
-        password = mavenPassword,
-        baseUrl = mavenBaseUrl,
-    )
 }
 
 private fun ConnectionConfig.isValid(): Boolean = when (this) {
     is ConnectionConfig.SlackConfig -> webhookUrl.isNotBlank()
     is ConnectionConfig.TeamCityConfig -> serverUrl.isNotBlank() && token.isNotBlank()
     is ConnectionConfig.GitHubConfig -> token.isNotBlank() && owner.isNotBlank() && repo.isNotBlank()
-    is ConnectionConfig.MavenCentralConfig -> username.isNotBlank() && password.isNotBlank() && baseUrl.isNotBlank()
 }

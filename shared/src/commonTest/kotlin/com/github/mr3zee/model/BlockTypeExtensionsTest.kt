@@ -11,7 +11,6 @@ class BlockTypeExtensionsTest {
         assertEquals(ConnectionType.TEAMCITY, BlockType.TEAMCITY_BUILD.requiredConnectionType())
         assertEquals(ConnectionType.GITHUB, BlockType.GITHUB_ACTION.requiredConnectionType())
         assertEquals(ConnectionType.GITHUB, BlockType.GITHUB_PUBLICATION.requiredConnectionType())
-        assertEquals(ConnectionType.MAVEN_CENTRAL, BlockType.MAVEN_CENTRAL_PUBLICATION.requiredConnectionType())
         assertEquals(ConnectionType.SLACK, BlockType.SLACK_MESSAGE.requiredConnectionType())
     }
 
@@ -24,7 +23,6 @@ class BlockTypeExtensionsTest {
     @Test
     fun `configIdParameterKey returns null for block types without config discovery`() {
         assertNull(BlockType.GITHUB_PUBLICATION.configIdParameterKey())
-        assertNull(BlockType.MAVEN_CENTRAL_PUBLICATION.configIdParameterKey())
         assertNull(BlockType.SLACK_MESSAGE.configIdParameterKey())
     }
 }

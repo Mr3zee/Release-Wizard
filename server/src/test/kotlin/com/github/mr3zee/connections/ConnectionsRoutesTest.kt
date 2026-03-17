@@ -202,10 +202,9 @@ class ConnectionsRoutesTest {
                 CreateConnectionRequest(
                     name = "Test Conn",
                     teamId = teamId,
-                    type = ConnectionType.MAVEN_CENTRAL,
-                    config = ConnectionConfig.MavenCentralConfig(
-                        username = "user",
-                        password = "pass123",
+                    type = ConnectionType.SLACK,
+                    config = ConnectionConfig.SlackConfig(
+                        webhookUrl = "https://hooks.slack.com/services/T00/B00/xxx",
                     ),
                 )
             )

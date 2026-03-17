@@ -16,7 +16,6 @@ fun BlockType.displayName(): String = packStringResource(
         BlockType.TEAMCITY_BUILD -> Res.string.block_type_teamcity_build
         BlockType.GITHUB_ACTION -> Res.string.block_type_github_action
         BlockType.GITHUB_PUBLICATION -> Res.string.block_type_github_publication
-        BlockType.MAVEN_CENTRAL_PUBLICATION -> Res.string.block_type_maven_central
         BlockType.SLACK_MESSAGE -> Res.string.block_type_slack_message
     }
 )
@@ -28,7 +27,6 @@ fun Block.typeLabel(): String = when (this) {
             BlockType.TEAMCITY_BUILD -> Res.string.block_label_teamcity_build
             BlockType.GITHUB_ACTION -> Res.string.block_label_github_action
             BlockType.GITHUB_PUBLICATION -> Res.string.block_label_github_publication
-            BlockType.MAVEN_CENTRAL_PUBLICATION -> Res.string.block_label_maven_central
             BlockType.SLACK_MESSAGE -> Res.string.block_label_slack_message
         }
     )
@@ -72,6 +70,5 @@ fun ConnectionType.displayName(): String = packStringResource(
         ConnectionType.GITHUB -> Res.string.connection_type_github
         ConnectionType.SLACK -> Res.string.connection_type_slack
         ConnectionType.TEAMCITY -> Res.string.connection_type_teamcity
-        ConnectionType.MAVEN_CENTRAL -> Res.string.connection_type_maven_central
     }
 )

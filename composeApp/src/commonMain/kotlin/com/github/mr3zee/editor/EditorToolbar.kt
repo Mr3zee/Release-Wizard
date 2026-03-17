@@ -168,7 +168,6 @@ private fun defaultBlockName(type: BlockType): String = when (type) {
     BlockType.TEAMCITY_BUILD -> "Build"
     BlockType.GITHUB_ACTION -> "Action"
     BlockType.GITHUB_PUBLICATION -> "Publish"
-    BlockType.MAVEN_CENTRAL_PUBLICATION -> "Maven Central"
     BlockType.SLACK_MESSAGE -> "Notify"
 }
 

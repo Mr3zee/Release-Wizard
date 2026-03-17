@@ -90,9 +90,6 @@
     <string name="connections_github_owner">Owner</string>
     <string name="connections_github_repo">Repository</string>
     <string name="connections_github_webhook_secret">Webhook Secret (optional)</string>
-    <string name="connections_maven_username">Username</string>
-    <string name="connections_maven_password">Password</string>
-    <string name="connections_maven_base_url">Base URL</string>
     <string name="connections_test_succeeded">Connection test succeeded: %1$s</string>
     <string name="connections_test_failed">Test failed: %1$s</string>
 
@@ -110,14 +107,12 @@
     <string name="block_type_teamcity_build">TeamCity Build</string>
     <string name="block_type_github_action">GitHub Action</string>
     <string name="block_type_github_publication">GitHub Publication</string>
-    <string name="block_type_maven_central">Maven Central</string>
     <string name="block_type_slack_message">Slack Message</string>
 
     <!-- ==================== Editor: Block Type Labels (canvas) ==================== -->
     <string name="block_label_teamcity_build">teamcity build</string>
     <string name="block_label_github_action">github action</string>
     <string name="block_label_github_publication">github publication</string>
-    <string name="block_label_maven_central">maven central</string>
     <string name="block_label_slack_message">slack message</string>
     <string name="block_label_container">container</string>
 
@@ -235,7 +230,6 @@
     <string name="connection_type_github">GitHub</string>
     <string name="connection_type_slack">Slack</string>
     <string name="connection_type_teamcity">TeamCity</string>
-    <string name="connection_type_maven_central">Maven Central</string>
 
     <!-- ==================== Releases: Status Display Names ==================== -->
     <string name="releases_status_pending">Pending</string>
@@ -316,7 +310,6 @@
     <string name="connections_section_slack">Slack Configuration</string>
     <string name="connections_section_teamcity">TeamCity Configuration</string>
     <string name="connections_section_github">GitHub Configuration</string>
-    <string name="connections_section_maven">Maven Central Configuration</string>
 
     <!-- ==================== Connections: Password Toggle ==================== -->
     <string name="connections_hide_password">Hide password</string>

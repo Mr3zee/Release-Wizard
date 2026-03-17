@@ -52,8 +52,8 @@ class RecoveryTest {
                 status = ReleaseStatus.RUNNING,
                 dagSnapshot = DagGraph(
                     blocks = listOf(
-                        Block.ActionBlock(id = BlockId("a"), name = "A", type = BlockType.MAVEN_CENTRAL_PUBLICATION),
-                        Block.ActionBlock(id = BlockId("b"), name = "B", type = BlockType.MAVEN_CENTRAL_PUBLICATION),
+                        Block.ActionBlock(id = BlockId("a"), name = "A", type = BlockType.SLACK_MESSAGE),
+                        Block.ActionBlock(id = BlockId("b"), name = "B", type = BlockType.SLACK_MESSAGE),
                     ),
                     edges = listOf(Edge(fromBlockId = BlockId("a"), toBlockId = BlockId("b"))),
                 ),
@@ -109,8 +109,8 @@ class RecoveryTest {
                 status = ReleaseStatus.RUNNING,
                 dagSnapshot = DagGraph(
                     blocks = listOf(
-                        Block.ActionBlock(id = BlockId("a"), name = "A", type = BlockType.MAVEN_CENTRAL_PUBLICATION),
-                        Block.ActionBlock(id = BlockId("b"), name = "B", type = BlockType.MAVEN_CENTRAL_PUBLICATION),
+                        Block.ActionBlock(id = BlockId("a"), name = "A", type = BlockType.SLACK_MESSAGE),
+                        Block.ActionBlock(id = BlockId("b"), name = "B", type = BlockType.SLACK_MESSAGE),
                     ),
                     edges = listOf(Edge(fromBlockId = BlockId("a"), toBlockId = BlockId("b"))),
                 ),
@@ -152,7 +152,7 @@ class RecoveryTest {
                 status = ReleaseStatus.SUCCEEDED,
                 dagSnapshot = DagGraph(
                     blocks = listOf(
-                        Block.ActionBlock(id = BlockId("a"), name = "A", type = BlockType.MAVEN_CENTRAL_PUBLICATION),
+                        Block.ActionBlock(id = BlockId("a"), name = "A", type = BlockType.SLACK_MESSAGE),
                     ),
                 ),
                 startedAt = Clock.System.now(),
