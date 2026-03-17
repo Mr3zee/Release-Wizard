@@ -2,6 +2,7 @@ package com.github.mr3zee.execution
 
 import com.github.mr3zee.AppJson
 import com.github.mr3zee.execution.executors.BuildPollingService
+import com.github.mr3zee.execution.executors.QueueTimeoutException
 import com.github.mr3zee.model.SubBuild
 import com.github.mr3zee.model.SubBuildStatus
 import io.ktor.client.*
@@ -13,10 +14,12 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 class BuildPollingServiceTest {
 
@@ -386,6 +389,110 @@ class BuildPollingServiceTest {
         )
 
         assertTrue(jobs.isEmpty(), "Should return empty list when rate limited")
+    }
+
+    // --- Queue timeout ---
+
+    @Test
+    fun `TC poll throws QueueTimeoutException when build stays queued`() = runBlocking {
+        val client = mockClient { request ->
+            val url = request.url.toString()
+            if (url.contains("/app/rest/builds/id:42")) {
+                respond(
+                    """{"state":"queued","status":null}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+            } else {
+                respond("{}", HttpStatusCode.OK)
+            }
+        }
+
+        val service = BuildPollingService(client)
+
+        val exception = assertFailsWith<QueueTimeoutException> {
+            service.pollTeamCityBuild(
+                serverUrl = "https://tc.example.com",
+                token = "test-token",
+                buildId = "42",
+                intervalSeconds = 1,
+                queueTimeout = 3.seconds,
+            )
+        }
+
+        assertTrue(exception.message?.contains("queue") == true)
+        assertTrue(exception.message?.contains("42") == true)
+    }
+
+    @Test
+    fun `GH poll throws QueueTimeoutException when run stays queued`() = runBlocking {
+        val client = mockClient { request ->
+            val url = request.url.toString()
+            if (url.contains("/actions/runs/789")) {
+                respond(
+                    """{"status":"queued","conclusion":null,"html_url":"https://github.com/o/r/actions/runs/789"}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+            } else {
+                respond("{}", HttpStatusCode.OK)
+            }
+        }
+
+        val service = BuildPollingService(client)
+
+        val exception = assertFailsWith<QueueTimeoutException> {
+            service.pollGitHubRun(
+                owner = "o",
+                repo = "r",
+                token = "ghp_test",
+                runId = "789",
+                intervalSeconds = 1,
+                queueTimeout = 3.seconds,
+            )
+        }
+
+        assertTrue(exception.message?.contains("queue") == true)
+        assertTrue(exception.message?.contains("789") == true)
+    }
+
+    @Test
+    fun `TC queue timeout resets once build starts running`() = runBlocking {
+        var pollCount = 0
+
+        val client = mockClient { request ->
+            val url = request.url.toString()
+            if (url.contains("/app/rest/builds/id:42")) {
+                pollCount++
+                val responseBody = when {
+                    pollCount <= 2 -> """{"state":"queued","status":null}"""
+                    pollCount <= 5 -> """{"state":"running","status":null}"""
+                    else -> """{"state":"finished","status":"SUCCESS","number":"build-42"}"""
+                }
+                respond(
+                    responseBody,
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+            } else {
+                respond("{}", HttpStatusCode.OK)
+            }
+        }
+
+        val service = BuildPollingService(client)
+
+        val result = withTimeoutOrNull(30_000.milliseconds) {
+            service.pollTeamCityBuild(
+                serverUrl = "https://tc.example.com",
+                token = "test-token",
+                buildId = "42",
+                intervalSeconds = 1,
+                queueTimeout = 30.seconds,
+            )
+        } ?: error("TC poll timed out")
+
+        assertEquals("SUCCESS", result["buildStatus"])
+        assertTrue(pollCount >= 6, "Should have polled through queued, running, and finished states")
     }
 
     // --- Sub-build discovery failure ---

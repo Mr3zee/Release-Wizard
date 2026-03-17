@@ -10,7 +10,16 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.serialization.json.*
 import org.slf4j.LoggerFactory
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
+
+/**
+ * Thrown when a build stays in the queue longer than the allowed timeout.
+ */
+class QueueTimeoutException(message: String) : RuntimeException(message)
 
 /**
  * Service for polling TeamCity and GitHub APIs for build/run status.
@@ -34,8 +43,11 @@ class BuildPollingService(
         token: String,
         buildId: String,
         intervalSeconds: Int,
+        queueTimeout: Duration = QUEUE_TIMEOUT,
         onUpdate: suspend (state: String, status: String?) -> Unit = { _, _ -> },
     ): Map<String, String> {
+        var queuedSince: TimeMark? = null
+
         while (true) {
             val json = fetchTeamCityBuild(serverUrl, token, buildId) ?: run {
                 delay(intervalSeconds.seconds)
@@ -45,6 +57,20 @@ class BuildPollingService(
             val state = json["state"]?.jsonPrimitive?.content ?: "unknown"
             val status = json["status"]?.jsonPrimitive?.content
             onUpdate(state, status)
+
+            if (state == "queued") {
+                if (queuedSince == null) {
+                    queuedSince = TimeSource.Monotonic.markNow()
+                }
+                val elapsed = queuedSince.elapsedNow()
+                if (elapsed >= queueTimeout) {
+                    throw QueueTimeoutException(
+                        "TeamCity build $buildId stayed in queue for over $queueTimeout"
+                    )
+                }
+            } else {
+                queuedSince = null
+            }
 
             if (state == "finished") {
                 val buildNumber = json["number"]?.jsonPrimitive?.content ?: buildId
@@ -245,6 +271,10 @@ class BuildPollingService(
         }
     }
 
+    companion object {
+        val QUEUE_TIMEOUT: Duration = 20.minutes
+    }
+
     private fun mapGitHubJobStatus(status: String?, conclusion: String?): SubBuildStatus = when {
         status == "queued" || status == "waiting" -> SubBuildStatus.QUEUED
         status == "in_progress" -> SubBuildStatus.RUNNING
@@ -268,9 +298,12 @@ class BuildPollingService(
         token: String,
         runId: String,
         intervalSeconds: Int,
+        queueTimeout: Duration = QUEUE_TIMEOUT,
         onUpdate: suspend (status: String, conclusion: String?) -> Unit = { _, _ -> },
     ): Map<String, String> {
         val baseUrl = "https://api.github.com/repos/$owner/$repo"
+        var queuedSince: TimeMark? = null
+
         while (true) {
             try {
                 val response = httpClient.get("$baseUrl/actions/runs/$runId") {
@@ -293,6 +326,20 @@ class BuildPollingService(
 
                     onUpdate(status, conclusion)
 
+                    if (status == "queued" || status == "waiting") {
+                        if (queuedSince == null) {
+                            queuedSince = TimeSource.Monotonic.markNow()
+                        }
+                        val elapsed = queuedSince.elapsedNow()
+                        if (elapsed >= queueTimeout) {
+                            throw QueueTimeoutException(
+                                "GitHub Actions run $runId stayed in queue for over $queueTimeout"
+                            )
+                        }
+                    } else {
+                        queuedSince = null
+                    }
+
                     if (status == "completed") {
                         return mapOf(
                             "runId" to runId,
@@ -303,6 +350,8 @@ class BuildPollingService(
                     }
                 }
             } catch (e: CancellationException) {
+                throw e
+            } catch (e: QueueTimeoutException) {
                 throw e
             } catch (e: Exception) {
                 log.debug("GitHub run poll failed for {}: {}", runId, e.message)
