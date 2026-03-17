@@ -33,5 +33,6 @@ sealed class Block {
         val connectionId: ConnectionId? = null,
         val preGate: Gate? = null,
         val postGate: Gate? = null,
+        val injectWebhookUrl: Boolean = false,
     ) : Block()
 }

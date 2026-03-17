@@ -6,6 +6,7 @@ import com.github.mr3zee.execution.executors.GitHubActionExecutor
 import com.github.mr3zee.execution.executors.TeamCityArtifactService
 import com.github.mr3zee.execution.executors.TeamCityBuildExecutor
 import com.github.mr3zee.model.*
+import com.github.mr3zee.WebhookConfig
 import com.github.mr3zee.webhooks.*
 import io.ktor.client.*
 import io.ktor.client.engine.mock.*
@@ -19,6 +20,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Clock
 
@@ -574,6 +577,259 @@ class AsyncExecutorsTest {
         }
         val message = e.message ?: error("IllegalArgumentException should have a message")
         assertTrue(message.contains("workflowFile"))
+    }
+
+    // --- TeamCity Webhook URL Injection ---
+
+    @Test
+    fun `teamcity executor includes webhook params when injectWebhookUrl is true`() = runBlocking {
+        var capturedBody: String? = null
+
+        val client = mockClient { request ->
+            capturedBody = request.body.toByteArray().decodeToString()
+            respond(
+                """{"id":"42","buildTypeId":"bt1","state":"queued"}""",
+                HttpStatusCode.OK,
+                headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+            )
+        }
+
+        val webhookRepo = InMemoryPendingWebhookRepository()
+        val connectionsRepo = FakeConnectionsRepository()
+        val webhookService = WebhookService(webhookRepo, connectionsRepo)
+
+        val releasesRepo = InMemoryReleasesRepository()
+        val stubExecutor = StubBlockExecutor()
+        val engineScope = CoroutineScope(SupervisorJob())
+        val engine = ExecutionEngine(releasesRepo, stubExecutor, connectionsRepo, engineScope)
+        val statusWebhookService = StatusWebhookService(
+            InMemoryStatusWebhookTokenRepository(),
+            releasesRepo,
+            engine,
+            WebhookConfig(baseUrl = "http://localhost:8080"),
+        )
+
+        val executor = TeamCityBuildExecutor(client, webhookRepo, webhookService, statusWebhookService = statusWebhookService)
+
+        val block = Block.ActionBlock(
+            id = BlockId("tc-webhook"),
+            name = "Build",
+            type = BlockType.TEAMCITY_BUILD,
+            connectionId = ConnectionId("conn-1"),
+            injectWebhookUrl = true,
+        )
+
+        val outputsDeferred = async {
+            executor.execute(
+                block = block,
+                parameters = listOf(Parameter(key = "buildTypeId", value = "bt1")),
+                context = context(
+                    config = ConnectionConfig.TeamCityConfig(
+                        serverUrl = "https://tc.example.com",
+                        token = "tc-token",
+                    ),
+                ),
+            )
+        }
+
+        waitUntil {
+            webhookRepo.findByConnectionIdAndType(ConnectionId("conn-1"), WebhookType.TEAMCITY).isNotEmpty()
+        }
+
+        val body = capturedBody ?: error("Request body should have been captured")
+        assertTrue(body.contains(TeamCityBuildExecutor.WEBHOOK_URL_PARAM), "XML should contain webhook URL param")
+        assertTrue(body.contains(TeamCityBuildExecutor.WEBHOOK_TOKEN_PARAM), "XML should contain webhook token param")
+        assertTrue(body.contains("http://localhost:8080"), "XML should contain the webhook base URL")
+
+        // Complete the webhook to let the executor finish
+        val pendingWebhooks = webhookRepo.findByConnectionIdAndType(ConnectionId("conn-1"), WebhookType.TEAMCITY)
+        webhookService.emitCompletion(
+            WebhookCompletion(
+                webhookId = pendingWebhooks[0].id,
+                blockId = block.id,
+                releaseId = ReleaseId("release-1"),
+                type = WebhookType.TEAMCITY,
+                payload = """{"buildNumber":"42","buildStatus":"SUCCESS"}""",
+            )
+        )
+        outputsDeferred.await()
+        engineScope.cancel()
+    }
+
+    @Test
+    fun `teamcity executor does NOT include webhook params when injectWebhookUrl is false`() = runBlocking {
+        var capturedBody: String? = null
+
+        val client = mockClient { request ->
+            capturedBody = request.body.toByteArray().decodeToString()
+            respond(
+                """{"id":"42","buildTypeId":"bt1","state":"queued"}""",
+                HttpStatusCode.OK,
+                headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+            )
+        }
+
+        val webhookRepo = InMemoryPendingWebhookRepository()
+        val connectionsRepo = FakeConnectionsRepository()
+        val webhookService = WebhookService(webhookRepo, connectionsRepo)
+        val executor = TeamCityBuildExecutor(client, webhookRepo, webhookService)
+
+        val block = Block.ActionBlock(
+            id = BlockId("tc-no-webhook"),
+            name = "Build",
+            type = BlockType.TEAMCITY_BUILD,
+            connectionId = ConnectionId("conn-1"),
+            injectWebhookUrl = false,
+        )
+
+        val outputsDeferred = async {
+            executor.execute(
+                block = block,
+                parameters = listOf(Parameter(key = "buildTypeId", value = "bt1")),
+                context = context(
+                    config = ConnectionConfig.TeamCityConfig(
+                        serverUrl = "https://tc.example.com",
+                        token = "tc-token",
+                    ),
+                ),
+            )
+        }
+
+        waitUntil {
+            webhookRepo.findByConnectionIdAndType(ConnectionId("conn-1"), WebhookType.TEAMCITY).isNotEmpty()
+        }
+
+        val body = capturedBody ?: error("Request body should have been captured")
+        assertFalse(body.contains(TeamCityBuildExecutor.WEBHOOK_URL_PARAM), "XML should NOT contain webhook URL param")
+        assertFalse(body.contains(TeamCityBuildExecutor.WEBHOOK_TOKEN_PARAM), "XML should NOT contain webhook token param")
+
+        // Complete the webhook to let the executor finish
+        val pendingWebhooks = webhookRepo.findByConnectionIdAndType(ConnectionId("conn-1"), WebhookType.TEAMCITY)
+        webhookService.emitCompletion(
+            WebhookCompletion(
+                webhookId = pendingWebhooks[0].id,
+                blockId = block.id,
+                releaseId = ReleaseId("release-1"),
+                type = WebhookType.TEAMCITY,
+                payload = """{"buildNumber":"42","buildStatus":"SUCCESS"}""",
+            )
+        )
+        outputsDeferred.await()
+        Unit
+    }
+
+    // --- Resume: webhook token deactivation ---
+
+    @Test
+    fun `teamcity executor deactivates webhook token after resume with completed webhook`() = runBlocking<Unit> {
+        val client = mockClient { respond(
+            """{"id":"42","buildTypeId":"bt1","state":"queued"}""",
+            HttpStatusCode.OK,
+            headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+        )}
+
+        val webhookRepo = InMemoryPendingWebhookRepository()
+        val connectionsRepo = FakeConnectionsRepository()
+        val webhookService = WebhookService(webhookRepo, connectionsRepo)
+
+        val releasesRepo = InMemoryReleasesRepository()
+        val stubExecutor = StubBlockExecutor()
+        val engineScope = CoroutineScope(SupervisorJob())
+        val engine = ExecutionEngine(releasesRepo, stubExecutor, connectionsRepo, engineScope)
+        val tokenRepo = InMemoryStatusWebhookTokenRepository()
+        val statusWebhookService = StatusWebhookService(
+            tokenRepo,
+            releasesRepo,
+            engine,
+            WebhookConfig(baseUrl = "http://localhost:8080"),
+        )
+
+        val block = Block.ActionBlock(
+            id = BlockId("tc-resume"),
+            name = "Build",
+            type = BlockType.TEAMCITY_BUILD,
+            connectionId = ConnectionId("conn-1"),
+            injectWebhookUrl = true,
+        )
+
+        val releaseId = ReleaseId("release-1")
+        val ctx = context(config = ConnectionConfig.TeamCityConfig(
+            serverUrl = "https://tc.example.com",
+            token = "tc-token",
+        ))
+
+        // Pre-create a token (as if execute() created one before crash)
+        val token = statusWebhookService.createToken(releaseId, block.id)
+
+        // Pre-insert a COMPLETED webhook (as if the TC webhook arrived while server was down)
+        val pendingWebhook = webhookRepo.create(
+            externalId = "42",
+            blockId = block.id,
+            releaseId = releaseId,
+            connectionId = ConnectionId("conn-1"),
+            type = WebhookType.TEAMCITY,
+        )
+        webhookRepo.updateStatus(pendingWebhook.id, WebhookStatus.COMPLETED, """{"buildNumber":"42","buildStatus":"SUCCESS"}""")
+
+        val executor = TeamCityBuildExecutor(client, webhookRepo, webhookService, statusWebhookService = statusWebhookService)
+
+        // Call resume — should detect COMPLETED webhook and return outputs
+        val outputs = executor.resume(block, listOf(Parameter(key = "buildTypeId", value = "bt1")), ctx)
+
+        assertEquals("42", outputs["buildNumber"])
+        assertEquals("SUCCESS", outputs["buildStatus"])
+
+        // Verify the token was deactivated
+        val tokenRecord = tokenRepo.findByToken(token)
+        assertNotNull(tokenRecord, "Token record should still exist")
+        assertFalse(tokenRecord.active, "Token should have been deactivated after resume")
+
+        engineScope.cancel()
+    }
+
+    // --- BlockExecution Serialization ---
+
+    @Test
+    fun `BlockExecution serialization backward compatibility — without webhookStatus`() {
+        val json = """
+            {
+                "blockId": "b-1",
+                "releaseId": "r-1",
+                "status": "RUNNING",
+                "outputs": {},
+                "approvals": []
+            }
+        """.trimIndent()
+
+        val execution = AppJson.decodeFromString<BlockExecution>(json)
+        assertEquals(BlockId("b-1"), execution.blockId)
+        assertEquals(ReleaseId("r-1"), execution.releaseId)
+        assertEquals(BlockStatus.RUNNING, execution.status)
+        assertNull(execution.webhookStatus, "webhookStatus should be null when absent from JSON")
+    }
+
+    @Test
+    fun `BlockExecution serialization round-trip — with webhookStatus`() {
+        val now = Clock.System.now()
+        val original = BlockExecution(
+            blockId = BlockId("b-2"),
+            releaseId = ReleaseId("r-2"),
+            status = BlockStatus.RUNNING,
+            webhookStatus = WebhookStatusUpdate(
+                status = "COMPILING",
+                description = "Step 3 of 5",
+                receivedAt = now,
+            ),
+        )
+
+        val encoded = AppJson.encodeToString(original)
+        val decoded = AppJson.decodeFromString<BlockExecution>(encoded)
+
+        assertEquals(original, decoded)
+        val webhookStatus = decoded.webhookStatus ?: error("webhookStatus should not be null after round-trip")
+        assertEquals("COMPILING", webhookStatus.status)
+        assertEquals("Step 3 of 5", webhookStatus.description)
+        assertEquals(now, webhookStatus.receivedAt)
     }
 }
 

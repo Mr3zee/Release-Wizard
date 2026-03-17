@@ -12,6 +12,8 @@ data class TeamCityTestConfig(
     val buildTypeId: String,
     /** ID of a completed build known to have artifacts. Used by artifact listing tests. */
     val artifactBuildId: String? = null,
+    /** ID of the build type that POSTs 3 status updates for webhook integration tests. */
+    val webhookBuildTypeId: String? = null,
 ) {
     companion object {
         fun loadOrNull(): TeamCityTestConfig? {
@@ -21,12 +23,14 @@ data class TeamCityTestConfig(
                 val token = props.getProperty("teamcity.test.token")
                 val buildTypeId = props.getProperty("teamcity.test.buildTypeId")
                 val artifactBuildId = props.getProperty("teamcity.test.artifactBuildId")
+                val webhookBuildTypeId = props.getProperty("teamcity.test.webhookBuildTypeId")
                 if (!serverUrl.isNullOrBlank() && !token.isNullOrBlank() && !buildTypeId.isNullOrBlank()) {
                     return TeamCityTestConfig(
                         serverUrl = serverUrl.trimEnd('/'),
                         token = token,
                         buildTypeId = buildTypeId,
                         artifactBuildId = artifactBuildId?.takeIf { it.isNotBlank() },
+                        webhookBuildTypeId = webhookBuildTypeId?.takeIf { it.isNotBlank() },
                     )
                 }
             }
@@ -35,6 +39,7 @@ data class TeamCityTestConfig(
             val token = System.getenv("TEAMCITY_TEST_TOKEN")
             val buildTypeId = System.getenv("TEAMCITY_TEST_BUILD_TYPE_ID")
             val artifactBuildId = System.getenv("TEAMCITY_TEST_ARTIFACT_BUILD_ID")
+            val webhookBuildTypeId = System.getenv("TEAMCITY_TEST_WEBHOOK_BUILD_TYPE_ID")
             if (serverUrl.isNullOrBlank() || token.isNullOrBlank() || buildTypeId.isNullOrBlank()) {
                 return null
             }
@@ -44,6 +49,7 @@ data class TeamCityTestConfig(
                 token = token,
                 buildTypeId = buildTypeId,
                 artifactBuildId = artifactBuildId?.takeIf { it.isNotBlank() },
+                webhookBuildTypeId = webhookBuildTypeId?.takeIf { it.isNotBlank() },
             )
         }
     }

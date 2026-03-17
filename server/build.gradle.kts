@@ -85,8 +85,67 @@ sourceSets {
 configurations["integrationTestImplementation"].extendsFrom(configurations["testImplementation"])
 configurations["integrationTestRuntimeOnly"].extendsFrom(configurations["testRuntimeOnly"])
 
+dependencies {
+    // CIO server engine for integration tests — daemon threads, clean shutdown (unlike Netty)
+    "integrationTestImplementation"(libs.ktor.serverCio)
+}
+
+// --- ngrok binary download via Gradle dependency resolution ---
+
+// Determine OS + arch classifier for the ngrok binary
+val ngrokClassifier: String by lazy {
+    val osName = System.getProperty("os.name").lowercase()
+    val osArch = System.getProperty("os.arch").lowercase()
+    val platform = when {
+        osName.contains("mac") || osName.contains("darwin") -> "darwin"
+        osName.contains("linux") -> "linux"
+        osName.contains("win") -> "windows"
+        else -> error("Unsupported OS for ngrok: $osName")
+    }
+    val arch = when {
+        osArch.contains("aarch64") || osArch.contains("arm64") -> "arm64"
+        osArch.contains("amd64") || osArch.contains("x86_64") || osArch == "x64" -> "amd64"
+        else -> error("Unsupported arch for ngrok: $osArch")
+    }
+    "$platform-$arch"
+}
+
+val ngrokBinaryName: String by lazy {
+    if (System.getProperty("os.name").lowercase().contains("win")) "ngrok.exe" else "ngrok"
+}
+
+// Ngrok binary resolved as a Gradle dependency via the Ivy repo defined in settings.gradle.kts
+val ngrok by configurations.creating {
+    isTransitive = false
+}
+
+dependencies {
+    ngrok("ngrok:ngrok:v3-stable:$ngrokClassifier@zip")
+}
+
+// Extract ngrok binary from the resolved zip
+val extractNgrok = tasks.register<Copy>("extractNgrok") {
+    from(zipTree(ngrok.singleFile))
+    into(layout.buildDirectory.dir("ngrok"))
+    // Make the binary executable on Unix
+    filePermissions {
+        unix("rwxr-xr-x")
+    }
+}
+
 tasks.register<Test>("integrationTest") {
+    dependsOn(extractNgrok)
     testClassesDirs = sourceSets["integrationTest"].output.classesDirs
     classpath = sourceSets["integrationTest"].runtimeClasspath
     useJUnit()
+
+    // Pass the ngrok binary path to the test runner
+    val ngrokPath = layout.buildDirectory.dir("ngrok").map { it.file(ngrokBinaryName).asFile.absolutePath }
+    systemProperty("ngrok.path", ngrokPath.get())
+
+    // Disable Ktor's JVM shutdown hook — tests manage server lifecycle explicitly in @After
+    systemProperty("io.ktor.server.engine.ShutdownHook", "false")
+
+    // Fork a new JVM per test class — ensures clean shutdown
+    forkEvery = 1
 }

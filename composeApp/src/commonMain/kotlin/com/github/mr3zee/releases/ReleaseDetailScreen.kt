@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.RwButton
@@ -338,6 +339,9 @@ private fun BlockDetailPanel(
                 }
             }
 
+            // Webhook status update section
+            WebhookStatusSection(block = block, execution = execution)
+
             execution.error?.let { errorMsg ->
                 Spacer(modifier = Modifier.height(Spacing.sm))
                 ErrorDetailSection(
@@ -447,6 +451,68 @@ private fun BlockDetailPanel(
                     Text(packStringResource(Res.string.common_approve))
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun WebhookStatusSection(block: Block, execution: BlockExecution) {
+    val webhookStatus = execution.webhookStatus
+    val isWebhookEnabled = (block as? Block.ActionBlock)?.injectWebhookUrl == true
+
+    if (webhookStatus != null) {
+        Spacer(modifier = Modifier.height(Spacing.sm))
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            shape = MaterialTheme.shapes.small,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("webhook_status_card"),
+        ) {
+            Column(modifier = Modifier.padding(Spacing.sm)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text = webhookStatus.status,
+                        style = AppTypography.body.copy(fontWeight = FontWeight.Medium),
+                        modifier = Modifier.weight(1f).testTag("webhook_status_text"),
+                    )
+                    val time = webhookStatus.receivedAt.toLocalDateTime(TimeZone.currentSystemDefault())
+                    Text(
+                        text = "${time.hour.toString().padStart(2, '0')}:${time.minute.toString().padStart(2, '0')}:${time.second.toString().padStart(2, '0')}",
+                        style = AppTypography.caption,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                val desc = webhookStatus.description
+                if (!desc.isNullOrBlank()) {
+                    Text(
+                        text = desc,
+                        style = AppTypography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+    } else if (isWebhookEnabled) {
+        Spacer(modifier = Modifier.height(Spacing.sm))
+        val text = when (execution.status) {
+            BlockStatus.RUNNING -> packStringResource(Res.string.releases_webhook_no_updates_running)
+            BlockStatus.SUCCEEDED, BlockStatus.FAILED -> packStringResource(Res.string.releases_webhook_no_updates_finished)
+            else -> null
+        }
+
+        if (text != null) {
+            Text(
+                text = text,
+                style = AppTypography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testTag("webhook_status_placeholder"),
+            )
         }
     }
 }

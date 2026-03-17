@@ -1,5 +1,6 @@
 package com.github.mr3zee.execution
 
+import com.github.mr3zee.WebhookConfig
 import com.github.mr3zee.model.*
 import com.github.mr3zee.releases.ReleasesRepository
 import com.github.mr3zee.webhooks.*
@@ -10,6 +11,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.yield
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -18,6 +20,7 @@ import kotlin.test.fail
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Instant
 
 class RecoveryTest {
 
@@ -28,7 +31,13 @@ class RecoveryTest {
         val executor = StubBlockExecutor()
         val scope = CoroutineScope(SupervisorJob())
         val engine = ExecutionEngine(releasesRepo, executor, connectionsRepo, scope)
-        val recoveryService = RecoveryService(releasesRepo, webhookRepo, engine)
+        val statusWebhookService = StatusWebhookService(
+            InMemoryStatusWebhookTokenRepository(),
+            releasesRepo,
+            engine,
+            WebhookConfig(baseUrl = "http://localhost:8080"),
+        )
+        val recoveryService = RecoveryService(releasesRepo, webhookRepo, engine, statusWebhookService)
         return TestSetup(releasesRepo, webhookRepo, engine, recoveryService, executor, scope)
     }
 
@@ -505,6 +514,30 @@ class InMemoryReleasesRepository : ReleasesRepository {
             }
         }
     }
+
+    override suspend fun updateWebhookStatus(
+        releaseId: ReleaseId,
+        blockId: BlockId,
+        status: String,
+        description: String?,
+        receivedAt: kotlin.time.Instant,
+    ): BlockExecution? {
+        synchronized(lock) {
+            val idx = executions.indexOfFirst {
+                it.releaseId == releaseId && it.blockId == blockId && it.status == BlockStatus.RUNNING
+            }
+            if (idx < 0) return null
+            val updated = executions[idx].copy(
+                webhookStatus = WebhookStatusUpdate(
+                    status = status,
+                    description = description,
+                    receivedAt = receivedAt,
+                )
+            )
+            executions[idx] = updated
+            return updated
+        }
+    }
 }
 
 /**
@@ -588,5 +621,50 @@ class InMemoryWebhookRepo : PendingWebhookRepository {
         val before = webhooks.size
         webhooks.removeAll { it.status == WebhookStatus.COMPLETED && it.updatedAt < cutoff }
         return before - webhooks.size
+    }
+}
+
+/**
+ * In-memory StatusWebhookTokenRepository for tests.
+ */
+class InMemoryStatusWebhookTokenRepository : StatusWebhookTokenRepository {
+    private val tokens = mutableListOf<StatusWebhookToken>()
+
+    /** Insert a token with a custom createdAt for TTL testing. */
+    fun insertWithCreatedAt(releaseId: ReleaseId, blockId: BlockId, createdAt: kotlin.time.Instant): UUID {
+        val token = UUID.randomUUID()
+        tokens.add(StatusWebhookToken(token, releaseId, blockId, active = true, createdAt = createdAt))
+        return token
+    }
+
+    override suspend fun create(releaseId: ReleaseId, blockId: BlockId): UUID {
+        val token = UUID.randomUUID()
+        tokens.add(StatusWebhookToken(token, releaseId, blockId, active = true, createdAt = Clock.System.now()))
+        return token
+    }
+
+    override suspend fun findByToken(token: UUID): StatusWebhookToken? =
+        tokens.find { it.token == token }
+
+    override suspend fun deactivate(releaseId: ReleaseId, blockId: BlockId) {
+        val idx = tokens.indexOfFirst { it.releaseId == releaseId && it.blockId == blockId && it.active }
+        if (idx >= 0) tokens[idx] = tokens[idx].copy(active = false)
+    }
+
+    override suspend fun deactivateExpiredBefore(cutoff: Instant): Int {
+        var count = 0
+        for (i in tokens.indices) {
+            if (tokens[i].active && tokens[i].createdAt < cutoff) {
+                tokens[i] = tokens[i].copy(active = false)
+                count++
+            }
+        }
+        return count
+    }
+
+    override suspend fun deleteInactiveBefore(cutoff: Instant): Int {
+        val before = tokens.size
+        tokens.removeAll { !it.active && it.createdAt < cutoff }
+        return before - tokens.size
     }
 }

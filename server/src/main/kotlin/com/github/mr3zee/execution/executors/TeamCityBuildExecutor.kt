@@ -34,6 +34,7 @@ class TeamCityBuildExecutor(
     private val webhookRepository: PendingWebhookRepository,
     private val webhookService: WebhookService,
     private val artifactService: TeamCityArtifactService? = null,
+    private val statusWebhookService: StatusWebhookService? = null,
 ) : BlockExecutor {
 
     private val log = LoggerFactory.getLogger(TeamCityBuildExecutor::class.java)
@@ -54,25 +55,34 @@ class TeamCityBuildExecutor(
         return when {
             webhook != null && webhook.status == WebhookStatus.COMPLETED && webhook.payload != null -> {
                 // Webhook already arrived — parse and return outputs
-                val baseOutputs = parseCompletionPayload(webhook.payload, webhook.externalId, config.serverUrl)
-                baseOutputs + fetchArtifactOutputs(parameters, config, webhook.externalId)
+                try {
+                    val baseOutputs = parseCompletionPayload(webhook.payload, webhook.externalId, config.serverUrl)
+                    baseOutputs + fetchArtifactOutputs(parameters, config, webhook.externalId)
+                } finally {
+                    deactivateTokenIfNeeded(block, context)
+                }
             }
             webhook != null && webhook.status == WebhookStatus.PENDING -> {
                 // Webhook registered but not yet received — subscribe and wait
-                coroutineScope {
-                    val completionDeferred = async(start = CoroutineStart.UNDISPATCHED) {
-                        withTimeoutOrNull(WEBHOOK_TIMEOUT_MS.milliseconds) {
-                            webhookService.completions.first { it.blockId == block.id && it.releaseId == context.releaseId }
+                try {
+                    coroutineScope {
+                        val completionDeferred = async(start = CoroutineStart.UNDISPATCHED) {
+                            withTimeoutOrNull(WEBHOOK_TIMEOUT_MS.milliseconds) {
+                                webhookService.completions.first { it.blockId == block.id && it.releaseId == context.releaseId }
+                            }
                         }
+                        val completion = completionDeferred.await()
+                            ?: throw RuntimeException("TeamCity webhook timed out after ${WEBHOOK_TIMEOUT_MS / 60_000}min")
+                        val baseOutputs = parseCompletionPayload(completion.payload, webhook.externalId, config.serverUrl)
+                        baseOutputs + fetchArtifactOutputs(parameters, config, webhook.externalId)
                     }
-                    val completion = completionDeferred.await()
-                        ?: throw RuntimeException("TeamCity webhook timed out after ${WEBHOOK_TIMEOUT_MS / 60_000}min")
-                    val baseOutputs = parseCompletionPayload(completion.payload, webhook.externalId, config.serverUrl)
-                    baseOutputs + fetchArtifactOutputs(parameters, config, webhook.externalId)
+                } finally {
+                    deactivateTokenIfNeeded(block, context)
                 }
             }
             else -> {
                 // No webhook record — trigger never happened, re-execute
+                // execute() has its own finally block for token deactivation
                 execute(block, parameters, context)
             }
         }
@@ -96,6 +106,20 @@ class TeamCityBuildExecutor(
             it.key !in SYSTEM_PARAMETER_KEYS && it.key.isNotBlank() && it.value.isNotBlank()
         }
 
+        // If webhook URL injection is enabled, create a token and add webhook params
+        val webhookParams = if (block.injectWebhookUrl && statusWebhookService != null) {
+            val token = statusWebhookService.createToken(context.releaseId, block.id)
+            val url = statusWebhookService.webhookUrl()
+            listOf(
+                Parameter(key = WEBHOOK_URL_PARAM, value = url),
+                Parameter(key = WEBHOOK_TOKEN_PARAM, value = token.toString()),
+            )
+        } else {
+            emptyList()
+        }
+
+        val allCustomParams = customParams + webhookParams
+
         // Trigger build with XML-escaped parameters
         val xmlBody = buildString {
             append("""<build>""")
@@ -103,9 +127,9 @@ class TeamCityBuildExecutor(
             if (branch != null) {
                 append("""<branchName>${escapeXml(branch)}</branchName>""")
             }
-            if (customParams.isNotEmpty()) {
+            if (allCustomParams.isNotEmpty()) {
                 append("<properties>")
-                for (param in customParams) {
+                for (param in allCustomParams) {
                     append("""<property name="${escapeXml(param.key)}" value="${escapeXml(param.value)}"/>""")
                 }
                 append("</properties>")
@@ -148,10 +172,20 @@ class TeamCityBuildExecutor(
                 type = WebhookType.TEAMCITY,
             )
 
-            val completion = completionDeferred.await()
-                ?: throw RuntimeException("TeamCity webhook timed out after ${WEBHOOK_TIMEOUT_MS / 60_000}min")
-            val baseOutputs = parseCompletionPayload(completion.payload, buildId, config.serverUrl)
-            baseOutputs + fetchArtifactOutputs(parameters, config, buildId)
+            try {
+                val completion = completionDeferred.await()
+                    ?: throw RuntimeException("TeamCity webhook timed out after ${WEBHOOK_TIMEOUT_MS / 60_000}min")
+                val baseOutputs = parseCompletionPayload(completion.payload, buildId, config.serverUrl)
+                baseOutputs + fetchArtifactOutputs(parameters, config, buildId)
+            } finally {
+                deactivateTokenIfNeeded(block, context)
+            }
+        }
+    }
+
+    private suspend fun deactivateTokenIfNeeded(block: Block.ActionBlock, context: ExecutionContext) {
+        if (block.injectWebhookUrl) {
+            statusWebhookService?.deactivateToken(context.releaseId, block.id)
         }
     }
 
@@ -202,6 +236,9 @@ class TeamCityBuildExecutor(
 
     companion object {
         const val WEBHOOK_TIMEOUT_MS = 30 * 60 * 1000L // 30 minutes
+
+        const val WEBHOOK_URL_PARAM = "env.RELEASE_WIZARD_WEBHOOK_URL"
+        const val WEBHOOK_TOKEN_PARAM = "env.RELEASE_WIZARD_WEBHOOK_TOKEN"
 
         private val SYSTEM_PARAMETER_KEYS = setOf(
             "buildTypeId", "branch", "artifactsGlob", "artifactsMaxDepth", "artifactsMaxFiles",

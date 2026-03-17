@@ -39,6 +39,7 @@ class PostgresIntegrationTest {
 
     private suspend fun HttpClient.createTestProject(
         name: String = "Test Project",
+        teamId: TeamId,
         blocks: List<Block> = listOf(
             Block.ActionBlock(
                 id = BlockId("block-a"),
@@ -54,6 +55,7 @@ class PostgresIntegrationTest {
             setBody(
                 CreateProjectRequest(
                     name = name,
+                    teamId = teamId,
                     dagGraph = DagGraph(blocks = blocks, edges = edges),
                     parameters = parameters,
                 )
@@ -82,7 +84,7 @@ class PostgresIntegrationTest {
     fun `create project, start release, and await completion against real Postgres`() = testApplication {
         application { postgresTestModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         // Create project with a sequential DAG: A -> B
         val blocks = listOf(
@@ -94,6 +96,7 @@ class PostgresIntegrationTest {
         )
         val project = client.createTestProject(
             name = "E2E Test Project",
+            teamId = teamId,
             blocks = blocks,
             edges = edges,
         )
@@ -117,10 +120,10 @@ class PostgresIntegrationTest {
     fun `create and delete project against real Postgres`() = testApplication {
         application { postgresTestModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         // Create a project
-        val project = client.createTestProject(name = "To Delete")
+        val project = client.createTestProject(name = "To Delete", teamId = teamId)
         assertNotNull(project.id)
         assertEquals("To Delete", project.name)
 
@@ -141,7 +144,7 @@ class PostgresIntegrationTest {
     fun `release rerun creates a new release against real Postgres`() = testApplication {
         application { postgresTestModule() }
         val client = jsonClient()
-        client.login()
+        val teamId = client.loginAndCreateTeam()
 
         // Create a project
         val blocks = listOf(
@@ -149,6 +152,7 @@ class PostgresIntegrationTest {
         )
         val project = client.createTestProject(
             name = "Rerun Test",
+            teamId = teamId,
             blocks = blocks,
         )
 

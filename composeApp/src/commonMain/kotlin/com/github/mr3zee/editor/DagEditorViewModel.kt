@@ -445,6 +445,10 @@ class DagEditorViewModel(
         updateActionBlock(blockId) { it.copy(timeoutSeconds = timeoutSeconds) }
     }
 
+    fun updateBlockInjectWebhookUrl(blockId: BlockId, inject: Boolean) {
+        updateActionBlock(blockId) { it.copy(injectWebhookUrl = inject) }
+    }
+
     fun updateBlockPreGate(blockId: BlockId, gate: Gate?) {
         updateActionBlock(blockId) { it.copy(preGate = gate) }
     }

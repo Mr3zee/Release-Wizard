@@ -77,6 +77,7 @@ object ApiRoutes {
 
     object Webhooks {
         const val BASE = "$API_V1/webhooks"
+        const val STATUS = "$BASE/status"
         fun teamcity(connectionId: String) = "$BASE/teamcity/$connectionId"
         fun github(connectionId: String) = "$BASE/github/$connectionId"
     }

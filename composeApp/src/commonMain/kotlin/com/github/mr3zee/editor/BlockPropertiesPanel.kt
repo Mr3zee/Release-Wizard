@@ -45,6 +45,7 @@ fun BlockPropertiesPanel(
     onUpdateTimeout: (BlockId, Long?) -> Unit,
     onUpdatePreGate: (BlockId, Gate?) -> Unit,
     onUpdatePostGate: (BlockId, Gate?) -> Unit,
+    onUpdateInjectWebhookUrl: (BlockId, Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
@@ -107,6 +108,7 @@ fun BlockPropertiesPanel(
                     onUpdateTimeout = onUpdateTimeout,
                     onUpdatePreGate = onUpdatePreGate,
                     onUpdatePostGate = onUpdatePostGate,
+                    onUpdateInjectWebhookUrl = onUpdateInjectWebhookUrl,
                     enabled = enabled,
                 )
             }
@@ -145,6 +147,7 @@ private fun ActionBlockProperties(
     onUpdateTimeout: (BlockId, Long?) -> Unit,
     onUpdatePreGate: (BlockId, Gate?) -> Unit,
     onUpdatePostGate: (BlockId, Gate?) -> Unit,
+    onUpdateInjectWebhookUrl: (BlockId, Boolean) -> Unit = { _, _ -> },
     enabled: Boolean = true,
 ) {
     // Type selector
@@ -247,6 +250,33 @@ private fun ActionBlockProperties(
             onRefresh = { onRefreshConfigs(block.id) },
         )
 
+        Spacer(Modifier.height(Spacing.md))
+    }
+
+    // Status webhook injection (TeamCity builds only)
+    if (block.type == BlockType.TEAMCITY_BUILD) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            RwCheckbox(
+                checked = block.injectWebhookUrl,
+                onCheckedChange = { checked ->
+                    onUpdateInjectWebhookUrl(block.id, checked)
+                },
+                enabled = enabled,
+                modifier = Modifier.testTag("inject_webhook_url_checkbox"),
+            )
+            Text(
+                packStringResource(Res.string.editor_inject_webhook_label),
+                style = AppTypography.label,
+            )
+        }
+        Text(
+            packStringResource(Res.string.editor_inject_webhook_hint),
+            style = AppTypography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         Spacer(Modifier.height(Spacing.md))
     }
 

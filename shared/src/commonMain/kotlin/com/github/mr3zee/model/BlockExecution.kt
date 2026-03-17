@@ -15,6 +15,7 @@ data class BlockExecution(
     val approvals: List<BlockApproval> = emptyList(),
     val gatePhase: GatePhase? = null,
     val gateMessage: String? = null,
+    val webhookStatus: WebhookStatusUpdate? = null,
 ) {
     companion object {
         /** Key in [outputs] for JSON-encoded artifact paths list. */

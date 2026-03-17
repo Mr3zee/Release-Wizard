@@ -40,6 +40,7 @@ fun initDatabase(ds: DataSource): Database {
             TriggerTable,
             ReleaseTagTable,
             ProjectLockTable,
+            StatusWebhookTokenTable,
         )
     }
     return database

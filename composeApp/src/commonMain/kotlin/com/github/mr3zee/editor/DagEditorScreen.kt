@@ -305,6 +305,7 @@ fun DagEditorScreen(
                     onUpdateTimeout = { id, timeout -> viewModel.updateBlockTimeout(id, timeout) },
                     onUpdatePreGate = { id, gate -> viewModel.updateBlockPreGate(id, gate) },
                     onUpdatePostGate = { id, gate -> viewModel.updateBlockPostGate(id, gate) },
+                    onUpdateInjectWebhookUrl = { id, inject -> viewModel.updateBlockInjectWebhookUrl(id, inject) },
                     enabled = !isReadOnly,
                 )
             }

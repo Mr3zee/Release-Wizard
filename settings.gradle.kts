@@ -25,6 +25,17 @@ dependencyResolutionManagement {
             }
         }
         mavenCentral()
+        // ngrok binary download — Ivy repo mapping to ngrok's CDN
+        // URL pattern: https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-<platform>-<arch>.zip
+        ivy {
+            name = "ngrok-cdn"
+            url = uri("https://bin.equinox.io/c/bNyj1mQVY4c")
+            patternLayout {
+                artifact("[module]-v3-stable-[classifier].[ext]")
+            }
+            metadataSources { artifact() }
+            content { includeGroup("ngrok") }
+        }
     }
 }
 

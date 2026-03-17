@@ -5,6 +5,7 @@ import com.github.mr3zee.persistence.BlockExecutionTable
 import com.github.mr3zee.persistence.ProjectTemplateTable
 import com.github.mr3zee.persistence.ReleaseTable
 import com.github.mr3zee.persistence.ReleaseTagTable
+import com.github.mr3zee.persistence.StatusWebhookTokenTable
 import com.github.mr3zee.persistence.likeContains
 import com.github.mr3zee.persistence.safeOffset
 import kotlinx.coroutines.Dispatchers
@@ -33,6 +34,8 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
     }
 
     private fun ResultRow.toBlockExecution(): BlockExecution {
+        val wsStatus = this[BlockExecutionTable.webhookStatus]
+        val wsAt = this[BlockExecutionTable.webhookStatusAt]
         return BlockExecution(
             blockId = BlockId(this[BlockExecutionTable.blockId]),
             releaseId = ReleaseId(this[BlockExecutionTable.releaseId].value.toString()),
@@ -44,6 +47,13 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
             approvals = this[BlockExecutionTable.approvals],
             gatePhase = this[BlockExecutionTable.gatePhase],
             gateMessage = this[BlockExecutionTable.gateMessage],
+            webhookStatus = if (wsStatus != null && wsAt != null) {
+                WebhookStatusUpdate(
+                    status = wsStatus,
+                    description = this[BlockExecutionTable.webhookStatusDescription],
+                    receivedAt = wsAt,
+                )
+            } else null,
         )
     }
 
@@ -267,14 +277,18 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
     }
 
     override suspend fun delete(id: ReleaseId): Boolean = dbQuery {
+        val releaseUuid = UUID.fromString(id.value)
+        StatusWebhookTokenTable.deleteWhere {
+            StatusWebhookTokenTable.releaseId eq releaseUuid
+        }
         BlockExecutionTable.deleteWhere {
-            BlockExecutionTable.releaseId eq UUID.fromString(id.value)
+            BlockExecutionTable.releaseId eq releaseUuid
         }
         ReleaseTagTable.deleteWhere {
-            ReleaseTagTable.releaseId eq UUID.fromString(id.value)
+            ReleaseTagTable.releaseId eq releaseUuid
         }
         val deleted = ReleaseTable.deleteWhere {
-            ReleaseTable.id eq UUID.fromString(id.value)
+            ReleaseTable.id eq releaseUuid
         }
         deleted > 0
     }
@@ -338,6 +352,9 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
                 it[BlockExecutionTable.approvals] = emptyList()
                 it[BlockExecutionTable.gatePhase] = null
                 it[BlockExecutionTable.gateMessage] = null
+                it[BlockExecutionTable.webhookStatus] = null
+                it[BlockExecutionTable.webhookStatusDescription] = null
+                it[BlockExecutionTable.webhookStatusAt] = null
             },
         ) { block ->
             this[BlockExecutionTable.id] = UUID.randomUUID()
@@ -351,7 +368,38 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
             this[BlockExecutionTable.approvals] = emptyList()
             this[BlockExecutionTable.gatePhase] = null
             this[BlockExecutionTable.gateMessage] = null
+            this[BlockExecutionTable.webhookStatus] = null
+            this[BlockExecutionTable.webhookStatusDescription] = null
+            this[BlockExecutionTable.webhookStatusAt] = null
         }
         Unit
+    }
+
+    override suspend fun updateWebhookStatus(
+        releaseId: ReleaseId,
+        blockId: BlockId,
+        status: String,
+        description: String?,
+        receivedAt: kotlin.time.Instant,
+    ): BlockExecution? = dbQuery {
+        val releaseUuid = UUID.fromString(releaseId.value)
+        val updated = BlockExecutionTable.update({
+            (BlockExecutionTable.releaseId eq releaseUuid) and
+                (BlockExecutionTable.blockId eq blockId.value) and
+                (BlockExecutionTable.status eq BlockStatus.RUNNING)
+        }) {
+            it[BlockExecutionTable.webhookStatus] = status
+            it[BlockExecutionTable.webhookStatusDescription] = description
+            it[BlockExecutionTable.webhookStatusAt] = receivedAt
+        }
+        if (updated > 0) {
+            BlockExecutionTable.selectAll()
+                .where {
+                    (BlockExecutionTable.releaseId eq releaseUuid) and
+                        (BlockExecutionTable.blockId eq blockId.value)
+                }
+                .singleOrNull()
+                ?.toBlockExecution()
+        } else null
     }
 }

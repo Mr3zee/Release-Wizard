@@ -122,6 +122,8 @@
     <string name="editor_prop_name">Name</string>
     <string name="editor_prop_type">Type</string>
     <string name="editor_prop_container_type">Container block</string>
+    <string name="editor_inject_webhook_label">Enable build status reporting</string>
+    <string name="editor_inject_webhook_hint">Build can POST status updates to RELEASE_WIZARD_WEBHOOK_URL</string>
     <string name="editor_prop_timeout">Timeout (seconds)</string>
     <string name="editor_prop_parameters">Parameters</string>
     <string name="editor_prop_add_parameter">+ Add Parameter</string>
@@ -207,6 +209,9 @@
     <string name="releases_approve_fallback_name">Step</string>
     <string name="releases_approve_default_message">Approve this step? The pipeline will continue.</string>
     <string name="releases_block_status">Status: %1$s</string>
+    <string name="releases_webhook_status_label">Build Status</string>
+    <string name="releases_webhook_no_updates_running">No status updates received yet</string>
+    <string name="releases_webhook_no_updates_finished">No status updates were reported by this build</string>
     <string name="releases_block_outputs">Outputs:</string>
     <string name="releases_block_output_entry">%1$s: %2$s</string>
     <string name="releases_approval_progress">%1$d of %2$d approvals</string>

@@ -43,6 +43,9 @@ object BlockExecutionTable : UUIDTable("block_executions") {
     val approvals = jsonb("approvals", AppJson, ListSerializer(BlockApproval.serializer()))
     val gatePhase = enumerationByName<GatePhase>("gate_phase", 32).nullable()
     val gateMessage = text("gate_message").nullable()
+    val webhookStatus = varchar("webhook_status", 200).nullable()
+    val webhookStatusDescription = text("webhook_status_description").nullable()
+    val webhookStatusAt = timestamp("webhook_status_at").nullable()
 
     init {
         index(false, releaseId)

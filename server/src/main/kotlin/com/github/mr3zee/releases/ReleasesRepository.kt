@@ -1,6 +1,7 @@
 package com.github.mr3zee.releases
 
 import com.github.mr3zee.model.*
+import kotlin.time.Instant
 
 interface ReleasesRepository {
     suspend fun batchUpsertBlockExecutions(releaseId: ReleaseId, blocks: List<Block>) {
@@ -64,4 +65,17 @@ interface ReleasesRepository {
     suspend fun findBlockExecutions(releaseId: ReleaseId): List<BlockExecution>
     suspend fun findBlockExecution(releaseId: ReleaseId, blockId: BlockId): BlockExecution?
     suspend fun upsertBlockExecution(execution: BlockExecution)
+
+    /**
+     * Atomically updates only the webhook status columns on a block execution.
+     * Only succeeds if the block is currently RUNNING (prevents overwriting terminal states).
+     * Returns the updated [BlockExecution] or null if the block was not RUNNING.
+     */
+    suspend fun updateWebhookStatus(
+        releaseId: ReleaseId,
+        blockId: BlockId,
+        status: String,
+        description: String?,
+        receivedAt: Instant,
+    ): BlockExecution?
 }
