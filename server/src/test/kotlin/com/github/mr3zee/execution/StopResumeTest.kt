@@ -33,7 +33,7 @@ class StopResumeTest {
         val statusWebhookService = StatusWebhookService(
             InMemoryStatusWebhookTokenRepository(),
             releasesRepo,
-            engine,
+            lazyOf(engine),
             WebhookConfig(baseUrl = "http://localhost:8080"),
         )
         val recoveryService = RecoveryService(releasesRepo, engine, statusWebhookService)

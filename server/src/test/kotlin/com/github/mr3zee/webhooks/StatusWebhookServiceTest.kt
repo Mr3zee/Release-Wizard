@@ -37,7 +37,7 @@ class StatusWebhookServiceTest {
     private val scope = CoroutineScope(SupervisorJob())
     private val engine = ExecutionEngine(releasesRepo, executor, connectionsRepo, scope)
     private val webhookConfig = WebhookConfig(baseUrl = "https://example.com")
-    private val service = StatusWebhookService(tokenRepo, releasesRepo, engine, webhookConfig)
+    private val service = StatusWebhookService(tokenRepo, releasesRepo, lazyOf(engine), webhookConfig)
 
     @AfterTest
     fun tearDown() {

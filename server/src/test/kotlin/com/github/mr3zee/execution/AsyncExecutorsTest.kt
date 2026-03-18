@@ -564,7 +564,7 @@ class AsyncExecutorsTest {
         val statusWebhookService = StatusWebhookService(
             InMemoryStatusWebhookTokenRepository(),
             releasesRepo,
-            engine,
+            lazyOf(engine),
             WebhookConfig(baseUrl = "http://localhost:8080"),
         )
 
@@ -688,7 +688,7 @@ class AsyncExecutorsTest {
         val statusWebhookService = StatusWebhookService(
             tokenRepo,
             releasesRepo,
-            engine,
+            lazyOf(engine),
             WebhookConfig(baseUrl = "http://localhost:8080"),
         )
 

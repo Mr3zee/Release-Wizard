@@ -16,7 +16,7 @@ import kotlin.time.Duration.Companion.hours
 class StatusWebhookService(
     private val tokenRepository: StatusWebhookTokenRepository,
     private val releasesRepository: ReleasesRepository,
-    private val executionEngine: ExecutionEngine,
+    private val executionEngineProvider: Lazy<ExecutionEngine>,
     private val webhookConfig: WebhookConfig,
 ) {
     private val log = LoggerFactory.getLogger(StatusWebhookService::class.java)
@@ -68,7 +68,7 @@ class StatusWebhookService(
             return StatusWebhookResult.NotFound
         }
 
-        executionEngine.emitBlockUpdate(tokenRecord.releaseId, updated)
+        executionEngineProvider.value.emitBlockUpdate(tokenRecord.releaseId, updated)
         log.debug("Status webhook update accepted: release={} block={} status={}",
             tokenRecord.releaseId.value, tokenRecord.blockId.value, truncatedStatus)
 

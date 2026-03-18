@@ -138,7 +138,7 @@ class WebhookStatusIntegrationTest {
         testScope = scope
         val engine = ExecutionEngine(releasesRepo, executor, connectionsRepo, scope)
         val webhookConfig = WebhookConfig(baseUrl = "http://localhost:$port") // placeholder, will be replaced with ngrok URL
-        val statusService = StatusWebhookService(tokenRepo, releasesRepo, engine, webhookConfig)
+        val statusService = StatusWebhookService(tokenRepo, releasesRepo, lazyOf(engine), webhookConfig)
 
         // 4. Create a release + RUNNING block execution
         val blockId = BlockId("webhook-test-block")
