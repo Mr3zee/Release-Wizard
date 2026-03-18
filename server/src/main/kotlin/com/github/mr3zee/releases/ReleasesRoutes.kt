@@ -63,6 +63,30 @@ fun Route.releaseRoutes() {
                 call.respond(ReleaseResponse(release, executions))
             }
 
+            post("/stop") {
+                val id = call.requireReleaseId()
+                val stopped = service.stopRelease(id, call.userSession())
+                if (!stopped) {
+                    throw IllegalArgumentException("Cannot stop release: ${id.value}")
+                }
+                val release = service.getRelease(id)
+                    ?: throw NotFoundException("Release not found after stop: ${id.value}")
+                val executions = service.getBlockExecutions(id)
+                call.respond(ReleaseResponse(release, executions))
+            }
+
+            post("/resume") {
+                val id = call.requireReleaseId()
+                val resumed = service.resumeRelease(id, call.userSession())
+                if (!resumed) {
+                    throw IllegalArgumentException("Cannot resume release: ${id.value}")
+                }
+                val release = service.getRelease(id)
+                    ?: throw NotFoundException("Release not found after resume: ${id.value}")
+                val executions = service.getBlockExecutions(id)
+                call.respond(ReleaseResponse(release, executions))
+            }
+
             post("/cancel") {
                 val id = call.requireReleaseId()
                 val cancelled = service.cancelRelease(id, call.userSession())
@@ -104,6 +128,19 @@ fun Route.releaseRoutes() {
             }
 
             route("/blocks/{blockId}") {
+                post("/stop") {
+                    val releaseId = call.requireReleaseId()
+                    val blockId = call.requireBlockId()
+                    val stopped = service.stopBlock(releaseId, blockId, call.userSession())
+                    if (!stopped) {
+                        throw IllegalArgumentException("Cannot stop block: ${blockId.value}")
+                    }
+                    val release = service.getRelease(releaseId)
+                        ?: throw NotFoundException("Release not found after block stop: ${releaseId.value}")
+                    val executions = service.getBlockExecutions(releaseId)
+                    call.respond(ReleaseResponse(release, executions))
+                }
+
                 post("/restart") {
                     val releaseId = call.requireReleaseId()
                     val blockId = call.requireBlockId()

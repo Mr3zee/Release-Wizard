@@ -172,6 +172,26 @@ class GitHubActionExecutor(
         val ref: String,
     )
 
+    override suspend fun cancel(block: Block.ActionBlock, context: ExecutionContext) {
+        val connectionId = block.connectionId ?: return
+        val config = context.connections[connectionId] as? ConnectionConfig.GitHubConfig ?: return
+        val runId = context.blockOutputs[block.id]?.get(INTERNAL_RUN_ID_KEY) ?: return
+
+        try {
+            val response = httpClient.post(
+                "https://api.github.com/repos/${config.owner}/${config.repo}/actions/runs/$runId/cancel"
+            ) {
+                header("Authorization", "Bearer ${config.token}")
+                header("Accept", "application/vnd.github+json")
+            }
+            log.info("GitHub Actions run {} cancel response: {}", runId, response.status)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("Failed to cancel GitHub Actions run {}: {}", runId, e.message)
+        }
+    }
+
     companion object {
         const val INTERNAL_RUN_ID_KEY = "_ghRunId"
         const val RUN_DISCOVERY_RETRIES = 3

@@ -485,6 +485,36 @@ class InMemoryReleasesRepository : ReleasesRepository {
         subBuilds: List<SubBuild>,
     ): Boolean = false
 
+    override suspend fun batchStopBlocks(releaseId: ReleaseId, blockIds: Set<BlockId>, finishedAt: kotlin.time.Instant) {
+        synchronized(lock) {
+            for (i in executions.indices) {
+                val exec = executions[i]
+                if (exec.releaseId == releaseId && exec.blockId in blockIds) {
+                    executions[i] = exec.copy(status = BlockStatus.STOPPED, finishedAt = finishedAt)
+                }
+            }
+        }
+        updateStatus(releaseId, ReleaseStatus.STOPPED)
+    }
+
+    override suspend fun batchResumeBlocks(releaseId: ReleaseId, blockIds: Set<BlockId>) {
+        synchronized(lock) {
+            for (i in executions.indices) {
+                val exec = executions[i]
+                if (exec.releaseId == releaseId && exec.blockId in blockIds) {
+                    executions[i] = exec.copy(
+                        status = BlockStatus.WAITING,
+                        startedAt = null,
+                        finishedAt = null,
+                        error = null,
+                        outputs = emptyMap(),
+                    )
+                }
+            }
+        }
+        updateStatus(releaseId, ReleaseStatus.RUNNING)
+    }
+
     override suspend fun updateWebhookStatus(
         releaseId: ReleaseId,
         blockId: BlockId,

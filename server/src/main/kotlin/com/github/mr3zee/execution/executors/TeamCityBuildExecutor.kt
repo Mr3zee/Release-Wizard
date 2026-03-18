@@ -204,6 +204,28 @@ class TeamCityBuildExecutor(
         }
     }
 
+    override suspend fun cancel(block: Block.ActionBlock, context: ExecutionContext) {
+        val connectionId = block.connectionId ?: return
+        val config = context.connections[connectionId] as? ConnectionConfig.TeamCityConfig ?: return
+        val buildId = context.blockOutputs[block.id]?.get(INTERNAL_BUILD_ID_KEY) ?: return
+
+        try {
+            val response = httpClient.post("${config.serverUrl}/app/rest/builds/id:$buildId") {
+                header("Authorization", "Bearer ${config.token}")
+                header("Accept", "application/json")
+                contentType(ContentType.Application.Xml)
+                setBody("""<buildCancelRequest comment="Stopped by Release Wizard" readdIntoQueue="false"/>""")
+            }
+            log.info("TeamCity build {} cancel response: {}", buildId, response.status)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("Failed to cancel TeamCity build {}: {}", buildId, e.message)
+        }
+
+        deactivateTokenIfNeeded(block, context)
+    }
+
     companion object {
         const val INTERNAL_BUILD_ID_KEY = "_tcBuildId"
 

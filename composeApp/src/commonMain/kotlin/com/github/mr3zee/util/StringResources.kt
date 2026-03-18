@@ -40,6 +40,7 @@ fun ReleaseStatus.displayName(): String = packStringResource(
         ReleaseStatus.RUNNING -> Res.string.releases_status_running
         ReleaseStatus.SUCCEEDED -> Res.string.releases_status_succeeded
         ReleaseStatus.FAILED -> Res.string.releases_status_failed
+        ReleaseStatus.STOPPED -> Res.string.releases_status_stopped
         ReleaseStatus.CANCELLED -> Res.string.releases_status_cancelled
         ReleaseStatus.ARCHIVED -> Res.string.releases_status_archived
     }
@@ -61,6 +62,7 @@ fun BlockStatus.displayName(): String = packStringResource(
         BlockStatus.SUCCEEDED -> Res.string.block_status_succeeded
         BlockStatus.FAILED -> Res.string.block_status_failed
         BlockStatus.WAITING_FOR_INPUT -> Res.string.block_status_waiting_for_input
+        BlockStatus.STOPPED -> Res.string.block_status_stopped
     }
 )
 

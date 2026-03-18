@@ -41,6 +41,9 @@ fun ReleaseDetailScreen(
     error: UiMessage? = null,
     onBack: () -> Unit,
     onCancel: () -> Unit,
+    onStopRelease: () -> Unit,
+    onResumeRelease: () -> Unit,
+    onStopBlock: (BlockId) -> Unit,
     onRerun: () -> Unit,
     onArchive: () -> Unit,
     onApproveBlock: (BlockId) -> Unit,
@@ -49,6 +52,8 @@ fun ReleaseDetailScreen(
 ) {
     var selectedBlockId by remember(release?.id) { mutableStateOf<BlockId?>(null) }
     var showCancelConfirmation by remember { mutableStateOf(false) }
+    var showStopConfirmation by remember { mutableStateOf(false) }
+    var showStopBlockConfirmation by remember { mutableStateOf<BlockId?>(null) }
     var showApproveConfirmation by remember { mutableStateOf<BlockId?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -93,6 +98,70 @@ fun ReleaseDetailScreen(
                 }
             },
             modifier = Modifier.testTag("cancel_confirmation_dialog"),
+        )
+    }
+
+    // Stop release confirmation dialog
+    if (showStopConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showStopConfirmation = false },
+            title = { Text(packStringResource(Res.string.releases_stop_title)) },
+            text = { Text(packStringResource(Res.string.releases_stop_body)) },
+            confirmButton = {
+                RwButton(
+                    onClick = {
+                        showStopConfirmation = false
+                        onStopRelease()
+                    },
+                    modifier = Modifier.testTag("confirm_stop_button"),
+                    variant = RwButtonVariant.Ghost,
+                    contentColor = MaterialTheme.colorScheme.error,
+                ) {
+                    Text(packStringResource(Res.string.releases_stop_confirm))
+                }
+            },
+            dismissButton = {
+                RwButton(
+                    onClick = { showStopConfirmation = false },
+                    modifier = Modifier.testTag("dismiss_stop_button"),
+                    variant = RwButtonVariant.Ghost,
+                ) {
+                    Text(packStringResource(Res.string.releases_keep_running))
+                }
+            },
+            modifier = Modifier.testTag("stop_confirmation_dialog"),
+        )
+    }
+
+    // Stop block confirmation dialog
+    showStopBlockConfirmation?.let { blockId ->
+        AlertDialog(
+            onDismissRequest = { showStopBlockConfirmation = null },
+            title = { Text(packStringResource(Res.string.releases_stop_block_title)) },
+            text = { Text(packStringResource(Res.string.releases_stop_block_body)) },
+            confirmButton = {
+                RwButton(
+                    onClick = {
+                        showStopBlockConfirmation = null
+                        onStopBlock(blockId)
+                    },
+                    modifier = Modifier.testTag("confirm_stop_block_button"),
+                    variant = RwButtonVariant.Ghost,
+                    contentColor = MaterialTheme.colorScheme.error,
+                ) {
+                    Text(packStringResource(Res.string.releases_stop_block_confirm))
+                }
+            },
+            dismissButton = {
+                RwButton(
+                    onClick = { showStopBlockConfirmation = null },
+                    modifier = Modifier.testTag("dismiss_stop_block_button"),
+                    variant = RwButtonVariant.Ghost,
+                ) {
+                    Text(packStringResource(Res.string.releases_keep_running))
+                }
+            },
+            modifier = Modifier.testTag("stop_block_confirmation_dialog"),
         )
     }
 
@@ -172,6 +241,30 @@ fun ReleaseDetailScreen(
                     }
                     if (release?.status == ReleaseStatus.RUNNING) {
                         RwButton(
+                            onClick = { showStopConfirmation = true },
+                            modifier = Modifier.testTag("stop_release_button"),
+                            variant = RwButtonVariant.Secondary,
+                        ) {
+                            Text(packStringResource(Res.string.releases_stop))
+                        }
+                        RwButton(
+                            onClick = { showCancelConfirmation = true },
+                            modifier = Modifier.testTag("cancel_release_button"),
+                            variant = RwButtonVariant.Ghost,
+                            contentColor = MaterialTheme.colorScheme.error,
+                        ) {
+                            Text(packStringResource(Res.string.common_cancel))
+                        }
+                    }
+                    if (release?.status == ReleaseStatus.STOPPED) {
+                        RwButton(
+                            onClick = onResumeRelease,
+                            modifier = Modifier.testTag("resume_release_button"),
+                            variant = RwButtonVariant.Primary,
+                        ) {
+                            Text(packStringResource(Res.string.releases_resume))
+                        }
+                        RwButton(
                             onClick = { showCancelConfirmation = true },
                             modifier = Modifier.testTag("cancel_release_button"),
                             variant = RwButtonVariant.Ghost,
@@ -245,7 +338,9 @@ fun ReleaseDetailScreen(
                     BlockDetailPanel(
                         block = block,
                         execution = execution,
+                        releaseStatus = release.status,
                         onApprove = { showApproveConfirmation = blockId },
+                        onStopBlock = { showStopBlockConfirmation = blockId },
                         onDismiss = { selectedBlockId = null },
                     )
                 }
@@ -259,7 +354,9 @@ fun ReleaseDetailScreen(
 private fun BlockDetailPanel(
     block: Block,
     execution: BlockExecution,
+    releaseStatus: ReleaseStatus = ReleaseStatus.RUNNING,
     onApprove: () -> Unit,
+    onStopBlock: () -> Unit = {},
     onDismiss: () -> Unit,
 ) {
     Surface(
@@ -336,6 +433,16 @@ private fun BlockDetailPanel(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.testTag("block_duration_text"),
                     )
+                } else if (execution.status == BlockStatus.STOPPED) {
+                    // Stopped block — show elapsed time before stop
+                    val elapsed = finishedAt?.let { formatDuration(it - startedAt) }
+                        ?: formatDuration(Clock.System.now() - startedAt)
+                    Text(
+                        text = packStringResource(Res.string.releases_duration, elapsed),
+                        style = AppTypography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testTag("block_duration_text"),
+                    )
                 }
             }
 
@@ -360,6 +467,17 @@ private fun BlockDetailPanel(
                 ErrorDetailSection(
                     error = errorMsg,
                     finishedAt = execution.finishedAt,
+                )
+            }
+
+            // Stopped block context message
+            if (execution.status == BlockStatus.STOPPED) {
+                Spacer(modifier = Modifier.height(Spacing.sm))
+                Text(
+                    text = packStringResource(Res.string.releases_stopped_context),
+                    style = AppTypography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag("stopped_context_text"),
                 )
             }
 
@@ -456,12 +574,37 @@ private fun BlockDetailPanel(
                 }
 
                 Spacer(modifier = Modifier.height(Spacing.xs))
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                    RwButton(
+                        onClick = onApprove,
+                        modifier = Modifier.testTag("approve_block_button"),
+                        variant = RwButtonVariant.Primary,
+                    ) {
+                        Text(packStringResource(Res.string.common_approve))
+                    }
+                    if (releaseStatus == ReleaseStatus.RUNNING) {
+                        RwButton(
+                            onClick = onStopBlock,
+                            modifier = Modifier.testTag("stop_block_button"),
+                            variant = RwButtonVariant.Ghost,
+                            contentColor = MaterialTheme.colorScheme.error,
+                        ) {
+                            Text(packStringResource(Res.string.releases_stop))
+                        }
+                    }
+                }
+            }
+
+            // Stop button for running blocks (without gate)
+            if (execution.status == BlockStatus.RUNNING && releaseStatus == ReleaseStatus.RUNNING) {
+                Spacer(modifier = Modifier.height(Spacing.sm))
                 RwButton(
-                    onClick = onApprove,
-                    modifier = Modifier.testTag("approve_block_button"),
-                    variant = RwButtonVariant.Primary,
+                    onClick = onStopBlock,
+                    modifier = Modifier.testTag("stop_block_button"),
+                    variant = RwButtonVariant.Ghost,
+                    contentColor = MaterialTheme.colorScheme.error,
                 ) {
-                    Text(packStringResource(Res.string.common_approve))
+                    Text(packStringResource(Res.string.releases_stop))
                 }
             }
         }

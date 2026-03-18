@@ -46,6 +46,18 @@ class ReleaseApiClient(private val client: HttpClient) {
         return client.post(serverUrl(ApiRoutes.Releases.rerun(id.value))).body()
     }
 
+    suspend fun stopRelease(id: ReleaseId): ReleaseResponse {
+        return client.post(serverUrl(ApiRoutes.Releases.stop(id.value))).body()
+    }
+
+    suspend fun resumeRelease(id: ReleaseId): ReleaseResponse {
+        return client.post(serverUrl(ApiRoutes.Releases.resume(id.value))).body()
+    }
+
+    suspend fun stopBlock(releaseId: ReleaseId, blockId: BlockId): ReleaseResponse {
+        return client.post(serverUrl(ApiRoutes.Releases.stopBlock(releaseId.value, blockId.value))).body()
+    }
+
     suspend fun archiveRelease(id: ReleaseId): ReleaseResponse {
         return client.post(serverUrl(ApiRoutes.Releases.archive(id.value))).body()
     }

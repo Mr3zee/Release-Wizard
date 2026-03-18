@@ -84,6 +84,26 @@ interface ReleasesRepository {
      * Only succeeds if the block is currently RUNNING (prevents overwriting terminal states).
      * Returns the updated [BlockExecution] or null if the block was not RUNNING.
      */
+    /**
+     * Batch-stop blocks in a single transaction: set status=STOPPED + finishedAt on given blocks,
+     * and set release status to STOPPED. Only updates status and finishedAt — preserves outputs,
+     * approvals, gate state, sub-builds, and webhook status.
+     */
+    suspend fun batchStopBlocks(
+        releaseId: ReleaseId,
+        blockIds: Set<BlockId>,
+        finishedAt: kotlin.time.Instant,
+    )
+
+    /**
+     * Batch-resume blocks in a single transaction: reset status=WAITING + clear startedAt/finishedAt/error/outputs
+     * on given blocks, and set release status to RUNNING.
+     */
+    suspend fun batchResumeBlocks(
+        releaseId: ReleaseId,
+        blockIds: Set<BlockId>,
+    )
+
     suspend fun updateWebhookStatus(
         releaseId: ReleaseId,
         blockId: BlockId,

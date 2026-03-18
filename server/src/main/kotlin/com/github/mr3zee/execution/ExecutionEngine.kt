@@ -48,6 +48,9 @@ class ExecutionEngine(
     // Releases currently being restarted (cancel-and-recover in progress)
     private val restartingReleases = ConcurrentHashMap.newKeySet<ReleaseId>()
 
+    // Releases currently being stopped (cancel-and-mark-stopped in progress)
+    private val stoppingReleases = ConcurrentHashMap.newKeySet<ReleaseId>()
+
     // Per-release mutex to prevent concurrent restarts
     private val restartMutexes = ConcurrentHashMap<ReleaseId, Mutex>()
 
@@ -134,17 +137,38 @@ class ExecutionEngine(
     }
 
     suspend fun cancelExecution(releaseId: ReleaseId) {
-        val job = activeJobs[releaseId] ?: return
-        pendingApprovals[releaseId]?.values?.forEach {
-            it.completeExceptionally(CancellationException("Release cancelled"))
-        }
-        job.cancel()
-        job.join()
-        // Ensure CANCELLED is written even if the job was cancelled before executeRelease ran
-        val release = repository.findById(releaseId)
-        if (release != null && release.status != ReleaseStatus.CANCELLED) {
-            repository.setFinished(releaseId, ReleaseStatus.CANCELLED)
-            emitCompletionOnce(releaseId, ReleaseStatus.CANCELLED, Clock.System.now())
+        val mutex = restartMutexes.getOrPut(releaseId) { Mutex() }
+        mutex.withLock {
+            val job = activeJobs[releaseId]
+            if (job != null) {
+                pendingApprovals[releaseId]?.values?.forEach {
+                    it.completeExceptionally(CancellationException("Release cancelled"))
+                }
+                job.cancel()
+                job.join()
+            }
+            // Ensure CANCELLED is written even if the job was cancelled before executeRelease ran,
+            // or if the release was STOPPED (no active job)
+            val release = repository.findById(releaseId)
+            if (release != null && release.status != ReleaseStatus.CANCELLED) {
+                // Mark any non-terminal blocks as FAILED
+                val executions = repository.findBlockExecutions(releaseId)
+                for (exec in executions) {
+                    if (exec.status == BlockStatus.STOPPED || exec.status == BlockStatus.RUNNING ||
+                        exec.status == BlockStatus.WAITING || exec.status == BlockStatus.WAITING_FOR_INPUT
+                    ) {
+                        persistAndEmit(releaseId, exec.copy(
+                            status = BlockStatus.FAILED,
+                            error = "Release cancelled",
+                            finishedAt = exec.finishedAt ?: Clock.System.now(),
+                        ))
+                    }
+                }
+                repository.setFinished(releaseId, ReleaseStatus.CANCELLED)
+                val now = Clock.System.now()
+                emitEvent(ReleaseEvent.ReleaseStatusChanged(releaseId, ReleaseStatus.CANCELLED, finishedAt = now))
+                emitEvent(ReleaseEvent.ReleaseCompleted(releaseId, ReleaseStatus.CANCELLED, finishedAt = now))
+            }
         }
     }
 
@@ -317,6 +341,10 @@ class ExecutionEngine(
                 // Already failed -- keep it
                 statusMap[block.id] = BlockStatus.FAILED
             }
+            BlockStatus.STOPPED -> {
+                // Stopped blocks stay stopped -- resumeRelease resets them to WAITING first
+                statusMap[block.id] = BlockStatus.STOPPED
+            }
             else -> {
                 // WAITING or null -- execute normally
                 executeAction(release, block, statusMap, outputsMap)
@@ -398,6 +426,152 @@ class ExecutionEngine(
             recoverRelease(updatedRelease, executions)
 
             true
+        }
+    }
+
+    /**
+     * Stop a specific block within a running release.
+     * This pauses the entire release: all running blocks get STOPPED and external builds are cancelled.
+     */
+    suspend fun stopBlock(releaseId: ReleaseId, @Suppress("UNUSED_PARAMETER") blockId: BlockId): Boolean {
+        // blockId is validated by the service layer; the engine stops the entire release
+        return stopReleaseInternal(releaseId)
+    }
+
+    /**
+     * Stop an entire running release: all running blocks get STOPPED and external builds are cancelled.
+     */
+    suspend fun stopRelease(releaseId: ReleaseId): Boolean {
+        return stopReleaseInternal(releaseId)
+    }
+
+    /**
+     * Internal helper shared by [stopBlock] and [stopRelease].
+     * Cancels the release job, marks all active blocks as STOPPED (using targeted DB update),
+     * cancels external builds, and sets release to STOPPED.
+     */
+    private suspend fun stopReleaseInternal(releaseId: ReleaseId): Boolean {
+        val mutex = restartMutexes.getOrPut(releaseId) { Mutex() }
+        return mutex.withLock {
+            val release = repository.findById(releaseId) ?: return@withLock false
+
+            try {
+                // Cancel the release-level coroutine job
+                val activeJob = activeJobs[releaseId]
+                if (activeJob != null && activeJob.isActive) {
+                    stoppingReleases.add(releaseId)
+                    activeJob.cancel()
+                    activeJob.join()
+                }
+            } finally {
+                stoppingReleases.remove(releaseId)
+            }
+
+            // Clean up stale in-memory state
+            activeJobs.remove(releaseId)
+            pendingApprovals.remove(releaseId)
+            completionEmitted.remove(releaseId)
+            replayBuffers.remove(releaseId)
+            sequenceCounters.remove(releaseId)
+
+            // Find all RUNNING/WAITING_FOR_INPUT blocks to stop
+            val executions = repository.findBlockExecutions(releaseId)
+            val blocksToStop = executions.filter {
+                it.status == BlockStatus.RUNNING || it.status == BlockStatus.WAITING_FOR_INPUT
+            }
+
+            // Cancel external builds for running blocks (best-effort)
+            for (exec in blocksToStop) {
+                if (exec.status == BlockStatus.RUNNING) {
+                    cancelExternalBuild(release, exec.blockId)
+                }
+            }
+
+            // Batch-update blocks to STOPPED and release to STOPPED in a single transaction
+            if (blocksToStop.isNotEmpty()) {
+                val blockIds = blocksToStop.map { it.blockId }.toSet()
+                repository.batchStopBlocks(releaseId, blockIds, Clock.System.now())
+            } else {
+                repository.updateStatus(releaseId, ReleaseStatus.STOPPED)
+            }
+
+            // Emit WebSocket events for each stopped block + release status change
+            val updatedExecutions = repository.findBlockExecutions(releaseId)
+            for (exec in updatedExecutions) {
+                if (exec.status == BlockStatus.STOPPED && blocksToStop.any { it.blockId == exec.blockId }) {
+                    emitBlockUpdate(releaseId, exec)
+                }
+            }
+            emitEvent(ReleaseEvent.ReleaseStatusChanged(releaseId, ReleaseStatus.STOPPED))
+
+            log.info("Release {} stopped ({} blocks stopped)", releaseId.value, blocksToStop.size)
+            true
+        }
+    }
+
+    /**
+     * Resume a stopped release: resets all STOPPED blocks to WAITING and re-launches execution.
+     */
+    suspend fun resumeRelease(releaseId: ReleaseId): Boolean {
+        val mutex = restartMutexes.getOrPut(releaseId) { Mutex() }
+        return mutex.withLock {
+            val release = repository.findById(releaseId) ?: return@withLock false
+            if (release.status != ReleaseStatus.STOPPED) return@withLock false
+
+            // Find all STOPPED blocks
+            val executions = repository.findBlockExecutions(releaseId)
+            val stoppedBlocks = executions.filter { it.status == BlockStatus.STOPPED }
+
+            // Reset STOPPED blocks to WAITING and release to RUNNING in a single transaction
+            if (stoppedBlocks.isNotEmpty()) {
+                val blockIds = stoppedBlocks.map { it.blockId }.toSet()
+                repository.batchResumeBlocks(releaseId, blockIds)
+            } else {
+                repository.updateStatus(releaseId, ReleaseStatus.RUNNING)
+            }
+
+            // Emit block updates for reset blocks
+            val updatedExecutions = repository.findBlockExecutions(releaseId)
+            for (exec in updatedExecutions) {
+                if (stoppedBlocks.any { it.blockId == exec.blockId }) {
+                    emitBlockUpdate(releaseId, exec)
+                }
+            }
+
+            // Re-launch via recovery
+            val updatedRelease = repository.findById(releaseId)
+                ?: error("Release $releaseId not found after status update")
+            recoverRelease(updatedRelease, updatedExecutions)
+
+            log.info("Release {} resumed ({} blocks re-queued)", releaseId.value, stoppedBlocks.size)
+            true
+        }
+    }
+
+    /**
+     * Cancel external build for a specific block (best-effort).
+     */
+    private suspend fun cancelExternalBuild(release: Release, blockId: BlockId) {
+        val block = release.dagSnapshot.findActionBlock(blockId) ?: return
+        val exec = repository.findBlockExecution(release.id, blockId) ?: return
+
+        try {
+            val connections = mutableMapOf<ConnectionId, ConnectionConfig>()
+            block.connectionId?.let { connId ->
+                val conn = connectionsRepository.findById(connId)
+                if (conn != null) connections[connId] = conn.config
+            }
+            val context = ExecutionContext(
+                releaseId = release.id,
+                parameters = release.parameters,
+                blockOutputs = mapOf(blockId to exec.outputs),
+                connections = connections,
+            )
+            blockExecutor.cancel(block, context)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("Failed to cancel external build for block {}: {}", blockId.value, e.message)
         }
     }
 
@@ -754,7 +928,7 @@ class ExecutionEngine(
         try {
             action()
         } catch (_: CancellationException) {
-            if (restartingReleases.contains(release.id)) return
+            if (restartingReleases.contains(release.id) || stoppingReleases.contains(release.id)) return
             // Must use NonCancellable to ensure cleanup suspend calls complete in a cancelled scope
             withContext(NonCancellable) {
                 val executions = repository.findBlockExecutions(release.id)
@@ -938,7 +1112,7 @@ class ExecutionEngine(
             val outputs = action()
             completeBlockSuccess(releaseId, blockId, outputs, startTime, statusMap, outputsMap)
         } catch (e: CancellationException) {
-            if (!restartingReleases.contains(releaseId)) {
+            if (!restartingReleases.contains(releaseId) && !stoppingReleases.contains(releaseId)) {
                 statusMap[blockId] = BlockStatus.FAILED
                 persistAndEmit(releaseId, BlockExecution(
                     blockId = blockId,
@@ -977,7 +1151,7 @@ class ExecutionEngine(
     private fun registerJob(releaseId: ReleaseId, job: Job) {
         activeJobs[releaseId] = job
         job.invokeOnCompletion {
-            if (!restartingReleases.contains(releaseId)) {
+            if (!restartingReleases.contains(releaseId) && !stoppingReleases.contains(releaseId)) {
                 activeJobs.remove(releaseId)
                 pendingApprovals.remove(releaseId)
                 completionEmitted.remove(releaseId)

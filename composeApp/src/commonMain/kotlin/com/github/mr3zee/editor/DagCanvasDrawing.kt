@@ -415,6 +415,7 @@ internal fun DrawScope.drawBlockStatusIcon(
         BlockStatus.WAITING -> colors.blockStatusWaiting
         BlockStatus.WAITING_FOR_INPUT -> colors.blockStatusWaitingForInput
         BlockStatus.RUNNING -> return // spinner dot handles this
+        BlockStatus.STOPPED -> colors.blockStatusStopped
     }
 
     // Draw white background circle for contrast
@@ -452,6 +453,19 @@ internal fun DrawScope.drawBlockStatusIcon(
             // Exclamation mark
             drawLine(iconColor, Offset(iconCenterX, iconCenterY - iconSize * 0.5f), Offset(iconCenterX, iconCenterY + iconSize * 0.15f), strokeWidth = strokeWidth * 1.2f, cap = StrokeCap.Round)
             drawCircle(iconColor, radius = strokeWidth * 0.8f, center = Offset(iconCenterX, iconCenterY + iconSize * 0.45f))
+        }
+        BlockStatus.STOPPED -> {
+            // Pause icon (two vertical bars)
+            val barGap = iconSize * 0.3f
+            val barHeight = iconSize * 0.85f
+            drawLine(iconColor,
+                Offset(iconCenterX - barGap, iconCenterY - barHeight / 2),
+                Offset(iconCenterX - barGap, iconCenterY + barHeight / 2),
+                strokeWidth = strokeWidth * 1.3f, cap = StrokeCap.Round)
+            drawLine(iconColor,
+                Offset(iconCenterX + barGap, iconCenterY - barHeight / 2),
+                Offset(iconCenterX + barGap, iconCenterY + barHeight / 2),
+                strokeWidth = strokeWidth * 1.3f, cap = StrokeCap.Round)
         }
     }
 }

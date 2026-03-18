@@ -32,6 +32,7 @@ internal fun blockStatusColor(status: BlockStatus, colors: AppColors): Color = w
     BlockStatus.FAILED -> colors.blockStatusFailed
     BlockStatus.WAITING -> colors.blockStatusWaiting
     BlockStatus.WAITING_FOR_INPUT -> colors.blockStatusWaitingForInput
+    BlockStatus.STOPPED -> colors.blockStatusStopped
 }
 
 @Composable

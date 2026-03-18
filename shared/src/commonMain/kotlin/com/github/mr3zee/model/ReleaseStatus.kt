@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
 enum class ReleaseStatus {
     PENDING,
     RUNNING,
+    STOPPED,
     SUCCEEDED,
     FAILED,
     CANCELLED,

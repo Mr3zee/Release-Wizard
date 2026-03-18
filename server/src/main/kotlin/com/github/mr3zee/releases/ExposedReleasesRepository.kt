@@ -382,6 +382,48 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
         Unit
     }
 
+    override suspend fun batchStopBlocks(
+        releaseId: ReleaseId,
+        blockIds: Set<BlockId>,
+        finishedAt: kotlin.time.Instant,
+    ) = dbQuery {
+        val releaseUuid = UUID.fromString(releaseId.value)
+        val blockIdValues = blockIds.map { it.value }
+        BlockExecutionTable.update({
+            (BlockExecutionTable.releaseId eq releaseUuid) and
+                (BlockExecutionTable.blockId inList blockIdValues)
+        }) {
+            it[BlockExecutionTable.status] = BlockStatus.STOPPED
+            it[BlockExecutionTable.finishedAt] = finishedAt
+        }
+        ReleaseTable.update({ ReleaseTable.id eq releaseUuid }) {
+            it[ReleaseTable.status] = ReleaseStatus.STOPPED
+        }
+        Unit
+    }
+
+    override suspend fun batchResumeBlocks(
+        releaseId: ReleaseId,
+        blockIds: Set<BlockId>,
+    ) = dbQuery {
+        val releaseUuid = UUID.fromString(releaseId.value)
+        val blockIdValues = blockIds.map { it.value }
+        BlockExecutionTable.update({
+            (BlockExecutionTable.releaseId eq releaseUuid) and
+                (BlockExecutionTable.blockId inList blockIdValues)
+        }) {
+            it[BlockExecutionTable.status] = BlockStatus.WAITING
+            it[BlockExecutionTable.startedAt] = null
+            it[BlockExecutionTable.finishedAt] = null
+            it[BlockExecutionTable.error] = null
+            it[BlockExecutionTable.outputs] = emptyMap()
+        }
+        ReleaseTable.update({ ReleaseTable.id eq releaseUuid }) {
+            it[ReleaseTable.status] = ReleaseStatus.RUNNING
+        }
+        Unit
+    }
+
     override suspend fun updateSubBuilds(
         releaseId: ReleaseId,
         blockId: BlockId,

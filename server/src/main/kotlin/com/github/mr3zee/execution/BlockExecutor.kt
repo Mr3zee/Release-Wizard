@@ -31,4 +31,15 @@ interface BlockExecutor {
         context: ExecutionContext,
         scope: ExecutionScope? = null,
     ): Map<String, String> = execute(block, parameters, context, scope)
+
+    /**
+     * Cancel an in-progress block execution.
+     * Called after the release job has been cancelled and joined.
+     * Implementations should cancel external resources (builds, workflow runs).
+     * Default: no-op (suitable for blocks with no external state to cancel).
+     */
+    suspend fun cancel(
+        block: Block.ActionBlock,
+        context: ExecutionContext,
+    ) { /* default no-op */ }
 }

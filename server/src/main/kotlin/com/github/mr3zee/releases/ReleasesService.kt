@@ -39,6 +39,9 @@ interface ReleasesService {
     suspend fun archiveRelease(id: ReleaseId, session: UserSession): Boolean
     suspend fun deleteRelease(id: ReleaseId, session: UserSession): Boolean
     suspend fun awaitRelease(id: ReleaseId)
+    suspend fun stopBlock(releaseId: ReleaseId, blockId: BlockId, session: UserSession): Boolean
+    suspend fun stopRelease(id: ReleaseId, session: UserSession): Boolean
+    suspend fun resumeRelease(id: ReleaseId, session: UserSession): Boolean
     suspend fun restartBlock(releaseId: ReleaseId, blockId: BlockId, session: UserSession): Boolean
     suspend fun approveBlock(releaseId: ReleaseId, blockId: BlockId, request: ApproveBlockRequest, session: UserSession): Boolean
     suspend fun checkAccess(id: ReleaseId, session: UserSession)
@@ -212,7 +215,7 @@ class DefaultReleasesService(
     override suspend fun cancelRelease(id: ReleaseId, session: UserSession): Boolean {
         val release = repository.findById(id) ?: return false
         checkAccess(id, session)
-        if (release.status != ReleaseStatus.RUNNING && release.status != ReleaseStatus.PENDING) {
+        if (release.status != ReleaseStatus.RUNNING && release.status != ReleaseStatus.PENDING && release.status != ReleaseStatus.STOPPED) {
             return false
         }
         executionEngine.cancelExecution(id)
@@ -238,6 +241,51 @@ class DefaultReleasesService(
 
     override suspend fun awaitRelease(id: ReleaseId) {
         executionEngine.awaitExecution(id)
+    }
+
+    override suspend fun stopBlock(releaseId: ReleaseId, blockId: BlockId, session: UserSession): Boolean {
+        val release = repository.findById(releaseId) ?: return false
+        checkAccess(releaseId, session)
+        if (release.status != ReleaseStatus.RUNNING) return false
+
+        val execution = repository.findBlockExecution(releaseId, blockId) ?: return false
+        if (execution.status != BlockStatus.RUNNING && execution.status != BlockStatus.WAITING_FOR_INPUT) return false
+
+        val result = executionEngine.stopBlock(releaseId, blockId)
+        if (result) {
+            val teamId = repository.findTeamId(releaseId)
+                ?: throw NotFoundException("Release not found")
+            auditService.log(TeamId(teamId), session, AuditAction.BLOCK_STOPPED, AuditTargetType.BLOCK, blockId.value, "Stopped block in release ${releaseId.value}")
+        }
+        return result
+    }
+
+    override suspend fun stopRelease(id: ReleaseId, session: UserSession): Boolean {
+        val release = repository.findById(id) ?: return false
+        checkAccess(id, session)
+        if (release.status != ReleaseStatus.RUNNING) return false
+
+        val result = executionEngine.stopRelease(id)
+        if (result) {
+            val teamId = repository.findTeamId(id)
+                ?: throw NotFoundException("Release not found")
+            auditService.log(TeamId(teamId), session, AuditAction.RELEASE_STOPPED, AuditTargetType.RELEASE, id.value)
+        }
+        return result
+    }
+
+    override suspend fun resumeRelease(id: ReleaseId, session: UserSession): Boolean {
+        val release = repository.findById(id) ?: return false
+        checkAccess(id, session)
+        if (release.status != ReleaseStatus.STOPPED) return false
+
+        val result = executionEngine.resumeRelease(id)
+        if (result) {
+            val teamId = repository.findTeamId(id)
+                ?: throw NotFoundException("Release not found")
+            auditService.log(TeamId(teamId), session, AuditAction.RELEASE_RESUMED, AuditTargetType.RELEASE, id.value)
+        }
+        return result
     }
 
     override suspend fun restartBlock(releaseId: ReleaseId, blockId: BlockId, session: UserSession): Boolean {

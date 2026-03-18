@@ -138,6 +138,9 @@ fun AppNavigation(
                 error = vmError,
                 onBack = { onGoBack() },
                 onCancel = { viewModel.cancelRelease() },
+                onStopRelease = { viewModel.stopRelease() },
+                onResumeRelease = { viewModel.resumeRelease() },
+                onStopBlock = { viewModel.stopBlock(it) },
                 onRerun = {
                     viewModel.rerunRelease { newReleaseId ->
                         onNavigate(Screen.ReleaseView(newReleaseId))

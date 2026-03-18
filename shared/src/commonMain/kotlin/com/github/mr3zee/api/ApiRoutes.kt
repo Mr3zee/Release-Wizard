@@ -18,8 +18,11 @@ object ApiRoutes {
         fun archive(id: String) = "$BASE/$id/archive"
         fun await(id: String) = "$BASE/$id/await"
         fun blockExecution(releaseId: String, blockId: String) = "$BASE/$releaseId/blocks/$blockId"
+        fun stop(id: String) = "$BASE/$id/stop"
+        fun resume(id: String) = "$BASE/$id/resume"
         fun restartBlock(releaseId: String, blockId: String) = "${blockExecution(releaseId, blockId)}/restart"
         fun approveBlock(releaseId: String, blockId: String) = "${blockExecution(releaseId, blockId)}/approve"
+        fun stopBlock(releaseId: String, blockId: String) = "${blockExecution(releaseId, blockId)}/stop"
         fun ws(id: String) = "$BASE/$id/ws"
     }
 

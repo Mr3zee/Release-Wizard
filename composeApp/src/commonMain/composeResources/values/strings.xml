@@ -206,6 +206,15 @@
     <string name="releases_cancel_body">Cancel this release? In-progress blocks will be interrupted.</string>
     <string name="releases_cancel_confirm">Cancel Release</string>
     <string name="releases_keep_running">Keep Running</string>
+    <string name="releases_stop">Stop</string>
+    <string name="releases_resume">Resume</string>
+    <string name="releases_stop_title">Stop Release?</string>
+    <string name="releases_stop_body">This will pause execution. Running blocks will be stopped and external builds will be cancelled. You can resume later.</string>
+    <string name="releases_stop_block_title">Stop Block?</string>
+    <string name="releases_stop_block_body">Stopping this block will pause the entire release. All other running blocks will also be interrupted. External builds will be cancelled. You can resume later.</string>
+    <string name="releases_stop_confirm">Stop Release</string>
+    <string name="releases_stop_block_confirm">Stop</string>
+    <string name="releases_stopped_context">This block was stopped. It will re-execute when the release is resumed.</string>
     <string name="releases_rerun">Re-run</string>
     <string name="releases_approve_title">Approve: %1$s</string>
     <string name="releases_approve_fallback_name">Step</string>
@@ -240,6 +249,7 @@
     <string name="block_status_succeeded">Succeeded</string>
     <string name="block_status_failed">Failed</string>
     <string name="block_status_waiting_for_input">Waiting for Input</string>
+    <string name="block_status_stopped">Stopped</string>
 
     <!-- ==================== Connection Type Display Names ==================== -->
     <string name="connection_type_github">GitHub</string>
@@ -251,6 +261,7 @@
     <string name="releases_status_running">Running</string>
     <string name="releases_status_succeeded">Succeeded</string>
     <string name="releases_status_failed">Failed</string>
+    <string name="releases_status_stopped">Stopped</string>
     <string name="releases_status_cancelled">Cancelled</string>
     <string name="releases_status_archived">Archived</string>
 

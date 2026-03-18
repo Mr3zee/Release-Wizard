@@ -9,4 +9,5 @@ enum class BlockStatus {
     FAILED,
     SUCCEEDED,
     WAITING_FOR_INPUT,
+    STOPPED,
 }

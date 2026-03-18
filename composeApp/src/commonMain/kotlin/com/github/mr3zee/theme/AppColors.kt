@@ -94,6 +94,10 @@ data class AppColors(
     val blockStatusFailed: Color,
     val blockStatusWaiting: Color,
     val blockStatusWaitingForInput: Color,
+    val blockStatusStopped: Color,
+
+    // Release stopped status
+    val statusStopped: Color,
 
     // ── Focus ring ────────────────────────────────────────────────────
     val focusRing: Color,
@@ -183,6 +187,8 @@ val LightAppColors = AppColors(
     blockStatusFailed = Color(0xFFEF4444),
     blockStatusWaiting = Color(0xFF9CA3AF),
     blockStatusWaitingForInput = Color(0xFFF59E0B),
+    blockStatusStopped = Color(0xFF0D9488),
+    statusStopped = Color(0xFF0D9488),
 
     // Focus ring
     focusRing = Color(0xFF3B82F6),
@@ -272,6 +278,8 @@ val DarkAppColors = AppColors(
     blockStatusFailed = Color(0xFFF87171),
     blockStatusWaiting = Color(0xFF6B7280),
     blockStatusWaitingForInput = Color(0xFFFDE68A),
+    blockStatusStopped = Color(0xFF5EEAD4),
+    statusStopped = Color(0xFF5EEAD4),
 
     // Focus ring
     focusRing = Color(0xFF60A5FA),

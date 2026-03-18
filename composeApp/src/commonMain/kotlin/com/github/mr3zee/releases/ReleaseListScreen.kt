@@ -503,6 +503,7 @@ internal fun StatusBadge(status: ReleaseStatus) {
     val color = when (status) {
         ReleaseStatus.PENDING -> appColors.statusPending
         ReleaseStatus.RUNNING -> appColors.statusRunning
+        ReleaseStatus.STOPPED -> appColors.statusStopped
         ReleaseStatus.SUCCEEDED -> appColors.statusSuccess
         ReleaseStatus.FAILED -> appColors.statusFailed
         ReleaseStatus.CANCELLED -> appColors.statusCancelled

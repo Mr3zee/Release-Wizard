@@ -33,4 +33,13 @@ class DispatchingBlockExecutor(
             ?: throw IllegalStateException("No executor registered for block type: ${block.type}")
         return executor.resume(block, parameters, context, scope)
     }
+
+    override suspend fun cancel(
+        block: Block.ActionBlock,
+        context: ExecutionContext,
+    ) {
+        val executor = executors[block.type]
+            ?: throw IllegalStateException("No executor registered for block type: ${block.type}")
+        executor.cancel(block, context)
+    }
 }

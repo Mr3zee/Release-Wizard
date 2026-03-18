@@ -161,6 +161,36 @@ class ReleaseDetailViewModel(
         }
     }
 
+    fun stopRelease() {
+        viewModelScope.launch {
+            try {
+                releaseApiClient.stopRelease(releaseId)
+            } catch (e: Exception) {
+                _error.value = e.toUiMessage()
+            }
+        }
+    }
+
+    fun resumeRelease() {
+        viewModelScope.launch {
+            try {
+                releaseApiClient.resumeRelease(releaseId)
+            } catch (e: Exception) {
+                _error.value = e.toUiMessage()
+            }
+        }
+    }
+
+    fun stopBlock(blockId: BlockId) {
+        viewModelScope.launch {
+            try {
+                releaseApiClient.stopBlock(releaseId, blockId)
+            } catch (e: Exception) {
+                _error.value = e.toUiMessage()
+            }
+        }
+    }
+
     fun approveBlock(blockId: BlockId, input: Map<String, String> = emptyMap()) {
         viewModelScope.launch {
             try {
