@@ -187,6 +187,115 @@ class ExposedProjectsRepository(private val db: Database) : ProjectsRepository {
 - For `Clock.System.now()`, always use `import kotlin.time.Clock` — `kotlinx.datetime.Clock.System` was removed in 0.7.x
 - Exposed's `timestamp()` column returns `kotlinx.datetime.Instant` which is compatible via typealias
 
+## Background Polling Services
+
+When a feature needs periodic background work (e.g. polling an external API every N minutes), follow the `SchedulerService` / `MavenPollerService` pattern:
+
+```kotlin
+class MyPollerService(/* dependencies */) {
+    private val logger = LoggerFactory.getLogger(MyPollerService::class.java)
+
+    @Volatile  // visibility guarantee between ApplicationStarted and ApplicationStopped threads
+    private var pollingJob: Job? = null
+
+    fun start(scope: CoroutineScope) {
+        pollingJob = scope.launch {
+            while (isActive) {
+                try {
+                    pollOnce()
+                } catch (e: CancellationException) {
+                    throw e  // MANDATORY: always re-throw in the outer loop
+                } catch (e: Exception) {
+                    logger.error("Poll error", e)
+                }
+                delay(POLL_INTERVAL)  // use Duration, not raw Long
+            }
+        }
+    }
+
+    fun stop() { pollingJob?.cancel(); pollingJob = null }
+
+    private suspend fun pollOnce() {
+        items.forEach { item ->
+            try {
+                process(item)
+            } catch (e: CancellationException) {
+                throw e  // MANDATORY: re-throw in inner catch blocks too
+            } catch (e: Exception) {
+                logger.error("Failed to process item", e)
+            }
+        }
+    }
+
+    companion object {
+        private val POLL_INTERVAL = 5.minutes  // NOT: 5L * 60L * 1000L
+    }
+}
+```
+
+**Lifecycle wiring in `Application.kt`:**
+```kotlin
+monitor.subscribe(ApplicationStarted) {
+    val poller = getKoin().getOrNull<MyPollerService>()
+    if (poller != null && scope != null) poller.start(scope)
+}
+monitor.subscribe(ApplicationStopped) {
+    getKoin().getOrNull<MyPollerService>()?.stop()
+}
+```
+
+**Rules:**
+- `@Volatile` on `pollingJob` — written on `ApplicationStarted` thread, read on `ApplicationStopped` thread
+- Use `kotlin.time.Duration.Companion.minutes` (e.g. `5.minutes`) — not raw Long arithmetic
+- Re-throw `CancellationException` in ALL catch blocks — both the outer loop and inner per-item ones
+- Cap concurrent HTTP via `list.chunked(N).forEach { batch -> coroutineScope { batch.forEach { launch { } } } }`
+- Always update `lastCheckedAt` unconditionally on a successful poll (even when nothing changed), so operators can tell when a trigger was last active. Log WARN when `update()` returns 0 rows (item was deleted between read and write).
+
+## Server-internal vs Shared model fields
+
+Never put server-side polling state (e.g. `knownVersions: Set<String>`) in the shared KMP model. The shared model is serialized to API responses and exposed to the client.
+
+```kotlin
+// shared/model/MyTrigger.kt — only client-visible fields
+data class MyTrigger(val id: String, val lastCheckedAt: Instant?)
+
+// server/.../MyTriggerRepository.kt — server-internal wrapper
+data class MyTriggerWithState(
+    val trigger: MyTrigger,        // shared model — returned in API responses
+    val knownVersions: Set<String> // server-only — never serialized to client
+)
+```
+
+The repository exposes two paths: `findAll(): List<MyTrigger>` for API responses and `findAllEnabled(): List<MyTriggerWithState>` for the internal poller.
+
+## Blocking I/O in suspend functions
+
+`ConnectionTester.validateUrlNotPrivate()` calls `InetAddress.getAllByName()`, which is blocking. Always dispatch to `Dispatchers.IO`:
+
+```kotlin
+withContext(Dispatchers.IO) { ConnectionTester.validateUrlNotPrivate(url) }
+```
+
+Apply the same rule to any other blocking I/O called from a `suspend` service method.
+
+## XML Parsing (DocumentBuilderFactory)
+
+Create `DocumentBuilderFactory` **once** at class level — expensive to instantiate. Call `factory.newDocumentBuilder()` per parse (that call is thread-safe):
+
+```kotlin
+class XmlParser {
+    private val factory = DocumentBuilderFactory.newInstance().apply {
+        setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+        setFeature("http://xml.org/sax/features/external-general-entities", false)
+        setFeature("http://xml.org/sax/features/external-parameter-entities", false)
+        setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
+        isXIncludeAware = false
+        isExpandEntityReferences = false
+        isNamespaceAware = false
+    }
+}
+```
+
 ## JSON Configuration
 
 Use the shared `AppJson` instance from `shared/.../JsonConfig.kt` everywhere (server, client, persistence). Do not create separate `Json { }` instances.

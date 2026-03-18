@@ -15,6 +15,7 @@ import com.github.mr3zee.projects.projectLockModule
 import com.github.mr3zee.projects.projectsModule
 import com.github.mr3zee.releases.releasesModule
 import com.github.mr3zee.notifications.notificationsModule
+import com.github.mr3zee.mavenpublication.mavenTriggerModule
 import com.github.mr3zee.schedules.schedulesModule
 import com.github.mr3zee.tags.tagsModule
 import com.github.mr3zee.teams.teamsModule
@@ -121,6 +122,7 @@ fun Application.testModule(
             notificationsModule,
             schedulesModule,
             triggersModule,
+            mavenTriggerModule,
             tagsModule,
             teamsModule,
             module { single { executionScope } },

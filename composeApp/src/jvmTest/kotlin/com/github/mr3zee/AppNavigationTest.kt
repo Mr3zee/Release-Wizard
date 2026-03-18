@@ -6,9 +6,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.test.*
 import com.github.mr3zee.api.AuthApiClient
 import com.github.mr3zee.api.ConnectionApiClient
+import com.github.mr3zee.api.MavenTriggerApiClient
 import com.github.mr3zee.api.ProjectApiClient
 import com.github.mr3zee.api.ReleaseApiClient
+import com.github.mr3zee.api.ScheduleApiClient
 import com.github.mr3zee.api.TeamApiClient
+import com.github.mr3zee.api.WebhookTriggerApiClient
 import com.github.mr3zee.auth.AuthViewModel
 import com.github.mr3zee.auth.LoginScreen
 import com.github.mr3zee.connections.ConnectionsViewModel
@@ -45,6 +48,9 @@ class AppNavigationTest {
         val connectionApiClient = remember { ConnectionApiClient(httpClient) }
         val releaseApiClient = remember { ReleaseApiClient(httpClient) }
         val teamApiClient = remember { TeamApiClient(httpClient) }
+        val scheduleApiClient = remember { ScheduleApiClient(httpClient) }
+        val webhookTriggerApiClient = remember { WebhookTriggerApiClient(httpClient) }
+        val mavenTriggerApiClient = remember { MavenTriggerApiClient(httpClient) }
         val authViewModel = remember { AuthViewModel(authApiClient) }
         val activeTeamId = remember { MutableStateFlow<TeamId?>(TeamId("test-team")) }
         val projectListViewModel = remember { ProjectListViewModel(projectApiClient, activeTeamId) }
@@ -74,6 +80,9 @@ class AppNavigationTest {
                         connectionsViewModel = connectionsViewModel,
                         connectionApiClient = connectionApiClient,
                         teamApiClient = teamApiClient,
+                        scheduleApiClient = scheduleApiClient,
+                        webhookTriggerApiClient = webhookTriggerApiClient,
+                        mavenTriggerApiClient = mavenTriggerApiClient,
                         activeTeamId = activeTeamId,
                         userTeams = emptyList(),
                         onLogout = { authViewModel.logout(); navController.resetTo(Screen.ProjectList) },

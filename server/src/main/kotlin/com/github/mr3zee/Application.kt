@@ -24,6 +24,9 @@ import com.github.mr3zee.projects.projectsModule
 import com.github.mr3zee.releases.releaseRoutes
 import com.github.mr3zee.releases.releaseWebSocketRoutes
 import com.github.mr3zee.releases.releasesModule
+import com.github.mr3zee.mavenpublication.MavenPollerService
+import com.github.mr3zee.mavenpublication.mavenTriggerModule
+import com.github.mr3zee.mavenpublication.mavenTriggerRoutes
 import com.github.mr3zee.schedules.SchedulerService
 import com.github.mr3zee.schedules.scheduleRoutes
 import com.github.mr3zee.schedules.schedulesModule
@@ -93,6 +96,7 @@ fun Application.module() {
             notificationsModule,
             schedulesModule,
             triggersModule,
+            mavenTriggerModule,
             tagsModule,
             teamsModule,
             module { single { executionScope } },
@@ -311,6 +315,12 @@ fun Application.module() {
             if (schedulerService != null && scope != null) {
                 schedulerService.start(scope)
             }
+
+            // Start Maven publication poller
+            val mavenPollerService = koin.getOrNull<MavenPollerService>()
+            if (mavenPollerService != null && scope != null) {
+                mavenPollerService.start(scope)
+            }
         } catch (e: Exception) {
             environment.log.error("Application startup failed", e)
         }
@@ -320,6 +330,7 @@ fun Application.module() {
         try {
             val koin = getKoin()
             koin.getOrNull<SchedulerService>()?.stop()
+            koin.getOrNull<MavenPollerService>()?.stop()
             koin.getOrNull<HttpClient>()?.close()
         } catch (_: IllegalStateException) {
             // Koin may already be stopped
@@ -350,6 +361,7 @@ fun Application.configureRouting(appVersion: String = "dev") {
             notificationRoutes()
             scheduleRoutes()
             triggerRoutes()
+            mavenTriggerRoutes()
             tagRoutes()
         }
     }

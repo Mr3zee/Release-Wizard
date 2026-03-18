@@ -15,9 +15,12 @@ import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.keyboard.handleGlobalKeyEvent
 import com.github.mr3zee.api.AuthApiClient
 import com.github.mr3zee.api.ConnectionApiClient
+import com.github.mr3zee.api.MavenTriggerApiClient
 import com.github.mr3zee.api.ProjectApiClient
 import com.github.mr3zee.api.ReleaseApiClient
+import com.github.mr3zee.api.ScheduleApiClient
 import com.github.mr3zee.api.TeamApiClient
+import com.github.mr3zee.api.WebhookTriggerApiClient
 import com.github.mr3zee.api.createHttpClient
 import com.github.mr3zee.auth.AuthEventBus
 import com.github.mr3zee.auth.AuthEvent
@@ -50,6 +53,9 @@ fun App() {
     val connectionApiClient = remember { ConnectionApiClient(httpClient) }
     val releaseApiClient = remember { ReleaseApiClient(httpClient) }
     val teamApiClient = remember { TeamApiClient(httpClient) }
+    val scheduleApiClient = remember { ScheduleApiClient(httpClient) }
+    val webhookTriggerApiClient = remember { WebhookTriggerApiClient(httpClient) }
+    val mavenTriggerApiClient = remember { MavenTriggerApiClient(httpClient) }
 
     val activeTeamId = remember { MutableStateFlow<TeamId?>(null) }
 
@@ -175,6 +181,9 @@ fun App() {
                             connectionsViewModel = connectionsViewModel,
                             connectionApiClient = connectionApiClient,
                             teamApiClient = teamApiClient,
+                            scheduleApiClient = scheduleApiClient,
+                            webhookTriggerApiClient = webhookTriggerApiClient,
+                            mavenTriggerApiClient = mavenTriggerApiClient,
                             activeTeamId = activeTeamId,
                             userTeams = user?.teams ?: emptyList(),
                             currentUserId = user?.id,

@@ -17,4 +17,5 @@ sealed class Screen {
     data class TeamManage(val teamId: TeamId) : Screen()
     data object MyInvites : Screen()
     data class AuditLog(val teamId: TeamId) : Screen()
+    data class ProjectAutomation(val projectId: ProjectId) : Screen()
 }

@@ -38,6 +38,7 @@ fun initDatabase(ds: DataSource): Database {
             NotificationConfigTable,
             ScheduleTable,
             TriggerTable,
+            MavenTriggerTable,
             ReleaseTagTable,
             ProjectLockTable,
             StatusWebhookTokenTable,

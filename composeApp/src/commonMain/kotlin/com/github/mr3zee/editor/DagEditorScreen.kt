@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,6 +30,7 @@ import releasewizard.composeapp.generated.resources.*
 fun DagEditorScreen(
     viewModel: DagEditorViewModel,
     onBack: () -> Unit,
+    onOpenAutomation: (() -> Unit)? = null,
 ) {
     val project by viewModel.project.collectAsState()
     val graph by viewModel.graph.collectAsState()
@@ -129,6 +131,16 @@ fun DagEditorScreen(
                 actions = {
                     if (validationErrors.isNotEmpty()) {
                         ValidationErrorBadge(validationErrors)
+                    }
+                    if (onOpenAutomation != null) {
+                        RwButton(
+                            onClick = onOpenAutomation,
+                            variant = RwButtonVariant.Ghost,
+                            modifier = Modifier.testTag("automation_button"),
+                        ) {
+                            Icon(Icons.Default.Schedule, contentDescription = packStringResource(Res.string.automation_open_button))
+                            Text(packStringResource(Res.string.automation_open_button))
+                        }
                     }
                     RwButton(
                         onClick = { viewModel.save() },

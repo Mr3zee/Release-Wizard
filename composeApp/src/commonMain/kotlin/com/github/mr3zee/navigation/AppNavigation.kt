@@ -2,10 +2,15 @@ package com.github.mr3zee.navigation
 
 import androidx.compose.runtime.*
 import com.github.mr3zee.api.ConnectionApiClient
+import com.github.mr3zee.api.MavenTriggerApiClient
 import com.github.mr3zee.api.ProjectApiClient
 import com.github.mr3zee.api.ReleaseApiClient
+import com.github.mr3zee.api.ScheduleApiClient
 import com.github.mr3zee.api.TeamApiClient
 import com.github.mr3zee.api.UserTeamInfo
+import com.github.mr3zee.api.WebhookTriggerApiClient
+import com.github.mr3zee.automation.ProjectAutomationScreen
+import com.github.mr3zee.automation.ProjectAutomationViewModel
 import com.github.mr3zee.connections.ConnectionFormScreen
 import com.github.mr3zee.connections.ConnectionListScreen
 import com.github.mr3zee.connections.ConnectionsViewModel
@@ -33,6 +38,9 @@ fun AppNavigation(
     connectionsViewModel: ConnectionsViewModel,
     connectionApiClient: ConnectionApiClient,
     teamApiClient: TeamApiClient,
+    scheduleApiClient: ScheduleApiClient,
+    webhookTriggerApiClient: WebhookTriggerApiClient,
+    mavenTriggerApiClient: MavenTriggerApiClient,
     activeTeamId: StateFlow<TeamId?>,
     userTeams: List<UserTeamInfo>,
     currentUserId: String? = null,
@@ -88,6 +96,9 @@ fun AppNavigation(
                     onBack = {
                         projectListViewModel.loadProjects()
                         onGoBack()
+                    },
+                    onOpenAutomation = {
+                        onNavigate(Screen.ProjectAutomation(projectId))
                     },
                 )
             } else {
@@ -204,6 +215,20 @@ fun AppNavigation(
                 AuditLogViewModel(currentScreen.teamId, teamApiClient)
             }
             AuditLogScreen(
+                viewModel = viewModel,
+                onBack = { onGoBack() },
+            )
+        }
+        is Screen.ProjectAutomation -> {
+            val viewModel = remember(currentScreen.projectId) {
+                ProjectAutomationViewModel(
+                    projectId = currentScreen.projectId,
+                    scheduleClient = scheduleApiClient,
+                    webhookClient = webhookTriggerApiClient,
+                    mavenClient = mavenTriggerApiClient,
+                )
+            }
+            ProjectAutomationScreen(
                 viewModel = viewModel,
                 onBack = { onGoBack() },
             )

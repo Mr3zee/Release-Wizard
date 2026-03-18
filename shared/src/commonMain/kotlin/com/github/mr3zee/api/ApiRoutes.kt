@@ -96,6 +96,11 @@ object ApiRoutes {
         fun webhook(triggerId: String) = "$API_V1/triggers/webhook/$triggerId"
     }
 
+    object MavenTriggers {
+        fun byProject(projectId: String) = "$API_V1/projects/$projectId/maven-triggers"
+        fun byId(projectId: String, triggerId: String) = "${byProject(projectId)}/$triggerId"
+    }
+
     object Tags {
         const val BASE = "$API_V1/tags"
     }

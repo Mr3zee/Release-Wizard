@@ -92,6 +92,64 @@ private fun ApplicationTestBuilder.jsonClient() = createClient {
 - Nonexistent resources for GET, PUT, DELETE → 404
 - Update preserves `createdAt`, changes `updatedAt`
 - Blank/empty required fields → 400
+- **Unauthenticated request → 401** (always add at least one per route group)
+- **Cross-team access → 403** (register a second non-admin user, have them access another team's resource)
+
+## Coroutine tests
+
+Use `runTest` (from `kotlinx-coroutines-test`), **never `runBlocking`**, for any test that contains `suspend` calls or uses coroutine test utilities. `runBlocking` blocks the thread for the full duration and will hang if `delay()` is ever introduced.
+
+```kotlin
+// CORRECT
+@Test
+fun `my suspend test`() = runTest {
+    val result = myService.doSomething()
+    assertEquals(expected, result)
+}
+
+// WRONG — blocks wall clock
+@Test
+fun `bad test`() = runBlocking { ... }
+```
+
+## Polling service tests
+
+Test `pollAllTriggers()` (or equivalent) **directly** — never call `start()` in tests (it starts a real 5-minute loop):
+
+```kotlin
+@Test
+fun `fires release for new version`() = runTest {
+    val captured = mutableListOf<Pair<ProjectId, List<Parameter>>>()
+    val poller = MavenPollerService(
+        repository = StubRepo(listOf(entry(trigger, knownVersions = setOf("1.0.0")))),
+        fetcher = fetcherReturning(setOf("1.0.0", "1.1.0")),
+        releasesService = releasesCapturing(captured),
+    )
+    poller.pollAllTriggers()
+    assertEquals(1, captured.size)
+    assertEquals("1.1.0", captured.first().second.first().value)
+}
+```
+
+Use `open class StubRepo(entries)` with `override suspend fun updateKnownVersions(...)` for capturing DB writes without a real database.
+
+## Validation test pattern for consecutive-character rules
+
+Regex alone cannot enforce "no consecutive dots" — the check uses `require(!value.contains(".."))`. Always add a dedicated test:
+
+```kotlin
+@Test
+fun `groupId with consecutive dots returns 400`() = testApplication {
+    application { testModule() }
+    val client = jsonClient()
+    val teamId = client.loginAndCreateTeam()
+    val projectId = client.createTestProject(teamId)
+    val response = client.post(route) {
+        setBody(Request(groupId = "com..example", ...))
+    }
+    assertEquals(HttpStatusCode.BadRequest, response.status)
+}
+```
 
 ## WebSocket testing
 

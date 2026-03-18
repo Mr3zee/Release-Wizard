@@ -31,6 +31,12 @@ fun createTestHttpClient(): HttpClient = HttpClient(MockEngine { request ->
             respond("""{"buildType":[{"id":"Proj_Build","name":"Build","projectId":"Proj"}]}""", HttpStatusCode.OK, jsonHeaders)
         url.contains("/api/v1/publisher/status") ->
             respond("""{"status":"ok"}""", HttpStatusCode.OK, jsonHeaders)
+        url.contains("maven-metadata.xml") ->
+            respond(
+                """<?xml version="1.0"?><metadata><versioning><versions><version>1.0.0</version><version>1.1.0</version></versions></versioning></metadata>""",
+                HttpStatusCode.OK,
+                headersOf(HttpHeaders.ContentType, ContentType.Application.Xml.toString()),
+            )
         else ->
             respond("ok", HttpStatusCode.OK, jsonHeaders)
     }
