@@ -31,6 +31,7 @@ class TemplateAutocompleteFieldTest {
 
     @Test
     fun `typing dollar-brace triggers dropdown`() = runComposeUiTest {
+        // todo claude: unused
         var currentValue = ""
         setContent {
             MaterialTheme {
@@ -48,7 +49,7 @@ class TemplateAutocompleteFieldTest {
             }
         }
 
-        onNodeWithTag("field").performTextInput("\${")
+        onNodeWithTag("field").performTextInput($$"${")
         waitForIdle()
 
         onNodeWithTag("field_autocomplete_dropdown", useUnmergedTree = true).assertExists()
@@ -111,7 +112,7 @@ class TemplateAutocompleteFieldTest {
             }
         }
 
-        onNodeWithTag("field").performTextInput("\${param.ver")
+        onNodeWithTag("field").performTextInput($$"${param.ver")
         waitForIdle()
 
         // Should show dropdown with only "version" suggestion
@@ -140,7 +141,7 @@ class TemplateAutocompleteFieldTest {
             }
         }
 
-        onNodeWithTag("field").performTextInput("\${")
+        onNodeWithTag("field").performTextInput($$"${")
         waitForIdle()
 
         // Click the first suggestion
@@ -148,7 +149,7 @@ class TemplateAutocompleteFieldTest {
         waitForIdle()
 
         // Should have inserted the full expression
-        assertEquals("\${param.version}", currentValue)
+        assertEquals($$"${param.version}", currentValue)
     }
 
     @Test
@@ -166,7 +167,7 @@ class TemplateAutocompleteFieldTest {
             }
         }
 
-        onNodeWithTag("field").performTextInput("\${")
+        onNodeWithTag("field").performTextInput($$"${")
         waitForIdle()
         onNodeWithTag("field_suggestion_0", useUnmergedTree = true).assertExists()
 
@@ -195,7 +196,7 @@ class TemplateAutocompleteFieldTest {
             }
         }
 
-        onNodeWithTag("field").performTextInput("\${")
+        onNodeWithTag("field").performTextInput($$"${")
         waitForIdle()
 
         // Should see both category headers and suggestion items
@@ -224,7 +225,7 @@ class TemplateAutocompleteFieldTest {
             }
         }
 
-        onNodeWithTag("field").performTextInput("\${block.")
+        onNodeWithTag("field").performTextInput($$"${block.")
         waitForIdle()
 
         // Should show dropdown with only block output suggestions
@@ -249,7 +250,7 @@ class TemplateAutocompleteFieldTest {
         }
 
         // Type a prefix that matches nothing
-        onNodeWithTag("field").performTextInput("\${zzz")
+        onNodeWithTag("field").performTextInput($$"${zzz")
         waitForIdle()
 
         onNodeWithTag("field_autocomplete_dropdown", useUnmergedTree = true).assertDoesNotExist()
@@ -270,7 +271,7 @@ class TemplateAutocompleteFieldTest {
             }
         }
 
-        onNodeWithTag("field").performTextInput("\${")
+        onNodeWithTag("field").performTextInput($$"${")
         waitForIdle()
 
         // No suggestions — dropdown should not appear
@@ -296,13 +297,13 @@ class TemplateAutocompleteFieldTest {
             }
         }
 
-        onNodeWithTag("field").performTextInput("prefix \${")
+        onNodeWithTag("field").performTextInput($$"prefix ${")
         waitForIdle()
 
         onNodeWithTag("field_suggestion_0", useUnmergedTree = true).performClick()
         waitForIdle()
 
-        assertEquals("prefix \${param.version}", currentValue)
+        assertEquals($$"prefix ${param.version}", currentValue)
     }
 
     @Test
@@ -324,7 +325,7 @@ class TemplateAutocompleteFieldTest {
             }
         }
 
-        onNodeWithTag("field").performTextInput("\${")
+        onNodeWithTag("field").performTextInput($$"${")
         waitForIdle()
 
         // Arrow down twice to second item ("env"), then Enter to accept
@@ -335,7 +336,7 @@ class TemplateAutocompleteFieldTest {
         }
         waitForIdle()
 
-        assertEquals("\${param.env}", currentValue)
+        assertEquals($$"${param.env}", currentValue)
     }
 
     // Note: Tab acceptance is implemented but cannot be tested reliably because
@@ -361,7 +362,7 @@ class TemplateAutocompleteFieldTest {
             }
         }
 
-        onNodeWithTag("field").performTextInput("\${")
+        onNodeWithTag("field").performTextInput($$"${")
         waitForIdle()
         onNodeWithTag("field_suggestion_0", useUnmergedTree = true).assertExists()
 
@@ -372,7 +373,7 @@ class TemplateAutocompleteFieldTest {
         waitForIdle()
 
         // Value should still be the raw typed text
-        assertEquals("\${", currentValue)
+        assertEquals($$"${", currentValue)
     }
 
     @Test
@@ -395,13 +396,13 @@ class TemplateAutocompleteFieldTest {
         }
 
         // Type text, then trigger autocomplete, then select
-        onNodeWithTag("field").performTextInput("before \${")
+        onNodeWithTag("field").performTextInput($$"before ${")
         waitForIdle()
 
         onNodeWithTag("field_suggestion_0", useUnmergedTree = true).performClick()
         waitForIdle()
 
-        assertEquals("before \${param.version}", currentValue)
+        assertEquals($$"before ${param.version}", currentValue)
     }
 
     @Test
@@ -423,7 +424,7 @@ class TemplateAutocompleteFieldTest {
             }
         }
 
-        onNodeWithTag("field").performTextInput("\${")
+        onNodeWithTag("field").performTextInput($$"${")
         waitForIdle()
 
         // Down twice (select "env" at index 1), Up once (select "version" at index 0), Enter
@@ -435,7 +436,7 @@ class TemplateAutocompleteFieldTest {
         }
         waitForIdle()
 
-        assertEquals("\${param.version}", currentValue)
+        assertEquals($$"${param.version}", currentValue)
     }
 
     @Test
@@ -458,7 +459,7 @@ class TemplateAutocompleteFieldTest {
             }
         }
 
-        onNodeWithTag("field").performTextInput("\${")
+        onNodeWithTag("field").performTextInput($$"${")
         waitForIdle()
 
         // Down twice reaches last item (index 1 = "env"), Down again wraps to first (index 0 = "version")
@@ -470,7 +471,7 @@ class TemplateAutocompleteFieldTest {
         }
         waitForIdle()
 
-        assertEquals("\${param.version}", currentValue)
+        assertEquals($$"${param.version}", currentValue)
     }
 
     @Test
@@ -492,7 +493,7 @@ class TemplateAutocompleteFieldTest {
             }
         }
 
-        onNodeWithTag("field").performTextInput("\${")
+        onNodeWithTag("field").performTextInput($$"${")
         waitForIdle()
 
         // Down once (index 0 = "version"), Up wraps to last (index 1 = "env")
@@ -503,7 +504,7 @@ class TemplateAutocompleteFieldTest {
         }
         waitForIdle()
 
-        assertEquals("\${param.env}", currentValue)
+        assertEquals($$"${param.env}", currentValue)
     }
 
     @Test
@@ -545,7 +546,7 @@ class TemplateAutocompleteFieldTest {
         }
 
         // Trigger at start — dropdown at left edge
-        onNodeWithTag("field").performTextInput("\${")
+        onNodeWithTag("field").performTextInput($$"${")
         waitForIdle()
         val leftAtStart = onNodeWithTag("field_suggestion_0", useUnmergedTree = true)
             .fetchSemanticsNode().boundsInRoot.left
@@ -553,7 +554,7 @@ class TemplateAutocompleteFieldTest {
         // Clear and trigger with prefix — dropdown should shift right
         onNodeWithTag("field").performTextClearance()
         waitForIdle()
-        onNodeWithTag("field").performTextInput("some prefix text \${")
+        onNodeWithTag("field").performTextInput($$"some prefix text ${")
         waitForIdle()
         val leftWithPrefix = onNodeWithTag("field_suggestion_0", useUnmergedTree = true)
             .fetchSemanticsNode().boundsInRoot.left
@@ -579,7 +580,7 @@ class TemplateAutocompleteFieldTest {
             }
         }
 
-        onNodeWithTag("field").performTextInput("\${par")
+        onNodeWithTag("field").performTextInput($$"${par")
         waitForIdle()
         onNodeWithTag("field_suggestion_0", useUnmergedTree = true).assertExists()
 

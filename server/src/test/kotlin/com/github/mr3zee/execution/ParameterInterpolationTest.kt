@@ -59,7 +59,7 @@ class ParameterInterpolationTest {
                             id = BlockId("build"),
                             name = "Build",
                             type = BlockType.TEAMCITY_BUILD,
-                            parameters = listOf(Parameter(key = "text", value = "\${param.version}")),
+                            parameters = listOf(Parameter(key = "text", value = $$"${param.version}")),
                         ),
                     ),
                 ),
@@ -90,7 +90,7 @@ class ParameterInterpolationTest {
                             id = BlockId("b"),
                             name = "B",
                             type = BlockType.SLACK_MESSAGE,
-                            parameters = listOf(Parameter(key = "message", value = "\${block.a.buildNumber}")),
+                            parameters = listOf(Parameter(key = "message", value = $$"${block.a.buildNumber}")),
                         ),
                     ),
                     edges = listOf(Edge(fromBlockId = BlockId("a"), toBlockId = BlockId("b"))),
@@ -122,7 +122,7 @@ class ParameterInterpolationTest {
                             id = BlockId("c"),
                             name = "C",
                             type = BlockType.SLACK_MESSAGE,
-                            parameters = listOf(Parameter(key = "buildRef", value = "\${block.a.buildNumber}")),
+                            parameters = listOf(Parameter(key = "buildRef", value = $$"${block.a.buildNumber}")),
                         ),
                     ),
                     edges = listOf(
@@ -157,7 +157,7 @@ class ParameterInterpolationTest {
                             id = blockId,
                             name = "Deploy",
                             type = BlockType.SLACK_MESSAGE,
-                            preGate = Gate(message = "Release \${param.version} ready?"),
+                            preGate = Gate(message = $$"Release ${param.version} ready?"),
                         ),
                     ),
                 ),
@@ -194,7 +194,7 @@ class ParameterInterpolationTest {
                             id = notifyId,
                             name = "Notify",
                             type = BlockType.SLACK_MESSAGE,
-                            postGate = Gate(message = "Build #\${block.build.buildNumber} done"),
+                            postGate = Gate(message = $$"Build #${block.build.buildNumber} done"),
                         ),
                     ),
                     edges = listOf(Edge(fromBlockId = BlockId("build"), toBlockId = notifyId)),
@@ -228,7 +228,7 @@ class ParameterInterpolationTest {
                             id = BlockId("build"),
                             name = "Build",
                             type = BlockType.TEAMCITY_BUILD,
-                            parameters = listOf(Parameter(key = "ref", value = "\${param.nonexistent}")),
+                            parameters = listOf(Parameter(key = "ref", value = $$"${param.nonexistent}")),
                         ),
                     ),
                 ),
@@ -241,7 +241,7 @@ class ParameterInterpolationTest {
             assertNotNull(captured, "Executor should have been called for block 'build'")
             val refParam = captured.find { it.key == "ref" }
             assertNotNull(refParam, "Parameter 'ref' should be present")
-            assertEquals("\${param.nonexistent}", refParam.value)
+            assertEquals($$"${param.nonexistent}", refParam.value)
         }
     }
 
@@ -259,7 +259,7 @@ class ParameterInterpolationTest {
                             name = "B",
                             type = BlockType.SLACK_MESSAGE,
                             parameters = listOf(
-                                Parameter(key = "text", value = "v\${param.version} build #\${block.a.buildNumber}"),
+                                Parameter(key = "text", value = $$"v${param.version} build #${block.a.buildNumber}"),
                             ),
                         ),
                     ),
@@ -296,8 +296,8 @@ class ParameterInterpolationTest {
                             name = "D",
                             type = BlockType.GITHUB_PUBLICATION,
                             parameters = listOf(
-                                Parameter(key = "runRef", value = "\${block.b.runId}"),
-                                Parameter(key = "slackTs", value = "\${block.c.messageTs}"),
+                                Parameter(key = "runRef", value = $$"${block.b.runId}"),
+                                Parameter(key = "slackTs", value = $$"${block.c.messageTs}"),
                             ),
                         ),
                     ),

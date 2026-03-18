@@ -11,10 +11,8 @@ class TeamAccessService(private val teamRepository: TeamRepository) {
 
     suspend fun checkMembership(teamId: TeamId, session: UserSession) {
         if (session.role == UserRole.ADMIN) return
-        val membership = teamRepository.findMembership(teamId, session.userId)
-        if (membership == null) {
-            throw ForbiddenException("Not a member of this team")
-        }
+        teamRepository.findMembership(teamId, session.userId)
+            ?: throw ForbiddenException("Not a member of this team")
     }
 
     suspend fun checkTeamLead(teamId: TeamId, session: UserSession) {
@@ -25,6 +23,7 @@ class TeamAccessService(private val teamRepository: TeamRepository) {
         }
     }
 
+    // todo claude: unused
     suspend fun getTeamRole(teamId: TeamId, userId: String): TeamRole? {
         return teamRepository.findMembership(teamId, userId)?.role
     }

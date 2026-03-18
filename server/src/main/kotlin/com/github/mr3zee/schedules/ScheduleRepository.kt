@@ -2,7 +2,6 @@ package com.github.mr3zee.schedules
 
 import com.github.mr3zee.model.Parameter
 import com.github.mr3zee.model.ProjectId
-import com.github.mr3zee.model.Schedule
 import kotlin.time.Instant
 
 data class ScheduleEntity(

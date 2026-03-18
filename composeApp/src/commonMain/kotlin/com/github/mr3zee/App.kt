@@ -33,7 +33,6 @@ import com.github.mr3zee.navigation.Screen
 import com.github.mr3zee.projects.ProjectListViewModel
 import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.releases.ReleaseListViewModel
-import com.github.mr3zee.i18n.LanguagePack
 import com.github.mr3zee.theme.AppTheme
 import com.github.mr3zee.theme.ThemePreference
 import com.github.mr3zee.theme.loadLanguagePack

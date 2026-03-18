@@ -11,6 +11,7 @@ import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.i18n.packStringResource
 import releasewizard.composeapp.generated.resources.*
 
+// todo claude: unused
 private data class CronPreset(val labelRes: Any, val cron: String)
 
 private val CRON_REGEX = Regex(

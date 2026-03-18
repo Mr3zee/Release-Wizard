@@ -35,6 +35,7 @@ fun Modifier.focusRing(
     ringColor: Color = Color.Unspecified,
     interactionSource: InteractionSource,
 ): Modifier = composed {
+    // todo claude: duplicate 15 lines
     val colors = LocalAppColors.current
     val isFocused by interactionSource.collectIsFocusedAsState()
 
@@ -56,6 +57,7 @@ fun Modifier.focusRing(
         .drawWithContent {
             drawContent()
             // Draw ring on top of content so it's visible over solid backgrounds
+            // todo claude: duplicate 12 lines
             if (animatedColor != Color.Transparent) {
                 val strokePx = strokeWidth.toPx()
                 val offsetPx = offset.toPx()
@@ -84,6 +86,7 @@ fun FocusRingBox(
     ringColor: Color = Color.Unspecified,
     content: @Composable BoxScope.() -> Unit,
 ) {
+    // todo claude: duplicate 15 lines
     val colors = LocalAppColors.current
     val isFocused by interactionSource.collectIsFocusedAsState()
 
@@ -104,6 +107,7 @@ fun FocusRingBox(
         modifier = modifier
             .graphicsLayer { clip = false }
             .drawWithContent {
+                // todo claude: duplicate 12 lines
                 if (animatedColor != Color.Transparent) {
                     val strokePx = strokeWidth.toPx()
                     val offsetPx = offset.toPx()

@@ -253,7 +253,7 @@ class EmojiSerializationTest {
         val encoded = json.encodeToString(ApproveBlockRequest.serializer(), request)
         val decoded = json.decodeFromString(ApproveBlockRequest.serializer(), encoded)
         assertEquals(request, decoded)
-        val input = decoded.input ?: error("Expected non-null input")
+        val input = decoded.input
         assertEquals("\uD83D\uDC4D LGTM! Ship it \uD83D\uDE80", input["comment"])
     }
 

@@ -4,6 +4,7 @@ import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.model.ProjectTemplate
 import io.ktor.client.*
 import io.ktor.client.call.*
+import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.request.*
 import io.ktor.client.request.parameter
 import io.ktor.http.*
@@ -56,8 +57,9 @@ class ProjectApiClient(private val client: HttpClient) {
     suspend fun releaseLock(projectId: ProjectId) {
         try {
             client.delete(serverUrl(ApiRoutes.Projects.lock(projectId.value)))
-        } catch (_: io.ktor.client.plugins.ClientRequestException) {
+        } catch (_: ClientRequestException) {
             // Fire-and-forget — TTL handles cleanup
+            // todo claude: java in common main
         } catch (_: java.io.IOException) {
             // Network failure — TTL handles cleanup
         }
@@ -68,11 +70,12 @@ class ProjectApiClient(private val client: HttpClient) {
         return response.body()
     }
 
+    // todo claude: unused
     suspend fun getLockInfo(projectId: ProjectId): ProjectLockInfo? {
         return try {
             val response = client.get(serverUrl(ApiRoutes.Projects.lock(projectId.value)))
             response.body()
-        } catch (e: io.ktor.client.plugins.ClientRequestException) {
+        } catch (e: ClientRequestException) {
             if (e.response.status.value == 404) null else throw e
         }
     }

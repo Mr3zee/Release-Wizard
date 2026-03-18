@@ -3,7 +3,6 @@ package com.github.mr3zee.execution
 import com.github.mr3zee.AppJson
 import com.github.mr3zee.execution.executors.BuildPollingService
 import com.github.mr3zee.execution.executors.QueueTimeoutException
-import com.github.mr3zee.model.SubBuild
 import com.github.mr3zee.model.SubBuildStatus
 import io.ktor.client.*
 import io.ktor.client.engine.mock.*
@@ -15,7 +14,6 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
@@ -71,7 +69,7 @@ class BuildPollingServiceTest {
 
         assertEquals("build-42", result["buildNumber"])
         assertEquals("SUCCESS", result["buildStatus"])
-        assertTrue(result["buildUrl"]?.contains("tc.example.com") == true)
+        assertEquals(true, result["buildUrl"]?.contains("tc.example.com"))
         assertTrue(statesObserved.contains("queued"), "Should have observed queued state")
         assertTrue(statesObserved.contains("running"), "Should have observed running state")
         assertTrue(statesObserved.contains("finished"), "Should have observed finished state")
@@ -118,7 +116,7 @@ class BuildPollingServiceTest {
 
         assertEquals("789", result["runId"])
         assertEquals("success", result["runStatus"])
-        assertTrue(result["runUrl"]?.contains("actions/runs/789") == true)
+        assertEquals(true, result["runUrl"]?.contains("actions/runs/789"))
         assertTrue(statusesObserved.contains("queued"), "Should have observed queued status")
         assertTrue(statusesObserved.contains("in_progress"), "Should have observed in_progress status")
         assertTrue(statusesObserved.contains("completed"), "Should have observed completed status")
@@ -420,8 +418,8 @@ class BuildPollingServiceTest {
             )
         }
 
-        assertTrue(exception.message?.contains("queue") == true)
-        assertTrue(exception.message?.contains("42") == true)
+        assertEquals(true, exception.message?.contains("queue"))
+        assertEquals(true, exception.message?.contains("42"))
     }
 
     @Test
@@ -452,8 +450,8 @@ class BuildPollingServiceTest {
             )
         }
 
-        assertTrue(exception.message?.contains("queue") == true)
-        assertTrue(exception.message?.contains("789") == true)
+        assertEquals(true, exception.message?.contains("queue"))
+        assertEquals(true, exception.message?.contains("789"))
     }
 
     @Test

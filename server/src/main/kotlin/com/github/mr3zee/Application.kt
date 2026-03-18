@@ -128,6 +128,7 @@ fun Application.module() {
             require(host.isNotBlank()) { "CORS origin '$origin' does not contain a valid host" }
             allowHost(host, schemes = listOf("https"))
         }
+        // todo claude: empty if
         if (corsConfig.allowedOrigins.isEmpty()) {
             // Development fallback: no origins allowed (strict by default)
         }

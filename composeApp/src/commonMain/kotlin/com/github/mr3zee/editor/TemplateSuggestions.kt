@@ -29,7 +29,7 @@ fun buildSuggestions(
         suggestions.add(
             TemplateSuggestion(
                 label = param.key,
-                insertText = "\${param.${param.key}}",
+                insertText = $$"${param.$${param.key}}",
                 description = when {
                     param.description.isNotEmpty() -> param.description
                     param.value.isNotEmpty() -> defaultValueFormat(param.value)
@@ -48,7 +48,7 @@ fun buildSuggestions(
             suggestions.add(
                 TemplateSuggestion(
                     label = "${block.name} / $output",
-                    insertText = "\${block.${block.id.value}.$output}",
+                    insertText = $$"${block.$${block.id.value}.$$output}",
                     description = null,
                     category = SuggestionCategory.BLOCK_OUTPUT,
                 )
@@ -95,8 +95,8 @@ fun parseInterpolationContext(text: String, cursorPos: Int): InterpolationContex
             if (depth == 0) {
                 // Found our trigger — check it's not already closed
                 val nextClose = text.indexOf('}', cursorPos)
-                val nextOpen = text.indexOf("\${", cursorPos)
-                if (nextClose >= 0 && (nextOpen < 0 || nextClose < nextOpen)) {
+                val nextOpen = text.indexOf($$"${", cursorPos)
+                if (nextClose >= 0 && (nextOpen !in 0..nextClose)) {
                     return null
                 }
                 val triggerOffset = i - 1
@@ -136,19 +136,19 @@ fun filterSuggestions(
             val blockPrefix = "block.$blockId."
             return allSuggestions.filter { s ->
                 if (s.category != SuggestionCategory.BLOCK_OUTPUT) return@filter false
-                val path = s.insertText.removeSurrounding("\${", "}")
+                val path = s.insertText.removeSurrounding($$"${", "}")
                 path.startsWith(blockPrefix) &&
                     (outputSuffix.isEmpty() || path.substringAfterLast('.').startsWith(outputSuffix))
             }
         }
         return allSuggestions.filter { s ->
             s.category == SuggestionCategory.BLOCK_OUTPUT &&
-                (rest.isEmpty() || s.insertText.removeSurrounding("\${", "}").removePrefix("block.").startsWith(rest))
+                (rest.isEmpty() || s.insertText.removeSurrounding($$"${", "}").removePrefix("block.").startsWith(rest))
         }
     }
 
     // General prefix — match against inner expression path
     return allSuggestions.filter { s ->
-        s.insertText.removeSurrounding("\${", "}").startsWith(prefix)
+        s.insertText.removeSurrounding($$"${", "}").startsWith(prefix)
     }
 }

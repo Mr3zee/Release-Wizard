@@ -134,9 +134,10 @@ fun ConnectionListScreen(
                             Text(packStringResource(Res.string.common_back))
                         }
                     },
+                    // todo claude: duplicate 20 lines
                     actions = {
                         TooltipBox(
-                            positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
                             tooltip = { PlainTooltip { Text(packStringResource(Res.string.common_refresh)) } },
                             state = rememberTooltipState(),
                         ) {
@@ -185,6 +186,7 @@ fun ConnectionListScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // Refresh error banner
+            // todo claude: duplicate 20 lines
             val resolvedRefreshError = refreshError?.resolve()
             if (resolvedRefreshError != null) {
                 RefreshErrorBanner(

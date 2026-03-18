@@ -98,6 +98,7 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
     }
 
     override suspend fun create(name: String, description: String): Team = dbQuery {
+        // todo claude: duplicate 9 lines
         val now = Clock.System.now()
         val id = UUID.randomUUID()
         TeamTable.insert {
@@ -111,6 +112,7 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
 
     override suspend fun createIfNameAvailable(name: String, description: String): Team = dbQuery {
         try {
+            // todo claude: duplicate 9 lines
             val now = Clock.System.now()
             val id = UUID.randomUUID()
             TeamTable.insert {
@@ -130,6 +132,7 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
 
     override suspend fun createTeamWithMember(name: String, description: String, userId: String, role: TeamRole): Team = dbQuery {
         try {
+            // todo claude: duplicate 8 lines
             val now = Clock.System.now()
             val id = UUID.randomUUID()
             TeamTable.insert {
@@ -156,6 +159,7 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
 
     override suspend fun updateIfNameAvailable(id: TeamId, name: String?, description: String?): Team? = dbQuery {
         try {
+            // todo claude: duplicate 6 lines
             val uuid = UUID.fromString(id.value)
             val updated = TeamTable.update({ TeamTable.id eq uuid }) { stmt ->
                 name?.let { stmt[TeamTable.name] = it }
@@ -200,6 +204,7 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
     }
 
     override suspend fun update(id: TeamId, name: String?, description: String?): Team? = dbQuery {
+        // todo claude: duplicate 6 lines
         val uuid = UUID.fromString(id.value)
         val updated = TeamTable.update({ TeamTable.id eq uuid }) { stmt ->
             name?.let { stmt[TeamTable.name] = it }
@@ -211,6 +216,7 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
     override suspend fun delete(id: TeamId): Boolean = dbQuery {
         val teamUuid = UUID.fromString(id.value)
         // Delete dependent rows (cascade handles most via FK, but explicit for safety)
+        // todo claude: duplicate 4 lines
         TeamMembershipTable.deleteWhere { TeamMembershipTable.teamId eq teamUuid }
         TeamInviteTable.deleteWhere { TeamInviteTable.teamId eq teamUuid }
         JoinRequestTable.deleteWhere { JoinRequestTable.teamId eq teamUuid }
@@ -228,6 +234,7 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
         if (hasActiveReleases) {
             throw IllegalArgumentException("Cannot delete team with active releases")
         }
+        // todo claude: duplicate 4 lines
         TeamMembershipTable.deleteWhere { TeamMembershipTable.teamId eq teamUuid }
         TeamInviteTable.deleteWhere { TeamInviteTable.teamId eq teamUuid }
         JoinRequestTable.deleteWhere { JoinRequestTable.teamId eq teamUuid }
@@ -509,7 +516,7 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
         return rows.map { row ->
             val tid = row[JoinRequestTable.teamId].value.toString()
             val uid = row[JoinRequestTable.userId].value.toString()
-            val reviewerId = row[JoinRequestTable.reviewedByUserId]?.let { entityId -> entityId.value.toString() }
+            val reviewerId = row[JoinRequestTable.reviewedByUserId]?.value?.toString()
             JoinRequest(
                 id = row[JoinRequestTable.id].value.toString(),
                 teamId = TeamId(tid),

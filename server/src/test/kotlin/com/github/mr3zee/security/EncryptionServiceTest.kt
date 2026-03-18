@@ -5,7 +5,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
-import kotlin.test.assertTrue
 
 class EncryptionServiceTest {
 
@@ -70,7 +69,7 @@ class EncryptionServiceTest {
     @Test
     fun `unicode input encrypts and decrypts correctly`() {
         val svc = service()
-        val original = "Special chars: ghp_token, Webhook\$\$, key=value&more"
+        val original = "Special chars: ghp_token, Webhook$$, key=value&more"
         val encrypted = svc.encrypt(original)
         val decrypted = svc.decrypt(encrypted)
         assertEquals(original, decrypted)

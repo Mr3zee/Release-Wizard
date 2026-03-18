@@ -77,6 +77,7 @@ fun TeamListScreen(
     ) {
 
     // Spin animation for refresh icon
+    // todo claude: duplicate 12 lines
     val infiniteTransition = rememberInfiniteTransition()
     val rotation by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -126,8 +127,9 @@ fun TeamListScreen(
                         ) {
                             Text(packStringResource(Res.string.teams_my_invites))
                         }
+                        // todo claude: duplicate 19 lines
                         TooltipBox(
-                            positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
                             tooltip = { PlainTooltip { Text(packStringResource(Res.string.common_refresh)) } },
                             state = rememberTooltipState(),
                         ) {

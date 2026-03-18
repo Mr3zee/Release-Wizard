@@ -2,8 +2,6 @@ package com.github.mr3zee.tags
 
 import com.github.mr3zee.model.ReleaseId
 import com.github.mr3zee.persistence.ReleaseTagTable
-import com.github.mr3zee.persistence.ReleaseTable
-import com.github.mr3zee.persistence.TeamTable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jetbrains.exposed.v1.core.*

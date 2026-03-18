@@ -141,6 +141,7 @@ class WebhookStatusIntegrationTest {
         val statusService = StatusWebhookService(tokenRepo, releasesRepo, engine, webhookConfig)
 
         // 4. Create a release + RUNNING block execution
+        // todo claude: unused
         val releaseId = ReleaseId(UUID.randomUUID().toString())
         val blockId = BlockId("webhook-test-block")
         // Insert team + project template (FK targets for releases)
@@ -273,8 +274,12 @@ class WebhookStatusIntegrationTest {
     private suspend fun startNgrok(port: Int): String {
         // Kill any leftover ngrok processes from previous runs
         try {
-            val killProcess = ProcessBuilder("pkill", "-f", "ngrok http").start()
-            killProcess.waitFor()
+            val killProcess = withContext(Dispatchers.IO) {
+                ProcessBuilder("pkill", "-f", "ngrok http").start()
+            }
+            withContext(Dispatchers.IO) {
+                killProcess.waitFor()
+            }
         } catch (_: Exception) {}
         // Wait for the old ngrok process to fully exit by verifying port 4040 is free (ngrok API port)
         waitUntil(maxAttempts = 10, delayMillis = 200) {
@@ -286,15 +291,17 @@ class WebhookStatusIntegrationTest {
         }
 
         val ngrokBinary = System.getProperty("ngrok.path") ?: "ngrok"
-        val process = ProcessBuilder(ngrokBinary, "http", port.toString(), "--log", "stdout", "--log-format", "json")
-            .redirectErrorStream(true)
-            .start()
+        val process = withContext(Dispatchers.IO) {
+            ProcessBuilder(ngrokBinary, "http", port.toString(), "--log", "stdout", "--log-format", "json")
+                .redirectErrorStream(true)
+                .start()
+        }
         ngrokProcess = process
 
         // Poll ngrok's local API until it reports a healthy tunnel with a public URL
         val ngrokApiClient = HttpClient(io.ktor.client.engine.cio.CIO)
         var publicUrl: String? = null
-        try {
+        ngrokApiClient.use { ngrokApiClient ->
             waitUntil(maxAttempts = 30, delayMillis = 1000) {
                 try {
                     val response = ngrokApiClient.get("http://127.0.0.1:4040/api/tunnels")
@@ -311,8 +318,6 @@ class WebhookStatusIntegrationTest {
                     false // ngrok API not ready yet
                 }
             }
-        } finally {
-            ngrokApiClient.close()
         }
 
         return publicUrl ?: error("Failed to get ngrok public URL after 30 health-check attempts")

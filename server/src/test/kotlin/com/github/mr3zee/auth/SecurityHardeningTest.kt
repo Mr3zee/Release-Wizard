@@ -3,12 +3,10 @@ package com.github.mr3zee.auth
 import com.github.mr3zee.*
 import com.github.mr3zee.api.*
 import com.github.mr3zee.model.TeamId
-import com.github.mr3zee.model.UserRole
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.cookies.HttpCookies
 import io.ktor.client.request.*
-import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.testing.*
@@ -278,7 +276,7 @@ class SecurityHardeningTest {
 
         // Try using query param instead of header — should fail
         val webhookClient = createClient {
-            install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) {
+            install(ContentNegotiation) {
                 json(AppJson)
             }
         }
@@ -301,7 +299,7 @@ class SecurityHardeningTest {
         val trigger = createTrigger.body<TriggerResponse>()
 
         val webhookClient = createClient {
-            install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) {
+            install(ContentNegotiation) {
                 json(AppJson)
             }
         }

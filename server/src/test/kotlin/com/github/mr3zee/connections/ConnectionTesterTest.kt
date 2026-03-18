@@ -155,7 +155,7 @@ class ConnectionTesterTest {
         val e = assertFailsWith<RuntimeException> {
             tester.fetchTeamCityBuildTypes(tcConfig)
         }
-        assertTrue(e.message?.contains("401") == true)
+        assertEquals(true, e.message?.contains("401"))
     }
 
     @Test
@@ -171,7 +171,7 @@ class ConnectionTesterTest {
         val e = assertFailsWith<RuntimeException> {
             tester.fetchTeamCityBuildTypes(tcConfig)
         }
-        assertTrue(e.message?.contains("500") == true)
+        assertEquals(true, e.message?.contains("500"))
     }
 
     // TeamCity Build Type Parameters
@@ -213,7 +213,7 @@ class ConnectionTesterTest {
         val e = assertFailsWith<RuntimeException> {
             tester.fetchTeamCityBuildTypeParameters(tcConfig, "nonexistent")
         }
-        assertTrue(e.message?.contains("404") == true)
+        assertEquals(true, e.message?.contains("404"))
     }
 
     @Test
@@ -289,7 +289,7 @@ class ConnectionTesterTest {
         val e = assertFailsWith<RuntimeException> {
             tester.fetchGitHubWorkflows(ghConfig)
         }
-        assertTrue(e.message?.contains("401") == true)
+        assertEquals(true, e.message?.contains("401"))
     }
 
     // GitHub Workflow Input Parsing (YAML)
@@ -452,6 +452,6 @@ class ConnectionTesterTest {
         val e = assertFailsWith<RuntimeException> {
             tester.fetchGitHubWorkflowInputs(ghConfig, "nonexistent.yml")
         }
-        assertTrue(e.message?.contains("404") == true)
+        assertEquals(true, e.message?.contains("404"))
     }
 }

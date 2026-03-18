@@ -177,12 +177,12 @@ class BuildPollingService(
         val status = json["status"]?.jsonPrimitive?.content
         val name = json["buildType"]?.jsonObject?.get("name")?.jsonPrimitive?.content ?: "Build $buildId"
 
-        val subStatus = when {
-            state == "finished" && status == "SUCCESS" -> SubBuildStatus.SUCCEEDED
-            state == "finished" && status == "FAILURE" -> SubBuildStatus.FAILED
-            state == "finished" && status == "UNKNOWN" -> SubBuildStatus.CANCELLED
-            state == "running" -> SubBuildStatus.RUNNING
-            state == "queued" -> SubBuildStatus.QUEUED
+        val subStatus = when (state) {
+            "finished" if status == "SUCCESS" -> SubBuildStatus.SUCCEEDED
+            "finished" if status == "FAILURE" -> SubBuildStatus.FAILED
+            "finished" if status == "UNKNOWN" -> SubBuildStatus.CANCELLED
+            "running" -> SubBuildStatus.RUNNING
+            "queued" -> SubBuildStatus.QUEUED
             else -> SubBuildStatus.UNKNOWN
         }
 
@@ -275,10 +275,10 @@ class BuildPollingService(
         val QUEUE_TIMEOUT: Duration = 20.minutes
     }
 
-    private fun mapGitHubJobStatus(status: String?, conclusion: String?): SubBuildStatus = when {
-        status == "queued" || status == "waiting" -> SubBuildStatus.QUEUED
-        status == "in_progress" -> SubBuildStatus.RUNNING
-        status == "completed" -> when (conclusion) {
+    private fun mapGitHubJobStatus(status: String?, conclusion: String?): SubBuildStatus = when (status) {
+        "queued", "waiting" -> SubBuildStatus.QUEUED
+        "in_progress" -> SubBuildStatus.RUNNING
+        "completed" -> when (conclusion) {
             "success", "neutral" -> SubBuildStatus.SUCCEEDED
             "failure", "timed_out", "startup_failure" -> SubBuildStatus.FAILED
             "cancelled", "skipped", "stale" -> SubBuildStatus.CANCELLED

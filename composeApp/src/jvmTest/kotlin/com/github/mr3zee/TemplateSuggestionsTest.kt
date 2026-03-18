@@ -31,7 +31,7 @@ class TemplateSuggestionsTest {
 
     @Test
     fun `detects trigger immediately after dollar-brace`() {
-        val ctx = parseInterpolationContext("\${", 2)
+        val ctx = parseInterpolationContext($$"${", 2)
         assertNotNull(ctx)
         assertEquals(0, ctx.triggerOffset)
         assertEquals("", ctx.prefix)
@@ -39,7 +39,7 @@ class TemplateSuggestionsTest {
 
     @Test
     fun `detects trigger with partial prefix`() {
-        val ctx = parseInterpolationContext("\${par", 5)
+        val ctx = parseInterpolationContext($$"${par", 5)
         assertNotNull(ctx)
         assertEquals(0, ctx.triggerOffset)
         assertEquals("par", ctx.prefix)
@@ -47,7 +47,7 @@ class TemplateSuggestionsTest {
 
     @Test
     fun `detects trigger with full param prefix`() {
-        val ctx = parseInterpolationContext("\${param.ver", 11)
+        val ctx = parseInterpolationContext($$"${param.ver", 11)
         assertNotNull(ctx)
         assertEquals(0, ctx.triggerOffset)
         assertEquals("param.ver", ctx.prefix)
@@ -55,18 +55,18 @@ class TemplateSuggestionsTest {
 
     @Test
     fun `returns null for already closed expression`() {
-        assertNull(parseInterpolationContext("\${param.version}", 16))
+        assertNull(parseInterpolationContext($$"${param.version}", 16))
     }
 
     @Test
     fun `returns null when cursor is inside a closed expression`() {
         // Cursor after "param" but the expression is closed with }
-        assertNull(parseInterpolationContext("\${param.version}", 7))
+        assertNull(parseInterpolationContext($$"${param.version}", 7))
     }
 
     @Test
     fun `detects trigger with text before dollar-brace`() {
-        val ctx = parseInterpolationContext("hello \${p", 9)
+        val ctx = parseInterpolationContext($$"hello ${p", 9)
         assertNotNull(ctx)
         assertEquals(6, ctx.triggerOffset)
         assertEquals("p", ctx.prefix)
@@ -74,13 +74,13 @@ class TemplateSuggestionsTest {
 
     @Test
     fun `returns null for bare dollar without brace`() {
-        assertNull(parseInterpolationContext("hello \$p", 8))
+        assertNull(parseInterpolationContext($$"hello $p", 8))
     }
 
     @Test
     fun `handles nested expressions - outer closed inner open`() {
         // "prefix ${closed} ${open" — cursor in the second open expression
-        val text = "prefix \${closed} \${"
+        val text = $$"prefix ${closed} ${"
         val ctx = parseInterpolationContext(text, text.length)
         assertNotNull(ctx)
         assertEquals(17, ctx.triggerOffset)
@@ -89,12 +89,12 @@ class TemplateSuggestionsTest {
 
     @Test
     fun `returns null when all expressions are closed`() {
-        assertNull(parseInterpolationContext("\${a} \${b}", 9))
+        assertNull(parseInterpolationContext($$"${a} ${b}", 9))
     }
 
     @Test
     fun `detects trigger at beginning of text`() {
-        val ctx = parseInterpolationContext("\${block.b1", 10)
+        val ctx = parseInterpolationContext($$"${block.b1", 10)
         assertNotNull(ctx)
         assertEquals(0, ctx.triggerOffset)
         assertEquals("block.b1", ctx.prefix)
@@ -112,7 +112,7 @@ class TemplateSuggestionsTest {
 
         assertEquals(2, suggestions.size)
         assertEquals("version", suggestions[0].label)
-        assertEquals("\${param.version}", suggestions[0].insertText)
+        assertEquals($$"${param.version}", suggestions[0].insertText)
         assertEquals("Default: 1.0", suggestions[0].description)
         assertEquals(SuggestionCategory.PARAMETER, suggestions[0].category)
 
@@ -134,11 +134,11 @@ class TemplateSuggestionsTest {
 
         assertEquals(2, suggestions.size)
         assertEquals("Build / buildNumber", suggestions[0].label)
-        assertEquals("\${block.build1.buildNumber}", suggestions[0].insertText)
+        assertEquals($$"${block.build1.buildNumber}", suggestions[0].insertText)
         assertEquals(SuggestionCategory.BLOCK_OUTPUT, suggestions[0].category)
 
         assertEquals("Build / status", suggestions[1].label)
-        assertEquals("\${block.build1.status}", suggestions[1].insertText)
+        assertEquals($$"${block.build1.status}", suggestions[1].insertText)
     }
 
     @Test
@@ -266,7 +266,7 @@ class TemplateSuggestionsTest {
     @Test
     fun `cursor mid-expression returns correct prefix`() {
         // Cursor between "par" and "am.version" in an open expression
-        val ctx = parseInterpolationContext("\${param.version", 5)
+        val ctx = parseInterpolationContext($$"${param.version", 5)
         assertNotNull(ctx)
         assertEquals(0, ctx.triggerOffset)
         assertEquals("par", ctx.prefix)
@@ -328,25 +328,25 @@ class TemplateSuggestionsTest {
 
     @Test
     fun `insertExpressionSafely appends when no partial expression`() {
-        val result = insertExpressionSafely("hello ", "\${param.version}")
-        assertEquals("hello \${param.version}", result)
+        val result = insertExpressionSafely("hello ", $$"${param.version}")
+        assertEquals($$"hello ${param.version}", result)
     }
 
     @Test
     fun `insertExpressionSafely replaces partial expression`() {
-        val result = insertExpressionSafely("hello \${pa", "\${param.version}")
-        assertEquals("hello \${param.version}", result)
+        val result = insertExpressionSafely($$"hello ${pa", $$"${param.version}")
+        assertEquals($$"hello ${param.version}", result)
     }
 
     @Test
     fun `insertExpressionSafely with empty value`() {
-        val result = insertExpressionSafely("", "\${param.version}")
-        assertEquals("\${param.version}", result)
+        val result = insertExpressionSafely("", $$"${param.version}")
+        assertEquals($$"${param.version}", result)
     }
 
     @Test
     fun `insertExpressionSafely with closed expression appends`() {
-        val result = insertExpressionSafely("\${param.version}", "\${param.env}")
-        assertEquals("\${param.version}\${param.env}", result)
+        val result = insertExpressionSafely($$"${param.version}", $$"${param.env}")
+        assertEquals($$"${param.version}${param.env}", result)
     }
 }

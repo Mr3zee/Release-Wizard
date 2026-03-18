@@ -11,7 +11,6 @@ import com.github.mr3zee.model.*
 import com.github.mr3zee.api.ReleaseEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
@@ -25,7 +24,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.milliseconds
@@ -47,7 +45,7 @@ class StatusWebhookServiceTest {
     }
 
     @Test
-    fun `createToken generates unique tokens`() = runBlocking<Unit> {
+    fun `createToken generates unique tokens`() = runBlocking {
         val releaseId = ReleaseId("r1")
         val blockIdA = BlockId("a")
         val blockIdB = BlockId("b")
@@ -164,7 +162,7 @@ class StatusWebhookServiceTest {
     }
 
     @Test
-    fun `processStatusUpdate truncates long status`() = runBlocking<Unit> {
+    fun `processStatusUpdate truncates long status`() = runBlocking {
         val releaseId = ReleaseId("r1")
         val blockId = BlockId("a")
 
@@ -323,7 +321,7 @@ class StatusWebhookServiceTest {
     }
 
     @Test
-    fun `cleanupExpiredTokens deactivates expired and deletes old inactive`() = runBlocking<Unit> {
+    fun `cleanupExpiredTokens deactivates expired and deletes old inactive`() = runBlocking {
         val releaseId = ReleaseId("r1")
         val blockA = BlockId("a")
         val blockB = BlockId("b")
@@ -355,7 +353,7 @@ class StatusWebhookServiceTest {
     }
 
     @Test
-    fun `processStatusUpdate truncates long description`() = runBlocking<Unit> {
+    fun `processStatusUpdate truncates long description`() = runBlocking {
         val releaseId = ReleaseId("r1")
         val blockId = BlockId("a")
 
@@ -380,7 +378,7 @@ class StatusWebhookServiceTest {
     }
 
     @Test
-    fun `processStatusUpdate emits block update event`() = runBlocking<Unit> {
+    fun `processStatusUpdate emits block update event`() = runBlocking {
         val releaseId = ReleaseId("r1")
         val blockId = BlockId("a")
 

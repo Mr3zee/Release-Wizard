@@ -283,7 +283,7 @@ class DagEditorViewModel(
                 } else {
                     _lockState.value = LockState.LockLost
                 }
-                _error.value = UiMessage.LockReacquireFailed(e.message ?: "")
+                _error.value = UiMessage.LockReacquireFailed(e.message)
             } catch (e: Exception) {
                 _lockState.value = LockState.LockLost
                 _error.value = UiMessage.LockReacquireFailed(e.message ?: "")
@@ -346,10 +346,10 @@ class DagEditorViewModel(
             configFetchJobs.remove(blockId)?.cancel()
             paramsFetchJobs.remove(blockId)?.cancel()
         }
-        _externalConfigs.value = _externalConfigs.value - blockIds
-        _configFetchError.value = _configFetchError.value - blockIds
-        _isFetchingConfigs.value = _isFetchingConfigs.value - blockIds
-        _isFetchingConfigParams.value = _isFetchingConfigParams.value - blockIds
+        _externalConfigs.value -= blockIds
+        _configFetchError.value -= blockIds
+        _isFetchingConfigs.value -= blockIds
+        _isFetchingConfigParams.value -= blockIds
         _selectedBlockIds.value = emptySet()
         _selectedEdgeIndex.value = null
     }
@@ -460,8 +460,8 @@ class DagEditorViewModel(
     fun updateBlockConnectionId(blockId: BlockId, connectionId: ConnectionId?) {
         updateActionBlock(blockId) { it.copy(connectionId = connectionId) }
         // Clear downstream state
-        _externalConfigs.value = _externalConfigs.value - blockId
-        _configFetchError.value = _configFetchError.value - blockId
+        _externalConfigs.value -= blockId
+        _configFetchError.value -= blockId
         configFetchJobs[blockId]?.cancel()
         paramsFetchJobs[blockId]?.cancel()
         // Clear config ID parameter and fetched params
@@ -487,15 +487,15 @@ class DagEditorViewModel(
 
         configFetchJobs[blockId]?.cancel()
         configFetchJobs[blockId] = viewModelScope.launch {
-            _isFetchingConfigs.value = _isFetchingConfigs.value + blockId
-            _configFetchError.value = _configFetchError.value - blockId
+            _isFetchingConfigs.value += blockId
+            _configFetchError.value -= blockId
             try {
                 val response = client.fetchExternalConfigs(connectionId, connectionType)
-                _externalConfigs.value = _externalConfigs.value + (blockId to response.configs)
+                _externalConfigs.value += (blockId to response.configs)
             } catch (e: Exception) {
-                _configFetchError.value = _configFetchError.value + (blockId to (e.message ?: "Failed to fetch"))
+                _configFetchError.value += (blockId to (e.message ?: "Failed to fetch"))
             } finally {
-                _isFetchingConfigs.value = _isFetchingConfigs.value - blockId
+                _isFetchingConfigs.value -= blockId
             }
         }
     }
@@ -529,7 +529,7 @@ class DagEditorViewModel(
 
         paramsFetchJobs[blockId]?.cancel()
         paramsFetchJobs[blockId] = viewModelScope.launch {
-            _isFetchingConfigParams.value = _isFetchingConfigParams.value + blockId
+            _isFetchingConfigParams.value += blockId
             try {
                 val response = client.fetchExternalConfigParameters(connectionId, connectionType, configId)
                 // Merge: only add new keys, preserve existing user-edited params
@@ -544,7 +544,7 @@ class DagEditorViewModel(
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
-                _isFetchingConfigParams.value = _isFetchingConfigParams.value - blockId
+                _isFetchingConfigParams.value -= blockId
             }
         }
     }

@@ -3,7 +3,6 @@ package com.github.mr3zee.api
 import com.github.mr3zee.model.AuditEvent
 import com.github.mr3zee.model.JoinRequest
 import com.github.mr3zee.model.Team
-import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.model.TeamInvite
 import com.github.mr3zee.model.TeamMembership
 import com.github.mr3zee.model.TeamRole

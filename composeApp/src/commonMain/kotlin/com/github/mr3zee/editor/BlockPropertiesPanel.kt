@@ -6,6 +6,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
+import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -624,7 +625,7 @@ private fun SingleGateEditor(
                 testTag = "${testTagPrefix}_message_field",
             )
             TooltipBox(
-                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(),
+                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
                 tooltip = { PlainTooltip { Text(packStringResource(Res.string.editor_template_tooltip)) } },
                 state = rememberTooltipState(),
             ) {
@@ -714,7 +715,7 @@ private fun ParameterRow(
             testTag = "param_value_field",
         )
         TooltipBox(
-            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(),
+            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
             tooltip = { PlainTooltip { Text(packStringResource(Res.string.editor_template_tooltip)) } },
             state = rememberTooltipState(),
         ) {

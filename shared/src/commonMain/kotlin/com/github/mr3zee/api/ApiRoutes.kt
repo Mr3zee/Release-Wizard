@@ -32,6 +32,7 @@ object ApiRoutes {
         const val REGISTER = "$API_V1/auth/register"
         const val ME = "$API_V1/auth/me"
         const val USERS = "$API_V1/auth/users"
+        // todo claude: unused
         fun userById(id: String) = "$USERS/$id"
         fun userRole(id: String) = "$USERS/$id/role"
 

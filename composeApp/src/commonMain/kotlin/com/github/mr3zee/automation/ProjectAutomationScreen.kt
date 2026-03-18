@@ -47,7 +47,7 @@ fun ProjectAutomationScreen(
     var pendingWebhookSecret by remember { mutableStateOf<String?>(null) }
 
     // Maven created — confirmation dialog (carries artifact info for display)
-    var createdMavenTrigger by remember { mutableStateOf<com.github.mr3zee.model.MavenTrigger?>(null) }
+    var createdMavenTrigger by remember { mutableStateOf<MavenTrigger?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val dismissLabel = packStringResource(Res.string.common_dismiss)

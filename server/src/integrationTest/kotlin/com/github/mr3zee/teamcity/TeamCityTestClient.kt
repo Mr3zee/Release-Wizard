@@ -30,6 +30,7 @@ fun createTeamCityTestHttpClient(): HttpClient {
  * Polls TeamCity REST API until the build finishes (or times out).
  * Returns the final build JSON.
  */
+// todo claude: unused
 suspend fun HttpClient.waitForBuildCompletion(
     config: TeamCityTestConfig,
     buildId: String,

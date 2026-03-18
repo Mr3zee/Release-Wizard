@@ -3,7 +3,6 @@ package com.github.mr3zee.tags
 import com.github.mr3zee.api.*
 import com.github.mr3zee.jsonClient
 import com.github.mr3zee.login
-import com.github.mr3zee.loginAndCreateTeam
 import com.github.mr3zee.testModule
 import io.ktor.client.call.*
 import io.ktor.client.request.*

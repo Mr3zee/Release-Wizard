@@ -24,12 +24,14 @@ import com.github.mr3zee.util.displayName
 import com.github.mr3zee.util.resolve
 import com.github.mr3zee.util.typeLabel
 import com.github.mr3zee.i18n.packStringResource
+import kotlinx.coroutines.delay
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import releasewizard.composeapp.generated.resources.*
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -424,7 +426,7 @@ private fun BlockDetailPanel(
                         while (true) {
                             val now = Clock.System.now()
                             elapsed = formatDuration(now - startedAt)
-                            kotlinx.coroutines.delay(1000)
+                            delay(1000.milliseconds)
                         }
                     }
                     Text(

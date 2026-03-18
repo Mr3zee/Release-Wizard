@@ -19,8 +19,10 @@ import com.github.mr3zee.theme.LocalAppColors
  * Uses Compose Unstyled Tooltip for positioning and hover detection.
  */
 @Composable
+// todo claude: unused
 fun RwTooltip(
     tooltip: String,
+    // todo claude: unused
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {

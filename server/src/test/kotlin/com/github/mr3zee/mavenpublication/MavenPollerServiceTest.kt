@@ -142,7 +142,7 @@ class MavenPollerServiceTest {
     }
 
     @Test
-    fun `partial fire failure — only successful versions added to knownVersions`() = runTest {
+    fun `partial fire failure - only successful versions added to knownVersions`() = runTest {
         val t = trigger()
         val updated = mutableListOf<Set<String>>()
 

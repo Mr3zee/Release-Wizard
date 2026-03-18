@@ -6,7 +6,6 @@ import com.github.mr3zee.login
 import com.github.mr3zee.createTestTeam
 import com.github.mr3zee.model.*
 import com.github.mr3zee.testModule
-import com.github.mr3zee.loginAndCreateTeam
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*

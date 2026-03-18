@@ -154,7 +154,7 @@ class EmojiInputOutputTest {
             }
         }
 
-        onNodeWithTag("field").performTextInput("\uD83D\uDE80 \${")
+        onNodeWithTag("field").performTextInput($$"\uD83D\uDE80 ${")
         waitForIdle()
 
         onNodeWithTag("field_autocomplete_dropdown", useUnmergedTree = true).assertExists()
@@ -179,13 +179,13 @@ class EmojiInputOutputTest {
             }
         }
 
-        onNodeWithTag("field").performTextInput("\uD83D\uDE80 \${")
+        onNodeWithTag("field").performTextInput($$"\uD83D\uDE80 ${")
         waitForIdle()
 
         onNodeWithTag("field_suggestion_0", useUnmergedTree = true).performClick()
         waitForIdle()
 
-        assertEquals("\uD83D\uDE80 \${param.version}", currentValue)
+        assertEquals($$"\uD83D\uDE80 ${param.version}", currentValue)
     }
 
     @Test
@@ -207,7 +207,7 @@ class EmojiInputOutputTest {
             }
         }
 
-        onNodeWithTag("field").performTextInput("\${")
+        onNodeWithTag("field").performTextInput($$"${")
         waitForIdle()
 
         onNodeWithTag("field_autocomplete_dropdown", useUnmergedTree = true).assertExists()
@@ -238,13 +238,13 @@ class EmojiInputOutputTest {
             }
         }
 
-        onNodeWithTag("field").performTextInput("\${")
+        onNodeWithTag("field").performTextInput($$"${")
         waitForIdle()
 
         onNodeWithTag("field_suggestion_0", useUnmergedTree = true).performClick()
         waitForIdle()
 
-        assertEquals("\${param.\uD83D\uDE80 deploy_env}", currentValue)
+        assertEquals($$"${param.\uD83D\uDE80 deploy_env}", currentValue)
     }
 
     @Test
@@ -270,7 +270,7 @@ class EmojiInputOutputTest {
             }
         }
 
-        onNodeWithTag("field").performTextInput("\${")
+        onNodeWithTag("field").performTextInput($$"${")
         waitForIdle()
 
         onNodeWithTag("field_autocomplete_dropdown", useUnmergedTree = true).assertExists()

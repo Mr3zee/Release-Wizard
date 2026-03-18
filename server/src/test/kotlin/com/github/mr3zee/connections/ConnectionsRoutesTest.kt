@@ -8,13 +8,13 @@ import com.github.mr3zee.testModule
 import com.github.mr3zee.model.ConnectionConfig
 import com.github.mr3zee.model.ConnectionType
 import com.github.mr3zee.model.TeamId
+import io.ktor.client.HttpClient
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ConnectionsRoutesTest {
@@ -228,7 +228,7 @@ class ConnectionsRoutesTest {
 
     // --- Build Type Discovery ---
 
-    private suspend fun ApplicationTestBuilder.createTcConnection(client: io.ktor.client.HttpClient, teamId: TeamId): ConnectionResponse {
+    private suspend fun createTcConnection(client: HttpClient, teamId: TeamId): ConnectionResponse {
         val response = client.post(ApiRoutes.Connections.BASE) {
             contentType(ContentType.Application.Json)
             setBody(
@@ -342,7 +342,7 @@ class ConnectionsRoutesTest {
 
     // --- GitHub Workflow Discovery ---
 
-    private suspend fun ApplicationTestBuilder.createGhConnection(client: io.ktor.client.HttpClient, teamId: TeamId): ConnectionResponse {
+    private suspend fun createGhConnection(client: HttpClient, teamId: TeamId): ConnectionResponse {
         val response = client.post(ApiRoutes.Connections.BASE) {
             contentType(ContentType.Application.Json)
             setBody(

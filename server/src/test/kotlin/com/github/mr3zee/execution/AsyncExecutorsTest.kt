@@ -46,6 +46,7 @@ class AsyncExecutorsTest {
 
     @Test
     fun `teamcity executor triggers build and polls to completion`() = runBlocking {
+        // todo claude: unused
         var capturedUrl: String? = null
 
         val client = mockClient { request ->
@@ -739,7 +740,7 @@ class AsyncExecutorsTest {
     // --- BlockExecution Serialization ---
 
     @Test
-    fun `BlockExecution serialization backward compatibility — without webhookStatus`() {
+    fun `BlockExecution serialization backward compatibility - without webhookStatus`() {
         val json = """
             {
                 "blockId": "b-1",
@@ -759,7 +760,7 @@ class AsyncExecutorsTest {
     }
 
     @Test
-    fun `BlockExecution serialization round-trip — with webhookStatus`() {
+    fun `BlockExecution serialization round-trip - with webhookStatus`() {
         val now = Clock.System.now()
         val original = BlockExecution(
             blockId = BlockId("b-2"),
@@ -783,7 +784,7 @@ class AsyncExecutorsTest {
     }
 
     @Test
-    fun `BlockExecution serialization round-trip — with subBuilds`() {
+    fun `BlockExecution serialization round-trip - with subBuilds`() {
         val original = BlockExecution(
             blockId = BlockId("b-3"),
             releaseId = ReleaseId("r-3"),

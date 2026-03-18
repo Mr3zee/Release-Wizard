@@ -241,7 +241,7 @@ fun Application.testModule(
         exception<LockConflictException> { call, cause ->
             call.respond(
                 HttpStatusCode.Conflict,
-                com.github.mr3zee.api.ProjectLockConflictResponse(
+                ProjectLockConflictResponse(
                     error = cause.message ?: "Project is locked",
                     code = "LOCK_CONFLICT",
                     lock = cause.lock,

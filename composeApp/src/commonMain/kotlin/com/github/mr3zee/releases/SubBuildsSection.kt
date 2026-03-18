@@ -69,6 +69,7 @@ fun SubBuildsSection(
 
             AnimatedVisibility(visible = expanded) {
                 Column(modifier = Modifier.padding(top = Spacing.sm).testTag("sub_builds_list")) {
+                    // todo claude: no toSortedMap in commom main
                     val grouped = subBuilds.groupBy { it.dependencyLevel }.toSortedMap()
                     val isSingleStage = grouped.size == 1
                     grouped.entries.forEachIndexed { index, (level, builds) ->

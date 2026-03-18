@@ -271,6 +271,7 @@ fun ProjectListScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // Refresh error banner
+            // todo claude: duplicate 20 lines
             val resolvedRefreshError = refreshError?.resolve()
             if (resolvedRefreshError != null) {
                 RefreshErrorBanner(

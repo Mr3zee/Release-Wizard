@@ -10,7 +10,6 @@ import io.ktor.client.*
 import kotlinx.coroutines.runBlocking
 import org.junit.*
 import org.junit.Assert.fail
-import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class TeamCityBuildExecutorIntegrationTest {

@@ -197,6 +197,7 @@ class DefaultTeamService(
     }
 
     override suspend fun approveJoinRequest(teamId: TeamId, requestId: String, session: UserSession) {
+        // todo claude: duplicate 5 lines
         teamAccessService.checkTeamLead(teamId, session)
         val request = teamRepository.findJoinRequestById(requestId)
             ?: throw NotFoundException("Join request not found")
@@ -209,6 +210,7 @@ class DefaultTeamService(
     }
 
     override suspend fun rejectJoinRequest(teamId: TeamId, requestId: String, session: UserSession) {
+        // todo claude: duplicate 5 lines
         teamAccessService.checkTeamLead(teamId, session)
         val request = teamRepository.findJoinRequestById(requestId)
             ?: throw NotFoundException("Join request not found")

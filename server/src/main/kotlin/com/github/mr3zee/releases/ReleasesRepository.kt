@@ -92,7 +92,7 @@ interface ReleasesRepository {
     suspend fun batchStopBlocks(
         releaseId: ReleaseId,
         blockIds: Set<BlockId>,
-        finishedAt: kotlin.time.Instant,
+        finishedAt: Instant,
     )
 
     /**

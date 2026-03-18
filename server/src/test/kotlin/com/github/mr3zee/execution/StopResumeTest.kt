@@ -237,7 +237,7 @@ class StopResumeTest {
     }
 
     @Test
-    fun `stop is idempotent — second stop keeps release in STOPPED without corrupting state`() = runBlocking {
+    fun `stop is idempotent - second stop keeps release in STOPPED without corrupting state`() = runBlocking {
         val executor = ControllableBlockExecutor()
         withTestSetup(executor) {
             val release = singleBlockRelease(id = "r6", blockId = "a")
@@ -567,6 +567,7 @@ class ControllableBlockExecutor : BlockExecutor {
         gate(blockId).completeExceptionally(RuntimeException(message))
     }
 
+    // todo claude: unused
     fun wasStarted(blockId: BlockId) = started.containsKey(blockId.value)
     fun wasCancelled(blockId: BlockId) = cancelled.containsKey(blockId.value)
 

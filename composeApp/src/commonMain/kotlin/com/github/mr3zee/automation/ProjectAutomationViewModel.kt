@@ -73,7 +73,7 @@ class ProjectAutomationViewModel(
             _isSaving.value = true
             try {
                 val created = scheduleClient.createSchedule(projectId, request)
-                _schedules.value = _schedules.value + created
+                _schedules.value += created
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -109,7 +109,7 @@ class ProjectAutomationViewModel(
             _isSaving.value = true
             try {
                 val created = webhookClient.createTrigger(projectId, request)
-                _webhookTriggers.value = _webhookTriggers.value + created
+                _webhookTriggers.value += created
                 _webhookCreated.emit(created)
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
@@ -146,7 +146,7 @@ class ProjectAutomationViewModel(
             _isSaving.value = true
             try {
                 val created = mavenClient.createMavenTrigger(projectId, request)
-                _mavenTriggers.value = _mavenTriggers.value + created
+                _mavenTriggers.value += created
                 _mavenTriggerCreated.emit(created)
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()

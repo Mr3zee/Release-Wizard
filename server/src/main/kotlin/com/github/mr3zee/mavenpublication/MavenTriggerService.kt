@@ -1,6 +1,5 @@
 package com.github.mr3zee.mavenpublication
 
-import com.github.mr3zee.ForbiddenException
 import com.github.mr3zee.NotFoundException
 import com.github.mr3zee.api.CreateMavenTriggerRequest
 import com.github.mr3zee.auth.UserSession

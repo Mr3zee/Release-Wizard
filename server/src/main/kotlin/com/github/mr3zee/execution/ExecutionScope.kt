@@ -17,6 +17,7 @@ interface ExecutionScope {
 
     /**
      * Update the sub-builds list for the current block.
+     * // todo claude: unresolved kdoc reference
      * Writes to a dedicated DB column and emits a [BlockExecutionUpdated] event.
      */
     suspend fun updateSubBuilds(subBuilds: List<SubBuild>)

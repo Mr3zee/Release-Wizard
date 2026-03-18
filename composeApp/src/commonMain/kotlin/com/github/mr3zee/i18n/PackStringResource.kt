@@ -41,14 +41,11 @@ fun packStringResource(resource: StringResource, vararg formatArgs: Any): String
     if (resource.key in NEVER_OVERRIDE) return stringResource(resource, *formatArgs)
     val overrides = LocalLanguagePackData.current
     val template = overrides.strings[resource.key]
-    return if (template != null) {
-        template.replaceFormatArgs(formatArgs)
-    } else {
-        stringResource(resource, *formatArgs)
-    }
+    return template?.replaceFormatArgs(formatArgs) ?: stringResource(resource, *formatArgs)
 }
 
 @Composable
+// todo claude: unused
 fun packPluralStringResource(resource: PluralStringResource, quantity: Int): String {
     if (resource.key in NEVER_OVERRIDE) return pluralStringResource(resource, quantity)
     val overrides = LocalLanguagePackData.current

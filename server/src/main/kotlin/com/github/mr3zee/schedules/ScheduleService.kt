@@ -1,6 +1,5 @@
 package com.github.mr3zee.schedules
 
-import com.github.mr3zee.ForbiddenException
 import com.github.mr3zee.NotFoundException
 import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.model.ProjectId

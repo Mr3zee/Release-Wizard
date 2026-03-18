@@ -1,6 +1,5 @@
 package com.github.mr3zee.projects
 
-import com.github.mr3zee.ForbiddenException
 import com.github.mr3zee.NotFoundException
 import com.github.mr3zee.api.ProjectLockInfo
 import com.github.mr3zee.audit.AuditService

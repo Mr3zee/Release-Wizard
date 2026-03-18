@@ -427,7 +427,7 @@ class InMemoryReleasesRepository : ReleasesRepository {
 
     override suspend fun create(projectTemplateId: ProjectId, dagSnapshot: DagGraph, parameters: List<Parameter>, teamId: String): Release {
         val release = Release(
-            id = ReleaseId(java.util.UUID.randomUUID().toString()),
+            id = ReleaseId(UUID.randomUUID().toString()),
             projectTemplateId = projectTemplateId,
             status = ReleaseStatus.PENDING,
             dagSnapshot = dagSnapshot,
@@ -485,7 +485,7 @@ class InMemoryReleasesRepository : ReleasesRepository {
         subBuilds: List<SubBuild>,
     ): Boolean = false
 
-    override suspend fun batchStopBlocks(releaseId: ReleaseId, blockIds: Set<BlockId>, finishedAt: kotlin.time.Instant) {
+    override suspend fun batchStopBlocks(releaseId: ReleaseId, blockIds: Set<BlockId>, finishedAt: Instant) {
         synchronized(lock) {
             for (i in executions.indices) {
                 val exec = executions[i]
@@ -520,7 +520,7 @@ class InMemoryReleasesRepository : ReleasesRepository {
         blockId: BlockId,
         status: String,
         description: String?,
-        receivedAt: kotlin.time.Instant,
+        receivedAt: Instant,
     ): BlockExecution? {
         synchronized(lock) {
             val idx = executions.indexOfFirst {
@@ -547,7 +547,7 @@ class InMemoryStatusWebhookTokenRepository : StatusWebhookTokenRepository {
     private val tokens = mutableListOf<StatusWebhookToken>()
 
     /** Insert a token with a custom createdAt for TTL testing. */
-    fun insertWithCreatedAt(releaseId: ReleaseId, blockId: BlockId, createdAt: kotlin.time.Instant): UUID {
+    fun insertWithCreatedAt(releaseId: ReleaseId, blockId: BlockId, createdAt: Instant): UUID {
         val token = UUID.randomUUID()
         tokens.add(StatusWebhookToken(token, releaseId, blockId, active = true, createdAt = createdAt))
         return token

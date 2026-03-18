@@ -33,6 +33,7 @@ class TeamApiClient(private val client: HttpClient) {
         return response.body()
     }
 
+    // todo claude: unused
     suspend fun updateTeam(teamId: TeamId, request: UpdateTeamRequest): TeamResponse {
         val response = client.put(serverUrl(ApiRoutes.Teams.byId(teamId.value))) {
             contentType(ContentType.Application.Json)
@@ -41,6 +42,7 @@ class TeamApiClient(private val client: HttpClient) {
         return response.body()
     }
 
+    // todo claude: unused
     suspend fun deleteTeam(teamId: TeamId) {
         client.delete(serverUrl(ApiRoutes.Teams.byId(teamId.value)))
     }

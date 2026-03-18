@@ -3,7 +3,6 @@ package com.github.mr3zee.auth
 import com.github.mr3zee.api.*
 import com.github.mr3zee.model.UserRole
 import com.github.mr3zee.model.UserId
-import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.plugins.CorrelationIdKey
 import com.github.mr3zee.teams.TeamRepository
 import io.ktor.http.*

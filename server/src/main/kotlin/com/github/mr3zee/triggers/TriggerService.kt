@@ -1,6 +1,5 @@
 package com.github.mr3zee.triggers
 
-import com.github.mr3zee.ForbiddenException
 import com.github.mr3zee.NotFoundException
 import com.github.mr3zee.api.CreateTriggerRequest
 import com.github.mr3zee.api.TriggerResponse

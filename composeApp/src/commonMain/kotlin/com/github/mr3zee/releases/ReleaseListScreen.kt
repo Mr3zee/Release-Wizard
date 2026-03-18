@@ -51,6 +51,7 @@ import com.github.mr3zee.i18n.packStringResource
 import com.github.mr3zee.keyboard.LocalShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
 import releasewizard.composeapp.generated.resources.*
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,7 +96,7 @@ fun ReleaseListScreen(
         }
         while (true) {
             elapsed = mark.elapsedNow()
-            delay(1000)
+            delay(1000.milliseconds)
         }
     }
     val relativeTimeText = elapsed?.let { dur ->
@@ -145,7 +146,7 @@ fun ReleaseListScreen(
                             Text(packStringResource(Res.string.releases_title))
                             if (relativeTimeText != null) {
                                 Text(
-                                    text = relativeTimeText ?: "",
+                                    text = relativeTimeText,
                                     style = AppTypography.caption,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.testTag("last_updated_text"),
@@ -163,9 +164,10 @@ fun ReleaseListScreen(
                             Text(packStringResource(Res.string.common_back))
                         }
                     },
+                    // todo claude: duplicate 20 lines
                     actions = {
                         TooltipBox(
-                            positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
                             tooltip = { PlainTooltip { Text(packStringResource(Res.string.common_refresh)) } },
                             state = rememberTooltipState(),
                         ) {
@@ -213,6 +215,7 @@ fun ReleaseListScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // Refresh error banner
+            // todo claude: duplicate 20 lines
             val resolvedRefreshError = refreshError?.resolve()
             if (resolvedRefreshError != null) {
                 RefreshErrorBanner(

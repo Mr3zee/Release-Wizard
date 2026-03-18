@@ -5,7 +5,6 @@ import com.github.mr3zee.jsonClient
 import com.github.mr3zee.login
 import com.github.mr3zee.loginAndCreateTeam
 import com.github.mr3zee.testModule
-import com.github.mr3zee.model.TeamId
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*

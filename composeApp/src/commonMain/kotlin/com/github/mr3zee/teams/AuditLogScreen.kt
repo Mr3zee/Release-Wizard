@@ -52,6 +52,7 @@ fun AuditLogScreen(
     }
 
     Scaffold(
+        // todo claude: duplicate 11 lines
         topBar = {
             TopAppBar(
                 title = { Text(packStringResource(Res.string.teams_audit_log_title)) },
