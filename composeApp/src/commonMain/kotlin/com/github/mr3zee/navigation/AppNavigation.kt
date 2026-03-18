@@ -198,6 +198,7 @@ fun AppNavigation(
             TeamManageScreen(
                 viewModel = viewModel,
                 onBack = { onGoBack() },
+                onTeamDeleted = { onGoBack(); onGoBack() },
             )
         }
         is Screen.MyInvites -> {

@@ -149,6 +149,10 @@ class TeamScreensTest {
     // --- TeamManageScreen ---
 
     private fun teamManageClient() = mockHttpClient(mapOf(
+        "/teams/t1" to json("""{"team":{"id":"t1","name":"Alpha Team","description":"First team","createdAt":0},"members":[
+            {"teamId":"t1","userId":"u1","username":"alice","role":"TEAM_LEAD","joinedAt":0},
+            {"teamId":"t1","userId":"u2","username":"bob","role":"COLLABORATOR","joinedAt":0}
+        ],"memberCount":2,"inviteCount":1,"joinRequestCount":1}"""),
         "/teams/t1/members" to json("""{"members":[
             {"teamId":"t1","userId":"u1","username":"alice","role":"TEAM_LEAD","joinedAt":0},
             {"teamId":"t1","userId":"u2","username":"bob","role":"COLLABORATOR","joinedAt":0}

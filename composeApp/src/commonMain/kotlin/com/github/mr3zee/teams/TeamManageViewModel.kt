@@ -14,6 +14,12 @@ class TeamManageViewModel(
     private val apiClient: TeamApiClient,
 ) : ViewModel() {
 
+    private val _teamName = MutableStateFlow("")
+    val teamName: StateFlow<String> = _teamName
+
+    private val _teamDescription = MutableStateFlow("")
+    val teamDescription: StateFlow<String> = _teamDescription
+
     private val _members = MutableStateFlow<List<TeamMembership>>(emptyList())
     val members: StateFlow<List<TeamMembership>> = _members
 
@@ -38,6 +44,9 @@ class TeamManageViewModel(
             _isLoading.value = true
             _error.value = null
             try {
+                val detail = apiClient.getTeamDetail(teamId)
+                _teamName.value = detail.team.name
+                _teamDescription.value = detail.team.description
                 val membersResponse = apiClient.listMembers(teamId)
                 _members.value = membersResponse.members
                 val invitesResponse = apiClient.listTeamInvites(teamId)
@@ -48,6 +57,28 @@ class TeamManageViewModel(
                 _error.value = e.toUiMessage()
             } finally {
                 _isLoading.value = false
+            }
+        }
+    }
+
+    fun updateTeam(name: String, description: String) {
+        viewModelScope.launch {
+            try {
+                apiClient.updateTeam(teamId, UpdateTeamRequest(name = name, description = description))
+                loadAll()
+            } catch (e: Exception) {
+                _error.value = e.toUiMessage()
+            }
+        }
+    }
+
+    fun deleteTeam(onDeleted: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                apiClient.deleteTeam(teamId)
+                onDeleted()
+            } catch (e: Exception) {
+                _error.value = e.toUiMessage()
             }
         }
     }

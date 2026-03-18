@@ -45,7 +45,6 @@ fun packStringResource(resource: StringResource, vararg formatArgs: Any): String
 }
 
 @Composable
-// todo claude: unused
 fun packPluralStringResource(resource: PluralStringResource, quantity: Int): String {
     if (resource.key in NEVER_OVERRIDE) return pluralStringResource(resource, quantity)
     val overrides = LocalLanguagePackData.current

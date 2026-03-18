@@ -2,6 +2,7 @@ package com.github.mr3zee.components
 
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,33 +20,33 @@ import com.github.mr3zee.theme.LocalAppColors
  * Uses Compose Unstyled Tooltip for positioning and hover detection.
  */
 @Composable
-// todo claude: unused
 fun RwTooltip(
     tooltip: String,
-    // todo claude: unused
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
     val colors = LocalAppColors.current
 
-    Tooltip(
-        enabled = true,
-        panel = {
-            TooltipPanel(
-                modifier = Modifier.zIndex(15f),
-                shape = AppShapes.xs,
-                backgroundColor = colors.chromeTextPrimary,
-                contentColor = colors.chromeSurface,
-                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                enter = fadeIn(),
-                exit = fadeOut(),
-            ) {
-                Text(
-                    text = tooltip,
-                    style = AppTypography.caption,
-                )
-            }
-        },
-        anchor = content,
-    )
+    Box(modifier = modifier) {
+        Tooltip(
+            enabled = true,
+            panel = {
+                TooltipPanel(
+                    modifier = Modifier.zIndex(15f),
+                    shape = AppShapes.xs,
+                    backgroundColor = colors.chromeTextPrimary,
+                    contentColor = colors.chromeSurface,
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                ) {
+                    Text(
+                        text = tooltip,
+                        style = AppTypography.caption,
+                    )
+                }
+            },
+            anchor = content,
+        )
+    }
 }

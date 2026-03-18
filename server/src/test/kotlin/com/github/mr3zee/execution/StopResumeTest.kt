@@ -567,8 +567,6 @@ class ControllableBlockExecutor : BlockExecutor {
         gate(blockId).completeExceptionally(RuntimeException(message))
     }
 
-    // todo claude: unused
-    fun wasStarted(blockId: BlockId) = started.containsKey(blockId.value)
     fun wasCancelled(blockId: BlockId) = cancelled.containsKey(blockId.value)
 
     override suspend fun execute(

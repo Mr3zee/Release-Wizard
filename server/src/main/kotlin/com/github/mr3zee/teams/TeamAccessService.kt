@@ -23,11 +23,6 @@ class TeamAccessService(private val teamRepository: TeamRepository) {
         }
     }
 
-    // todo claude: unused
-    suspend fun getTeamRole(teamId: TeamId, userId: String): TeamRole? {
-        return teamRepository.findMembership(teamId, userId)?.role
-    }
-
     suspend fun getUserTeamIds(userId: String): List<TeamId> {
         return teamRepository.getUserTeams(userId).map { it.first.id }
     }

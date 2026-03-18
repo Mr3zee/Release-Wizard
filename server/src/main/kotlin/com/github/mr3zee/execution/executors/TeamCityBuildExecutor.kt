@@ -50,7 +50,7 @@ class TeamCityBuildExecutor(
         return if (persistedBuildId != null) {
             // Resume polling from persisted build ID
             try {
-                pollBuildToCompletion(config, persistedBuildId, parameters, block, scope)
+                pollBuildToCompletion(config, persistedBuildId, parameters, scope)
             } finally {
                 deactivateTokenIfNeeded(block, context)
             }
@@ -131,7 +131,7 @@ class TeamCityBuildExecutor(
         scope?.persistOutputs(mapOf(INTERNAL_BUILD_ID_KEY to buildId))
 
         return try {
-            pollBuildToCompletion(config, buildId, parameters, block, scope)
+            pollBuildToCompletion(config, buildId, parameters, scope)
         } finally {
             deactivateTokenIfNeeded(block, context)
         }
@@ -141,8 +141,6 @@ class TeamCityBuildExecutor(
         config: ConnectionConfig.TeamCityConfig,
         buildId: String,
         parameters: List<Parameter>,
-        // todo claude: unused
-        block: Block.ActionBlock,
         scope: ExecutionScope?,
     ): Map<String, String> {
         // Discover sub-builds once (non-fatal on failure)

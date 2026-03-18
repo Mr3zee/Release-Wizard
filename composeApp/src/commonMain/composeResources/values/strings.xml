@@ -310,6 +310,9 @@
     <string name="teams_keep">Keep</string>
     <string name="teams_promote">Promote</string>
     <string name="teams_demote">Demote</string>
+    <string name="teams_edit_team">Edit Team</string>
+    <string name="teams_delete_team">Delete Team</string>
+    <string name="teams_delete_confirmation">Are you sure you want to delete \"%1$s\"? This action cannot be undone.</string>
     <string name="teams_reject">Reject</string>
     <string name="teams_invite_dialog_title">Invite User</string>
     <string name="teams_invite_username_label">Username</string>

@@ -29,14 +29,22 @@ import releasewizard.composeapp.generated.resources.*
 fun TeamManageScreen(
     viewModel: TeamManageViewModel,
     onBack: () -> Unit,
+    onTeamDeleted: () -> Unit = {},
 ) {
+    val teamName by viewModel.teamName.collectAsState()
+    val teamDescription by viewModel.teamDescription.collectAsState()
     val members by viewModel.members.collectAsState()
     val invites by viewModel.invites.collectAsState()
     val joinRequests by viewModel.joinRequests.collectAsState()
     val error by viewModel.error.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
+    var editName by remember(teamName) { mutableStateOf(teamName) }
+    var editDescription by remember(teamDescription) { mutableStateOf(teamDescription) }
+    val hasEditChanges = editName != teamName || editDescription != teamDescription
+
     var showInviteDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
     var memberToRemove by remember { mutableStateOf<TeamMembership?>(null) }
     var inviteToCancel by remember { mutableStateOf<TeamInvite?>(null) }
 
@@ -79,6 +87,43 @@ fun TeamManageScreen(
                 modifier = Modifier.fillMaxSize().padding(padding),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
+                // Edit team section
+                item {
+                    Column(
+                        modifier = Modifier
+                            .widthIn(max = 1200.dp)
+                            .fillMaxWidth()
+                            .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                    ) {
+                        Text(packStringResource(Res.string.teams_edit_team), style = AppTypography.heading)
+                        Spacer(modifier = Modifier.height(Spacing.sm))
+                        RwTextField(
+                            value = editName,
+                            onValueChange = { editName = it },
+                            label = packStringResource(Res.string.teams_team_name),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth().testTag("edit_team_name"),
+                        )
+                        Spacer(modifier = Modifier.height(Spacing.sm))
+                        RwTextField(
+                            value = editDescription,
+                            onValueChange = { editDescription = it },
+                            label = packStringResource(Res.string.teams_description_optional),
+                            modifier = Modifier.fillMaxWidth().testTag("edit_team_description"),
+                        )
+                        Spacer(modifier = Modifier.height(Spacing.sm))
+                        RwButton(
+                            onClick = { viewModel.updateTeam(editName, editDescription) },
+                            variant = RwButtonVariant.Ghost,
+                            enabled = hasEditChanges && editName.isNotBlank(),
+                            modifier = Modifier.testTag("save_team_button"),
+                        ) {
+                            Text(packStringResource(Res.string.common_save))
+                        }
+                    }
+                    HorizontalDivider(modifier = Modifier.widthIn(max = 1200.dp).padding(vertical = Spacing.sm))
+                }
+
                 // Members section
                 item {
                     Row(
@@ -159,8 +204,55 @@ fun TeamManageScreen(
                         )
                     }
                 }
+
+                // Delete team (danger zone)
+                item {
+                    HorizontalDivider(modifier = Modifier.widthIn(max = 1200.dp).padding(vertical = Spacing.sm))
+                    Row(
+                        modifier = Modifier
+                            .widthIn(max = 1200.dp)
+                            .fillMaxWidth()
+                            .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                        horizontalArrangement = Arrangement.End,
+                    ) {
+                        RwButton(
+                            onClick = { showDeleteDialog = true },
+                            variant = RwButtonVariant.Ghost,
+                            contentColor = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.testTag("delete_team_button"),
+                        ) {
+                            Text(packStringResource(Res.string.teams_delete_team))
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(80.dp))
+                }
             }
         }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text(packStringResource(Res.string.teams_delete_team)) },
+            text = { Text(packStringResource(Res.string.teams_delete_confirmation, teamName)) },
+            confirmButton = {
+                RwButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        viewModel.deleteTeam { onTeamDeleted() }
+                    },
+                    variant = RwButtonVariant.Ghost,
+                    contentColor = MaterialTheme.colorScheme.error,
+                ) {
+                    Text(packStringResource(Res.string.common_delete))
+                }
+            },
+            dismissButton = {
+                RwButton(onClick = { showDeleteDialog = false }, variant = RwButtonVariant.Ghost) {
+                    Text(packStringResource(Res.string.common_cancel))
+                }
+            },
+        )
     }
 
     if (showInviteDialog) {

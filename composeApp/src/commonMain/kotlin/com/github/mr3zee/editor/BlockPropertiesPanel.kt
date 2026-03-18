@@ -6,7 +6,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
-import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,6 +17,7 @@ import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwCheckbox
 import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwTextField
+import com.github.mr3zee.components.RwTooltip
 import com.github.mr3zee.model.*
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.Spacing
@@ -624,11 +624,7 @@ private fun SingleGateEditor(
                 textStyle = AppTypography.bodySmall,
                 testTag = "${testTagPrefix}_message_field",
             )
-            TooltipBox(
-                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                tooltip = { PlainTooltip { Text(packStringResource(Res.string.editor_template_tooltip)) } },
-                state = rememberTooltipState(),
-            ) {
+            RwTooltip(tooltip = packStringResource(Res.string.editor_template_tooltip)) {
                 RwButton(
                     onClick = { showTemplatePicker = true },
                     variant = RwButtonVariant.Ghost,
@@ -714,11 +710,7 @@ private fun ParameterRow(
             textStyle = AppTypography.bodySmall,
             testTag = "param_value_field",
         )
-        TooltipBox(
-            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-            tooltip = { PlainTooltip { Text(packStringResource(Res.string.editor_template_tooltip)) } },
-            state = rememberTooltipState(),
-        ) {
+        RwTooltip(tooltip = packStringResource(Res.string.editor_template_tooltip)) {
             RwButton(
                 onClick = { showTemplatePicker = true },
                 variant = RwButtonVariant.Ghost,

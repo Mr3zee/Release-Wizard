@@ -11,9 +11,6 @@ import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.i18n.packStringResource
 import releasewizard.composeapp.generated.resources.*
 
-// todo claude: unused
-private data class CronPreset(val labelRes: Any, val cron: String)
-
 private val CRON_REGEX = Regex(
     "^(\\*|[0-5]?\\d)\\s+(\\*|[01]?\\d|2[0-3])\\s+(\\*|[12]?\\d|3[01])\\s+(\\*|[0-9]|1[0-2])\\s+(\\*|[0-6])$"
 )

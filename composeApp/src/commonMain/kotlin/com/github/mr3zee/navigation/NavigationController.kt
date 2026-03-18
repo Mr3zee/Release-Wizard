@@ -15,8 +15,6 @@ class NavigationController(
     private val _backStack = mutableStateListOf(initialScreen)
 
     val currentScreen by derivedStateOf { _backStack.last() }
-    // todo claude: unused
-    val canGoBack by derivedStateOf { _backStack.size > 1 }
 
     fun navigate(screen: Screen) {
         // Avoid pushing the same screen twice

@@ -46,12 +46,8 @@ class AsyncExecutorsTest {
 
     @Test
     fun `teamcity executor triggers build and polls to completion`() = runBlocking {
-        // todo claude: unused
-        var capturedUrl: String? = null
-
         val client = mockClient { request ->
             val url = request.url.toString()
-            capturedUrl = url
             when {
                 url.contains("/app/rest/buildQueue") -> respond(
                     """{"id":"42","buildTypeId":"bt1","state":"queued"}""",

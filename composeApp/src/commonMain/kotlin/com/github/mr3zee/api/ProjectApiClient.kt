@@ -69,16 +69,6 @@ class ProjectApiClient(private val client: HttpClient) {
         return response.body()
     }
 
-    // todo claude: unused
-    suspend fun getLockInfo(projectId: ProjectId): ProjectLockInfo? {
-        return try {
-            val response = client.get(serverUrl(ApiRoutes.Projects.lock(projectId.value)))
-            response.body()
-        } catch (e: ClientRequestException) {
-            if (e.response.status.value == 404) null else throw e
-        }
-    }
-
     suspend fun forceReleaseLock(projectId: ProjectId) {
         client.delete(serverUrl(ApiRoutes.Projects.lock(projectId.value))) {
             parameter("force", true)

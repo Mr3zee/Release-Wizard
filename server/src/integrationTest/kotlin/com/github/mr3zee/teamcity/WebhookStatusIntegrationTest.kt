@@ -141,8 +141,6 @@ class WebhookStatusIntegrationTest {
         val statusService = StatusWebhookService(tokenRepo, releasesRepo, engine, webhookConfig)
 
         // 4. Create a release + RUNNING block execution
-        // todo claude: unused
-        val releaseId = ReleaseId(UUID.randomUUID().toString())
         val blockId = BlockId("webhook-test-block")
         // Insert team + project template (FK targets for releases)
         val teamUuid = UUID.fromString("00000000-0000-0000-0000-000000000001")

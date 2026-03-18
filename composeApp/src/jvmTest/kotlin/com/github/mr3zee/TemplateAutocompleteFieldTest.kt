@@ -31,17 +31,12 @@ class TemplateAutocompleteFieldTest {
 
     @Test
     fun `typing dollar-brace triggers dropdown`() = runComposeUiTest {
-        // todo claude: unused
-        var currentValue = ""
         setContent {
             MaterialTheme {
                 var value by remember { mutableStateOf("") }
                 TemplateAutocompleteField(
                     value = value,
-                    onValueChange = {
-                        value = it
-                        currentValue = it
-                    },
+                    onValueChange = { value = it },
                     projectParameters = testParams,
                     predecessors = testPredecessors,
                     testTag = "field",
