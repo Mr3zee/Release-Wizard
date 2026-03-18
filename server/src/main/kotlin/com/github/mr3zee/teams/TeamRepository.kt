@@ -97,8 +97,7 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
             e.cause?.message?.contains("duplicate key", ignoreCase = true) == true
     }
 
-    override suspend fun create(name: String, description: String): Team = dbQuery {
-        // todo claude: duplicate 9 lines
+    private fun insertTeam(name: String, description: String): Team {
         val now = Clock.System.now()
         val id = UUID.randomUUID()
         TeamTable.insert {
@@ -107,21 +106,12 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
             it[TeamTable.description] = description
             it[TeamTable.createdAt] = now
         }
-        Team(id = TeamId(id.toString()), name = name, description = description, createdAt = now.toEpochMilliseconds())
+        return Team(id = TeamId(id.toString()), name = name, description = description, createdAt = now.toEpochMilliseconds())
     }
 
-    override suspend fun createIfNameAvailable(name: String, description: String): Team = dbQuery {
-        try {
-            // todo claude: duplicate 9 lines
-            val now = Clock.System.now()
-            val id = UUID.randomUUID()
-            TeamTable.insert {
-                it[TeamTable.id] = id
-                it[TeamTable.name] = name
-                it[TeamTable.description] = description
-                it[TeamTable.createdAt] = now
-            }
-            Team(id = TeamId(id.toString()), name = name, description = description, createdAt = now.toEpochMilliseconds())
+    private inline fun <T> catchUniqueConstraint(block: () -> T): T {
+        return try {
+            block()
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             if (isUniqueConstraintViolation(e)) {
                 throw IllegalArgumentException("Team name already taken")
@@ -130,48 +120,29 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
         }
     }
 
+    override suspend fun create(name: String, description: String): Team = dbQuery {
+        insertTeam(name, description)
+    }
+
+    override suspend fun createIfNameAvailable(name: String, description: String): Team = dbQuery {
+        catchUniqueConstraint { insertTeam(name, description) }
+    }
+
     override suspend fun createTeamWithMember(name: String, description: String, userId: String, role: TeamRole): Team = dbQuery {
-        try {
-            // todo claude: duplicate 8 lines
-            val now = Clock.System.now()
-            val id = UUID.randomUUID()
-            TeamTable.insert {
-                it[TeamTable.id] = id
-                it[TeamTable.name] = name
-                it[TeamTable.description] = description
-                it[TeamTable.createdAt] = now
-            }
-            val teamId = TeamId(id.toString())
+        catchUniqueConstraint {
+            val team = insertTeam(name, description)
             TeamMembershipTable.insert {
-                it[TeamMembershipTable.teamId] = id
+                it[TeamMembershipTable.teamId] = UUID.fromString(team.id.value)
                 it[TeamMembershipTable.userId] = UUID.fromString(userId)
                 it[TeamMembershipTable.role] = role
-                it[TeamMembershipTable.joinedAt] = now
+                it[TeamMembershipTable.joinedAt] = Clock.System.now()
             }
-            Team(id = teamId, name = name, description = description, createdAt = now.toEpochMilliseconds())
-        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-            if (isUniqueConstraintViolation(e)) {
-                throw IllegalArgumentException("Team name already taken")
-            }
-            throw e
+            team
         }
     }
 
     override suspend fun updateIfNameAvailable(id: TeamId, name: String?, description: String?): Team? = dbQuery {
-        try {
-            // todo claude: duplicate 6 lines
-            val uuid = UUID.fromString(id.value)
-            val updated = TeamTable.update({ TeamTable.id eq uuid }) { stmt ->
-                name?.let { stmt[TeamTable.name] = it }
-                description?.let { stmt[TeamTable.description] = it }
-            }
-            if (updated > 0) TeamTable.selectAll().where { TeamTable.id eq uuid }.single().toTeam() else null
-        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-            if (isUniqueConstraintViolation(e)) {
-                throw IllegalArgumentException("Team name already taken")
-            }
-            throw e
-        }
+        catchUniqueConstraint { performTeamUpdate(id, name, description) }
     }
 
     override suspend fun findById(id: TeamId): Team? = dbQuery {
@@ -203,24 +174,28 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
         teams to totalCount
     }
 
-    override suspend fun update(id: TeamId, name: String?, description: String?): Team? = dbQuery {
-        // todo claude: duplicate 6 lines
+    private fun performTeamUpdate(id: TeamId, name: String?, description: String?): Team? {
         val uuid = UUID.fromString(id.value)
         val updated = TeamTable.update({ TeamTable.id eq uuid }) { stmt ->
             name?.let { stmt[TeamTable.name] = it }
             description?.let { stmt[TeamTable.description] = it }
         }
-        if (updated > 0) TeamTable.selectAll().where { TeamTable.id eq uuid }.single().toTeam() else null
+        return if (updated > 0) TeamTable.selectAll().where { TeamTable.id eq uuid }.single().toTeam() else null
     }
 
-    override suspend fun delete(id: TeamId): Boolean = dbQuery {
-        val teamUuid = UUID.fromString(id.value)
-        // Delete dependent rows (cascade handles most via FK, but explicit for safety)
-        // todo claude: duplicate 4 lines
+    override suspend fun update(id: TeamId, name: String?, description: String?): Team? = dbQuery {
+        performTeamUpdate(id, name, description)
+    }
+
+    private fun deleteTeamAndDependencies(teamUuid: UUID): Boolean {
         TeamMembershipTable.deleteWhere { TeamMembershipTable.teamId eq teamUuid }
         TeamInviteTable.deleteWhere { TeamInviteTable.teamId eq teamUuid }
         JoinRequestTable.deleteWhere { JoinRequestTable.teamId eq teamUuid }
-        TeamTable.deleteWhere { TeamTable.id eq teamUuid } > 0
+        return TeamTable.deleteWhere { TeamTable.id eq teamUuid } > 0
+    }
+
+    override suspend fun delete(id: TeamId): Boolean = dbQuery {
+        deleteTeamAndDependencies(UUID.fromString(id.value))
     }
 
     override suspend fun deleteWithActiveReleaseCheck(teamId: TeamId): Boolean = dbQuery {
@@ -234,11 +209,7 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
         if (hasActiveReleases) {
             throw IllegalArgumentException("Cannot delete team with active releases")
         }
-        // todo claude: duplicate 4 lines
-        TeamMembershipTable.deleteWhere { TeamMembershipTable.teamId eq teamUuid }
-        TeamInviteTable.deleteWhere { TeamInviteTable.teamId eq teamUuid }
-        JoinRequestTable.deleteWhere { JoinRequestTable.teamId eq teamUuid }
-        TeamTable.deleteWhere { TeamTable.id eq teamUuid } > 0
+        deleteTeamAndDependencies(teamUuid)
     }
 
     // Membership

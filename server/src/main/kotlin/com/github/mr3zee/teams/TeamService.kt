@@ -196,13 +196,17 @@ class DefaultTeamService(
         return JoinRequestListResponse(requests = teamRepository.findPendingJoinRequestsByTeam(teamId))
     }
 
-    override suspend fun approveJoinRequest(teamId: TeamId, requestId: String, session: UserSession) {
-        // todo claude: duplicate 5 lines
+    private suspend fun validatePendingJoinRequest(teamId: TeamId, requestId: String, session: UserSession): JoinRequest {
         teamAccessService.checkTeamLead(teamId, session)
         val request = teamRepository.findJoinRequestById(requestId)
             ?: throw NotFoundException("Join request not found")
         if (request.teamId != teamId) throw ForbiddenException("Request does not belong to this team")
         if (request.status != JoinRequestStatus.PENDING) throw IllegalArgumentException("Request is not pending")
+        return request
+    }
+
+    override suspend fun approveJoinRequest(teamId: TeamId, requestId: String, session: UserSession) {
+        val request = validatePendingJoinRequest(teamId, requestId, session)
         teamRepository.updateJoinRequestStatus(requestId, JoinRequestStatus.APPROVED, session.userId)
         teamRepository.addMember(teamId, request.userId.value, TeamRole.COLLABORATOR)
         auditService.log(teamId, session, AuditAction.JOIN_REQUEST_APPROVED, AuditTargetType.USER, request.userId.value, "Approved join request")
@@ -210,12 +214,7 @@ class DefaultTeamService(
     }
 
     override suspend fun rejectJoinRequest(teamId: TeamId, requestId: String, session: UserSession) {
-        // todo claude: duplicate 5 lines
-        teamAccessService.checkTeamLead(teamId, session)
-        val request = teamRepository.findJoinRequestById(requestId)
-            ?: throw NotFoundException("Join request not found")
-        if (request.teamId != teamId) throw ForbiddenException("Request does not belong to this team")
-        if (request.status != JoinRequestStatus.PENDING) throw IllegalArgumentException("Request is not pending")
+        val request = validatePendingJoinRequest(teamId, requestId, session)
         teamRepository.updateJoinRequestStatus(requestId, JoinRequestStatus.REJECTED, session.userId)
         auditService.log(teamId, session, AuditAction.JOIN_REQUEST_REJECTED, AuditTargetType.USER, request.userId.value, "Rejected join request")
     }

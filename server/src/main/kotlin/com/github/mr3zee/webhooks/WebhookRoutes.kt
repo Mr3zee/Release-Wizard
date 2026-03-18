@@ -23,7 +23,6 @@ fun Route.webhookRoutes() {
 
     route(ApiRoutes.Webhooks.BASE) {
         post("/status") {
-            // todo claude: duplicate 12 lines
             val authHeader = call.request.header("Authorization")
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                 call.respond(HttpStatusCode.NotFound, "Not found")

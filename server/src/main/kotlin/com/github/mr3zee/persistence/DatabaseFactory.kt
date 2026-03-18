@@ -23,8 +23,6 @@ fun dataSource(config: DatabaseConfig): DataSource {
 fun initDatabase(ds: DataSource): Database {
     val database = Database.connect(ds)
     transaction(database) {
-        // todo claude:
-        //   [DEPRECATION] 'fun createMissingTablesAndColumns(vararg tables: Table, inBatch: Boolean = ..., withLogs: Boolean = ...): Unit' is deprecated. Execution of this function might lead to unpredictable state in the database if a failure occurs at any point. To prevent this, please use `MigrationUtils.statementsRequiredForDatabaseMigration()` with a third-party migration tool (e.g., Flyway). `MigrationUtils` is accessible with a dependency on `exposed-migration-jdbc`.
         SchemaUtils.create(
             UserTable,
             TeamTable,

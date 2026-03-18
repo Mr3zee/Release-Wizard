@@ -15,6 +15,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
@@ -35,41 +36,13 @@ fun Modifier.focusRing(
     ringColor: Color = Color.Unspecified,
     interactionSource: InteractionSource,
 ): Modifier = composed {
-    // todo claude: duplicate 15 lines
-    val colors = LocalAppColors.current
-    val isFocused by interactionSource.collectIsFocusedAsState()
-
-    val resolvedColor = if (ringColor != Color.Unspecified) ringColor else colors.focusRing
-    val targetColor = if (isFocused) resolvedColor else Color.Transparent
-
-    val animatedColor by animateColorAsState(
-        targetValue = targetColor,
-        animationSpec = tween(durationMillis = 100),
-    )
-
-    val strokeWidth = 2.dp
-    val gap = 2.dp
-    val offset = strokeWidth / 2 + gap
-    val outerCornerRadius = cornerRadius + gap + strokeWidth / 2
+    val ring = resolveFocusRing(cornerRadius, ringColor, interactionSource)
 
     this
         .graphicsLayer { clip = false }
         .drawWithContent {
             drawContent()
-            // Draw ring on top of content so it's visible over solid backgrounds
-            // todo claude: duplicate 12 lines
-            if (animatedColor != Color.Transparent) {
-                val strokePx = strokeWidth.toPx()
-                val offsetPx = offset.toPx()
-                val cr = CornerRadius(outerCornerRadius.toPx())
-                drawRoundRect(
-                    color = animatedColor,
-                    topLeft = Offset(-offsetPx, -offsetPx),
-                    size = Size(size.width + offsetPx * 2, size.height + offsetPx * 2),
-                    cornerRadius = cr,
-                    style = Stroke(width = strokePx),
-                )
-            }
+            drawFocusRing(ring)
         }
 }
 
@@ -86,7 +59,32 @@ fun FocusRingBox(
     ringColor: Color = Color.Unspecified,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    // todo claude: duplicate 15 lines
+    val ring = resolveFocusRing(cornerRadius, ringColor, interactionSource)
+
+    Box(
+        modifier = modifier
+            .graphicsLayer { clip = false }
+            .drawWithContent {
+                drawFocusRing(ring)
+                drawContent()
+            },
+        content = content,
+    )
+}
+
+private class FocusRingParams(
+    val animatedColor: Color,
+    val strokeWidth: Dp,
+    val offset: Dp,
+    val outerCornerRadius: Dp,
+)
+
+@Composable
+private fun resolveFocusRing(
+    cornerRadius: Dp,
+    ringColor: Color,
+    interactionSource: InteractionSource,
+): FocusRingParams {
     val colors = LocalAppColors.current
     val isFocused by interactionSource.collectIsFocusedAsState()
 
@@ -100,28 +98,26 @@ fun FocusRingBox(
 
     val strokeWidth = 2.dp
     val gap = 2.dp
-    val offset = strokeWidth / 2 + gap
-    val outerCornerRadius = cornerRadius + gap + strokeWidth / 2
 
-    Box(
-        modifier = modifier
-            .graphicsLayer { clip = false }
-            .drawWithContent {
-                // todo claude: duplicate 12 lines
-                if (animatedColor != Color.Transparent) {
-                    val strokePx = strokeWidth.toPx()
-                    val offsetPx = offset.toPx()
-                    val cr = CornerRadius(outerCornerRadius.toPx())
-                    drawRoundRect(
-                        color = animatedColor,
-                        topLeft = Offset(-offsetPx, -offsetPx),
-                        size = Size(size.width + offsetPx * 2, size.height + offsetPx * 2),
-                        cornerRadius = cr,
-                        style = Stroke(width = strokePx),
-                    )
-                }
-                drawContent()
-            },
-        content = content,
+    return FocusRingParams(
+        animatedColor = animatedColor,
+        strokeWidth = strokeWidth,
+        offset = strokeWidth / 2 + gap,
+        outerCornerRadius = cornerRadius + gap + strokeWidth / 2,
     )
+}
+
+private fun DrawScope.drawFocusRing(ring: FocusRingParams) {
+    if (ring.animatedColor != Color.Transparent) {
+        val strokePx = ring.strokeWidth.toPx()
+        val offsetPx = ring.offset.toPx()
+        val cr = CornerRadius(ring.outerCornerRadius.toPx())
+        drawRoundRect(
+            color = ring.animatedColor,
+            topLeft = Offset(-offsetPx, -offsetPx),
+            size = Size(size.width + offsetPx * 2, size.height + offsetPx * 2),
+            cornerRadius = cr,
+            style = Stroke(width = strokePx),
+        )
+    }
 }

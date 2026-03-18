@@ -59,8 +59,7 @@ class ProjectApiClient(private val client: HttpClient) {
             client.delete(serverUrl(ApiRoutes.Projects.lock(projectId.value)))
         } catch (_: ClientRequestException) {
             // Fire-and-forget — TTL handles cleanup
-            // todo claude: java in common main
-        } catch (_: java.io.IOException) {
+        } catch (_: Exception) {
             // Network failure — TTL handles cleanup
         }
     }
