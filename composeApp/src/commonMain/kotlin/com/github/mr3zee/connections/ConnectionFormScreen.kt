@@ -262,11 +262,12 @@ fun ConnectionFormScreen(
                         .padding(Spacing.lg),
                     verticalArrangement = Arrangement.spacedBy(Spacing.md),
                 ) {
+            Spacer(modifier = Modifier.height(Spacing.sm))
             RwTextField(
                 value = name,
                 onValueChange = { name = it },
                 label = packStringResource(Res.string.connections_name_label),
-                placeholder = packStringResource(Res.string.connections_name_label),
+                placeholder = packStringResource(Res.string.connections_name_placeholder),
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -345,14 +346,14 @@ fun ConnectionFormScreen(
 
                     Text(
                         text = packStringResource(Res.string.connections_section_slack),
-                        style = AppTypography.subheading,
+                        style = AppTypography.heading,
                         modifier = Modifier.testTag("section_header_slack"),
                     )
                     RwTextField(
                         value = slackWebhookUrl,
                         onValueChange = { slackWebhookUrl = it },
                         label = packStringResource(Res.string.connections_slack_webhook_url),
-                        placeholder = packStringResource(Res.string.connections_slack_webhook_url),
+                        placeholder = "https://hooks.slack.com/services/...",
                         singleLine = true,
                         visualTransformation = if (showSlackWebhook) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
@@ -371,14 +372,14 @@ fun ConnectionFormScreen(
 
                     Text(
                         text = packStringResource(Res.string.connections_section_teamcity),
-                        style = AppTypography.subheading,
+                        style = AppTypography.heading,
                         modifier = Modifier.testTag("section_header_teamcity"),
                     )
                     RwTextField(
                         value = teamCityServerUrl,
                         onValueChange = { teamCityServerUrl = it },
                         label = packStringResource(Res.string.connections_tc_server_url),
-                        placeholder = packStringResource(Res.string.connections_tc_server_url),
+                        placeholder = "https://teamcity.example.com",
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().testTag("teamcity_server_url"),
                     )
@@ -386,7 +387,7 @@ fun ConnectionFormScreen(
                         value = teamCityToken,
                         onValueChange = { teamCityToken = it },
                         label = packStringResource(Res.string.connections_tc_token),
-                        placeholder = packStringResource(Res.string.connections_tc_token),
+                        placeholder = "eyJ0eXAi...",
                         singleLine = true,
                         visualTransformation = if (showTeamCityToken) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
@@ -422,14 +423,14 @@ fun ConnectionFormScreen(
 
                     Text(
                         text = packStringResource(Res.string.connections_section_github),
-                        style = AppTypography.subheading,
+                        style = AppTypography.heading,
                         modifier = Modifier.testTag("section_header_github"),
                     )
                     RwTextField(
                         value = githubToken,
                         onValueChange = { githubToken = it },
                         label = packStringResource(Res.string.connections_github_pat),
-                        placeholder = packStringResource(Res.string.connections_github_pat),
+                        placeholder = "ghp_xxxx...",
                         singleLine = true,
                         visualTransformation = if (showGithubToken) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
@@ -446,7 +447,7 @@ fun ConnectionFormScreen(
                         value = githubOwner,
                         onValueChange = { githubOwner = it },
                         label = packStringResource(Res.string.connections_github_owner),
-                        placeholder = packStringResource(Res.string.connections_github_owner),
+                        placeholder = "my-org",
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().testTag("github_owner"),
                     )
@@ -454,7 +455,7 @@ fun ConnectionFormScreen(
                         value = githubRepo,
                         onValueChange = { githubRepo = it },
                         label = packStringResource(Res.string.connections_github_repo),
-                        placeholder = packStringResource(Res.string.connections_github_repo),
+                        placeholder = "my-repo",
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().testTag("github_repo"),
                     )

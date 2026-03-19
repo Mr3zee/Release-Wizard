@@ -200,7 +200,15 @@ fun ReleaseDetailScreen(
                     .padding(padding),
                 contentAlignment = Alignment.Center,
             ) {
-                CircularProgressIndicator()
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator()
+                    Spacer(modifier = Modifier.height(Spacing.md))
+                    Text(
+                        packStringResource(Res.string.releases_loading),
+                        style = AppTypography.body,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
             return@Scaffold
         }

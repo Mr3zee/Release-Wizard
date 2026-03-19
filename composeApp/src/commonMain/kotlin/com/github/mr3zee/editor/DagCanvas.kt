@@ -310,7 +310,7 @@ fun DagCanvas(
     }
 
     // Empty canvas hint
-    if (graph.edges.isEmpty() && graph.blocks.size <= 1) {
+    if (graph.edges.isEmpty()) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,

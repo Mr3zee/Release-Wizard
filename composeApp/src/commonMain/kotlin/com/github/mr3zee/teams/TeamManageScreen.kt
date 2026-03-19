@@ -143,6 +143,7 @@ fun TeamManageScreen(
                 LazyColumn(
                     modifier = Modifier.fillMaxSize().weight(1f),
                     horizontalAlignment = Alignment.CenterHorizontally,
+                    contentPadding = PaddingValues(bottom = 80.dp),
                 ) {
                 // Edit team section
                 item {
@@ -169,12 +170,13 @@ fun TeamManageScreen(
                             modifier = Modifier.fillMaxWidth().testTag("edit_team_description"),
                         )
                         Spacer(modifier = Modifier.height(Spacing.sm))
+                        val updatedMessage = packStringResource(Res.string.teams_updated_success, editName)
                         RwButton(
                             onClick = {
                                 viewModel.updateTeam(editName, editDescription)
                                 scope.launch {
                                     snackbarHostState.showSnackbar(
-                                        message = "$editName \u2713",
+                                        message = updatedMessage,
                                         duration = SnackbarDuration.Short,
                                     )
                                 }
@@ -187,24 +189,6 @@ fun TeamManageScreen(
                         }
                     }
                     HorizontalDivider(modifier = Modifier.widthIn(max = 1200.dp).padding(vertical = Spacing.sm))
-                }
-
-                // Invite form (above members section)
-                item {
-                    InviteUserInlineForm(
-                        visible = showInviteDialog,
-                        isInviting = isInviting,
-                        error = inviteError,
-                        onDismiss = {
-                            showInviteDialog = false
-                            viewModel.clearInviteState()
-                        },
-                        onClearError = { viewModel.clearInviteState() },
-                        onInvite = { username -> viewModel.inviteUser(username) },
-                        modifier = Modifier
-                            .widthIn(max = 1200.dp)
-                            .padding(horizontal = Spacing.lg, vertical = Spacing.xs),
-                    )
                 }
 
                 // Members section
@@ -226,6 +210,24 @@ fun TeamManageScreen(
                             Text(packStringResource(Res.string.teams_invite_user))
                         }
                     }
+                }
+
+                // Invite form below the invite button
+                item {
+                    InviteUserInlineForm(
+                        visible = showInviteDialog,
+                        isInviting = isInviting,
+                        error = inviteError,
+                        onDismiss = {
+                            showInviteDialog = false
+                            viewModel.clearInviteState()
+                        },
+                        onClearError = { viewModel.clearInviteState() },
+                        onInvite = { username -> viewModel.inviteUser(username) },
+                        modifier = Modifier
+                            .widthIn(max = 1200.dp)
+                            .padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+                    )
                 }
                 items(members, key = { "member-${it.userId.value}" }) { member ->
                     Column(modifier = Modifier.widthIn(max = 1200.dp)) {
@@ -254,12 +256,11 @@ fun TeamManageScreen(
                 }
 
                 // Pending invites section
-                if (invites.isNotEmpty()) {
-                    item {
-                        Spacer(modifier = Modifier.height(Spacing.sm))
-                    }
-                    item {
-                        Text(
+                item {
+                    HorizontalDivider(modifier = Modifier.widthIn(max = 1200.dp).padding(vertical = Spacing.sm))
+                }
+                item {
+                    Text(
                             packStringResource(Res.string.teams_pending_invites_count, invites.size),
                             style = AppTypography.heading,
                             modifier = Modifier
@@ -288,31 +289,28 @@ fun TeamManageScreen(
                             )
                         }
                     }
-                }
 
                 // Join requests section
-                if (joinRequests.isNotEmpty()) {
-                    item {
-                        Spacer(modifier = Modifier.height(Spacing.sm))
-                    }
-                    item {
-                        Text(
-                            packStringResource(Res.string.teams_join_requests_count, joinRequests.size),
-                            style = AppTypography.heading,
-                            modifier = Modifier
-                                .widthIn(max = 1200.dp)
-                                .fillMaxWidth()
-                                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-                        )
-                    }
-                    items(joinRequests, key = { "request-${it.id}" }) { request ->
-                        JoinRequestItem(
-                            request = request,
-                            onApprove = { viewModel.approveJoinRequest(request.id) },
-                            onReject = { viewModel.rejectJoinRequest(request.id) },
-                            modifier = Modifier.widthIn(max = 1200.dp),
-                        )
-                    }
+                item {
+                    HorizontalDivider(modifier = Modifier.widthIn(max = 1200.dp).padding(vertical = Spacing.sm))
+                }
+                item {
+                    Text(
+                        packStringResource(Res.string.teams_join_requests_count, joinRequests.size),
+                        style = AppTypography.heading,
+                        modifier = Modifier
+                            .widthIn(max = 1200.dp)
+                            .fillMaxWidth()
+                            .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                    )
+                }
+                items(joinRequests, key = { "request-${it.id}" }) { request ->
+                    JoinRequestItem(
+                        request = request,
+                        onApprove = { viewModel.approveJoinRequest(request.id) },
+                        onReject = { viewModel.rejectJoinRequest(request.id) },
+                        modifier = Modifier.widthIn(max = 1200.dp),
+                    )
                 }
 
                 // Delete team (danger zone)
@@ -354,7 +352,7 @@ fun TeamManageScreen(
                             .widthIn(max = 1200.dp)
                             .padding(horizontal = Spacing.lg, vertical = Spacing.xs),
                     )
-                    Spacer(modifier = Modifier.height(80.dp))
+                    Spacer(modifier = Modifier.height(Spacing.lg))
                 }
                 }
             }
@@ -415,7 +413,7 @@ private fun ManageMemberItem(
                 variant = RwButtonVariant.Ghost,
                 modifier = Modifier.testTag("toggle_role_${member.userId.value}"),
             ) {
-                Text(if (member.role == TeamRole.TEAM_LEAD) packStringResource(Res.string.teams_demote) else packStringResource(Res.string.teams_promote))
+                Text(if (member.role == TeamRole.TEAM_LEAD) packStringResource(Res.string.teams_demote_to_collaborator) else packStringResource(Res.string.teams_promote_to_lead))
             }
             RwButton(
                 onClick = onRemove,

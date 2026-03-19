@@ -85,6 +85,7 @@
     <string name="connections_edit_title">Edit Connection</string>
     <string name="connections_new_title">New Connection</string>
     <string name="connections_name_label">Connection Name</string>
+    <string name="connections_name_placeholder">e.g., Production GitHub</string>
     <string name="connections_type_label">Type</string>
     <string name="connections_slack_webhook_url">Webhook URL</string>
     <string name="connections_tc_server_url">Server URL</string>
@@ -217,6 +218,7 @@
     <string name="releases_delete_title">Delete Release</string>
     <string name="releases_delete_confirmation">This will permanently delete the release and all its data. This cannot be undone.</string>
     <string name="releases_detail_title">Release</string>
+    <string name="releases_loading">Loading release…</string>
     <string name="releases_reconnecting">Reconnecting (attempt %1$d)...</string>
     <string name="releases_disconnected">Disconnected</string>
     <string name="releases_cancel_title">Cancel Release</string>
@@ -329,7 +331,10 @@
     <string name="teams_revoke_invite">Revoke</string>
     <string name="teams_keep">Keep</string>
     <string name="teams_promote">Promote</string>
+    <string name="teams_promote_to_lead">Promote to Lead</string>
     <string name="teams_demote">Demote</string>
+    <string name="teams_demote_to_collaborator">Demote to Collaborator</string>
+    <string name="teams_updated_success">%1$s updated</string>
     <string name="teams_edit_team">Edit Team</string>
     <string name="teams_delete_team">Delete Team</string>
     <string name="teams_delete_confirmation">Are you sure you want to delete \"%1$s\"? This action cannot be undone.</string>

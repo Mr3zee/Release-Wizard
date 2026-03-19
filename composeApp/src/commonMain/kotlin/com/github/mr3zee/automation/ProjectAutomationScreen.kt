@@ -18,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.api.CreateMavenTriggerRequest
@@ -186,10 +187,14 @@ fun ProjectAutomationScreen(
                 CircularProgressIndicator()
             }
         } else {
+            Box(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                contentAlignment = Alignment.TopCenter,
+            ) {
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
+                    .widthIn(max = 720.dp)
+                    .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xl),
@@ -366,6 +371,7 @@ fun ProjectAutomationScreen(
                     }
                 }
             }
+            } // Box
         }
     }
 
@@ -726,7 +732,7 @@ private fun ScheduleItem(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(schedule.cronExpression, style = AppTypography.body)
+                Text(schedule.cronExpression, style = AppTypography.code)
                 val description = cronDescription(schedule.cronExpression)
                 if (description != null) {
                     Text(
@@ -774,9 +780,10 @@ private fun WebhookTriggerItem(
                 Text(packStringResource(Res.string.automation_webhook_item_label), style = AppTypography.body)
                 Text(
                     trigger.webhookUrl,
-                    style = AppTypography.caption,
+                    style = AppTypography.code,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
             RwSwitch(

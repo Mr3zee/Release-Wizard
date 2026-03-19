@@ -146,7 +146,7 @@ fun DagEditorScreen(
                         } else if (isDirty) {
                             Text(
                                 " " + packStringResource(Res.string.editor_dirty_indicator),
-                                color = MaterialTheme.colorScheme.error,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -377,7 +377,7 @@ fun DagEditorScreen(
                     ) {
                         RwIconButton(
                             onClick = { leftSidebarExpanded = !leftSidebarExpanded },
-                            modifier = Modifier.size(24.dp).testTag("toggle_left_sidebar"),
+                            modifier = Modifier.size(44.dp).testTag("toggle_left_sidebar"),
                         ) {
                             Icon(
                                 if (leftSidebarExpanded) Icons.AutoMirrored.Filled.KeyboardArrowLeft
@@ -437,7 +437,7 @@ fun DagEditorScreen(
                     ) {
                         RwIconButton(
                             onClick = { rightSidebarExpanded = !rightSidebarExpanded },
-                            modifier = Modifier.size(24.dp).testTag("toggle_right_sidebar"),
+                            modifier = Modifier.size(44.dp).testTag("toggle_right_sidebar"),
                         ) {
                             Icon(
                                 if (rightSidebarExpanded) Icons.AutoMirrored.Filled.KeyboardArrowRight

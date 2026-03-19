@@ -227,10 +227,10 @@ class TeamScreensTest {
         }
 
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("alice").fetchSemanticsNodes().isNotEmpty() }
-        // Alice is TEAM_LEAD, so "Demote" should appear
-        onAllNodesWithText("Demote").assertCountEquals(1)
-        // Bob is COLLABORATOR, so "Promote" should appear
-        onAllNodesWithText("Promote").assertCountEquals(1)
+        // Alice is TEAM_LEAD, so "Demote to Collaborator" should appear
+        onAllNodesWithText("Demote to Collaborator").assertCountEquals(1)
+        // Bob is COLLABORATOR, so "Promote to Lead" should appear
+        onAllNodesWithText("Promote to Lead").assertCountEquals(1)
         // Both should have Remove
         onAllNodesWithText("Remove").assertCountEquals(2)
     }

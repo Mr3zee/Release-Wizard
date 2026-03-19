@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Link
@@ -341,15 +342,10 @@ private fun ConnectionListItem(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text(
-                text = connection.type.displayName(),
-                style = AppTypography.body,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
             if (webhookUrl != null) {
                 Text(
-                    text = packStringResource(Res.string.connections_webhook_display, webhookUrl),
-                    style = AppTypography.bodySmall,
+                    text = webhookUrl,
+                    style = AppTypography.code,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -383,11 +379,18 @@ private fun ConnectionListItem(
             }
             RwButton(
                 onClick = onDelete,
-                variant = RwButtonVariant.Danger,
+                variant = RwButtonVariant.Ghost,
+                contentColor = MaterialTheme.colorScheme.error,
                 modifier = Modifier.testTag("delete_connection_btn_${connection.id.value}"),
             ) {
                 Text(packStringResource(Res.string.common_delete))
             }
         }
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp),
+        )
     }
 }
