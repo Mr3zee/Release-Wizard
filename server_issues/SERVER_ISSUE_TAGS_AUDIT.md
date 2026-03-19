@@ -4,7 +4,7 @@
 
 ## Critical
 
-### TAG-C1: Tag rename/delete in TeamRoutes bypass TagService entirely
+### ✅ TAG-C1: Tag rename/delete in TeamRoutes bypass TagService entirely
 
 **Files:** `TeamRoutes.kt:168, 178`
 
@@ -14,7 +14,7 @@ Team-scoped routes call `tagRepository` directly, skipping service validation an
 
 ---
 
-### TAG-C2: No audit events for any tag mutation
+### ✅ TAG-C2: No audit events for any tag mutation
 
 **Files:** `TagRoutes.kt`, `TeamRoutes.kt`, `TagService.kt`
 

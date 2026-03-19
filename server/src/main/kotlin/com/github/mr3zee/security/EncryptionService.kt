@@ -10,6 +10,7 @@ import javax.crypto.spec.SecretKeySpec
 
 class EncryptionService(config: EncryptionConfig) {
     private val key: SecretKey
+    private val secureRandom = SecureRandom()
 
     init {
         val keyBytes = Base64.getDecoder().decode(config.key)
@@ -18,7 +19,7 @@ class EncryptionService(config: EncryptionConfig) {
     }
 
     fun encrypt(plaintext: String): String {
-        val iv = ByteArray(GCM_IV_LENGTH).also { SecureRandom().nextBytes(it) }
+        val iv = ByteArray(GCM_IV_LENGTH).also { secureRandom.nextBytes(it) }
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(GCM_TAG_LENGTH_BITS, iv))
         val ciphertext = cipher.doFinal(plaintext.toByteArray(Charsets.UTF_8))

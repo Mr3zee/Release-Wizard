@@ -102,43 +102,21 @@ class DefaultTeamService(
 
     override suspend fun updateMemberRole(teamId: TeamId, userId: String, request: UpdateMemberRoleRequest, session: UserSession) {
         teamAccessService.checkTeamLead(teamId, session)
-        val membership = teamRepository.findMembership(teamId, userId)
-            ?: throw NotFoundException("Member not found")
-        // Protect last team lead
-        if (membership.role == TeamRole.TEAM_LEAD && request.role != TeamRole.TEAM_LEAD) {
-            val leadCount = teamRepository.countMembersWithRole(teamId, TeamRole.TEAM_LEAD)
-            if (leadCount <= 1) {
-                throw IllegalArgumentException("Cannot demote the last team lead")
-            }
-        }
-        teamRepository.updateMemberRole(teamId, userId, request.role)
+        // TEAM-C1: Atomic role update with last-lead protection in a single transaction
+        teamRepository.updateMemberRoleAtomic(teamId, userId, request.role)
         auditService.log(teamId, session, AuditAction.MEMBER_ROLE_CHANGED, AuditTargetType.USER, userId, "Changed role to ${request.role}")
     }
 
     override suspend fun removeMember(teamId: TeamId, userId: String, session: UserSession) {
         teamAccessService.checkTeamLead(teamId, session)
-        val membership = teamRepository.findMembership(teamId, userId)
-            ?: throw NotFoundException("Member not found")
-        if (membership.role == TeamRole.TEAM_LEAD) {
-            val leadCount = teamRepository.countMembersWithRole(teamId, TeamRole.TEAM_LEAD)
-            if (leadCount <= 1) {
-                throw IllegalArgumentException("Cannot remove the last team lead")
-            }
-        }
-        teamRepository.removeMember(teamId, userId)
+        // TEAM-C1: Atomic removal with last-lead protection in a single transaction
+        teamRepository.removeMemberAtomic(teamId, userId)
         auditService.log(teamId, session, AuditAction.MEMBER_REMOVED, AuditTargetType.USER, userId, "Removed member from team")
     }
 
     override suspend fun leaveTeam(teamId: TeamId, session: UserSession) {
-        val membership = teamRepository.findMembership(teamId, session.userId)
-            ?: throw NotFoundException("Not a member of this team")
-        if (membership.role == TeamRole.TEAM_LEAD) {
-            val leadCount = teamRepository.countMembersWithRole(teamId, TeamRole.TEAM_LEAD)
-            if (leadCount <= 1) {
-                throw IllegalArgumentException("Cannot leave as the last team lead. Promote another member first.")
-            }
-        }
-        teamRepository.removeMember(teamId, session.userId)
+        // TEAM-C1: Atomic removal with last-lead protection in a single transaction
+        teamRepository.removeMemberAtomic(teamId, session.userId)
         auditService.log(teamId, session, AuditAction.MEMBER_LEFT, AuditTargetType.USER, session.userId, "Left team")
     }
 
@@ -211,11 +189,11 @@ class DefaultTeamService(
     }
 
     override suspend fun approveJoinRequest(teamId: TeamId, requestId: String, session: UserSession) {
-        val request = validatePendingJoinRequest(teamId, requestId, session)
-        teamRepository.updateJoinRequestStatus(requestId, JoinRequestStatus.APPROVED, session.userId)
-        teamRepository.addMember(teamId, request.userId.value, TeamRole.COLLABORATOR)
-        auditService.log(teamId, session, AuditAction.JOIN_REQUEST_APPROVED, AuditTargetType.USER, request.userId.value, "Approved join request")
-        auditService.log(teamId, session, AuditAction.MEMBER_JOINED, AuditTargetType.USER, request.userId.value, "Joined team via approved join request")
+        teamAccessService.checkTeamLead(teamId, session)
+        // TEAM-C2: Atomic approve + add member in a single transaction to prevent duplicate memberships
+        val requestUserId = teamRepository.approveJoinRequestAtomic(teamId, requestId, session.userId, TeamRole.COLLABORATOR)
+        auditService.log(teamId, session, AuditAction.JOIN_REQUEST_APPROVED, AuditTargetType.USER, requestUserId, "Approved join request")
+        auditService.log(teamId, session, AuditAction.MEMBER_JOINED, AuditTargetType.USER, requestUserId, "Joined team via approved join request")
     }
 
     override suspend fun rejectJoinRequest(teamId: TeamId, requestId: String, session: UserSession) {
@@ -231,17 +209,10 @@ class DefaultTeamService(
     }
 
     override suspend fun acceptInvite(inviteId: String, session: UserSession) {
-        val invite = teamRepository.findInviteById(inviteId)
-            ?: throw NotFoundException("Invite not found")
-        if (invite.invitedUserId.value != session.userId) throw ForbiddenException("This invite is not for you")
-        if (invite.status != InviteStatus.PENDING) throw IllegalArgumentException("Invite is not pending")
-        if (teamAccessService.isMember(invite.teamId, session.userId)) {
-            throw IllegalArgumentException("Already a member of this team")
-        }
-        teamRepository.updateInviteStatus(inviteId, InviteStatus.ACCEPTED)
-        teamRepository.addMember(invite.teamId, session.userId, TeamRole.COLLABORATOR)
-        auditService.log(invite.teamId, session, AuditAction.INVITE_ACCEPTED, AuditTargetType.USER, session.userId, "Accepted invite")
-        auditService.log(invite.teamId, session, AuditAction.MEMBER_JOINED, AuditTargetType.USER, session.userId, "Joined team via accepted invite")
+        // TEAM-C2: Atomic invite accept + add member in a single transaction to prevent duplicate memberships
+        val teamId = teamRepository.acceptInviteAtomic(inviteId, session.userId, TeamRole.COLLABORATOR)
+        auditService.log(teamId, session, AuditAction.INVITE_ACCEPTED, AuditTargetType.USER, session.userId, "Accepted invite")
+        auditService.log(teamId, session, AuditAction.MEMBER_JOINED, AuditTargetType.USER, session.userId, "Joined team via accepted invite")
     }
 
     override suspend fun declineInvite(inviteId: String, session: UserSession) {

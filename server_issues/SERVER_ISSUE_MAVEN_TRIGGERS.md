@@ -4,7 +4,7 @@
 
 ## Critical
 
-### MAVEN-C1: Polling drift accumulates unboundedly
+### ✅ MAVEN-C1: Polling drift accumulates unboundedly
 
 **Files:** `MavenPollerService.kt`
 
@@ -14,7 +14,7 @@
 
 ---
 
-### MAVEN-C2: Race condition in multi-instance — duplicate version fires
+### ✅ MAVEN-C2: Race condition in multi-instance — duplicate version fires
 
 **Files:** `MavenPollerService.kt`, `ExposedMavenTriggerRepository.kt`
 

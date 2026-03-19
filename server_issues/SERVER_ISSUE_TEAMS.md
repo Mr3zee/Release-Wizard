@@ -4,7 +4,7 @@
 
 ## Critical
 
-### TEAM-C1: TOCTOU race on last-owner enforcement
+### ✅ TEAM-C1: TOCTOU race on last-owner enforcement
 
 **Files:** `TeamService.kt:108-113, 122-127, 136-140`
 
@@ -14,7 +14,7 @@ Count and mutate in separate transactions. Two demotions can leave zero leads.
 
 ---
 
-### TEAM-C2: TOCTOU race on invite accept / join request approve — duplicate memberships
+### ✅ TEAM-C2: TOCTOU race on invite accept / join request approve — duplicate memberships
 
 **Files:** `TeamService.kt:238-242, 214-217`
 

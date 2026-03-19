@@ -20,6 +20,8 @@ class MavenPollerService(
     fun start(scope: CoroutineScope) {
         pollingJob = scope.launch {
             while (isActive) {
+                // MAVEN-C1: Fixed-rate ticker — measure from cycle start, not end
+                val cycleStart = Clock.System.now()
                 try {
                     pollAllTriggers()
                 } catch (e: CancellationException) {
@@ -27,7 +29,11 @@ class MavenPollerService(
                 } catch (e: Exception) {
                     logger.error("Maven poller error", e)
                 }
-                delay(POLL_INTERVAL)
+                val elapsed = Clock.System.now() - cycleStart
+                val remaining = POLL_INTERVAL - elapsed
+                if (remaining.isPositive()) {
+                    delay(remaining)
+                }
             }
         }
     }

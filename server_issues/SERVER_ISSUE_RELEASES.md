@@ -4,7 +4,7 @@
 
 ## Critical
 
-### REL-C1: `approveBlock` removes mutex before `executionEngine.approveBlock` completes
+### ✅ REL-C1: `approveBlock` removes mutex before `executionEngine.approveBlock` completes
 
 **Files:** `ReleasesService.kt:374-376`
 
@@ -14,7 +14,7 @@ The mutex is removed from `approvalMutexes` *before* `executionEngine.approveBlo
 
 ---
 
-### REL-C2: `approvalMutexes` grows unbounded — memory leak
+### ✅ REL-C2: `approvalMutexes` grows unbounded — memory leak
 
 **Files:** `ReleasesService.kt`
 

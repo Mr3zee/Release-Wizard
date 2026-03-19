@@ -4,7 +4,7 @@
 
 ## Critical
 
-### INFRA-C1: `SecureRandom` instantiated per `encrypt()` call
+### ✅ INFRA-C1: `SecureRandom` instantiated per `encrypt()` call
 
 **Files:** `EncryptionService.kt:21`
 

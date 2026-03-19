@@ -1,6 +1,8 @@
 package com.github.mr3zee.projects
 
+import com.github.mr3zee.api.ProjectLockInfo
 import com.github.mr3zee.model.*
+import com.github.mr3zee.persistence.ProjectLockTable
 import com.github.mr3zee.persistence.ProjectTemplateTable
 import com.github.mr3zee.persistence.likeContains
 import com.github.mr3zee.persistence.safeOffset
@@ -159,6 +161,61 @@ class ExposedProjectsRepository(private val db: Database) : ProjectsRepository {
     ): ProjectTemplate? = dbQuery {
         val uuid = UUID.fromString(id.value)
         val now = Clock.System.now()
+        val updated = ProjectTemplateTable.update({ ProjectTemplateTable.id eq uuid }) { stmt ->
+            name?.let { stmt[ProjectTemplateTable.name] = it }
+            description?.let { stmt[ProjectTemplateTable.description] = it }
+            dagGraph?.let { stmt[ProjectTemplateTable.dagGraph] = it }
+            parameters?.let { stmt[ProjectTemplateTable.parameters] = it }
+            defaultTags?.let { stmt[ProjectTemplateTable.defaultTags] = it }
+            stmt[ProjectTemplateTable.updatedAt] = now
+        }
+        if (updated > 0) {
+            ProjectTemplateTable.selectAll()
+                .where { ProjectTemplateTable.id eq uuid }
+                .single()
+                .toProjectTemplate()
+        } else {
+            null
+        }
+    }
+
+    /**
+     * PROJ-C1: Atomically check the project lock and update the project in a single transaction.
+     * Prevents TOCTOU race where another user acquires the lock between the check and the update.
+     */
+    override suspend fun updateWithLockCheck(
+        id: ProjectId,
+        callerUserId: String,
+        name: String?,
+        description: String?,
+        dagGraph: DagGraph?,
+        parameters: List<Parameter>?,
+        defaultTags: List<String>?,
+    ): ProjectTemplate? = dbQuery {
+        val uuid = UUID.fromString(id.value)
+        val now = Clock.System.now()
+
+        // Check for active lock by another user within the same transaction
+        // forUpdate() prevents another transaction from modifying the lock between our read and the update
+        val activeLock = ProjectLockTable.selectAll()
+            .where {
+                (ProjectLockTable.projectId eq uuid) and
+                    (ProjectLockTable.expiresAt greater now)
+            }
+            .forUpdate()
+            .singleOrNull()
+
+        if (activeLock != null && activeLock[ProjectLockTable.userId].value.toString() != callerUserId) {
+            throw LockConflictException(
+                ProjectLockInfo(
+                    userId = activeLock[ProjectLockTable.userId].value.toString(),
+                    username = activeLock[ProjectLockTable.username],
+                    acquiredAt = activeLock[ProjectLockTable.acquiredAt],
+                    expiresAt = activeLock[ProjectLockTable.expiresAt],
+                )
+            )
+        }
+
         val updated = ProjectTemplateTable.update({ ProjectTemplateTable.id eq uuid }) { stmt ->
             name?.let { stmt[ProjectTemplateTable.name] = it }
             description?.let { stmt[ProjectTemplateTable.description] = it }

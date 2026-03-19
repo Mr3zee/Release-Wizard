@@ -12,16 +12,12 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import org.koin.ktor.ext.inject
-import org.slf4j.LoggerFactory
-
-private val log = LoggerFactory.getLogger("com.github.mr3zee.tags.TagRoutes")
 
 fun Route.tagRoutes() {
     val service by inject<TagService>()
 
     route(ApiRoutes.Tags.BASE) {
         get {
-            // Global tag list (admin only for cross-team view; team-scoped via team routes)
             requireTagAdmin()
             val tags = service.listAllTags()
             call.respond(TagListResponse(tags))
@@ -29,25 +25,22 @@ fun Route.tagRoutes() {
 
         route("/{name}") {
             put {
-                requireTagAdmin()
+                val session = requireTagAdmin()
                 val name = call.parameters["name"] ?: throw IllegalArgumentException("Missing tag name")
                 val request = call.receive<RenameTagRequest>()
                 // Admin global rename (no team scoping)
-                val updated = service.renameTag(name, request.newName)
-                log.info("Tag renamed: '{}' -> '{}' ({} updated)", name, request.newName, updated)
+                val updated = service.renameTag(name, request.newName, session = session)
                 call.respond(mapOf("updated" to updated))
             }
 
             delete {
-                requireTagAdmin()
+                val session = requireTagAdmin()
                 val name = call.parameters["name"] ?: throw IllegalArgumentException("Missing tag name")
                 // Admin global delete (no team scoping)
-                val deleted = service.deleteTag(name)
+                val deleted = service.deleteTag(name, session = session)
                 if (deleted > 0) {
-                    log.info("Tag deleted: '{}' ({} removed)", name, deleted)
                     call.respond(HttpStatusCode.NoContent)
                 } else {
-                    log.warn("Tag delete failed: '{}' not found", name)
                     call.respond(HttpStatusCode.NotFound, "Tag not found")
                 }
             }
@@ -55,10 +48,11 @@ fun Route.tagRoutes() {
     }
 }
 
-private fun RoutingContext.requireTagAdmin() {
+private fun RoutingContext.requireTagAdmin(): UserSession {
     val session = call.sessions.get<UserSession>()
         ?: throw ForbiddenException("Not authenticated")
     if (session.role != UserRole.ADMIN) {
         throw ForbiddenException("Admin access required for tag management")
     }
+    return session
 }

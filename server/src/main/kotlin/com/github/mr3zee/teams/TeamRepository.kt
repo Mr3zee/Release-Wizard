@@ -1,5 +1,7 @@
 package com.github.mr3zee.teams
 
+import com.github.mr3zee.ForbiddenException
+import com.github.mr3zee.NotFoundException
 import com.github.mr3zee.model.*
 import com.github.mr3zee.persistence.*
 import kotlinx.coroutines.Dispatchers
@@ -26,6 +28,42 @@ interface TeamRepository {
     suspend fun addMember(teamId: TeamId, userId: String, role: TeamRole): Boolean
     suspend fun removeMember(teamId: TeamId, userId: String): Boolean
     suspend fun updateMemberRole(teamId: TeamId, userId: String, role: TeamRole): Boolean
+
+    /**
+     * TEAM-C1: Atomically update a member's role with last-lead protection.
+     * Uses SELECT FOR UPDATE to prevent TOCTOU race on concurrent demotions.
+     * @throws IllegalArgumentException if demoting the last team lead
+     * @throws com.github.mr3zee.NotFoundException if member not found
+     */
+    suspend fun updateMemberRoleAtomic(teamId: TeamId, userId: String, newRole: TeamRole): Boolean
+
+    /**
+     * TEAM-C1: Atomically remove a member with last-lead protection.
+     * Uses SELECT FOR UPDATE to prevent TOCTOU race on concurrent removals.
+     * @throws IllegalArgumentException if removing the last team lead
+     * @throws com.github.mr3zee.NotFoundException if member not found
+     */
+    suspend fun removeMemberAtomic(teamId: TeamId, userId: String): Boolean
+
+    /**
+     * TEAM-C2: Atomically accept an invite: validate, update status, and add member in one transaction.
+     * Catches duplicate membership as a conflict.
+     * @return the team ID of the accepted invite
+     * @throws com.github.mr3zee.NotFoundException if invite not found
+     * @throws com.github.mr3zee.ForbiddenException if invite is not for the given user
+     * @throws IllegalArgumentException if invite is not pending or user is already a member
+     */
+    suspend fun acceptInviteAtomic(inviteId: String, userId: String, role: TeamRole): TeamId
+
+    /**
+     * TEAM-C2: Atomically approve a join request: validate, update status, and add member in one transaction.
+     * Catches duplicate membership as a conflict.
+     * @return pair of (teamId, requestingUserId)
+     * @throws com.github.mr3zee.NotFoundException if join request not found
+     * @throws com.github.mr3zee.ForbiddenException if request doesn't belong to the team
+     * @throws IllegalArgumentException if request is not pending or user is already a member
+     */
+    suspend fun approveJoinRequestAtomic(teamId: TeamId, requestId: String, reviewedByUserId: String, role: TeamRole): String
     suspend fun findMembers(teamId: TeamId): List<TeamMembership>
     suspend fun findMembership(teamId: TeamId, userId: String): TeamMembership?
     suspend fun countMembersWithRole(teamId: TeamId, role: TeamRole): Long
@@ -293,6 +331,169 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
             .associate { row ->
                 TeamId(row[TeamMembershipTable.teamId].value.toString()) to row[TeamMembershipTable.teamId.count()].toInt()
             }
+    }
+
+    override suspend fun updateMemberRoleAtomic(teamId: TeamId, userId: String, newRole: TeamRole): Boolean = dbQuery {
+        val teamUuid = UUID.fromString(teamId.value)
+        val userUuid = UUID.fromString(userId)
+
+        // Lock ALL membership rows for this team to prevent concurrent demotions of different leads
+        // from both passing the lead count check (e.g., 2 leads → both see count=2 → both demote → 0 leads)
+        val allMembers = TeamMembershipTable.selectAll()
+            .where { TeamMembershipTable.teamId eq teamUuid }
+            .forUpdate()
+            .toList()
+
+        val row = allMembers.find { it[TeamMembershipTable.userId].value == userUuid }
+            ?: throw NotFoundException("Member not found")
+
+        val currentRole = row[TeamMembershipTable.role]
+
+        if (currentRole == TeamRole.TEAM_LEAD && newRole != TeamRole.TEAM_LEAD) {
+            val leadCount = allMembers.count { it[TeamMembershipTable.role] == TeamRole.TEAM_LEAD }
+            if (leadCount <= 1) {
+                throw IllegalArgumentException("Cannot demote the last team lead")
+            }
+        }
+
+        TeamMembershipTable.update({
+            (TeamMembershipTable.teamId eq teamUuid) and (TeamMembershipTable.userId eq userUuid)
+        }) { it[TeamMembershipTable.role] = newRole } > 0
+    }
+
+    override suspend fun removeMemberAtomic(teamId: TeamId, userId: String): Boolean = dbQuery {
+        val teamUuid = UUID.fromString(teamId.value)
+        val userUuid = UUID.fromString(userId)
+
+        // Lock ALL membership rows for this team to prevent concurrent removals of different leads
+        val allMembers = TeamMembershipTable.selectAll()
+            .where { TeamMembershipTable.teamId eq teamUuid }
+            .forUpdate()
+            .toList()
+
+        val row = allMembers.find { it[TeamMembershipTable.userId].value == userUuid }
+            ?: throw NotFoundException("Member not found")
+
+        val currentRole = row[TeamMembershipTable.role]
+
+        if (currentRole == TeamRole.TEAM_LEAD) {
+            val leadCount = allMembers.count { it[TeamMembershipTable.role] == TeamRole.TEAM_LEAD }
+            if (leadCount <= 1) {
+                throw IllegalArgumentException("Cannot remove the last team lead")
+            }
+        }
+
+        TeamMembershipTable.deleteWhere {
+            (TeamMembershipTable.teamId eq teamUuid) and (TeamMembershipTable.userId eq userUuid)
+        } > 0
+    }
+
+    override suspend fun acceptInviteAtomic(inviteId: String, userId: String, role: TeamRole): TeamId = dbQuery {
+        val inviteUuid = UUID.fromString(inviteId)
+        val userUuid = UUID.fromString(userId)
+
+        // Lock and validate invite in one transaction
+        val invite = TeamInviteTable.selectAll()
+            .where { TeamInviteTable.id eq inviteUuid }
+            .forUpdate()
+            .singleOrNull() ?: throw NotFoundException("Invite not found")
+
+        if (invite[TeamInviteTable.invitedUserId].value != userUuid) {
+            throw ForbiddenException("This invite is not for you")
+        }
+        if (invite[TeamInviteTable.status] != InviteStatus.PENDING) {
+            throw IllegalArgumentException("Invite is not pending")
+        }
+
+        val teamUuid = invite[TeamInviteTable.teamId].value
+
+        // Check not already a member (within same transaction)
+        val existingMember = TeamMembershipTable.selectAll()
+            .where { (TeamMembershipTable.teamId eq teamUuid) and (TeamMembershipTable.userId eq userUuid) }
+            .singleOrNull()
+        if (existingMember != null) {
+            throw IllegalArgumentException("Already a member of this team")
+        }
+
+        // Update invite status
+        TeamInviteTable.update({ TeamInviteTable.id eq inviteUuid }) {
+            it[TeamInviteTable.status] = InviteStatus.ACCEPTED
+        }
+
+        // Add member — catch duplicate key as conflict
+        try {
+            TeamMembershipTable.insert {
+                it[TeamMembershipTable.teamId] = teamUuid
+                it[TeamMembershipTable.userId] = userUuid
+                it[TeamMembershipTable.role] = role
+                it[TeamMembershipTable.joinedAt] = Clock.System.now()
+            }
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+            if (isUniqueConstraintViolation(e)) {
+                throw IllegalArgumentException("Already a member of this team")
+            }
+            throw e
+        }
+
+        TeamId(teamUuid.toString())
+    }
+
+    override suspend fun approveJoinRequestAtomic(
+        teamId: TeamId,
+        requestId: String,
+        reviewedByUserId: String,
+        role: TeamRole,
+    ): String = dbQuery {
+        val requestUuid = UUID.fromString(requestId)
+        val teamUuid = UUID.fromString(teamId.value)
+        val reviewerUuid = UUID.fromString(reviewedByUserId)
+
+        // Lock and validate join request in one transaction
+        val request = JoinRequestTable.selectAll()
+            .where { JoinRequestTable.id eq requestUuid }
+            .forUpdate()
+            .singleOrNull() ?: throw NotFoundException("Join request not found")
+
+        if (request[JoinRequestTable.teamId].value != teamUuid) {
+            throw ForbiddenException("Request does not belong to this team")
+        }
+        if (request[JoinRequestTable.status] != JoinRequestStatus.PENDING) {
+            throw IllegalArgumentException("Request is not pending")
+        }
+
+        val requestUserId = request[JoinRequestTable.userId].value
+
+        // Check not already a member (within same transaction)
+        val existingMember = TeamMembershipTable.selectAll()
+            .where { (TeamMembershipTable.teamId eq teamUuid) and (TeamMembershipTable.userId eq requestUserId) }
+            .singleOrNull()
+        if (existingMember != null) {
+            throw IllegalArgumentException("Already a member of this team")
+        }
+
+        // Update request status
+        JoinRequestTable.update({ JoinRequestTable.id eq requestUuid }) {
+            it[JoinRequestTable.status] = JoinRequestStatus.APPROVED
+            it[JoinRequestTable.reviewedByUserId] = reviewerUuid
+            it[JoinRequestTable.reviewedAt] = Clock.System.now()
+        }
+
+        // Add member — catch duplicate key as conflict
+        try {
+            TeamMembershipTable.insert {
+                it[TeamMembershipTable.teamId] = teamUuid
+                it[TeamMembershipTable.userId] = requestUserId
+                it[TeamMembershipTable.role] = role
+                it[TeamMembershipTable.joinedAt] = Clock.System.now()
+            }
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+            if (isUniqueConstraintViolation(e)) {
+                throw IllegalArgumentException("Already a member of this team")
+            }
+            throw e
+        }
+
+        requestUserId.toString()
     }
 
     override suspend fun getUserTeams(userId: String): List<Pair<Team, TeamRole>> = dbQuery {

@@ -4,7 +4,7 @@
 
 ## Critical
 
-### PROJ-C1: Lock check in `updateProject` not atomic — TOCTOU race
+### ✅ PROJ-C1: Lock check in `updateProject` not atomic — TOCTOU race
 
 **Files:** `ProjectsService.kt:72-76`, `ExposedProjectsRepository.kt:162-178`
 
@@ -14,7 +14,7 @@
 
 ---
 
-### PROJ-C2: `tryAcquire` delete-then-insert on expired lock not atomic
+### ✅ PROJ-C2: `tryAcquire` delete-then-insert on expired lock not atomic
 
 **Files:** `ExposedProjectLockRepository.kt:63-87`
 

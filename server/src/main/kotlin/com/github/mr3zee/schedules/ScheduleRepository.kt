@@ -28,5 +28,11 @@ interface ScheduleRepository {
         nextRunAt: Instant?,
     ): ScheduleEntity
     suspend fun update(id: String, enabled: Boolean?, nextRunAt: Instant?, lastRunAt: Instant?): ScheduleEntity?
+    /**
+     * SCHED-C1: Atomically claim a due schedule by setting lastRunAt and advancing nextRunAt.
+     * Uses CAS condition (lastRunAt IS NULL OR lastRunAt < nextRunAt) to prevent double-fires.
+     * Returns true if the schedule was claimed, false if another instance already claimed it.
+     */
+    suspend fun claimSchedule(id: String, now: Instant, nextRun: Instant?): Boolean
     suspend fun delete(id: String): Boolean
 }

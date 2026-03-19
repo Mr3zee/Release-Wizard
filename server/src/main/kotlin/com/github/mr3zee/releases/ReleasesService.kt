@@ -219,6 +219,8 @@ class DefaultReleasesService(
             return false
         }
         executionEngine.cancelExecution(id)
+        // REL-C2: Clean up approval mutexes on cancellation to prevent memory leak
+        cleanupApprovalMutexes(id)
         val teamId = repository.findTeamId(id)
             ?: throw NotFoundException("Release not found")
         auditService.log(TeamId(teamId), session, AuditAction.RELEASE_CANCELLED, AuditTargetType.RELEASE, id.value)
@@ -229,6 +231,7 @@ class DefaultReleasesService(
         val release = repository.findById(id) ?: return false
         checkAccess(id, session)
         if (!release.status.isTerminal) return false
+        cleanupApprovalMutexes(id)
         return repository.updateStatus(id, ReleaseStatus.ARCHIVED)
     }
 
@@ -236,11 +239,14 @@ class DefaultReleasesService(
         val release = repository.findById(id) ?: return false
         checkAccess(id, session)
         if (!release.status.isTerminal) return false
+        cleanupApprovalMutexes(id)
         return repository.delete(id)
     }
 
     override suspend fun awaitRelease(id: ReleaseId) {
         executionEngine.awaitExecution(id)
+        // REL-C2: Clean up approval mutexes after release completes
+        cleanupApprovalMutexes(id)
     }
 
     override suspend fun stopBlock(releaseId: ReleaseId, blockId: BlockId, session: UserSession): Boolean {
@@ -371,10 +377,24 @@ class DefaultReleasesService(
             ApprovalResult.Recorded -> true
             ApprovalResult.Rejected -> false
             ApprovalResult.ThresholdMet -> {
-                approvalMutexes.remove(mutexKey)
-                executionEngine.approveBlock(releaseId, blockId, request.input)
+                try {
+                    executionEngine.approveBlock(releaseId, blockId, request.input)
+                } finally {
+                    // REL-C1: Remove mutex AFTER approveBlock completes to prevent
+                    // a concurrent approval from bypassing serialization
+                    approvalMutexes.remove(mutexKey)
+                }
             }
         }
+    }
+
+    /**
+     * REL-C2: Remove all approval mutexes for a release to prevent unbounded memory growth.
+     * Called when a release reaches a terminal state (cancelled, completed, archived, deleted).
+     */
+    private fun cleanupApprovalMutexes(releaseId: ReleaseId) {
+        val prefix = releaseId.value
+        approvalMutexes.keys.removeAll { it.first == prefix }
     }
 
     private suspend fun applyTags(releaseId: ReleaseId, tags: List<String>, teamId: String) {

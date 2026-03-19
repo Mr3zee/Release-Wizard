@@ -52,6 +52,11 @@ class ExposedMavenTriggerRepository(private val db: Database) : MavenTriggerRepo
     override suspend fun findAllEnabled(): List<MavenTriggerWithVersions> = dbQuery {
         MavenTriggerTable.selectAll()
             .where { MavenTriggerTable.enabled eq true }
+            // MAVEN-C2: FOR UPDATE provides single-instance serialization of poll reads.
+            // Note: lock is released when this transaction ends (before trigger processing runs).
+            // Cross-instance idempotency relies on knownVersions tracking — a version fired by
+            // instance A will be in knownVersions on instance B's next poll cycle.
+            .forUpdate()
             .map { it.toWithVersions() }
     }
 

@@ -52,12 +52,19 @@ class SchedulerService(
                     (schedule.nextRunAt != null && schedule.lastRunAt < schedule.nextRunAt)
 
                 if (shouldCatchUp) {
+                    // SCHED-C1: Atomically claim the schedule before firing to prevent double-fire on crash recovery
+                    val nextRun = CronUtils.computeNextRun(schedule.cronExpression)
+                    val claimed = scheduleRepository.claimSchedule(schedule.id, now, nextRun)
+                    if (!claimed) {
+                        logger.debug("Schedule {} already claimed during recovery", schedule.id)
+                        continue
+                    }
                     logger.info("Catch-up firing schedule {} for project {}", schedule.id, schedule.projectId.value)
                     fireSchedule(schedule)
+                } else {
+                    // Just advance next_run_at to the future
+                    advanceNextRun(schedule)
                 }
-
-                // Advance next_run_at to the future
-                advanceNextRun(schedule)
             } catch (e: Exception) {
                 logger.error("Failed to recover schedule {}: {}", schedule.id, e.message, e)
             }
@@ -70,9 +77,15 @@ class SchedulerService(
 
         for (schedule in dueSchedules) {
             try {
+                // SCHED-C1: Atomically claim before firing — CAS prevents double-fire across instances
+                val nextRun = CronUtils.computeNextRun(schedule.cronExpression)
+                val claimed = scheduleRepository.claimSchedule(schedule.id, now, nextRun)
+                if (!claimed) {
+                    logger.debug("Schedule {} already claimed by another instance", schedule.id)
+                    continue
+                }
                 logger.info("Triggering scheduled release for project {}", schedule.projectId.value)
                 fireSchedule(schedule)
-                advanceNextRun(schedule)
             } catch (e: Exception) {
                 logger.error("Failed to trigger schedule {}: {}", schedule.id, e.message, e)
             }

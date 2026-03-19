@@ -68,14 +68,10 @@ class DefaultProjectsService(
 
     override suspend fun updateProject(id: ProjectId, request: UpdateProjectRequest, session: UserSession): ProjectTemplate? {
         checkAccess(id, session)
-        // Enforce lock ownership — reject update if another user holds the lock
-        val activeLock = lockRepository.findActiveLock(id.value)
-        if (activeLock != null && activeLock.userId != session.userId) {
-            log.warn("Project update rejected for {}: lock held by user {}", id.value, activeLock.userId)
-            throw LockConflictException(activeLock)
-        }
-        val updated = repository.update(
+        // PROJ-C1: Lock check + update in a single transaction to prevent TOCTOU race
+        val updated = repository.updateWithLockCheck(
             id = id,
+            callerUserId = session.userId,
             name = request.name,
             description = request.description,
             dagGraph = request.dagGraph,

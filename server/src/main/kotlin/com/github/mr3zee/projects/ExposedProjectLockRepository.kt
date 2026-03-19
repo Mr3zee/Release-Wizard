@@ -60,11 +60,20 @@ class ExposedProjectLockRepository(
                 return@dbQuery null
             }
 
-            // Expired lock — remove it and insert new one
-            ProjectLockTable.deleteWhere { ProjectLockTable.projectId eq projectUuid }
+            // PROJ-C2: Expired lock — atomically update in-place instead of delete-then-insert
+            // The row is already locked via forUpdate(), so this is safe from races
+            ProjectLockTable.update(
+                where = { ProjectLockTable.projectId eq projectUuid }
+            ) {
+                it[ProjectLockTable.userId] = userUuid
+                it[ProjectLockTable.username] = username
+                it[ProjectLockTable.acquiredAt] = now
+                it[ProjectLockTable.expiresAt] = expires
+            }
+            return@dbQuery ProjectLockInfo(userId, username, now, expires)
         }
 
-        // Insert new lock — PK constraint prevents concurrent double-insert
+        // No existing lock — insert new one. PK constraint prevents concurrent double-insert.
         try {
             ProjectLockTable.insert {
                 it[ProjectLockTable.projectId] = projectUuid
@@ -75,10 +84,8 @@ class ExposedProjectLockRepository(
             }
             ProjectLockInfo(userId, username, now, expires)
         } catch (e: org.jetbrains.exposed.v1.exceptions.ExposedSQLException) {
-            // Only swallow unique/PK constraint violations (SQL state 23xxx)
             val sqlState = (e.cause as? java.sql.SQLException)?.sqlState
             if (sqlState != null && sqlState.startsWith("23")) {
-                // Concurrent insert won the race — lock is held by someone else
                 log.debug("Lock acquisition race lost for project {} by user {}", projectId, userId)
                 null
             } else {

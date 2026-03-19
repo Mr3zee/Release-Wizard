@@ -25,5 +25,6 @@ interface ProjectsRepository {
     suspend fun findTeamId(id: ProjectId): String?
     suspend fun create(name: String, description: String, dagGraph: DagGraph, parameters: List<Parameter>, teamId: String, defaultTags: List<String> = emptyList()): ProjectTemplate
     suspend fun update(id: ProjectId, name: String?, description: String?, dagGraph: DagGraph?, parameters: List<Parameter>?, defaultTags: List<String>? = null): ProjectTemplate?
+    suspend fun updateWithLockCheck(id: ProjectId, callerUserId: String, name: String?, description: String?, dagGraph: DagGraph?, parameters: List<Parameter>?, defaultTags: List<String>? = null): ProjectTemplate?
     suspend fun delete(id: ProjectId): Boolean
 }

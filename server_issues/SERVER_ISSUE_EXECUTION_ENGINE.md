@@ -4,7 +4,7 @@
 
 ## Critical
 
-### EXEC-C1: Wave-loop busy-polling causes artificial serialization
+### ✅ EXEC-C1: Wave-loop busy-polling causes artificial serialization
 
 **Files:** `ExecutionEngine.kt:974-984`
 
@@ -14,7 +14,7 @@
 
 ---
 
-### EXEC-C2: Race between `startExecution` and `registerJob` — ghost executions
+### ✅ EXEC-C2: Race between `startExecution` and `registerJob` — ghost executions
 
 **Files:** `ExecutionEngine.kt:125-133`
 
@@ -24,7 +24,7 @@
 
 ---
 
-### EXEC-C3: DB error in `completeBlockSuccess` silently marks SUCCEEDED block as FAILED
+### ✅ EXEC-C3: DB error in `completeBlockSuccess` silently marks SUCCEEDED block as FAILED
 
 **Files:** `ExecutionEngine.kt:1103-1138`
 

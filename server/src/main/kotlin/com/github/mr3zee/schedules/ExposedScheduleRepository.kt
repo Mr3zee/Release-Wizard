@@ -48,6 +48,10 @@ class ExposedScheduleRepository(private val db: Database) : ScheduleRepository {
                 (ScheduleTable.enabled eq true) and
                     (ScheduleTable.nextRunAt lessEq now)
             }
+            // SCHED-C2: FOR UPDATE provides single-instance serialization of poll reads.
+            // Note: lock is released when this transaction ends (before claimSchedule runs in its own txn).
+            // Cross-instance idempotency is guaranteed by the CAS in claimSchedule, not by this lock.
+            .forUpdate()
             .map { it.toEntity() }
     }
 
@@ -102,6 +106,19 @@ class ExposedScheduleRepository(private val db: Database) : ScheduleRepository {
         } else {
             null
         }
+    }
+
+    override suspend fun claimSchedule(id: String, now: Instant, nextRun: Instant?): Boolean = dbQuery {
+        val uuid = UUID.fromString(id)
+        // SCHED-C1: CAS — only claim if lastRunAt hasn't already covered this scheduled run
+        val updated = ScheduleTable.update({
+            (ScheduleTable.id eq uuid) and
+                ((ScheduleTable.lastRunAt.isNull()) or (ScheduleTable.lastRunAt less ScheduleTable.nextRunAt))
+        }) { stmt ->
+            stmt[ScheduleTable.lastRunAt] = now
+            nextRun?.let { stmt[ScheduleTable.nextRunAt] = it }
+        }
+        updated > 0
     }
 
     override suspend fun delete(id: String): Boolean = dbQuery {

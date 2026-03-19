@@ -9,17 +9,18 @@ import com.github.mr3zee.model.*
 import com.github.mr3zee.releases.ReleasesRepository
 import com.github.mr3zee.template.TemplateEngine
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -125,10 +126,13 @@ class ExecutionEngine(
     fun startExecution(release: Release): Job {
         log.info("Starting execution for release {}", release.id.value)
         completionEmitted[release.id] = AtomicBoolean(false)
-        val job = scope.launch {
+        // EXEC-C2: Use LAZY start to register the job BEFORE the coroutine can execute,
+        // preventing ghost executions if cancel is called between launch and registerJob.
+        val job = scope.launch(start = CoroutineStart.LAZY) {
             executeRelease(release)
         }
         registerJob(release.id, job)
+        job.start()
         return job
     }
 
@@ -165,9 +169,7 @@ class ExecutionEngine(
                     }
                 }
                 repository.setFinished(releaseId, ReleaseStatus.CANCELLED)
-                val now = Clock.System.now()
-                emitEvent(ReleaseEvent.ReleaseStatusChanged(releaseId, ReleaseStatus.CANCELLED, finishedAt = now))
-                emitEvent(ReleaseEvent.ReleaseCompleted(releaseId, ReleaseStatus.CANCELLED, finishedAt = now))
+                emitCompletionOnce(releaseId, ReleaseStatus.CANCELLED, Clock.System.now())
             }
         }
     }
@@ -199,10 +201,12 @@ class ExecutionEngine(
      */
     fun recoverRelease(release: Release, persistedExecutions: List<BlockExecution>) {
         completionEmitted[release.id] = AtomicBoolean(false)
-        val job = scope.launch {
+        // EXEC-C2: Use LAZY start to register the job before execution begins
+        val job = scope.launch(start = CoroutineStart.LAZY) {
             executeRecovery(release, persistedExecutions)
         }
         registerJob(release.id, job)
+        job.start()
     }
 
     private suspend fun executeRecovery(release: Release, persistedExecutions: List<BlockExecution>) {
@@ -378,13 +382,15 @@ class ExecutionEngine(
             val activeJob = activeJobs[releaseId]
             if (activeJob != null && activeJob.isActive) {
                 restartingReleases.add(releaseId)
-                activeJob.cancel()
-                activeJob.join()
-                // invokeOnCompletion has run and skipped cleanup due to restart flag
+                try {
+                    activeJob.cancel()
+                    activeJob.join()
+                    // invokeOnCompletion has run and skipped cleanup due to restart flag
+                } finally {
+                    // Always clear the restart flag to prevent state leak on failure
+                    restartingReleases.remove(releaseId)
+                }
             }
-
-            // Clear the restart flag now that the old job is fully stopped
-            restartingReleases.remove(releaseId)
 
             // Clean up stale in-memory state from the old job
             activeJobs.remove(releaseId)
@@ -951,8 +957,10 @@ class ExecutionEngine(
     }
 
     /**
-     * Shared wave execution loop: picks ready blocks, launches them concurrently,
-     * marks remaining blocks as FAILED when predecessors fail.
+     * Event-driven block execution loop: launches each block as soon as its predecessors succeed.
+     * EXEC-C1: Replaces the previous wave-based approach that serialized unrelated blocks sharing
+     * a topological level and busy-polled with delay(100ms). Now uses a Channel to signal
+     * block completion, eliminating both unnecessary serialization and busy-polling.
      */
     private suspend fun runWaveLoop(
         scope: CoroutineScope,
@@ -963,38 +971,54 @@ class ExecutionEngine(
         statusMap: MutableMap<BlockId, BlockStatus>,
         executeBlock: suspend (Block) -> Unit,
     ) {
-        while (remaining.isNotEmpty()) {
-            currentCoroutineContext().ensureActive()
+        // Channel signaled whenever any block reaches a terminal state
+        val blockCompleted = Channel<Unit>(Channel.UNLIMITED)
+        val inFlightCount = AtomicInteger(0)
 
+        fun launchReadyBlocks(): Int {
             val ready = remaining.filter { blockId ->
                 val preds = predecessors[blockId] ?: emptySet()
                 preds.all { statusMap[it] == BlockStatus.SUCCEEDED }
             }
-
-            if (ready.isEmpty()) {
-                val anyRunning = statusMap.values.any {
-                    it == BlockStatus.RUNNING || it == BlockStatus.WAITING_FOR_INPUT
-                }
-                if (anyRunning) {
-                    log.debug("Wave loop polling: {} blocks running/waiting, {} remaining", statusMap.values.count { it == BlockStatus.RUNNING || it == BlockStatus.WAITING_FOR_INPUT }, remaining.size)
-                    delay(100.milliseconds)
-                    continue
-                }
-                break
-            }
-
-            ready.forEach { remaining.remove(it) }
-
-            val jobs = ready.map { blockId ->
+            for (blockId in ready) {
+                remaining.remove(blockId)
+                inFlightCount.incrementAndGet()
                 val block = graph.blocks.find { it.id == blockId }
                     ?: error("Block $blockId not found in DAG despite being in topological sort")
-                scope.async { executeBlock(block) }
+                scope.launch {
+                    try {
+                        executeBlock(block)
+                    } finally {
+                        inFlightCount.decrementAndGet()
+                        blockCompleted.trySend(Unit)
+                    }
+                }
             }
-
-            jobs.forEach { it.await() }
+            return ready.size
         }
 
-        // Mark any remaining blocks (whose predecessors failed) as FAILED
+        launchReadyBlocks()
+
+        while (remaining.isNotEmpty()) {
+            currentCoroutineContext().ensureActive()
+            if (inFlightCount.get() == 0) {
+                // All in-flight blocks finished — check once more for newly ready blocks
+                // (handles the race where multiple blocks complete before the loop iterates)
+                if (launchReadyBlocks() == 0) break // Truly stuck: remaining blocks have failed predecessors
+                continue
+            }
+            blockCompleted.receive() // Suspend until a block completes
+            launchReadyBlocks()
+        }
+
+        // Wait for all in-flight blocks to finish
+        while (inFlightCount.get() > 0) {
+            blockCompleted.receive()
+        }
+
+        blockCompleted.close()
+
+        // Mark unreachable blocks (whose predecessors failed) as FAILED
         for (blockId in remaining) {
             statusMap[blockId] = BlockStatus.FAILED
             persistAndEmit(release.id, BlockExecution(
@@ -1098,7 +1122,9 @@ class ExecutionEngine(
     }
 
     /**
-     * Block-level error handling: records success, cancellation, or failure.
+     * Block-level error handling: records cancellation or failure for block execution errors.
+     * EXEC-C3: Success persistence is separated from the execution try-catch so that
+     * a DB error in [completeBlockSuccess] does NOT mark a successfully executed block as FAILED.
      */
     private suspend fun executeWithBlockErrorHandling(
         releaseId: ReleaseId,
@@ -1108,9 +1134,9 @@ class ExecutionEngine(
         outputsMap: MutableMap<BlockId, Map<String, String>>,
         action: suspend () -> Map<String, String>,
     ) {
+        val outputs: Map<String, String>
         try {
-            val outputs = action()
-            completeBlockSuccess(releaseId, blockId, outputs, startTime, statusMap, outputsMap)
+            outputs = action()
         } catch (e: CancellationException) {
             if (!restartingReleases.contains(releaseId) && !stoppingReleases.contains(releaseId)) {
                 statusMap[blockId] = BlockStatus.FAILED
@@ -1125,6 +1151,7 @@ class ExecutionEngine(
             }
             throw e
         } catch (e: Exception) {
+            // Block execution failed — record the failure
             statusMap[blockId] = BlockStatus.FAILED
             persistAndEmit(releaseId, BlockExecution(
                 blockId = blockId,
@@ -1134,7 +1161,12 @@ class ExecutionEngine(
                 startedAt = startTime,
                 finishedAt = Clock.System.now(),
             ))
+            return
         }
+
+        // Block execution succeeded — persist success separately.
+        // DB errors here propagate up (handled at release level) rather than falsely marking the block as FAILED.
+        completeBlockSuccess(releaseId, blockId, outputs, startTime, statusMap, outputsMap)
     }
 
     private suspend fun persistAndEmit(releaseId: ReleaseId, execution: BlockExecution) {

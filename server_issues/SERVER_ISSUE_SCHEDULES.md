@@ -4,7 +4,7 @@
 
 ## Critical
 
-### SCHED-C1: Non-atomic `fireSchedule` + `advanceNextRun` — double-fire on crash
+### ✅ SCHED-C1: Non-atomic `fireSchedule` + `advanceNextRun` — double-fire on crash
 
 **Files:** `SchedulerService.kt`
 
@@ -14,7 +14,7 @@
 
 ---
 
-### SCHED-C2: No distributed lock — duplicate fires in multi-instance deployments
+### ✅ SCHED-C2: No distributed lock — duplicate fires in multi-instance deployments
 
 **Files:** `SchedulerService.kt`
 
