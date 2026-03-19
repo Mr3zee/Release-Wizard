@@ -28,7 +28,7 @@ fun buildSuggestions(
         if (param.key.isBlank()) continue
         suggestions.add(
             TemplateSuggestion(
-                label = param.key,
+                label = if (param.label.isNotEmpty()) "${param.label} (${param.key})" else param.key,
                 insertText = $$"${param.$${param.key}}",
                 description = when {
                     param.description.isNotEmpty() -> param.description

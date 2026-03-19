@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.api.ExternalConfig
 import com.github.mr3zee.components.RwButton
@@ -703,63 +704,76 @@ private fun ParameterRow(
 ) {
     var showTemplatePicker by remember(parameter.key) { mutableStateOf(false) }
 
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        RwTextField(
-            value = parameter.key,
-            onValueChange = { onUpdate(parameter.copy(key = it)) },
-            placeholder = packStringResource(Res.string.editor_prop_key),
-            singleLine = true,
-            enabled = enabled,
-            modifier = Modifier.weight(1f),
-            textStyle = AppTypography.bodySmall,
-        )
-        TemplateAutocompleteField(
-            value = parameter.value,
-            onValueChange = { onUpdate(parameter.copy(value = it)) },
-            projectParameters = projectParameters,
-            predecessors = predecessors,
-            label = { Text(packStringResource(Res.string.editor_prop_value)) },
-            singleLine = true,
-            enabled = enabled,
-            modifier = Modifier.weight(1f),
-            textStyle = AppTypography.bodySmall,
-            testTag = "param_value_field",
-        )
-        Box {
-            RwTooltip(tooltip = packStringResource(Res.string.editor_template_tooltip)) {
-                RwButton(
-                    onClick = { showTemplatePicker = true },
-                    variant = RwButtonVariant.Ghost,
-                    enabled = enabled,
-                    contentPadding = PaddingValues(Spacing.xs),
-                    modifier = Modifier.testTag("insert_template_button"),
-                ) {
-                    Text(packStringResource(Res.string.editor_template_button), style = AppTypography.bodySmall)
-                }
-            }
-            TemplatePickerDropdown(
-                expanded = showTemplatePicker,
-                parameters = projectParameters,
-                predecessors = predecessors,
-                onSelect = { expr ->
-                    onUpdate(parameter.copy(value = insertExpressionSafely(parameter.value, expr)))
-                    showTemplatePicker = false
-                },
-                onDismiss = { showTemplatePicker = false },
-            )
+    val supportingText: @Composable (() -> Unit)? = remember(parameter.description) {
+        if (parameter.description.isNotEmpty()) {
+            { Text(parameter.description, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        } else null
+    }
+
+    Column {
+        if (parameter.label.isNotEmpty()) {
+            Text(parameter.label, style = AppTypography.label)
         }
-        RwButton(
-            onClick = onRemove,
-            variant = RwButtonVariant.Ghost,
-            enabled = enabled,
-            contentPadding = PaddingValues(Spacing.xs),
-            contentColor = MaterialTheme.colorScheme.error,
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+            verticalAlignment = Alignment.Top,
         ) {
-            Text(packStringResource(Res.string.editor_prop_remove))
+            RwTextField(
+                value = parameter.key,
+                onValueChange = { onUpdate(parameter.copy(key = it)) },
+                placeholder = if (parameter.label.isNotEmpty()) parameter.label
+                              else packStringResource(Res.string.editor_prop_key),
+                singleLine = true,
+                enabled = enabled,
+                modifier = Modifier.weight(1f),
+                textStyle = AppTypography.bodySmall,
+            )
+            TemplateAutocompleteField(
+                value = parameter.value,
+                onValueChange = { onUpdate(parameter.copy(value = it)) },
+                projectParameters = projectParameters,
+                predecessors = predecessors,
+                label = { Text(packStringResource(Res.string.editor_prop_value)) },
+                supportingText = supportingText,
+                singleLine = true,
+                enabled = enabled,
+                modifier = Modifier.weight(1f),
+                textStyle = AppTypography.bodySmall,
+                testTag = "param_value_field",
+            )
+            Box {
+                RwTooltip(tooltip = packStringResource(Res.string.editor_template_tooltip)) {
+                    RwButton(
+                        onClick = { showTemplatePicker = true },
+                        variant = RwButtonVariant.Ghost,
+                        enabled = enabled,
+                        contentPadding = PaddingValues(Spacing.xs),
+                        modifier = Modifier.testTag("insert_template_button"),
+                    ) {
+                        Text(packStringResource(Res.string.editor_template_button), style = AppTypography.bodySmall)
+                    }
+                }
+                TemplatePickerDropdown(
+                    expanded = showTemplatePicker,
+                    parameters = projectParameters,
+                    predecessors = predecessors,
+                    onSelect = { expr ->
+                        onUpdate(parameter.copy(value = insertExpressionSafely(parameter.value, expr)))
+                        showTemplatePicker = false
+                    },
+                    onDismiss = { showTemplatePicker = false },
+                )
+            }
+            RwButton(
+                onClick = onRemove,
+                variant = RwButtonVariant.Ghost,
+                enabled = enabled,
+                contentPadding = PaddingValues(Spacing.xs),
+                contentColor = MaterialTheme.colorScheme.error,
+            ) {
+                Text(packStringResource(Res.string.editor_prop_remove))
+            }
         }
     }
 }

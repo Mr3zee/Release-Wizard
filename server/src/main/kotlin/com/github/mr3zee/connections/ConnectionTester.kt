@@ -188,11 +188,26 @@ class ConnectionTester(
             val own = obj["own"]?.jsonPrimitive?.booleanOrNull ?: false
             val typeRaw = obj["type"]?.jsonObject?.get("rawValue")?.jsonPrimitive?.content ?: ""
 
-            // Filter: only own parameters, exclude passwords
+            // Filter: only own parameters, exclude sensitive types
             if (!own) return@mapNotNull null
-            if (typeRaw.contains("password", ignoreCase = true)) return@mapNotNull null
+            val typeToken = typeRaw.substringBefore(' ')
+            if (SENSITIVE_KEYWORDS.any { typeToken.contains(it, ignoreCase = true) }) return@mapNotNull null
 
-            ExternalConfigParameter(name = name, value = value, type = typeRaw)
+            val metadata = parseTcTypeMetadata(typeRaw)
+            val label = metadata["label"] ?: ""
+            val description = metadata["description"] ?: ""
+            // Don't surface metadata that hints at sensitive content
+            val safeLabelAndDesc = if (SENSITIVE_KEYWORDS.any { kw ->
+                label.contains(kw, ignoreCase = true) || description.contains(kw, ignoreCase = true)
+            }) "" to "" else label to description
+
+            ExternalConfigParameter(
+                name = name,
+                value = value,
+                type = typeRaw,
+                label = safeLabelAndDesc.first,
+                description = safeLabelAndDesc.second,
+            )
         }
 
         return ExternalConfigParametersResponse(parameters = parameters)
@@ -259,6 +274,18 @@ class ConnectionTester(
 
     companion object {
 
+        private val TC_METADATA_REGEX = Regex("""(\w+)='([^']*)'""")
+
+        private val SENSITIVE_KEYWORDS = setOf("password", "secret", "secure", "credential", "token", "private", "passphrase")
+
+        fun parseTcTypeMetadata(rawValue: String): Map<String, String> {
+            val result = mutableMapOf<String, String>()
+            for (match in TC_METADATA_REGEX.findAll(rawValue)) {
+                result[match.groupValues[1]] = match.groupValues[2]
+            }
+            return result
+        }
+
         /**
          * Parses workflow_dispatch inputs from a GitHub Actions YAML file content.
          * Uses SnakeYAML to navigate: on → workflow_dispatch → inputs → {name: {default, type}}
@@ -291,7 +318,8 @@ class ConnectionTester(
                 val props = value as? Map<*, *> ?: return@mapNotNull null
                 val default = props["default"]?.toString() ?: ""
                 val type = props["type"]?.toString() ?: ""
-                ExternalConfigParameter(name = name, value = default, type = type)
+                val description = props["description"]?.toString() ?: ""
+                ExternalConfigParameter(name = name, value = default, type = type, description = description)
             }
         }
         /**

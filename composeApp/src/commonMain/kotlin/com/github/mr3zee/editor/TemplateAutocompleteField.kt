@@ -29,6 +29,7 @@ fun TemplateAutocompleteField(
     projectParameters: List<Parameter>,
     predecessors: List<Block>,
     label: @Composable (() -> Unit)? = null,
+    supportingText: @Composable (() -> Unit)? = null,
     singleLine: Boolean = true,
     enabled: Boolean = true,
     modifier: Modifier = Modifier,
@@ -130,6 +131,7 @@ fun TemplateAutocompleteField(
                 updateSuggestions(newTfv)
             },
             label = label,
+            supportingText = supportingText,
             singleLine = singleLine,
             enabled = enabled,
             textStyle = textStyle,

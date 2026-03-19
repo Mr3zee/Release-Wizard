@@ -9,6 +9,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ConnectionTesterTest {
@@ -177,27 +178,38 @@ class ConnectionTesterTest {
     // TeamCity Build Type Parameters
 
     private val parametersJson = """{"property":[
-        {"name":"env.VERSION","value":"1.0.0","own":true,"type":{"rawValue":"text"}},
+        {"name":"env.VERSION","value":"1.0.0","own":true,"type":{"rawValue":"text label='Version' description='Release version'"}},
         {"name":"env.DEPLOY_TARGET","value":"staging","own":true,"type":{"rawValue":"select"}},
         {"name":"env.INHERITED","value":"inherited-val","own":false,"type":{"rawValue":"text"}},
         {"name":"env.SECRET_TOKEN","value":"******","own":true,"type":{"rawValue":"password display='hidden'"}},
-        {"name":"env.NO_TYPE","value":"plain","own":true}
+        {"name":"env.NO_TYPE","value":"plain","own":true},
+        {"name":"env.SECURE_KEY","value":"key123","own":true,"type":{"rawValue":"secure"}}
     ]}"""
 
     @Test
-    fun `fetchTeamCityBuildTypeParameters returns only own non-password params`() = runTest {
+    fun `fetchTeamCityBuildTypeParameters returns only own non-sensitive params`() = runTest {
         val tester = createTester { respond(parametersJson, HttpStatusCode.OK, jsonHeaders()) }
         val result = tester.fetchTeamCityBuildTypeParameters(tcConfig, "bt1")
 
-        // Should include own=true non-password params only
+        // Should include own=true non-sensitive params only
         assertEquals(3, result.parameters.size)
         assertTrue(result.parameters.any { it.name == "env.VERSION" && it.value == "1.0.0" })
         assertTrue(result.parameters.any { it.name == "env.DEPLOY_TARGET" && it.value == "staging" })
         assertTrue(result.parameters.any { it.name == "env.NO_TYPE" && it.value == "plain" })
 
-        // Should exclude inherited and password params
+        // Should exclude inherited, password and secure params
         assertFalse(result.parameters.any { it.name == "env.INHERITED" })
         assertFalse(result.parameters.any { it.name == "env.SECRET_TOKEN" })
+        assertFalse(result.parameters.any { it.name == "env.SECURE_KEY" })
+
+        // Verify label/description extraction from rawValue metadata
+        val version = result.parameters.find { it.name == "env.VERSION" } ?: error("Expected VERSION")
+        assertEquals("Version", version.label)
+        assertEquals("Release version", version.description)
+
+        val target = result.parameters.find { it.name == "env.DEPLOY_TARGET" } ?: error("Expected DEPLOY_TARGET")
+        assertEquals("", target.label)
+        assertEquals("", target.description)
     }
 
     @Test
@@ -322,14 +334,17 @@ class ConnectionTesterTest {
         val env = inputs.find { it.name == "environment" } ?: error("Expected environment input")
         assertEquals("staging", env.value)
         assertEquals("choice", env.type)
+        assertEquals("Target environment", env.description)
 
         val version = inputs.find { it.name == "version" } ?: error("Expected version input")
         assertEquals("", version.value)
         assertEquals("string", version.type)
+        assertEquals("Version to deploy", version.description)
 
         val dryRun = inputs.find { it.name == "dry_run" } ?: error("Expected dry_run input")
         assertEquals("true", dryRun.value)
         assertEquals("boolean", dryRun.type)
+        assertEquals("Dry run mode", dryRun.description)
     }
 
     @Test
@@ -453,5 +468,87 @@ class ConnectionTesterTest {
             tester.fetchGitHubWorkflowInputs(ghConfig, "nonexistent.yml")
         }
         assertEquals(true, e.message?.contains("404"))
+    }
+
+    // --- parseTcTypeMetadata ---
+
+    @Test
+    fun `parseTcTypeMetadata extracts label and description`() {
+        val metadata = ConnectionTester.parseTcTypeMetadata("text description='Version number' label='Version' display='normal'")
+        assertEquals("Version", metadata["label"])
+        assertEquals("Version number", metadata["description"])
+        assertEquals("normal", metadata["display"])
+    }
+
+    @Test
+    fun `parseTcTypeMetadata handles label only`() {
+        val metadata = ConnectionTester.parseTcTypeMetadata("text label='My Label'")
+        assertEquals("My Label", metadata["label"])
+        assertNull(metadata["description"])
+    }
+
+    @Test
+    fun `parseTcTypeMetadata handles empty values`() {
+        val metadata = ConnectionTester.parseTcTypeMetadata("text label='' description=''")
+        assertEquals("", metadata["label"])
+        assertEquals("", metadata["description"])
+    }
+
+    @Test
+    fun `parseTcTypeMetadata returns empty map for type-only rawValue`() {
+        val metadata = ConnectionTester.parseTcTypeMetadata("text")
+        assertTrue(metadata.isEmpty())
+    }
+
+    @Test
+    fun `parseTcTypeMetadata returns empty map for empty string`() {
+        val metadata = ConnectionTester.parseTcTypeMetadata("")
+        assertTrue(metadata.isEmpty())
+    }
+
+    @Test
+    fun `parseTcTypeMetadata is order-independent`() {
+        val m1 = ConnectionTester.parseTcTypeMetadata("text description='D' label='L'")
+        val m2 = ConnectionTester.parseTcTypeMetadata("text label='L' description='D'")
+        assertEquals(m1["label"], m2["label"])
+        assertEquals(m1["description"], m2["description"])
+    }
+
+    // --- GH YAML description edge cases ---
+
+    @Test
+    fun `parseWorkflowDispatchInputs handles inputs without description`() {
+        val yaml = """
+            name: Deploy
+            on:
+              workflow_dispatch:
+                inputs:
+                  simple_input:
+                    type: string
+                  null_desc:
+                    description:
+                    type: string
+                  explicit_null:
+                    description: ~
+                    type: string
+                  string_null:
+                    description: null
+                    type: string
+        """.trimIndent()
+
+        val inputs = ConnectionTester.parseWorkflowDispatchInputs(yaml)
+        assertEquals(4, inputs.size)
+
+        val simple = inputs.find { it.name == "simple_input" } ?: error("Expected simple_input")
+        assertEquals("", simple.description)
+
+        val nullDesc = inputs.find { it.name == "null_desc" } ?: error("Expected null_desc")
+        assertEquals("", nullDesc.description)
+
+        val explicitNull = inputs.find { it.name == "explicit_null" } ?: error("Expected explicit_null")
+        assertEquals("", explicitNull.description)
+
+        val stringNull = inputs.find { it.name == "string_null" } ?: error("Expected string_null")
+        assertEquals("", stringNull.description)
     }
 }

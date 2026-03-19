@@ -3,6 +3,7 @@ package com.github.mr3zee.api
 import com.github.mr3zee.model.Connection
 import com.github.mr3zee.model.ConnectionConfig
 import com.github.mr3zee.model.ConnectionType
+import com.github.mr3zee.model.Parameter
 import com.github.mr3zee.model.TeamId
 import kotlinx.serialization.Serializable
 
@@ -58,6 +59,15 @@ data class ExternalConfigParameter(
     val name: String,
     val value: String,
     val type: String = "",
+    val label: String = "",
+    val description: String = "",
+)
+
+fun ExternalConfigParameter.toParameter(): Parameter = Parameter(
+    key = name,
+    value = value,
+    label = label,
+    description = description,
 )
 
 @Serializable

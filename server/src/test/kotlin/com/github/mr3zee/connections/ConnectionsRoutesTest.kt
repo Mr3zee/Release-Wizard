@@ -303,7 +303,10 @@ class ConnectionsRoutesTest {
         assertEquals(HttpStatusCode.OK, response.status)
         val body = response.body<ExternalConfigParametersResponse>()
         assertTrue(body.parameters.isNotEmpty())
-        assertEquals("env.VERSION", body.parameters.first().name)
+        val version = body.parameters.first()
+        assertEquals("env.VERSION", version.name)
+        assertEquals("Version", version.label)
+        assertEquals("Release version", version.description)
     }
 
     @Test
@@ -397,8 +400,10 @@ class ConnectionsRoutesTest {
         assertEquals(HttpStatusCode.OK, response.status)
         val body = response.body<ExternalConfigParametersResponse>()
         assertTrue(body.parameters.isNotEmpty())
-        assertEquals("environment", body.parameters.first().name)
-        assertEquals("staging", body.parameters.first().value)
+        val env = body.parameters.first()
+        assertEquals("environment", env.name)
+        assertEquals("staging", env.value)
+        assertEquals("Target env", env.description)
     }
 
     @Test

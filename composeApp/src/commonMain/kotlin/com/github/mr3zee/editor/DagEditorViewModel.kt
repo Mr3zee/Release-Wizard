@@ -8,6 +8,7 @@ import com.github.mr3zee.api.ProjectApiClient
 import com.github.mr3zee.api.ProjectLockInfo
 import com.github.mr3zee.api.UpdateProjectRequest
 import com.github.mr3zee.api.parseLockConflict
+import com.github.mr3zee.api.toParameter
 import com.github.mr3zee.api.toUiMessage
 import com.github.mr3zee.util.UiMessage
 import com.github.mr3zee.dag.DagValidator
@@ -533,14 +534,26 @@ class DagEditorViewModel(
             _isFetchingConfigParams.value += blockId
             try {
                 val response = client.fetchExternalConfigParameters(connectionId, connectionType, configId)
-                // Merge: only add new keys, preserve existing user-edited params
+                // Merge: update label/description for existing keys, add new keys, preserve user-only params
                 val currentBlock = findActionBlock(blockId) ?: return@launch
+                val fetchedByName = response.parameters.associateBy { it.name }
+                // Preserve original order: update existing, keep user-only in place
+                val updatedExisting = currentBlock.parameters.map { param ->
+                    val ext = fetchedByName[param.key]
+                    if (ext != null) {
+                        param.copy(label = ext.label, description = ext.description)
+                    } else {
+                        param // user-only param, keep as-is
+                    }
+                }
+                // Append truly new params (not in existing)
                 val existingKeys = currentBlock.parameters.map { it.key }.toSet()
                 val newParams = response.parameters
                     .filter { it.name !in existingKeys }
-                    .map { Parameter(key = it.name, value = it.value) }
-                if (newParams.isNotEmpty()) {
-                    updateBlockParameters(blockId, currentBlock.parameters + newParams)
+                    .map { it.toParameter() }
+                val merged = updatedExisting + newParams
+                if (merged != currentBlock.parameters) {
+                    updateBlockParameters(blockId, merged)
                 }
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()

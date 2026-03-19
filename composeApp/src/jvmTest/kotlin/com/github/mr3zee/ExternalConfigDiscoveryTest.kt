@@ -32,8 +32,8 @@ class ExternalConfigDiscoveryTest {
     ]}"""
 
     private val parametersJson = """{"parameters":[
-        {"name":"env.VERSION","value":"1.0.0","type":"text"},
-        {"name":"env.TARGET","value":"staging","type":"select"}
+        {"name":"env.VERSION","value":"1.0.0","type":"text","label":"Version","description":"Release version"},
+        {"name":"env.TARGET","value":"staging","type":"select","label":"","description":"Deploy target"}
     ]}"""
 
     private fun editorClient() = mockHttpClient(
@@ -117,9 +117,18 @@ class ExternalConfigDiscoveryTest {
             ?: error("Expected block b1")
         // buildTypeId param should be set
         assertEquals("Proj_Build", block.parameters.find { it.key == "buildTypeId" }?.value)
-        // Fetched params should be merged
-        assertTrue(block.parameters.any { it.key == "env.VERSION" && it.value == "1.0.0" })
-        assertTrue(block.parameters.any { it.key == "env.TARGET" && it.value == "staging" })
+        // Fetched params should be merged with label/description
+        val versionParam = block.parameters.find { it.key == "env.VERSION" }
+            ?: error("Expected env.VERSION parameter")
+        assertEquals("1.0.0", versionParam.value)
+        assertEquals("Version", versionParam.label)
+        assertEquals("Release version", versionParam.description)
+
+        val targetParam = block.parameters.find { it.key == "env.TARGET" }
+            ?: error("Expected env.TARGET parameter")
+        assertEquals("staging", targetParam.value)
+        assertEquals("", targetParam.label)
+        assertEquals("Deploy target", targetParam.description)
     }
 
     @Test
@@ -181,6 +190,130 @@ class ExternalConfigDiscoveryTest {
         assertTrue(vm.externalConfigs.value[BlockId("b1")].isNullOrEmpty())
         assertTrue(BlockId("b1") !in vm.isFetchingConfigs.value)
         assertTrue(BlockId("b1") !in vm.isFetchingConfigParams.value)
+    }
+
+    @Test
+    fun `re-fetch preserves user-edited values while updating label and description`() = runComposeUiTest {
+        // Use a parameters response with updated metadata on re-fetch
+        val updatedParametersJson = """{"parameters":[
+            {"name":"env.VERSION","value":"1.0.0","type":"text","label":"Release Version","description":"Updated release version description"},
+            {"name":"env.TARGET","value":"staging","type":"select","label":"Target Env","description":"Updated deploy target"},
+            {"name":"env.NEW_PARAM","value":"default","type":"text","label":"New","description":"Brand new param"}
+        ]}"""
+
+        var fetchCount = 0
+        val client = mockHttpClient(
+            mapOf(
+                "/projects/p1" to json(tcBlockProjectJson, method = null),
+                "/projects/p1/lock" to json(lockJson, method = HttpMethod.Post),
+                "/projects/p1/lock/heartbeat" to json(lockJson, method = HttpMethod.Put),
+                "/connections" to json(connectionsJson),
+                "/connections/conn-1/teamcity/build-types" to json(buildTypesJson),
+                // First fetch returns original params, second returns updated metadata + new param
+                "/connections/conn-1/teamcity/build-types/Proj_Build/parameters" to json(parametersJson),
+            )
+        )
+
+        // We need a custom client that switches responses — but the mock client
+        // doesn't support that. Instead, we set up initial state, edit values,
+        // then swap to a new VM with updated response.
+        // Actually, the simplest approach: use one VM, edit values, then re-fetch.
+        // The mock always returns the same parametersJson, so label/description
+        // will stay the same but user values should be preserved.
+        // Let's use the updatedParametersJson instead for the route.
+        val refetchClient = mockHttpClient(
+            mapOf(
+                "/projects/p1" to json(tcBlockProjectJson, method = null),
+                "/projects/p1/lock" to json(lockJson, method = HttpMethod.Post),
+                "/projects/p1/lock/heartbeat" to json(lockJson, method = HttpMethod.Put),
+                "/connections" to json(connectionsJson),
+                "/connections/conn-1/teamcity/build-types" to json(buildTypesJson),
+                "/connections/conn-1/teamcity/build-types/Proj_Build/parameters" to json(updatedParametersJson),
+            )
+        )
+
+        val vm = DagEditorViewModel(
+            projectId = ProjectId("p1"),
+            apiClient = ProjectApiClient(client),
+            connectionApiClient = ConnectionApiClient(refetchClient),
+        )
+        setContent { MaterialTheme { DagEditorScreen(viewModel = vm, onBack = {}) } }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        vm.selectBlock(BlockId("b1"))
+        vm.updateBlockConnectionId(BlockId("b1"), ConnectionId("conn-1"))
+        waitForIdle()
+
+        waitUntil(timeoutMillis = 3000L) {
+            vm.externalConfigs.value[BlockId("b1")]?.isNotEmpty() == true
+        }
+
+        // Select config to trigger initial param fetch
+        vm.selectExternalConfig(BlockId("b1"), "Proj_Build")
+        waitForIdle()
+
+        waitUntil(timeoutMillis = 3000L) {
+            val block = vm.graph.value.blocks.filterIsInstance<Block.ActionBlock>().find { it.id == BlockId("b1") }
+            block?.parameters?.any { it.key == "env.VERSION" } == true
+        }
+
+        // Edit user values
+        val block1 = vm.graph.value.blocks.filterIsInstance<Block.ActionBlock>().find { it.id == BlockId("b1") }
+            ?: error("Expected block b1")
+        val editedParams = block1.parameters.map { p ->
+            when (p.key) {
+                "env.VERSION" -> p.copy(value = "2.0.0-user-edit")
+                "env.TARGET" -> p.copy(value = "production")
+                else -> p
+            }
+        }
+        vm.updateBlockParameters(BlockId("b1"), editedParams)
+        waitForIdle()
+
+        // Re-fetch parameters (simulating refresh button click)
+        vm.fetchExternalConfigParameters(BlockId("b1"))
+        waitForIdle()
+
+        waitUntil(timeoutMillis = 3000L) {
+            val b = vm.graph.value.blocks.filterIsInstance<Block.ActionBlock>().find { it.id == BlockId("b1") }
+            // Wait until we see the new param from the updated response
+            b?.parameters?.any { it.key == "env.NEW_PARAM" } == true
+        }
+
+        val finalBlock = vm.graph.value.blocks.filterIsInstance<Block.ActionBlock>().find { it.id == BlockId("b1") }
+            ?: error("Expected block b1 after re-fetch")
+
+        // User-edited values should be preserved
+        val version = finalBlock.parameters.find { it.key == "env.VERSION" }
+            ?: error("Expected env.VERSION parameter")
+        assertEquals("2.0.0-user-edit", version.value)
+        // Label and description should be updated from the re-fetch
+        assertEquals("Release Version", version.label)
+        assertEquals("Updated release version description", version.description)
+
+        val target = finalBlock.parameters.find { it.key == "env.TARGET" }
+            ?: error("Expected env.TARGET parameter")
+        assertEquals("production", target.value)
+        assertEquals("Target Env", target.label)
+        assertEquals("Updated deploy target", target.description)
+
+        // New param from re-fetch should be appended
+        val newParam = finalBlock.parameters.find { it.key == "env.NEW_PARAM" }
+            ?: error("Expected env.NEW_PARAM parameter")
+        assertEquals("default", newParam.value)
+        assertEquals("New", newParam.label)
+        assertEquals("Brand new param", newParam.description)
+
+        // Verify ordering: existing params should come before newly appended ones
+        val paramKeys = finalBlock.parameters.map { it.key }
+        val versionIdx = paramKeys.indexOf("env.VERSION")
+        val targetIdx = paramKeys.indexOf("env.TARGET")
+        val newParamIdx = paramKeys.indexOf("env.NEW_PARAM")
+        assertTrue(versionIdx < newParamIdx, "Existing params should precede new params")
+        assertTrue(targetIdx < newParamIdx, "Existing params should precede new params")
     }
 
     // --- UI Tests ---
