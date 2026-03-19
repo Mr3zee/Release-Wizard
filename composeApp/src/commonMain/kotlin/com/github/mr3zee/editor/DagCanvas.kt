@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwIconButton
+import com.github.mr3zee.components.RwTooltip
 import com.github.mr3zee.i18n.packStringResource
 import com.github.mr3zee.model.*
 import com.github.mr3zee.theme.AppTypography
@@ -41,6 +42,8 @@ import com.github.mr3zee.util.typeLabel
 import releasewizard.composeapp.generated.resources.Res
 import releasewizard.composeapp.generated.resources.editor_empty_canvas_hint
 import releasewizard.composeapp.generated.resources.editor_zoom_fit
+import releasewizard.composeapp.generated.resources.editor_zoom_in
+import releasewizard.composeapp.generated.resources.editor_zoom_out
 
 // Hit testing
 private sealed class HitTarget {
@@ -336,23 +339,27 @@ fun DagCanvas(
             modifier = Modifier.testTag("zoom_label"),
         )
         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-            RwIconButton(
-                onClick = {
-                    val newZoom = (zoom * 1.2f).coerceIn(MIN_ZOOM, MAX_ZOOM)
-                    zoom = newZoom
-                },
-                modifier = Modifier.size(32.dp).testTag("zoom_in_button"),
-            ) {
-                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+            RwTooltip(tooltip = packStringResource(Res.string.editor_zoom_in)) {
+                RwIconButton(
+                    onClick = {
+                        val newZoom = (zoom * 1.2f).coerceIn(MIN_ZOOM, MAX_ZOOM)
+                        zoom = newZoom
+                    },
+                    modifier = Modifier.size(32.dp).testTag("zoom_in_button"),
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = packStringResource(Res.string.editor_zoom_in), modifier = Modifier.size(16.dp))
+                }
             }
-            RwIconButton(
-                onClick = {
-                    val newZoom = (zoom / 1.2f).coerceIn(MIN_ZOOM, MAX_ZOOM)
-                    zoom = newZoom
-                },
-                modifier = Modifier.size(32.dp).testTag("zoom_out_button"),
-            ) {
-                Icon(Icons.Default.Remove, contentDescription = null, modifier = Modifier.size(16.dp))
+            RwTooltip(tooltip = packStringResource(Res.string.editor_zoom_out)) {
+                RwIconButton(
+                    onClick = {
+                        val newZoom = (zoom / 1.2f).coerceIn(MIN_ZOOM, MAX_ZOOM)
+                        zoom = newZoom
+                    },
+                    modifier = Modifier.size(32.dp).testTag("zoom_out_button"),
+                ) {
+                    Icon(Icons.Default.Remove, contentDescription = packStringResource(Res.string.editor_zoom_out), modifier = Modifier.size(16.dp))
+                }
             }
         }
         RwButton(

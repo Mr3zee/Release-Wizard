@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +25,7 @@ import com.github.mr3zee.components.RwCard
 import com.github.mr3zee.components.RefreshIconButton
 import com.github.mr3zee.components.RwFab
 import com.github.mr3zee.components.RwInlineForm
+import com.github.mr3zee.components.RwTooltip
 import com.github.mr3zee.components.loadMoreItem
 import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.model.TeamId
@@ -134,11 +136,13 @@ fun TeamListScreen(
             }
         },
         floatingActionButton = {
-            RwFab(
-                onClick = { showCreateDialog = true },
-                modifier = Modifier.testTag("create_team_fab"),
-            ) {
-                Icon(Icons.Default.Add, contentDescription = packStringResource(Res.string.teams_new_team))
+            RwTooltip(tooltip = packStringResource(Res.string.teams_new_team)) {
+                RwFab(
+                    onClick = { showCreateDialog = true },
+                    modifier = Modifier.testTag("create_team_fab"),
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = packStringResource(Res.string.teams_new_team))
+                }
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -233,11 +237,28 @@ fun TeamListScreen(
                             }
                         }
                     } else {
-                        Text(
-                            packStringResource(Res.string.teams_empty_state),
-                            style = AppTypography.body,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Outlined.Group,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            )
+                            Spacer(modifier = Modifier.height(Spacing.md))
+                            Text(
+                                packStringResource(Res.string.teams_empty_state),
+                                style = AppTypography.body,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(modifier = Modifier.height(Spacing.md))
+                            RwButton(
+                                onClick = { showCreateDialog = true },
+                                variant = RwButtonVariant.Primary,
+                                modifier = Modifier.testTag("empty_state_create_team_button"),
+                            ) {
+                                Text(packStringResource(Res.string.teams_new_team))
+                            }
+                        }
                     }
                 }
             } else {

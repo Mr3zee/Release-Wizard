@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,6 +31,7 @@ import com.github.mr3zee.components.RwFab
 import com.github.mr3zee.components.RwInlineConfirmation
 import com.github.mr3zee.components.RwInlineForm
 import com.github.mr3zee.components.RwIconButton
+import com.github.mr3zee.components.RwTooltip
 import com.github.mr3zee.components.RwRadioButton
 import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.components.loadMoreItem
@@ -286,11 +288,13 @@ fun ProjectListScreen(
             }
         },
         floatingActionButton = {
-            RwFab(
-                onClick = { showCreateDialog = true },
-                modifier = Modifier.testTag("create_project_fab"),
-            ) {
-                Icon(Icons.Default.Add, contentDescription = packStringResource(Res.string.projects_create_project))
+            RwTooltip(tooltip = packStringResource(Res.string.projects_create_project)) {
+                RwFab(
+                    onClick = { showCreateDialog = true },
+                    modifier = Modifier.testTag("create_project_fab"),
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = packStringResource(Res.string.projects_create_project))
+                }
             }
         },
         modifier = Modifier.testTag("project_list_screen"),
@@ -381,11 +385,28 @@ fun ProjectListScreen(
                             }
                         }
                     } else {
-                        Text(
-                            text = packStringResource(Res.string.projects_empty_state),
-                            style = AppTypography.body,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Outlined.FolderOpen,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            )
+                            Spacer(modifier = Modifier.height(Spacing.md))
+                            Text(
+                                text = packStringResource(Res.string.projects_empty_state),
+                                style = AppTypography.body,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(modifier = Modifier.height(Spacing.md))
+                            RwButton(
+                                onClick = { showCreateDialog = true },
+                                variant = RwButtonVariant.Primary,
+                                modifier = Modifier.testTag("empty_state_create_project_button"),
+                            ) {
+                                Text(packStringResource(Res.string.projects_create_project))
+                            }
+                        }
                     }
                 }
             } else {

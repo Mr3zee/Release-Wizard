@@ -86,7 +86,7 @@ class TeamScreensTest {
         waitUntil(timeoutMillis = 2000L) { onAllNodesWithTag("team_name_input").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("team_name_input").assertExists()
         onNodeWithTag("team_description_input").assertExists()
-        onNodeWithText("New Team").assertExists()
+        onNodeWithTag("create_team_form").assertExists()
     }
 
     @Test

@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.RocketLaunch
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -180,11 +181,13 @@ fun ReleaseListScreen(
             }
         },
         floatingActionButton = {
-            RwFab(
-                onClick = { showStartDialog = true },
-                modifier = Modifier.testTag("start_release_fab"),
-            ) {
-                Icon(Icons.Default.Add, contentDescription = packStringResource(Res.string.releases_start_release))
+            RwTooltip(tooltip = packStringResource(Res.string.releases_start_release)) {
+                RwFab(
+                    onClick = { showStartDialog = true },
+                    modifier = Modifier.testTag("start_release_fab"),
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = packStringResource(Res.string.releases_start_release))
+                }
             }
         },
         modifier = Modifier.testTag("release_list_screen"),
@@ -372,6 +375,13 @@ fun ReleaseListScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.padding(top = 80.dp),
                         ) {
+                            Icon(
+                                Icons.Outlined.RocketLaunch,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            )
+                            Spacer(modifier = Modifier.height(Spacing.md))
                             Text(
                                 text = packStringResource(Res.string.releases_empty_state),
                                 style = AppTypography.body,
@@ -382,7 +392,7 @@ fun ReleaseListScreen(
                             RwButton(
                                 onClick = { showStartDialog = true },
                                 variant = RwButtonVariant.Primary,
-                                modifier = Modifier.testTag("empty_state_create_button"),
+                                modifier = Modifier.testTag("empty_state_start_release_button"),
                             ) {
                                 Text(packStringResource(Res.string.releases_create_release))
                             }

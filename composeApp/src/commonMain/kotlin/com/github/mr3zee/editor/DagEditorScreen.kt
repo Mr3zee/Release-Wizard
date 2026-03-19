@@ -369,16 +369,26 @@ fun DagEditorScreen(
                             .width(1.dp)
                             .drawBehind { drawRect(appColors.chromeBorder) }
                     )
-                    RwIconButton(
-                        onClick = { leftSidebarExpanded = !leftSidebarExpanded },
-                        modifier = Modifier.size(24.dp).testTag("toggle_left_sidebar"),
+                    RwTooltip(
+                        tooltip = packStringResource(
+                            if (leftSidebarExpanded) Res.string.editor_collapse_panel
+                            else Res.string.editor_expand_panel
+                        ),
                     ) {
-                        Icon(
-                            if (leftSidebarExpanded) Icons.AutoMirrored.Filled.KeyboardArrowLeft
-                            else Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                        )
+                        RwIconButton(
+                            onClick = { leftSidebarExpanded = !leftSidebarExpanded },
+                            modifier = Modifier.size(24.dp).testTag("toggle_left_sidebar"),
+                        ) {
+                            Icon(
+                                if (leftSidebarExpanded) Icons.AutoMirrored.Filled.KeyboardArrowLeft
+                                else Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = packStringResource(
+                                    if (leftSidebarExpanded) Res.string.editor_collapse_panel
+                                    else Res.string.editor_expand_panel
+                                ),
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
                     }
                     Box(
                         Modifier
@@ -419,16 +429,26 @@ fun DagEditorScreen(
                             .width(1.dp)
                             .drawBehind { drawRect(appColors.chromeBorder) }
                     )
-                    RwIconButton(
-                        onClick = { rightSidebarExpanded = !rightSidebarExpanded },
-                        modifier = Modifier.size(24.dp).testTag("toggle_right_sidebar"),
+                    RwTooltip(
+                        tooltip = packStringResource(
+                            if (rightSidebarExpanded) Res.string.editor_collapse_panel
+                            else Res.string.editor_expand_panel
+                        ),
                     ) {
-                        Icon(
-                            if (rightSidebarExpanded) Icons.AutoMirrored.Filled.KeyboardArrowRight
-                            else Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                        )
+                        RwIconButton(
+                            onClick = { rightSidebarExpanded = !rightSidebarExpanded },
+                            modifier = Modifier.size(24.dp).testTag("toggle_right_sidebar"),
+                        ) {
+                            Icon(
+                                if (rightSidebarExpanded) Icons.AutoMirrored.Filled.KeyboardArrowRight
+                                else Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                                contentDescription = packStringResource(
+                                    if (rightSidebarExpanded) Res.string.editor_collapse_panel
+                                    else Res.string.editor_expand_panel
+                                ),
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
                     }
                     Box(
                         Modifier

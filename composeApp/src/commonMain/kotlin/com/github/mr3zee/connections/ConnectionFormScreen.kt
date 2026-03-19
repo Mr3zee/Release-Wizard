@@ -25,6 +25,7 @@ import com.github.mr3zee.components.RwCard
 import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwInlineConfirmation
 import com.github.mr3zee.components.RwTextField
+import com.github.mr3zee.components.RwTooltip
 import com.github.mr3zee.model.ConnectionConfig
 import com.github.mr3zee.model.ConnectionId
 import com.github.mr3zee.model.ConnectionType

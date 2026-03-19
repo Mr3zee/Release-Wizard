@@ -192,6 +192,10 @@
     <string name="editor_validation_self_loop">Self-loop on block: %1$s</string>
     <string name="editor_empty_canvas_hint">Drag from an output port to an input port to connect blocks</string>
     <string name="editor_zoom_fit">Fit</string>
+    <string name="editor_zoom_in">Zoom in</string>
+    <string name="editor_zoom_out">Zoom out</string>
+    <string name="editor_collapse_panel">Collapse panel</string>
+    <string name="editor_expand_panel">Expand panel</string>
 
     <!-- ==================== Releases ==================== -->
     <string name="releases_title">Releases</string>

@@ -33,6 +33,7 @@ import com.github.mr3zee.components.RwInlineConfirmation
 import com.github.mr3zee.components.RwSwitch
 import com.github.mr3zee.components.RwInlineForm
 import com.github.mr3zee.components.RwTextField
+import com.github.mr3zee.components.RwTooltip
 import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.i18n.packPluralStringResource
@@ -446,14 +447,16 @@ private fun WebhookSecretInlineCard(
                     singleLine = true,
                     modifier = Modifier.weight(1f).testTag("webhook_secret_field"),
                 )
-                RwIconButton(
-                    onClick = { copyToClipboard(secret) },
-                    modifier = Modifier.testTag("webhook_secret_copy"),
-                ) {
-                    Icon(
-                        Icons.Default.ContentCopy,
-                        contentDescription = packStringResource(Res.string.common_copy_to_clipboard),
-                    )
+                RwTooltip(tooltip = packStringResource(Res.string.common_copy_to_clipboard)) {
+                    RwIconButton(
+                        onClick = { copyToClipboard(secret) },
+                        modifier = Modifier.testTag("webhook_secret_copy"),
+                    ) {
+                        Icon(
+                            Icons.Default.ContentCopy,
+                            contentDescription = packStringResource(Res.string.common_copy_to_clipboard),
+                        )
+                    }
                 }
             }
 
@@ -739,15 +742,17 @@ private fun ScheduleItem(
                 onCheckedChange = onToggle,
                 modifier = Modifier.testTag("schedule_toggle_${schedule.id}"),
             )
-            RwIconButton(
-                onClick = onRequestDelete,
-                modifier = Modifier.testTag("schedule_delete_${schedule.id}"),
-            ) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = packStringResource(Res.string.common_delete),
-                    tint = MaterialTheme.colorScheme.error,
-                )
+            RwTooltip(tooltip = packStringResource(Res.string.common_delete)) {
+                RwIconButton(
+                    onClick = onRequestDelete,
+                    modifier = Modifier.testTag("schedule_delete_${schedule.id}"),
+                ) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = packStringResource(Res.string.common_delete),
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                }
             }
         }
     }
@@ -779,15 +784,17 @@ private fun WebhookTriggerItem(
                 onCheckedChange = onToggle,
                 modifier = Modifier.testTag("webhook_toggle_${trigger.id}"),
             )
-            RwIconButton(
-                onClick = onRequestDelete,
-                modifier = Modifier.testTag("webhook_delete_${trigger.id}"),
-            ) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = packStringResource(Res.string.common_delete),
-                    tint = MaterialTheme.colorScheme.error,
-                )
+            RwTooltip(tooltip = packStringResource(Res.string.common_delete)) {
+                RwIconButton(
+                    onClick = onRequestDelete,
+                    modifier = Modifier.testTag("webhook_delete_${trigger.id}"),
+                ) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = packStringResource(Res.string.common_delete),
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                }
             }
         }
     }
@@ -834,15 +841,17 @@ private fun MavenTriggerItem(
                 onCheckedChange = onToggle,
                 modifier = Modifier.testTag("maven_toggle_${trigger.id}"),
             )
-            RwIconButton(
-                onClick = onRequestDelete,
-                modifier = Modifier.testTag("maven_delete_${trigger.id}"),
-            ) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = packStringResource(Res.string.common_delete),
-                    tint = MaterialTheme.colorScheme.error,
-                )
+            RwTooltip(tooltip = packStringResource(Res.string.common_delete)) {
+                RwIconButton(
+                    onClick = onRequestDelete,
+                    modifier = Modifier.testTag("maven_delete_${trigger.id}"),
+                ) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = packStringResource(Res.string.common_delete),
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                }
             }
         }
     }

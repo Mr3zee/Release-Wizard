@@ -38,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.RwIconButton
+import com.github.mr3zee.components.RwTooltip
 import com.github.mr3zee.i18n.packStringResource
 import com.github.mr3zee.theme.AppShapes
 import com.github.mr3zee.theme.AppTypography
@@ -106,11 +107,13 @@ fun KeyboardShortcutsOverlay(
                             style = AppTypography.heading,
                             color = colors.chromeTextPrimary,
                         )
-                        RwIconButton(onClick = onDismiss) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = packStringResource(Res.string.shortcuts_close),
-                            )
+                        RwTooltip(tooltip = packStringResource(Res.string.common_close)) {
+                            RwIconButton(onClick = onDismiss) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = packStringResource(Res.string.shortcuts_close),
+                                )
+                            }
                         }
                     }
 

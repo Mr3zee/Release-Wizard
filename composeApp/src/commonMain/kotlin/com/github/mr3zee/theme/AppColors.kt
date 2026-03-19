@@ -207,10 +207,10 @@ val DarkAppColors = AppColors(
     chromeTextSecondary = Color(0xFF9CA3AF),
     chromeTextTertiary = Color(0xFF6B7280),
 
-    // Buttons
-    buttonPrimaryBg = Color(0xFF3B82F6),
-    buttonPrimaryHover = Color(0xFF2563EB),
-    buttonPrimaryPress = Color(0xFF1D4ED8),
+    // Buttons — darkened for WCAG AA 4.5:1 contrast with white text
+    buttonPrimaryBg = Color(0xFF2563EB),
+    buttonPrimaryHover = Color(0xFF1D4ED8),
+    buttonPrimaryPress = Color(0xFF1E40AF),
     buttonPrimaryText = Color.White,
     buttonSecondaryBg = Color(0xFF1E2230),
     buttonSecondaryHover = Color(0xFF282C3A),
@@ -218,9 +218,10 @@ val DarkAppColors = AppColors(
     buttonSecondaryBorder = Color(0xFF3A3F50),
     buttonGhostHover = Color(0xFF22252F),
     buttonGhostPress = Color(0xFF282C3A),
-    buttonDangerBg = Color(0xFFF87171),
-    buttonDangerHover = Color(0xFFEF4444),
-    buttonDangerPress = Color(0xFFDC2626),
+    // Darkened for WCAG AA 4.5:1 contrast with white text
+    buttonDangerBg = Color(0xFFDC2626),
+    buttonDangerHover = Color(0xFFB91C1C),
+    buttonDangerPress = Color(0xFF991B1B),
 
     // Inputs
     inputBg = Color(0xFF151820),
