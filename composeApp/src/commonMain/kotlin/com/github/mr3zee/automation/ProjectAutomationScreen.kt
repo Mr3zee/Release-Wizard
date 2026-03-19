@@ -1,5 +1,6 @@
 package com.github.mr3zee.automation
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -13,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.api.CreateMavenTriggerRequest
 import com.github.mr3zee.api.CreateScheduleRequest
@@ -21,8 +23,11 @@ import com.github.mr3zee.api.TriggerResponse
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwCard
+import com.github.mr3zee.components.RwCheckbox
+import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwInlineConfirmation
 import com.github.mr3zee.components.RwInlineForm
+import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.i18n.packStringResource
 import com.github.mr3zee.model.MavenTrigger
 import com.github.mr3zee.model.Schedule
@@ -68,6 +73,13 @@ private fun isValidCron(expression: String): Boolean {
         validField(parts[2], 1, 31) &&     // day of month
         validField(parts[3], 1, 12) &&     // month
         validField(parts[4], 0, 6)         // day of week
+}
+
+private fun cronDescription(expression: String): String? = when (expression.trim()) {
+    "0 9 * * *"   -> "Every day at 9:00 AM"
+    "0 9 * * 1-5" -> "Every weekday (Mon-Fri) at 9:00 AM"
+    "0 12 * * 1"  -> "Every Monday at 12:00 PM"
+    else -> null
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -370,14 +382,14 @@ private fun WebhookSecretInlineCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
-                OutlinedTextField(
+                RwTextField(
                     value = secret,
                     onValueChange = {},
                     readOnly = true,
                     singleLine = true,
                     modifier = Modifier.weight(1f).testTag("webhook_secret_field"),
                 )
-                IconButton(
+                RwIconButton(
                     onClick = { copyToClipboard(secret) },
                     modifier = Modifier.testTag("webhook_secret_copy"),
                 ) {
@@ -391,7 +403,7 @@ private fun WebhookSecretInlineCard(
             Text(
                 text = packStringResource(Res.string.webhook_secret_warning),
                 color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
+                style = AppTypography.bodySmall,
             )
 
             Row(
@@ -442,12 +454,7 @@ private fun CreateScheduleInlineForm(
     val isCronValid = remember(cronExpression) { isValidCron(cronExpression) }
     val showValidation = cronExpression.isNotBlank()
 
-    val nextRunHint: String? = when (cronExpression.trim()) {
-        "0 9 * * *"   -> "Every day at 9:00 AM"
-        "0 9 * * 1-5" -> "Every weekday (Mon-Fri) at 9:00 AM"
-        "0 12 * * 1"  -> "Every Monday at 12:00 PM"
-        else -> null
-    }
+    val nextRunHint = cronDescription(cronExpression)
 
     RwInlineForm(
         visible = visible,
@@ -467,7 +474,8 @@ private fun CreateScheduleInlineForm(
             }
         },
     ) {
-        // Preset selector
+        // Preset selector — keeps M3 OutlinedTextField (not RwTextField) because
+        // ExposedDropdownMenuBox requires .menuAnchor() which only works with M3 text fields
         ExposedDropdownMenuBox(
             expanded = presetsExpanded,
             onExpandedChange = { presetsExpanded = it },
@@ -480,7 +488,8 @@ private fun CreateScheduleInlineForm(
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = presetsExpanded) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                    .testTag("schedule_preset_selector"),
             )
             ExposedDropdownMenu(
                 expanded = presetsExpanded,
@@ -500,11 +509,11 @@ private fun CreateScheduleInlineForm(
         }
 
         // Cron expression field
-        OutlinedTextField(
+        RwTextField(
             value = cronExpression,
             onValueChange = { cronExpression = it; selectedPresetLabel = "" },
-            label = { Text(packStringResource(Res.string.schedule_cron_label)) },
-            placeholder = { Text(packStringResource(Res.string.schedule_cron_hint)) },
+            label = packStringResource(Res.string.schedule_cron_label),
+            placeholder = packStringResource(Res.string.schedule_cron_hint),
             supportingText = {
                 when {
                     nextRunHint != null -> Text(
@@ -589,50 +598,50 @@ private fun CreateMavenTriggerInlineForm(
     ) {
         val repoUrlInvalid = repoUrl.isNotBlank() &&
             !repoUrl.startsWith("http://") && !repoUrl.startsWith("https://")
-        OutlinedTextField(
+        RwTextField(
             value = repoUrl,
             onValueChange = { repoUrl = it },
-            label = { Text(packStringResource(Res.string.maven_repo_url_label)) },
-            placeholder = { Text(packStringResource(Res.string.maven_repo_url_hint)) },
+            label = packStringResource(Res.string.maven_repo_url_label),
+            placeholder = packStringResource(Res.string.maven_repo_url_hint),
             isError = repoUrlInvalid,
             supportingText = if (repoUrlInvalid) {
-                { Text("Must start with http:// or https://", color = MaterialTheme.colorScheme.error) }
+                { Text("Must start with http:// or https://") }
             } else null,
             singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().testTag("maven_repo_url_field"),
         )
-        OutlinedTextField(
+        RwTextField(
             value = groupId,
             onValueChange = { groupId = it },
-            label = { Text(packStringResource(Res.string.maven_group_id_label)) },
-            placeholder = { Text(packStringResource(Res.string.maven_group_id_hint)) },
+            label = packStringResource(Res.string.maven_group_id_label),
+            placeholder = packStringResource(Res.string.maven_group_id_hint),
             singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().testTag("maven_group_id_field"),
         )
-        OutlinedTextField(
+        RwTextField(
             value = artifactId,
             onValueChange = { artifactId = it },
-            label = { Text(packStringResource(Res.string.maven_artifact_id_label)) },
-            placeholder = { Text(packStringResource(Res.string.maven_artifact_id_hint)) },
+            label = packStringResource(Res.string.maven_artifact_id_label),
+            placeholder = packStringResource(Res.string.maven_artifact_id_hint),
             singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().testTag("maven_artifact_id_field"),
         )
-        OutlinedTextField(
+        RwTextField(
             value = parameterKey,
             onValueChange = { parameterKey = it },
-            label = { Text(packStringResource(Res.string.maven_parameter_key_label)) },
-            placeholder = { Text(packStringResource(Res.string.maven_parameter_key_hint)) },
+            label = packStringResource(Res.string.maven_parameter_key_label),
+            placeholder = packStringResource(Res.string.maven_parameter_key_hint),
             singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().testTag("maven_parameter_key_field"),
         )
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            modifier = Modifier
+                .clickable(role = Role.Checkbox) { includeSnapshots = !includeSnapshots }
+                .testTag("maven_include_snapshots"),
         ) {
-            Checkbox(
-                checked = includeSnapshots,
-                onCheckedChange = { includeSnapshots = it },
-            )
+            RwCheckbox(checked = includeSnapshots, onCheckedChange = null)
             Text(packStringResource(Res.string.maven_include_snapshots_label))
         }
     }
@@ -646,7 +655,7 @@ private fun ScheduleItem(
     onToggle: (Boolean) -> Unit,
     onRequestDelete: () -> Unit,
 ) {
-    Card(modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xxs)) {
+    RwCard(modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xxs)) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(Spacing.md),
             verticalAlignment = Alignment.CenterVertically,
@@ -654,13 +663,22 @@ private fun ScheduleItem(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(schedule.cronExpression, style = AppTypography.body)
+                val description = cronDescription(schedule.cronExpression)
+                if (description != null) {
+                    Text(
+                        description,
+                        style = AppTypography.caption,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testTag("schedule_description_${schedule.id}"),
+                    )
+                }
             }
             Switch(
                 checked = schedule.enabled,
                 onCheckedChange = onToggle,
                 modifier = Modifier.testTag("schedule_toggle_${schedule.id}"),
             )
-            IconButton(
+            RwIconButton(
                 onClick = onRequestDelete,
                 modifier = Modifier.testTag("schedule_delete_${schedule.id}"),
             ) {
@@ -680,7 +698,7 @@ private fun WebhookTriggerItem(
     onToggle: (Boolean) -> Unit,
     onRequestDelete: () -> Unit,
 ) {
-    Card(modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xxs)) {
+    RwCard(modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xxs)) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(Spacing.md),
             verticalAlignment = Alignment.CenterVertically,
@@ -700,7 +718,7 @@ private fun WebhookTriggerItem(
                 onCheckedChange = onToggle,
                 modifier = Modifier.testTag("webhook_toggle_${trigger.id}"),
             )
-            IconButton(
+            RwIconButton(
                 onClick = onRequestDelete,
                 modifier = Modifier.testTag("webhook_delete_${trigger.id}"),
             ) {
@@ -720,7 +738,7 @@ private fun MavenTriggerItem(
     onToggle: (Boolean) -> Unit,
     onRequestDelete: () -> Unit,
 ) {
-    Card(modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xxs)) {
+    RwCard(modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xxs)) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(Spacing.md),
             verticalAlignment = Alignment.CenterVertically,
@@ -755,7 +773,7 @@ private fun MavenTriggerItem(
                 onCheckedChange = onToggle,
                 modifier = Modifier.testTag("maven_toggle_${trigger.id}"),
             )
-            IconButton(
+            RwIconButton(
                 onClick = onRequestDelete,
                 modifier = Modifier.testTag("maven_delete_${trigger.id}"),
             ) {

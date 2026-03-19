@@ -82,29 +82,16 @@ All 8 fixes implemented, reviewed by UX/Design/Compose/QA experts, 306/306 Compo
 
 ---
 
-## Phase 6: Automation Screen Consistency Overhaul
+## Phase 6: Automation Screen Consistency Overhaul ✅
 
-**Goal:** Align the entire automation module with the app's component system. This single phase resolves ~15 findings.
+**Status:** Complete (commit `29cb84d`)
 
-### 6A. Replace M3 components with Rw* wrappers
-- **Files:** `ProjectAutomationScreen.kt`, `CreateScheduleDialog.kt`, `CreateMavenTriggerDialog.kt`, `CreateWebhookTriggerDialog.kt`, `WebhookSecretDialog.kt`, `MavenTriggerCreatedDialog.kt`
-- Replace `Card` -> `RwCard` (3 instances)
-- Replace `IconButton` -> `RwIconButton` (4 instances)
-- Replace `Checkbox` -> `RwCheckbox` (1 instance)
-- Replace `OutlinedTextField` -> `RwTextField` (5+ instances)
-- Replace `Switch` -> keep M3 (no `RwSwitch` exists) but ensure consistent styling
-- Make checkbox label clickable (`CreateMavenTriggerDialog.kt:80-89`)
+All items fixed, reviewed by UX/Design/Compose/Tech Writer/QA experts, 311/311 Compose tests pass.
 
-### 6B. Replace hardcoded dp with Spacing tokens
-- Replace `16.dp` -> `Spacing.lg`, `12.dp` -> `Spacing.md`, `8.dp` -> `Spacing.sm`, `4.dp` -> `Spacing.xs`, `2.dp` -> `Spacing.xxs` across all automation files.
-
-### 6C. Add human-readable cron descriptions to schedule items
-- **File:** `ProjectAutomationScreen.kt:279`
-- Reuse `nextRunHint` logic from `CreateScheduleDialog` to show descriptions alongside raw cron expressions.
-
-### 6D. Add test tags to all automation dialog fields and buttons
-- **Files:** All dialog files in `automation/`
-- Add `testTag` modifiers to form fields, confirm/dismiss buttons.
+- **6A.** Replaced `Card` → `RwCard` (3 item composables), `IconButton` → `RwIconButton` (4 instances), `Checkbox` → `RwCheckbox` with clickable label row + `Role.Checkbox` accessibility, `OutlinedTextField` → `RwTextField` (6 of 7; preset selector kept for `menuAnchor` compatibility), `Switch` kept as M3 (no `RwSwitch` exists), `MaterialTheme.typography.bodySmall` → `AppTypography.bodySmall`
+- **6B.** No-op — only hardcoded dp was `Modifier.size(16.dp)` for an icon size, not spacing
+- **6C.** Extracted `cronDescription()` function; schedule list items now show human-readable descriptions for preset cron expressions
+- **6D.** Added testTags: `schedule_preset_selector`, `schedule_description_${id}`, `maven_repo_url_field`, `maven_group_id_field`, `maven_artifact_id_field`, `maven_parameter_key_field`, `maven_include_snapshots`
 
 ---
 
