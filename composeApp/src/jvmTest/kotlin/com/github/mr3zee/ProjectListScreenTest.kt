@@ -17,7 +17,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 @OptIn(ExperimentalTestApi::class)
 class ProjectListScreenTest {
@@ -38,7 +37,7 @@ class ProjectListScreenTest {
         val vm = ProjectListViewModel(ProjectApiClient(projectClient()), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme {
-                ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = {}, onLogout = {})
+                ProjectListScreen(viewModel = vm, onEditProject = {})
             }
         }
 
@@ -55,7 +54,7 @@ class ProjectListScreenTest {
         val vm = ProjectListViewModel(ProjectApiClient(projectClient("""{"projects":[]}""")), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme {
-                ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = {}, onLogout = {})
+                ProjectListScreen(viewModel = vm, onEditProject = {})
             }
         }
 
@@ -68,7 +67,7 @@ class ProjectListScreenTest {
         val vm = ProjectListViewModel(ProjectApiClient(projectClient("Internal server error", HttpStatusCode.InternalServerError)), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme {
-                ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = {}, onLogout = {})
+                ProjectListScreen(viewModel = vm, onEditProject = {})
             }
         }
 
@@ -77,34 +76,15 @@ class ProjectListScreenTest {
     }
 
     @Test
-    fun `has connections and logout buttons`() = runComposeUiTest {
+    fun `has create project fab`() = runComposeUiTest {
         val vm = ProjectListViewModel(ProjectApiClient(projectClient("""{"projects":[]}""")), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme {
-                ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = {}, onLogout = {})
+                ProjectListScreen(viewModel = vm, onEditProject = {})
             }
         }
 
-        onNodeWithTag("connections_button").assertExists()
         onNodeWithTag("create_project_fab").assertExists()
-        // Logout button is now inside the overflow menu
-        onNodeWithTag("overflow_menu_button").performClick()
-        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("logout_button").fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithTag("logout_button").assertExists()
-    }
-
-    @Test
-    fun `connections button triggers callback`() = runComposeUiTest {
-        val vm = ProjectListViewModel(ProjectApiClient(projectClient("""{"projects":[]}""")), MutableStateFlow(TeamId("test-team")))
-        var clicked = false
-        setContent {
-            MaterialTheme {
-                ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = { clicked = true }, onLogout = {})
-            }
-        }
-
-        onNodeWithTag("connections_button").performClick()
-        assertTrue(clicked)
     }
 
     @Test
@@ -112,7 +92,7 @@ class ProjectListScreenTest {
         val vm = ProjectListViewModel(ProjectApiClient(projectClient("""{"projects":[]}""")), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme {
-                ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = {}, onLogout = {})
+                ProjectListScreen(viewModel = vm, onEditProject = {})
             }
         }
 
@@ -128,7 +108,7 @@ class ProjectListScreenTest {
         var editedId: ProjectId? = null
         setContent {
             MaterialTheme {
-                ProjectListScreen(viewModel = vm, onEditProject = { editedId = it }, onConnections = {}, onLogout = {})
+                ProjectListScreen(viewModel = vm, onEditProject = { editedId = it })
             }
         }
 
@@ -142,7 +122,7 @@ class ProjectListScreenTest {
         val vm = ProjectListViewModel(ProjectApiClient(projectClient()), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme {
-                ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = {}, onLogout = {})
+                ProjectListScreen(viewModel = vm, onEditProject = {})
             }
         }
 
@@ -160,7 +140,7 @@ class ProjectListScreenTest {
         val vm = ProjectListViewModel(ProjectApiClient(projectClient()), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme {
-                ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = {}, onLogout = {})
+                ProjectListScreen(viewModel = vm, onEditProject = {})
             }
         }
 
@@ -175,17 +155,15 @@ class ProjectListScreenTest {
     }
 
     @Test
-    fun `releases button triggers callback`() = runComposeUiTest {
+    fun `refresh button exists`() = runComposeUiTest {
         val vm = ProjectListViewModel(ProjectApiClient(projectClient("""{"projects":[]}""")), MutableStateFlow(TeamId("test-team")))
-        var clicked = false
         setContent {
             MaterialTheme {
-                ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = {}, onReleases = { clicked = true }, onLogout = {})
+                ProjectListScreen(viewModel = vm, onEditProject = {})
             }
         }
 
-        onNodeWithTag("releases_button").performClick()
-        assertTrue(clicked)
+        onNodeWithTag("refresh_button").assertExists()
     }
 
     @Test
@@ -219,8 +197,6 @@ class ProjectListScreenTest {
                 ProjectListScreen(
                     viewModel = vm,
                     onEditProject = { editedId = it },
-                    onConnections = {},
-                    onLogout = {},
                 )
             }
         }
@@ -248,19 +224,15 @@ class ProjectListScreenTest {
     // ---- Refresh Tests ----
 
     @Test
-    fun `refresh menu item exists in overflow`() = runComposeUiTest {
+    fun `refresh icon button exists in top bar`() = runComposeUiTest {
         val vm = ProjectListViewModel(ProjectApiClient(projectClient("""{"projects":[]}""")), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme {
-                ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = {}, onLogout = {})
+                ProjectListScreen(viewModel = vm, onEditProject = {})
             }
         }
 
-        onNodeWithTag("overflow_menu_button").performClick()
-        waitUntil(timeoutMillis = 3000L) {
-            onAllNodesWithTag("refresh_menu_item").fetchSemanticsNodes().isNotEmpty()
-        }
-        onNodeWithTag("refresh_menu_item").assertExists()
+        onNodeWithTag("refresh_button").assertExists()
     }
 
     @Test
@@ -289,7 +261,7 @@ class ProjectListScreenTest {
 
         setContent {
             MaterialTheme {
-                ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = {}, onLogout = {})
+                ProjectListScreen(viewModel = vm, onEditProject = {})
             }
         }
 
@@ -297,9 +269,7 @@ class ProjectListScreenTest {
         onNodeWithText("Beta New").assertDoesNotExist()
 
         returnNewData.set(true)
-        onNodeWithTag("overflow_menu_button").performClick()
-        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("refresh_menu_item").fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithTag("refresh_menu_item").performClick()
+        onNodeWithTag("refresh_button").performClick()
 
         waitUntil(timeoutMillis = 5000L) { onAllNodesWithText("Beta New").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithText("Beta New").assertExists()
@@ -330,16 +300,14 @@ class ProjectListScreenTest {
 
         setContent {
             MaterialTheme {
-                ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = {}, onLogout = {})
+                ProjectListScreen(viewModel = vm, onEditProject = {})
             }
         }
 
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("My Pipeline").fetchSemanticsNodes().isNotEmpty() }
 
         failOnRefresh.set(true)
-        onNodeWithTag("overflow_menu_button").performClick()
-        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("refresh_menu_item").fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithTag("refresh_menu_item").performClick()
+        onNodeWithTag("refresh_button").performClick()
 
         waitUntil(timeoutMillis = 5000L) { onAllNodesWithTag("refresh_error_banner").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("refresh_error_banner").assertExists()
@@ -371,15 +339,13 @@ class ProjectListScreenTest {
 
         setContent {
             MaterialTheme {
-                ProjectListScreen(viewModel = vm, onEditProject = {}, onConnections = {}, onLogout = {})
+                ProjectListScreen(viewModel = vm, onEditProject = {})
             }
         }
 
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("My Pipeline").fetchSemanticsNodes().isNotEmpty() }
         failOnRefresh.set(true)
-        onNodeWithTag("overflow_menu_button").performClick()
-        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("refresh_menu_item").fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithTag("refresh_menu_item").performClick()
+        onNodeWithTag("refresh_button").performClick()
         waitUntil(timeoutMillis = 5000L) { onAllNodesWithTag("refresh_error_banner").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("dismiss_refresh_error").performClick()
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("refresh_error_banner").fetchSemanticsNodes().isEmpty() }

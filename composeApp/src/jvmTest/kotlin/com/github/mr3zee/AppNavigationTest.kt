@@ -17,6 +17,7 @@ import com.github.mr3zee.auth.LoginScreen
 import com.github.mr3zee.connections.ConnectionsViewModel
 import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.navigation.AppNavigation
+import com.github.mr3zee.navigation.NavSection
 import com.github.mr3zee.navigation.NavigationController
 import com.github.mr3zee.navigation.Screen
 import com.github.mr3zee.projects.ProjectListViewModel
@@ -42,7 +43,7 @@ class AppNavigationTest {
     ))
 
     @Composable
-    private fun TestApp(httpClient: HttpClient) {
+    private fun TestApp(httpClient: HttpClient, navController: NavigationController = remember { NavigationController() }) {
         val authApiClient = remember { AuthApiClient(httpClient) }
         val projectApiClient = remember { ProjectApiClient(httpClient) }
         val connectionApiClient = remember { ConnectionApiClient(httpClient) }
@@ -61,7 +62,6 @@ class AppNavigationTest {
 
         LaunchedEffect(Unit) { authViewModel.checkSession() }
 
-        val navController = remember { NavigationController() }
         val currentScreen = navController.currentScreen
 
         MaterialTheme {
@@ -104,47 +104,27 @@ class AppNavigationTest {
     }
 
     @Test
-    fun `navigate to connections and back`() = runComposeUiTest {
-        setContent { TestApp(appClient()) }
+    fun `navigate to connections via section switch`() = runComposeUiTest {
+        val navController = NavigationController()
+        setContent { TestApp(appClient(), navController) }
 
         waitUntil(timeoutMillis = 5000L) { onAllNodesWithTag("project_list_screen").fetchSemanticsNodes().isNotEmpty() }
 
-        onNodeWithTag("connections_button").performClick()
+        navController.navigateToSection(NavSection.CONNECTIONS)
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("connection_list_screen").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("connection_list_screen").assertExists()
-
-        onNodeWithText("Back").performClick()
-        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("project_list_screen").fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithTag("project_list_screen").assertExists()
     }
 
     @Test
-    fun `logout returns to login screen`() = runComposeUiTest {
-        setContent { TestApp(appClient()) }
+    fun `navigate to releases via section switch`() = runComposeUiTest {
+        val navController = NavigationController()
+        setContent { TestApp(appClient(), navController) }
 
         waitUntil(timeoutMillis = 5000L) { onAllNodesWithTag("project_list_screen").fetchSemanticsNodes().isNotEmpty() }
 
-        // Logout button is now inside the overflow menu
-        onNodeWithTag("overflow_menu_button").performClick()
-        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("logout_button").fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithTag("logout_button").performClick()
-        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("login_screen").fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithTag("login_screen").assertExists()
-    }
-
-    @Test
-    fun `navigate to releases and back`() = runComposeUiTest {
-        setContent { TestApp(appClient()) }
-
-        waitUntil(timeoutMillis = 5000L) { onAllNodesWithTag("project_list_screen").fetchSemanticsNodes().isNotEmpty() }
-
-        onNodeWithTag("releases_button").performClick()
+        navController.navigateToSection(NavSection.RELEASES)
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("release_list_screen").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("release_list_screen").assertExists()
-
-        onNodeWithText("Back").performClick()
-        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("project_list_screen").fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithTag("project_list_screen").assertExists()
     }
 
     @Test
@@ -168,12 +148,13 @@ class AppNavigationTest {
 
     @Test
     fun `navigate to connection form and back`() = runComposeUiTest {
-        setContent { TestApp(appClient()) }
+        val navController = NavigationController()
+        setContent { TestApp(appClient(), navController) }
 
         waitUntil(timeoutMillis = 5000L) { onAllNodesWithTag("project_list_screen").fetchSemanticsNodes().isNotEmpty() }
 
-        // Navigate to connections
-        onNodeWithTag("connections_button").performClick()
+        // Navigate to connections via section switch
+        navController.navigateToSection(NavSection.CONNECTIONS)
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("connection_list_screen").fetchSemanticsNodes().isNotEmpty() }
 
         // Click FAB to go to form

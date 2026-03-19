@@ -304,61 +304,8 @@ class TeamScreensTest {
         onNodeWithText("No pending invites.").assertExists()
     }
 
-    // --- ProjectListScreen team switcher ---
-
-    @Test
-    fun `project list shows Teams button`() = runComposeUiTest {
-        val projectClient = mockHttpClient(mapOf("/projects" to json("""{"projects":[]}""")))
-        val vm = com.github.mr3zee.projects.ProjectListViewModel(
-            com.github.mr3zee.api.ProjectApiClient(projectClient),
-            kotlinx.coroutines.flow.MutableStateFlow(TeamId("t1")),
-        )
-        setContent {
-            MaterialTheme {
-                com.github.mr3zee.projects.ProjectListScreen(
-                    viewModel = vm,
-                    onEditProject = {},
-                    onTeams = {},
-                    onLogout = {},
-                )
-            }
-        }
-
-        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("teams_button").fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithTag("teams_button").assertExists()
-    }
-
-    @Test
-    fun `project list shows team switcher when multiple teams`() = runComposeUiTest {
-        val projectClient = mockHttpClient(mapOf("/projects" to json("""{"projects":[]}""")))
-        val activeTeamId = kotlinx.coroutines.flow.MutableStateFlow<TeamId?>(TeamId("t1"))
-        val userTeams = listOf(
-            com.github.mr3zee.api.UserTeamInfo(TeamId("t1"), "Alpha", com.github.mr3zee.model.TeamRole.TEAM_LEAD),
-            com.github.mr3zee.api.UserTeamInfo(TeamId("t2"), "Beta", com.github.mr3zee.model.TeamRole.COLLABORATOR),
-        )
-        val vm = com.github.mr3zee.projects.ProjectListViewModel(
-            com.github.mr3zee.api.ProjectApiClient(projectClient),
-            activeTeamId,
-        )
-        setContent {
-            MaterialTheme {
-                com.github.mr3zee.projects.ProjectListScreen(
-                    viewModel = vm,
-                    onEditProject = {},
-                    activeTeamId = activeTeamId,
-                    userTeams = userTeams,
-                )
-            }
-        }
-
-        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("team_switcher").fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithTag("team_switcher").assertExists()
-        // Click team switcher to open DropdownMenu picker
-        onNodeWithTag("team_switcher").performClick()
-        waitUntil(timeoutMillis = 2000L) { onAllNodesWithTag("team_picker_t1", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithTag("team_picker_t1", useUnmergedTree = true).assertExists()
-        onNodeWithTag("team_picker_t2", useUnmergedTree = true).assertExists()
-    }
+    // Team switcher and Teams button are now in the sidebar (AppShell),
+    // not in ProjectListScreen. See SidebarNavigationTest for those tests.
 
     // ---- Refresh Tests ----
 

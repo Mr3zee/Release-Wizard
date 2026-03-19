@@ -28,8 +28,16 @@ import com.github.mr3zee.auth.AuthViewModel
 import com.github.mr3zee.auth.LoginScreen
 import com.github.mr3zee.connections.ConnectionsViewModel
 import com.github.mr3zee.navigation.AppNavigation
+import com.github.mr3zee.navigation.AppShell
 import com.github.mr3zee.navigation.NavigationController
 import com.github.mr3zee.navigation.Screen
+import com.github.mr3zee.navigation.SidebarSettingsContent
+import com.github.mr3zee.navigation.SidebarTeamSwitcher
+import com.github.mr3zee.navigation.createPlatformRouter
+import com.github.mr3zee.navigation.isTopLevel
+import com.github.mr3zee.navigation.parseUrlPath
+import com.github.mr3zee.navigation.toNavSection
+import com.github.mr3zee.navigation.toUrlPath
 import com.github.mr3zee.projects.ProjectListViewModel
 import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.releases.ReleaseListViewModel
@@ -69,13 +77,37 @@ fun App() {
     var themePreference by remember { mutableStateOf(loadThemePreference()) }
     var languagePack by remember { mutableStateOf(loadLanguagePack()) }
 
+    val router = remember { createPlatformRouter() }
     val navController = remember { NavigationController() }
     val currentScreen = navController.currentScreen
+
+    // URL restoration — gated behind auth with one-shot flag to avoid race with checkSession
+    var hasRestoredUrl by remember { mutableStateOf(false) }
+
+    // URL sync via snapshotFlow — fires AFTER snapshot is applied, safe for DOM side-effects.
+    // Gated behind hasRestoredUrl so we don't push /projects before deep-link restoration completes.
+    LaunchedEffect(navController) {
+        snapshotFlow { navController.currentScreen }
+            .collect { screen ->
+                if (!navController.suppressUrlSync && hasRestoredUrl) {
+                    router.pushPath(screen.toUrlPath())
+                }
+                navController.suppressUrlSync = false
+            }
+    }
 
     // Auto-select team when user info changes, or redirect to team list if no teams
     LaunchedEffect(user) {
         val currentUser = user
         if (currentUser != null) {
+            // Restore URL-based navigation on first auth (deep linking)
+            if (!hasRestoredUrl) {
+                hasRestoredUrl = true
+                val initialScreen = parseUrlPath(router.currentPath())
+                if (initialScreen != null && initialScreen != Screen.ProjectList) {
+                    navController.navigateFromExternal(initialScreen)
+                }
+            }
             if (currentUser.teams.isNotEmpty()) {
                 if (activeTeamId.value == null) {
                     activeTeamId.value = currentUser.teams.first().teamId
@@ -90,6 +122,14 @@ fun App() {
         authViewModel.checkSession()
     }
 
+    // Handle browser back/forward button
+    DisposableEffect(router) {
+        val dispose = router.onPopState { path ->
+            parseUrlPath(path)?.let { navController.navigateFromExternal(it) }
+        }
+        onDispose { dispose() }
+    }
+
     LaunchedEffect(Unit) {
         AuthEventBus.events.collect { event ->
             when (event) {
@@ -97,6 +137,7 @@ fun App() {
                     authViewModel.onSessionExpired()
                     activeTeamId.value = null
                     navController.resetTo(Screen.ProjectList)
+                    router.replacePath("/projects")
                 }
             }
         }
@@ -122,6 +163,7 @@ fun App() {
         authViewModel.logout()
         activeTeamId.value = null
         navController.resetTo(Screen.ProjectList)
+        router.replacePath("/projects")
     }
 
     AppTheme(themePreference = themePreference, languagePack = languagePack) {
@@ -134,7 +176,7 @@ fun App() {
                     handleGlobalKeyEvent(
                         event = event,
                         shortcutActions = shortcutActionsState.value,
-                        onNavigate = { navController.navigate(it) },
+                        onNavigateToSection = { navController.navigateToSection(it) },
                         onGoBack = { navController.goBack() },
                         onToggleTheme = toggleTheme,
                         onToggleShortcutsOverlay = { showShortcutsOverlay = !showShortcutsOverlay },
@@ -162,41 +204,77 @@ fun App() {
                         LoginScreen(viewModel = authViewModel)
                     }
                     else -> {
-                        AppNavigation(
-                            currentScreen = currentScreen,
-                            onNavigate = { navController.navigate(it) },
-                            onGoBack = { navController.goBack() },
-                            projectListViewModel = projectListViewModel,
-                            projectApiClient = projectApiClient,
-                            releaseApiClient = releaseApiClient,
-                            releaseListViewModel = releaseListViewModel,
-                            connectionsViewModel = connectionsViewModel,
-                            connectionApiClient = connectionApiClient,
-                            teamApiClient = teamApiClient,
-                            scheduleApiClient = scheduleApiClient,
-                            webhookTriggerApiClient = webhookTriggerApiClient,
-                            mavenTriggerApiClient = mavenTriggerApiClient,
-                            activeTeamId = activeTeamId,
-                            userTeams = user?.teams ?: emptyList(),
-                            currentUserId = user?.id,
-                            currentUserRole = user?.role,
-                            onLogout = logout,
-                            onTeamChanged = { teamId ->
-                                activeTeamId.value = teamId
+                        val currentUserTeams = user?.teams ?: emptyList()
+                        AppShell(
+                            sidebarVisible = currentScreen.isTopLevel(),
+                            currentSection = currentScreen.toNavSection(),
+                            onSectionClick = { section ->
+                                if (!shortcutActionsState.value.hasDialogOpen) {
+                                    navController.navigateToSection(section)
+                                }
                             },
-                            onRefreshUser = { authViewModel.checkSession() },
-                            themePreference = themePreference,
-                            onThemeChange = {
-                                themePreference = it
-                                saveThemePreference(it)
+                            teamSwitcher = { collapsed ->
+                                SidebarTeamSwitcher(
+                                    userTeams = currentUserTeams,
+                                    activeTeamId = activeTeamId,
+                                    onTeamChanged = { teamId -> activeTeamId.value = teamId },
+                                    collapsed = collapsed,
+                                )
                             },
-                            languagePack = languagePack,
-                            onLanguagePackChange = {
-                                languagePack = it
-                                saveLanguagePack(it)
+                            settingsContent = { collapsed ->
+                                SidebarSettingsContent(
+                                    collapsed = collapsed,
+                                    themePreference = themePreference,
+                                    onThemeChange = {
+                                        themePreference = it
+                                        saveThemePreference(it)
+                                    },
+                                    languagePack = languagePack,
+                                    onLanguagePackChange = {
+                                        languagePack = it
+                                        saveLanguagePack(it)
+                                    },
+                                    onShowShortcuts = { showShortcutsOverlay = true },
+                                )
                             },
-                            onShowShortcuts = { showShortcutsOverlay = true },
-                        )
+                            onSignOut = logout,
+                        ) {
+                            AppNavigation(
+                                currentScreen = currentScreen,
+                                onNavigate = { navController.navigate(it) },
+                                onGoBack = { navController.goBack() },
+                                projectListViewModel = projectListViewModel,
+                                projectApiClient = projectApiClient,
+                                releaseApiClient = releaseApiClient,
+                                releaseListViewModel = releaseListViewModel,
+                                connectionsViewModel = connectionsViewModel,
+                                connectionApiClient = connectionApiClient,
+                                teamApiClient = teamApiClient,
+                                scheduleApiClient = scheduleApiClient,
+                                webhookTriggerApiClient = webhookTriggerApiClient,
+                                mavenTriggerApiClient = mavenTriggerApiClient,
+                                activeTeamId = activeTeamId,
+                                userTeams = currentUserTeams,
+                                currentUserId = user?.id,
+                                currentUserRole = user?.role,
+                                onLogout = logout,
+                                onTeamChanged = { teamId ->
+                                    activeTeamId.value = teamId
+                                },
+                                onRefreshUser = { authViewModel.checkSession() },
+                                themePreference = themePreference,
+                                onThemeChange = {
+                                    themePreference = it
+                                    saveThemePreference(it)
+                                },
+                                languagePack = languagePack,
+                                onLanguagePackChange = {
+                                    languagePack = it
+                                    saveLanguagePack(it)
+                                },
+                                onShowShortcuts = { showShortcutsOverlay = true },
+                            )
+                        }
                     }
                 }
             }

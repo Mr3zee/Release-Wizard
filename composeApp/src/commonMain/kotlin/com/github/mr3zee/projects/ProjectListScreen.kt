@@ -6,7 +6,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.FolderOpen
@@ -22,9 +21,9 @@ import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.github.mr3zee.api.UserTeamInfo
 import com.github.mr3zee.components.ListItemCard
 import com.github.mr3zee.components.RefreshErrorBanner
+import com.github.mr3zee.components.RefreshIconButton
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwFab
@@ -32,21 +31,15 @@ import com.github.mr3zee.components.RwInlineConfirmation
 import com.github.mr3zee.components.RwInlineForm
 import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwTooltip
-import com.github.mr3zee.components.RwRadioButton
 import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.components.loadMoreItem
 import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.model.ProjectTemplate
-import com.github.mr3zee.model.TeamId
-import com.github.mr3zee.i18n.LanguagePack
 import com.github.mr3zee.i18n.packPluralStringResource
 import com.github.mr3zee.i18n.packStringResource
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.Spacing
-import com.github.mr3zee.theme.ThemePreference
 import com.github.mr3zee.util.resolve
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import releasewizard.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,18 +47,6 @@ import releasewizard.composeapp.generated.resources.*
 fun ProjectListScreen(
     viewModel: ProjectListViewModel,
     onEditProject: (ProjectId) -> Unit,
-    onConnections: (() -> Unit)? = null,
-    onReleases: (() -> Unit)? = null,
-    onTeams: (() -> Unit)? = null,
-    onLogout: (() -> Unit)? = null,
-    themePreference: ThemePreference = ThemePreference.SYSTEM,
-    onThemeChange: (ThemePreference) -> Unit = {},
-    languagePack: LanguagePack = LanguagePack.ENGLISH,
-    onLanguagePackChange: (LanguagePack) -> Unit = {},
-    activeTeamId: StateFlow<TeamId?>? = null,
-    userTeams: List<UserTeamInfo> = emptyList(),
-    onTeamChanged: (TeamId) -> Unit = {},
-    onShowShortcuts: () -> Unit = {},
 ) {
     val projects by viewModel.projects.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -80,13 +61,9 @@ fun ProjectListScreen(
     var showCreateDialog by remember { mutableStateOf(false) }
     var projectToDelete by remember { mutableStateOf<ProjectTemplate?>(null) }
 
-    val currentTeamId by (activeTeamId ?: remember { MutableStateFlow<TeamId?>(null) }).collectAsState()
-    var showTeamPicker by remember { mutableStateOf(false) }
-    var showOverflowMenu by remember { mutableStateOf(false) }
-
     val searchFocusRequester = remember { FocusRequester() }
 
-    val isDialogOpen = showCreateDialog || projectToDelete != null || showTeamPicker || showOverflowMenu
+    val isDialogOpen = showCreateDialog || projectToDelete != null
     val shortcutActions = remember(isDialogOpen) {
         ShortcutActions(
             onSearch = { searchFocusRequester.requestFocus() },
@@ -96,183 +73,24 @@ fun ProjectListScreen(
         )
     }
     ProvideShortcutActions(shortcutActions) {
-    val activeTeamName = userTeams.find { it.teamId == currentTeamId }?.teamName
-        ?: packStringResource(Res.string.projects_no_team)
 
     Scaffold(
         topBar = {
             Box {
                 TopAppBar(
                     title = {
-                        if (userTeams.size > 1) {
-                            Box {
-                                RwButton(
-                                    onClick = { showTeamPicker = true },
-                                    variant = RwButtonVariant.Ghost,
-                                    modifier = Modifier.testTag("team_switcher"),
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            packStringResource(Res.string.projects_title_with_team, activeTeamName),
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                        )
-                                        Icon(
-                                            Icons.Default.ArrowDropDown,
-                                            contentDescription = packStringResource(Res.string.projects_switch_team),
-                                            modifier = Modifier.size(24.dp),
-                                        )
-                                    }
-                                }
-                                DropdownMenu(
-                                    expanded = showTeamPicker,
-                                    onDismissRequest = { showTeamPicker = false },
-                                ) {
-                                    userTeams.forEach { teamInfo ->
-                                        DropdownMenuItem(
-                                            text = {
-                                                Text(
-                                                    teamInfo.teamName,
-                                                    color = if (teamInfo.teamId == currentTeamId) MaterialTheme.colorScheme.primary
-                                                    else MaterialTheme.colorScheme.onSurface,
-                                                )
-                                            },
-                                            onClick = {
-                                                onTeamChanged(teamInfo.teamId)
-                                                showTeamPicker = false
-                                            },
-                                            modifier = Modifier.testTag("team_picker_${teamInfo.teamId.value}"),
-                                        )
-                                    }
-                                }
-                            }
-                        } else {
-                            Text(
-                                packStringResource(Res.string.projects_title_with_team, activeTeamName),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
+                        Text(
+                            packStringResource(Res.string.sidebar_projects),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     },
                     actions = {
-                        if (onTeams != null) {
-                            RwButton(
-                                onClick = onTeams,
-                                variant = RwButtonVariant.Ghost,
-                                modifier = Modifier.testTag("teams_button"),
-                            ) {
-                                Text(packStringResource(Res.string.projects_teams))
-                            }
-                        }
-                        if (onReleases != null) {
-                            RwButton(
-                                onClick = onReleases,
-                                variant = RwButtonVariant.Ghost,
-                                modifier = Modifier.testTag("releases_button"),
-                            ) {
-                                Text(packStringResource(Res.string.projects_releases))
-                            }
-                        }
-                        if (onConnections != null) {
-                            RwButton(
-                                onClick = onConnections,
-                                variant = RwButtonVariant.Ghost,
-                                modifier = Modifier.testTag("connections_button"),
-                            ) {
-                                Text(packStringResource(Res.string.projects_connections))
-                            }
-                        }
-                        // Overflow menu for theme toggle, refresh, and sign out
-                        Box {
-                            RwIconButton(
-                                onClick = { showOverflowMenu = true },
-                                modifier = Modifier.testTag("overflow_menu_button"),
-                            ) {
-                                Icon(Icons.Default.MoreVert, contentDescription = packStringResource(Res.string.common_more_options))
-                            }
-                            DropdownMenu(
-                                expanded = showOverflowMenu,
-                                onDismissRequest = { showOverflowMenu = false },
-                            ) {
-                                if (onLogout != null) {
-                                    DropdownMenuItem(
-                                        text = { Text(packStringResource(Res.string.auth_sign_out)) },
-                                        onClick = {
-                                            onLogout()
-                                            showOverflowMenu = false
-                                        },
-                                        modifier = Modifier.testTag("logout_button"),
-                                    )
-                                    HorizontalDivider()
-                                }
-                                DropdownMenuItem(
-                                    text = { Text(packStringResource(Res.string.common_refresh)) },
-                                    onClick = {
-                                        viewModel.refresh()
-                                        showOverflowMenu = false
-                                    },
-                                    modifier = Modifier.testTag("refresh_menu_item"),
-                                )
-                                DropdownMenuItem(
-                                    text = {
-                                        val label = when (themePreference) {
-                                            ThemePreference.SYSTEM -> packStringResource(Res.string.projects_theme_auto)
-                                            ThemePreference.LIGHT -> packStringResource(Res.string.projects_theme_light)
-                                            ThemePreference.DARK -> packStringResource(Res.string.projects_theme_dark)
-                                        }
-                                        Text(label)
-                                    },
-                                    onClick = {
-                                        val next = when (themePreference) {
-                                            ThemePreference.SYSTEM -> ThemePreference.LIGHT
-                                            ThemePreference.LIGHT -> ThemePreference.DARK
-                                            ThemePreference.DARK -> ThemePreference.SYSTEM
-                                        }
-                                        onThemeChange(next)
-                                        showOverflowMenu = false
-                                    },
-                                    modifier = Modifier.testTag("theme_toggle_menu_item"),
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(packStringResource(Res.string.shortcuts_menu_item)) },
-                                    onClick = {
-                                        onShowShortcuts()
-                                        showOverflowMenu = false
-                                    },
-                                    modifier = Modifier.testTag("keyboard_shortcuts_menu_item"),
-                                )
-                                HorizontalDivider()
-                                LanguagePack.entries.forEach { pack ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                RwRadioButton(
-                                                    selected = pack == languagePack,
-                                                    onClick = null,
-                                                    modifier = Modifier.size(20.dp),
-                                                )
-                                                Spacer(Modifier.width(Spacing.sm))
-                                                Column {
-                                                    Text(pack.displayName, style = AppTypography.body)
-                                                    if (pack != LanguagePack.ENGLISH) {
-                                                        Text(
-                                                            pack.preview,
-                                                            style = AppTypography.bodySmall,
-                                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        onClick = {
-                                            onLanguagePackChange(pack)
-                                            showOverflowMenu = false
-                                        },
-                                        modifier = Modifier.testTag("language_pack_${pack.name}"),
-                                    )
-                                }
-                            }
-                        }
+                        RefreshIconButton(
+                            onClick = { viewModel.refresh() },
+                            isRefreshing = isRefreshing,
+                            isManualRefresh = isManualRefresh,
+                        )
                     },
                 )
                 if (isRefreshing && !isLoading) {
@@ -444,11 +262,6 @@ fun ProjectListScreen(
         }
     }
 
-    // Create project dialog replaced by inline form in the content area
-
-    // Delete confirmation is now shown inline within the LazyColumn items
-
-    // Team picker is now a DropdownMenu in the TopAppBar
     } // ProvideShortcutActions
 }
 

@@ -234,6 +234,7 @@ private fun shortcutDescriptionResource(key: String): String = when (key) {
     "shortcut_action_save" -> packStringResource(Res.string.shortcut_action_save)
     "shortcut_action_help" -> packStringResource(Res.string.shortcut_action_help)
     "shortcut_action_theme" -> packStringResource(Res.string.shortcut_action_theme)
+    "shortcut_action_escape" -> packStringResource(Res.string.shortcut_action_escape)
     "shortcut_editor_undo" -> packStringResource(Res.string.shortcut_editor_undo)
     "shortcut_editor_redo" -> packStringResource(Res.string.shortcut_editor_redo)
     "shortcut_editor_copy" -> packStringResource(Res.string.shortcut_editor_copy)

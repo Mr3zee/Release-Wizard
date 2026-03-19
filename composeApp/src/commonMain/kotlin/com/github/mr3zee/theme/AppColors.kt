@@ -99,6 +99,11 @@ data class AppColors(
     // Release stopped status
     val statusStopped: Color,
 
+    // ── Sidebar ────────────────────────────────────────────────────────
+    val sidebarActiveBg: Color,
+    val sidebarActiveText: Color,
+    val sidebarActiveHoverBg: Color,
+
     // ── Focus ring ────────────────────────────────────────────────────
     val focusRing: Color,
     val focusRingOnColor: Color,
@@ -189,6 +194,11 @@ val LightAppColors = AppColors(
     blockStatusWaitingForInput = Color(0xFFF59E0B),
     blockStatusStopped = Color(0xFF0D9488),
     statusStopped = Color(0xFF0D9488),
+
+    // Sidebar — opaque tokens tuned for WCAG AA 4.5:1
+    sidebarActiveBg = Color(0xFFEFF6FF),      // matches chipBgSelected
+    sidebarActiveText = Color(0xFF2563EB),     // buttonPrimaryHover for AA contrast
+    sidebarActiveHoverBg = Color(0xFFDCEAFE),  // slightly saturated
 
     // Focus ring
     focusRing = Color(0xFF3B82F6),
@@ -281,6 +291,11 @@ val DarkAppColors = AppColors(
     blockStatusWaitingForInput = Color(0xFFFDE68A),
     blockStatusStopped = Color(0xFF5EEAD4),
     statusStopped = Color(0xFF5EEAD4),
+
+    // Sidebar — opaque tokens tuned for dark theme, WCAG AA compliant
+    sidebarActiveBg = Color(0xFF1D3A5C),       // darker to increase contrast
+    sidebarActiveText = Color(0xFF93C5FD),     // blue-300 for AA 4.5:1 against sidebarActiveBg
+    sidebarActiveHoverBg = Color(0xFF264B73),  // slightly brighter on hover
 
     // Focus ring
     focusRing = Color(0xFF60A5FA),

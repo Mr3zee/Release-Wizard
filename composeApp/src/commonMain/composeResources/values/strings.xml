@@ -60,9 +60,9 @@
     <string name="projects_teams">Teams</string>
     <string name="projects_releases">Releases</string>
     <string name="projects_connections">Connections</string>
-    <string name="projects_theme_auto">Theme: Auto</string>
-    <string name="projects_theme_light">Theme: Light</string>
-    <string name="projects_theme_dark">Theme: Dark</string>
+    <string name="settings_theme_auto">Theme: Auto</string>
+    <string name="settings_theme_light">Theme: Light</string>
+    <string name="settings_theme_dark">Theme: Dark</string>
     <string name="projects_search_placeholder">Search projects...</string>
     <string name="projects_empty_state">No projects yet. Create one to get started.</string>
     <string name="projects_create_project">Create project</string>
@@ -502,4 +502,17 @@
     <string name="audit_target_schedule">Schedule</string>
     <string name="audit_target_trigger">Trigger</string>
     <string name="audit_target_tag">Tag</string>
+
+    <!-- ==================== Sidebar ==================== -->
+    <string name="sidebar_app_name">Release Wizard</string>
+    <string name="sidebar_projects">Projects</string>
+    <string name="sidebar_releases">Releases</string>
+    <string name="sidebar_connections">Connections</string>
+    <string name="sidebar_teams">Teams</string>
+    <string name="sidebar_settings">Settings</string>
+    <string name="sidebar_sign_out">Sign Out</string>
+    <string name="sidebar_collapse">Collapse sidebar</string>
+    <string name="sidebar_expand">Expand sidebar</string>
+    <string name="sidebar_sign_out_confirm">Click again to sign out</string>
+    <string name="sidebar_app_abbreviation">RW</string>
 </resources>

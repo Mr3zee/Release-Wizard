@@ -61,7 +61,7 @@ import kotlin.time.Duration.Companion.milliseconds
 fun ReleaseListScreen(
     viewModel: ReleaseListViewModel,
     onViewRelease: (ReleaseId) -> Unit,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)? = null,
 ) {
     val releases by viewModel.releases.collectAsState()
     val projects by viewModel.projects.collectAsState()
@@ -151,13 +151,15 @@ fun ReleaseListScreen(
                         }
                     },
                     navigationIcon = {
-                        RwButton(
-                            onClick = onBack,
-                            modifier = Modifier.testTag("back_button"),
-                            variant = RwButtonVariant.Ghost,
-                        ) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
-                            Text(packStringResource(Res.string.common_back))
+                        if (onBack != null) {
+                            RwButton(
+                                onClick = onBack,
+                                modifier = Modifier.testTag("back_button"),
+                                variant = RwButtonVariant.Ghost,
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
+                                Text(packStringResource(Res.string.common_back))
+                            }
                         }
                     },
                     actions = {

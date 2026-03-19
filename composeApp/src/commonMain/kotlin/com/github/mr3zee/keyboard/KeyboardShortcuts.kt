@@ -89,6 +89,7 @@ val AllShortcuts: List<KeyboardShortcut> = listOf(
     KeyboardShortcut("action.save", Key.S, setOf(ShortcutModifier.CTRL_OR_CMD), ShortcutCategory.ACTIONS, "shortcut_action_save"),
     KeyboardShortcut("action.help", Key.Slash, setOf(ShortcutModifier.CTRL_OR_CMD), ShortcutCategory.ACTIONS, "shortcut_action_help"),
     KeyboardShortcut("action.theme", Key.D, setOf(ShortcutModifier.CTRL_OR_CMD, ShortcutModifier.SHIFT), ShortcutCategory.ACTIONS, "shortcut_action_theme"),
+    KeyboardShortcut("action.escape", Key.Escape, emptySet(), ShortcutCategory.ACTIONS, "shortcut_action_escape"),
     // Editor (display-only — handled by DagEditorScreen's onKeyEvent)
     KeyboardShortcut("editor.undo", Key.Z, setOf(ShortcutModifier.CTRL_OR_CMD), ShortcutCategory.EDITOR, "shortcut_editor_undo"),
     KeyboardShortcut("editor.redo", Key.Z, setOf(ShortcutModifier.CTRL_OR_CMD, ShortcutModifier.SHIFT), ShortcutCategory.EDITOR, "shortcut_editor_redo"),

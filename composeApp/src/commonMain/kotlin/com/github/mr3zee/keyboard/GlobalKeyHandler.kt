@@ -9,7 +9,7 @@ import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
-import com.github.mr3zee.navigation.Screen
+import com.github.mr3zee.navigation.NavSection
 
 /**
  * Global keyboard event handler attached via `Modifier.onKeyEvent` (bubble phase)
@@ -23,7 +23,7 @@ import com.github.mr3zee.navigation.Screen
 fun handleGlobalKeyEvent(
     event: KeyEvent,
     shortcutActions: ShortcutActions,
-    onNavigate: (Screen) -> Unit,
+    onNavigateToSection: (NavSection) -> Unit,
     onGoBack: () -> Boolean,
     onToggleTheme: () -> Unit,
     onToggleShortcutsOverlay: () -> Unit,
@@ -42,13 +42,13 @@ fun handleGlobalKeyEvent(
     }
 
     // ── Navigation shortcuts (Alt + number / Alt + Left) ────────────
-    // Suppressed when a dialog is open
+    // Suppressed when a dialog is open (unsaved-changes guard)
     if (!shortcutActions.hasDialogOpen && isAlt && !isModifier) {
         when (event.key) {
-            Key.One -> { onNavigate(Screen.ProjectList); return true }
-            Key.Two -> { onNavigate(Screen.ReleaseList); return true }
-            Key.Three -> { onNavigate(Screen.ConnectionList); return true }
-            Key.Four -> { onNavigate(Screen.TeamList); return true }
+            Key.One -> { onNavigateToSection(NavSection.PROJECTS); return true }
+            Key.Two -> { onNavigateToSection(NavSection.RELEASES); return true }
+            Key.Three -> { onNavigateToSection(NavSection.CONNECTIONS); return true }
+            Key.Four -> { onNavigateToSection(NavSection.TEAMS); return true }
             Key.DirectionLeft -> { onGoBack(); return true }
         }
     }

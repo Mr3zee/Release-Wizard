@@ -197,46 +197,52 @@ Teams List (first visit after register)
   |
   v
 Project List (home screen after team selected)
-  |-- Teams (nav bar)
+  |-- [Sidebar] Teams
   |     |-- Team Detail -> Audit Log, Manage
   |     |-- My Invites
-  |-- Releases (nav bar)
+  |-- [Sidebar] Releases
   |     |-- Release Detail
-  |-- Connections (nav bar)
+  |-- [Sidebar] Connections
   |     |-- Connection Form (create/edit)
   |-- [Project click] -> DAG Editor
   |     |-- Automation
-  |-- [Kebab menu] -> Theme, Language, Shortcuts
+  |-- [Sidebar Settings] -> Theme, Language, Shortcuts
+  |-- [Sidebar Sign Out] -> Login
 ```
 
-### Navigation Test Tags (Project List nav bar)
+### Sidebar Navigation Test Tags
+
+The app uses a persistent sidebar for navigation (no nav buttons in ProjectList TopAppBar).
 
 | Tag | Destination |
 |-----|-------------|
-| `teams_button` | Teams List |
-| `releases_button` | Releases List |
-| `connections_button` | Connections List |
-| `logout_button` | Sign Out |
-| `overflow_menu_button` | Settings dropdown |
+| `sidebar_nav_projects` | Projects List |
+| `sidebar_nav_releases` | Releases List |
+| `sidebar_nav_connections` | Connections List |
+| `sidebar_nav_teams` | Teams List |
+| `sidebar_sign_out` | Sign Out (two-click confirmation) |
+| `sidebar_settings` | Settings (expandable section) |
+| `sidebar_team_switcher` | Team dropdown |
+| `sidebar_collapse_toggle` | Collapse/expand sidebar |
 
 ### Common Screen Entry Points
 
-**From Project List:**
+**From any top-level screen (sidebar visible):**
 ```bash
 # Open editor for a project
 curl -s "http://localhost:54345/onNodeWithText/Test%20Project/performClick"
 
 # Navigate to Releases
-curl -s "http://localhost:54345/onNodeWithTag/releases_button/performClick"
+curl -s "http://localhost:54345/onNodeWithTag/sidebar_nav_releases/performClick"
 
 # Navigate to Connections
-curl -s "http://localhost:54345/onNodeWithTag/connections_button/performClick"
+curl -s "http://localhost:54345/onNodeWithTag/sidebar_nav_connections/performClick"
 
 # Navigate to Teams
-curl -s "http://localhost:54345/onNodeWithTag/teams_button/performClick"
+curl -s "http://localhost:54345/onNodeWithTag/sidebar_nav_teams/performClick"
 ```
 
-**Going back (from any sub-screen):**
+**Going back (from detail screens — sidebar is hidden, Back button shown):**
 ```bash
 curl -s "http://localhost:54345/onNodeWithTag/back_button/performClick"
 # or if no back_button tag:

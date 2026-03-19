@@ -49,7 +49,7 @@ fun ConnectionListScreen(
     viewModel: ConnectionsViewModel,
     onCreateConnection: () -> Unit,
     onEditConnection: (ConnectionId) -> Unit,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)? = null,
 ) {
     val connections by viewModel.connections.collectAsState()
     val webhookUrls by viewModel.webhookUrls.collectAsState()
@@ -116,13 +116,15 @@ fun ConnectionListScreen(
                 TopAppBar(
                     title = { Text(packStringResource(Res.string.connections_title)) },
                     navigationIcon = {
-                        RwButton(
-                            onClick = onBack,
-                            variant = RwButtonVariant.Ghost,
-                            modifier = Modifier.testTag("back_button"),
-                        ) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
-                            Text(packStringResource(Res.string.common_back))
+                        if (onBack != null) {
+                            RwButton(
+                                onClick = onBack,
+                                variant = RwButtonVariant.Ghost,
+                                modifier = Modifier.testTag("back_button"),
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
+                                Text(packStringResource(Res.string.common_back))
+                            }
                         }
                     },
                     actions = {

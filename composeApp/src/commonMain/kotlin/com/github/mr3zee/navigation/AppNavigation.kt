@@ -58,18 +58,6 @@ fun AppNavigation(
         is Screen.ProjectList -> ProjectListScreen(
             viewModel = projectListViewModel,
             onEditProject = { onNavigate(Screen.ProjectEditor(projectId = it)) },
-            onConnections = { onNavigate(Screen.ConnectionList) },
-            onReleases = { onNavigate(Screen.ReleaseList) },
-            onTeams = { onNavigate(Screen.TeamList) },
-            onLogout = onLogout,
-            themePreference = themePreference,
-            onThemeChange = onThemeChange,
-            languagePack = languagePack,
-            onLanguagePackChange = onLanguagePackChange,
-            activeTeamId = activeTeamId,
-            userTeams = userTeams,
-            onTeamChanged = onTeamChanged,
-            onShowShortcuts = onShowShortcuts,
         )
         is Screen.ProjectEditor -> {
             val projectId = currentScreen.projectId
@@ -109,7 +97,6 @@ fun AppNavigation(
             viewModel = connectionsViewModel,
             onCreateConnection = { onNavigate(Screen.ConnectionForm()) },
             onEditConnection = { onNavigate(Screen.ConnectionForm(connectionId = it)) },
-            onBack = { onGoBack() },
         )
         is Screen.ConnectionForm -> ConnectionFormScreen(
             viewModel = connectionsViewModel,
@@ -123,7 +110,6 @@ fun AppNavigation(
         is Screen.ReleaseList -> ReleaseListScreen(
             viewModel = releaseListViewModel,
             onViewRelease = { onNavigate(Screen.ReleaseView(it)) },
-            onBack = { onGoBack() },
         )
         is Screen.ReleaseView -> {
             val viewModel = remember(currentScreen.releaseId) {
@@ -174,7 +160,6 @@ fun AppNavigation(
                     onNavigate(Screen.ProjectList)
                 },
                 onMyInvites = { onNavigate(Screen.MyInvites) },
-                onBack = { onGoBack() },
                 memberTeamIds = userTeams.map { it.teamId }.toSet(),
             )
         }
