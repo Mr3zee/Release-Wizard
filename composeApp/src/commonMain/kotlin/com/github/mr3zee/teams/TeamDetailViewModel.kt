@@ -29,6 +29,21 @@ class TeamDetailViewModel(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
+    private val _actionError = MutableStateFlow<UiMessage?>(null)
+    val actionError: StateFlow<UiMessage?> = _actionError
+
+    private val _isLeaving = MutableStateFlow(false)
+    val isLeaving: StateFlow<Boolean> = _isLeaving
+
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing
+
+    private val _isManualRefresh = MutableStateFlow(false)
+    val isManualRefresh: StateFlow<Boolean> = _isManualRefresh
+
+    private val _refreshError = MutableStateFlow<UiMessage?>(null)
+    val refreshError: StateFlow<UiMessage?> = _refreshError
+
     init {
         loadDetail()
     }
@@ -49,18 +64,48 @@ class TeamDetailViewModel(
         }
     }
 
+    fun refresh() {
+        if (_isRefreshing.value) return
+        viewModelScope.launch {
+            _isManualRefresh.value = true
+            _isRefreshing.value = true
+            _refreshError.value = null
+            try {
+                val detail = apiClient.getTeamDetail(teamId)
+                _team.value = detail.team
+                _members.value = detail.members
+            } catch (e: Exception) {
+                _refreshError.value = e.toUiMessage()
+            } finally {
+                _isRefreshing.value = false
+                _isManualRefresh.value = false
+            }
+        }
+    }
+
+    fun dismissRefreshError() {
+        _refreshError.value = null
+    }
+
     fun leaveTeam(onLeft: () -> Unit) {
         viewModelScope.launch {
+            _isLeaving.value = true
             try {
                 apiClient.leaveTeam(teamId)
                 onLeft()
             } catch (e: Exception) {
-                _error.value = e.toUiMessage()
+                _actionError.value = e.toUiMessage()
+            } finally {
+                _isLeaving.value = false
             }
         }
     }
 
     fun dismissError() {
         _error.value = null
+    }
+
+    fun dismissActionError() {
+        _actionError.value = null
     }
 }

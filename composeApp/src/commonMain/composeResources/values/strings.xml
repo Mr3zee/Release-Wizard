@@ -208,6 +208,7 @@
     <string name="releases_start_release">Start release</string>
     <string name="releases_updated_just_now">Updated just now</string>
     <string name="releases_release_title">Release %1$s</string>
+    <string name="releases_release_id_tooltip">Release ID: %1$s</string>
     <string name="releases_project_label">Project: %1$s</string>
     <string name="releases_started_label">Started: %1$s</string>
     <string name="releases_archive">Archive</string>
@@ -290,6 +291,7 @@
     <string name="start_release_title">Start Release</string>
     <string name="start_release_project_label">Project</string>
     <string name="start_release_start">Start</string>
+    <string name="start_release_select_project">Select a project</string>
     <string name="start_release_no_projects">No projects available. Create a project first.</string>
 
     <!-- ==================== Teams ==================== -->
@@ -308,6 +310,7 @@
     <string name="teams_audit_log">Audit Log</string>
     <string name="teams_manage">Manage</string>
     <string name="teams_members_section">Members</string>
+    <string name="teams_no_members">No members yet</string>
     <string name="teams_leave_title">Leave Team</string>
     <string name="teams_leave_confirmation">Are you sure you want to leave \"%1$s\"?</string>
     <string name="teams_leave_fallback">this team</string>
@@ -343,10 +346,12 @@
     <string name="teams_invited_by">Invited by %1$s</string>
     <string name="teams_accept">Accept</string>
     <string name="teams_decline">Decline</string>
+    <string name="teams_decline_confirmation">Decline invite from \"%1$s\"? You\'ll need a new invite to join.</string>
 
     <!-- ==================== Teams: Audit Log ==================== -->
     <string name="teams_audit_log_title">Audit Log</string>
     <string name="teams_no_audit_events">No audit events yet.</string>
+    <string name="teams_audit_empty_hint">Audit events will appear here as team activity occurs.</string>
     <string name="teams_load_more">Load more</string>
     <string name="teams_audit_entry_by">by %1$s \u2022 %2$s</string>
 

@@ -61,6 +61,7 @@ fun ProjectListScreen(
     var showCreateDialog by remember { mutableStateOf(false) }
     var projectToDelete by remember { mutableStateOf<ProjectTemplate?>(null) }
 
+    val snackbarHostState = remember { SnackbarHostState() }
     val searchFocusRequester = remember { FocusRequester() }
 
     val isDialogOpen = showCreateDialog || projectToDelete != null
@@ -115,6 +116,7 @@ fun ProjectListScreen(
                 }
             }
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = Modifier.testTag("project_list_screen"),
     ) { padding ->
         Column(

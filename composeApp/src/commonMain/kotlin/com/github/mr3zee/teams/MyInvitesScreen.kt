@@ -14,11 +14,12 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.github.mr3zee.components.ListItemCard
 import com.github.mr3zee.components.RefreshErrorBanner
 import com.github.mr3zee.components.RefreshIconButton
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
-import com.github.mr3zee.components.RwCard
+import com.github.mr3zee.components.RwInlineConfirmation
 import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.model.TeamInvite
@@ -41,6 +42,9 @@ fun MyInvitesScreen(
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val isManualRefresh by viewModel.isManualRefresh.collectAsState()
     val refreshError by viewModel.refreshError.collectAsState()
+    val loadingInviteIds by viewModel.loadingInviteIds.collectAsState()
+
+    var declineInviteId by remember { mutableStateOf<String?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val retryLabel = packStringResource(Res.string.common_retry)
@@ -138,16 +142,33 @@ fun MyInvitesScreen(
                 LazyColumn(
                     modifier = Modifier.fillMaxSize().weight(1f),
                     horizontalAlignment = Alignment.CenterHorizontally,
+                    contentPadding = PaddingValues(bottom = Spacing.xl),
                 ) {
                     items(invites, key = { it.id }) { invite ->
-                        InviteCard(
-                            invite = invite,
-                            onAccept = {
-                                viewModel.acceptInvite(invite.id) { onInviteAccepted() }
-                            },
-                            onDecline = { viewModel.declineInvite(invite.id) },
-                            modifier = Modifier.widthIn(max = 1200.dp),
-                        )
+                        val isInviteLoading = invite.id in loadingInviteIds
+                        Column(modifier = Modifier.widthIn(max = 1200.dp).animateItem()) {
+                            InviteCard(
+                                invite = invite,
+                                isLoading = isInviteLoading,
+                                onAccept = {
+                                    viewModel.acceptInvite(invite.id) { onInviteAccepted() }
+                                },
+                                onDecline = { declineInviteId = invite.id },
+                            )
+                            RwInlineConfirmation(
+                                visible = declineInviteId == invite.id,
+                                message = packStringResource(Res.string.teams_decline_confirmation, invite.teamName),
+                                confirmLabel = packStringResource(Res.string.teams_decline),
+                                onConfirm = {
+                                    declineInviteId = null
+                                    viewModel.declineInvite(invite.id)
+                                },
+                                onDismiss = { declineInviteId = null },
+                                isDestructive = true,
+                                testTag = "decline_invite_confirm_${invite.id}",
+                                modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+                            )
+                        }
                     }
                 }
             }
@@ -160,17 +181,16 @@ fun MyInvitesScreen(
 @Composable
 private fun InviteCard(
     invite: TeamInvite,
+    isLoading: Boolean,
     onAccept: () -> Unit,
     onDecline: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    RwCard(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = Spacing.lg, vertical = Spacing.xs)
-            .testTag("invite_card_${invite.id}"),
+    ListItemCard(
+        testTag = "invite_card_${invite.id}",
+        modifier = modifier,
     ) {
-        Column(modifier = Modifier.padding(Spacing.lg)) {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 invite.teamName,
                 style = AppTypography.subheading,
@@ -182,10 +202,28 @@ private fun InviteCard(
                 style = AppTypography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(modifier = Modifier.height(Spacing.sm))
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                RwButton(onClick = onAccept, variant = RwButtonVariant.Primary, modifier = Modifier.testTag("accept_invite_${invite.id}")) { Text(packStringResource(Res.string.teams_accept)) }
-                RwButton(onClick = onDecline, variant = RwButtonVariant.Ghost, modifier = Modifier.testTag("decline_invite_${invite.id}")) { Text(packStringResource(Res.string.teams_decline)) }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            RwButton(
+                onClick = onAccept,
+                variant = RwButtonVariant.Primary,
+                enabled = !isLoading,
+                modifier = Modifier.testTag("accept_invite_${invite.id}"),
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                } else {
+                    Text(packStringResource(Res.string.teams_accept))
+                }
+            }
+            RwButton(
+                onClick = onDecline,
+                variant = RwButtonVariant.Ghost,
+                enabled = !isLoading,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testTag("decline_invite_${invite.id}"),
+            ) {
+                Text(packStringResource(Res.string.teams_decline))
             }
         }
     }

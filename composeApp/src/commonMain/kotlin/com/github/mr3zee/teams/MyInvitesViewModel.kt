@@ -32,6 +32,9 @@ class MyInvitesViewModel(
     private val _refreshError = MutableStateFlow<UiMessage?>(null)
     val refreshError: StateFlow<UiMessage?> = _refreshError
 
+    private val _loadingInviteIds = MutableStateFlow<Set<String>>(emptySet())
+    val loadingInviteIds: StateFlow<Set<String>> = _loadingInviteIds
+
     init {
         loadInvites()
     }
@@ -53,23 +56,29 @@ class MyInvitesViewModel(
 
     fun acceptInvite(inviteId: String, onAccepted: () -> Unit = {}) {
         viewModelScope.launch {
+            _loadingInviteIds.value += inviteId
             try {
                 apiClient.acceptInvite(inviteId)
                 loadInvites()
                 onAccepted()
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
+            } finally {
+                _loadingInviteIds.value -= inviteId
             }
         }
     }
 
     fun declineInvite(inviteId: String) {
         viewModelScope.launch {
+            _loadingInviteIds.value += inviteId
             try {
                 apiClient.declineInvite(inviteId)
                 loadInvites()
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
+            } finally {
+                _loadingInviteIds.value -= inviteId
             }
         }
     }

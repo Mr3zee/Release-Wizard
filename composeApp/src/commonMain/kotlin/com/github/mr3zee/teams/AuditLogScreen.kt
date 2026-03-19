@@ -50,7 +50,7 @@ fun AuditLogScreen(
     val refreshError by viewModel.refreshError.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
-    val dismissLabel = packStringResource(Res.string.common_dismiss)
+    val retryLabel = packStringResource(Res.string.common_retry)
     val resolvedError = error?.resolve()
 
     // Show errors via snackbar with dismiss
@@ -58,9 +58,13 @@ fun AuditLogScreen(
         val msg = resolvedError ?: return@LaunchedEffect
         snackbarHostState.showSnackbar(
             message = msg,
-            actionLabel = dismissLabel,
+            actionLabel = retryLabel,
             duration = SnackbarDuration.Long,
-        )
+        ).let { result ->
+            if (result == SnackbarResult.ActionPerformed) {
+                viewModel.refresh()
+            }
+        }
         viewModel.dismissError()
     }
 
@@ -129,12 +133,19 @@ fun AuditLogScreen(
                             style = AppTypography.body,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        Text(
+                            packStringResource(Res.string.teams_audit_empty_hint),
+                            style = AppTypography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = Spacing.xs),
+                        )
                     }
                 }
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize().weight(1f).testTag("audit_event_list"),
                     horizontalAlignment = Alignment.CenterHorizontally,
+                    contentPadding = PaddingValues(bottom = Spacing.lg),
                 ) {
                     items(events, key = { it.id }) { event ->
                         AuditEventItem(

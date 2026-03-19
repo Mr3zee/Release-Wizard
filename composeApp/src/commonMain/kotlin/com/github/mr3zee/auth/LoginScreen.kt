@@ -1,5 +1,8 @@
 package com.github.mr3zee.auth
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
@@ -56,6 +59,8 @@ fun LoginScreen(
 
     LaunchedEffect(isRegisterMode) {
         confirmPassword = ""
+        showPassword = false
+        showConfirmPassword = false
     }
 
     val canSubmit = username.isNotBlank() && password.isNotBlank() && !isLoading
@@ -129,15 +134,17 @@ fun LoginScreen(
                         { Text(packStringResource(Res.string.auth_password_requirements)) }
                     } else null,
                     trailingIcon = {
-                        RwIconButton(
-                            onClick = { showPassword = !showPassword },
-                            modifier = Modifier.focusProperties { canFocus = false }.testTag("login_password_toggle_visibility"),
-                        ) {
-                            Icon(
-                                if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                contentDescription = if (showPassword) packStringResource(Res.string.common_hide_password)
-                                    else packStringResource(Res.string.common_show_password),
-                            )
+                        RwTooltip(tooltip = if (showPassword) packStringResource(Res.string.common_hide_password) else packStringResource(Res.string.common_show_password)) {
+                            RwIconButton(
+                                onClick = { showPassword = !showPassword },
+                                modifier = Modifier.focusProperties { canFocus = false }.testTag("login_password_toggle_visibility"),
+                            ) {
+                                Icon(
+                                    if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = if (showPassword) packStringResource(Res.string.common_hide_password)
+                                        else packStringResource(Res.string.common_show_password),
+                                )
+                            }
                         }
                     },
                     modifier = Modifier
@@ -156,7 +163,11 @@ fun LoginScreen(
                         .testTag("login_password"),
                 )
 
-                if (isRegisterMode) {
+                AnimatedVisibility(
+                    visible = isRegisterMode,
+                    enter = expandVertically(),
+                    exit = shrinkVertically(),
+                ) {
                     val confirmPasswordMismatch = confirmPassword.isNotEmpty() && password != confirmPassword
                     RwTextField(
                         value = confirmPassword,
@@ -170,15 +181,17 @@ fun LoginScreen(
                             { Text(packStringResource(Res.string.auth_password_mismatch)) }
                         } else null,
                         trailingIcon = {
-                            RwIconButton(
-                                onClick = { showConfirmPassword = !showConfirmPassword },
-                                modifier = Modifier.focusProperties { canFocus = false }.testTag("login_confirm_password_toggle_visibility"),
-                            ) {
-                                Icon(
-                                    if (showConfirmPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    contentDescription = if (showConfirmPassword) packStringResource(Res.string.common_hide_password)
-                                        else packStringResource(Res.string.common_show_password),
-                                )
+                            RwTooltip(tooltip = if (showConfirmPassword) packStringResource(Res.string.common_hide_password) else packStringResource(Res.string.common_show_password)) {
+                                RwIconButton(
+                                    onClick = { showConfirmPassword = !showConfirmPassword },
+                                    modifier = Modifier.focusProperties { canFocus = false }.testTag("login_confirm_password_toggle_visibility"),
+                                ) {
+                                    Icon(
+                                        if (showConfirmPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                        contentDescription = if (showConfirmPassword) packStringResource(Res.string.common_hide_password)
+                                            else packStringResource(Res.string.common_show_password),
+                                    )
+                                }
                             }
                         },
                         modifier = Modifier
@@ -194,10 +207,8 @@ fun LoginScreen(
                     )
                 }
 
-                val currentError = error
-                Box(
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 20.dp),
-                ) {
+                AnimatedVisibility(visible = error != null) {
+                    val currentError = error
                     if (currentError != null) {
                         Text(
                             text = currentError.resolve(),

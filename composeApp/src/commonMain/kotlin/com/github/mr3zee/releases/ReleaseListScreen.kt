@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.RocketLaunch
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -287,7 +288,7 @@ fun ReleaseListScreen(
                     modifier = Modifier
                         .widthIn(max = 1200.dp)
                         .padding(horizontal = Spacing.lg)
-                        .padding(top = Spacing.xs),
+                        .padding(top = Spacing.sm),
                 )
                 Row(
                     modifier = Modifier
@@ -331,6 +332,13 @@ fun ReleaseListScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Default.Warning,
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                        )
+                        Spacer(modifier = Modifier.height(Spacing.md))
                         Text(
                             text = error?.resolve() ?: packStringResource(Res.string.common_unknown_error),
                             color = MaterialTheme.colorScheme.error,
@@ -409,6 +417,9 @@ fun ReleaseListScreen(
                     }
                 }
             } else {
+                val projectNameMap = remember(projects) {
+                    projects.associate { it.id to it.name }
+                }
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -419,6 +430,7 @@ fun ReleaseListScreen(
                     items(releases, key = { it.id.value }) { release ->
                         ReleaseListItem(
                             release = release,
+                            projectName = projectNameMap[release.projectTemplateId],
                             onClick = { onViewRelease(release.id) },
                             onArchive = { releaseToArchive = release.id },
                             onDelete = { releaseToDelete = release.id },
@@ -513,6 +525,7 @@ private fun StartReleaseInlineForm(
                     onValueChange = {},
                     readOnly = true,
                     label = packStringResource(Res.string.start_release_project_label),
+                    placeholder = packStringResource(Res.string.start_release_select_project),
                     trailingIcon = {
                         Icon(
                             Icons.Default.ArrowDropDown,
@@ -550,12 +563,20 @@ private fun StartReleaseInlineForm(
 @Composable
 private fun ReleaseListItem(
     release: Release,
+    projectName: String?,
     onClick: () -> Unit,
     onArchive: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    val displayName = projectName ?: release.projectTemplateId.value.take(8)
+    val startedAt = release.startedAt
+    val title = if (startedAt != null) {
+        "$displayName — ${formatTimestamp(startedAt)}"
+    } else {
+        displayName
+    }
 
     ListItemCard(
         onClick = onClick,
@@ -563,24 +584,14 @@ private fun ReleaseListItem(
         modifier = modifier,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            RwTooltip(tooltip = release.id.value) {
+            RwTooltip(tooltip = packStringResource(Res.string.releases_release_id_tooltip, release.id.value)) {
                 Text(
-                    text = packStringResource(Res.string.releases_release_title, release.id.value.take(8)),
+                    text = title,
                     style = AppTypography.subheading,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            RwTooltip(tooltip = release.projectTemplateId.value) {
-                Text(
-                    text = packStringResource(Res.string.releases_project_label, release.projectTemplateId.value.take(8)),
-                    style = AppTypography.body,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            val startedAt = release.startedAt
             if (startedAt != null) {
                 Text(
                     text = packStringResource(Res.string.releases_started_label, formatTimestamp(startedAt)),

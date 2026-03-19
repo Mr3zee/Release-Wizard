@@ -304,7 +304,7 @@ private fun TeamListItem(
     ListItemCard(
         onClick = if (isMember) onClick else null,
         testTag = "team_item_${teamResponse.team.id.value}",
-        modifier = modifier,
+        modifier = if (!isMember) modifier.alpha(0.7f) else modifier,
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
