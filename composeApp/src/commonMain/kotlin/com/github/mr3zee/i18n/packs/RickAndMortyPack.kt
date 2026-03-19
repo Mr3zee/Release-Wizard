@@ -30,6 +30,7 @@ object RickAndMortyPack {
             "common_saving" to "Saving across dimensions...",
             "common_unknown_error" to "Oh geez, I-I don't know what happened",
             "common_unsaved_message" to "You've got unsaved changes, Morty. Wanna *burp* throw them away?",
+            "common_danger_zone" to "*Burp* Danger Zone, Morty!",
             "common_unsaved_title" to "Unsaved *burp* Changes",
             "auth_app_title" to "Release Wizard \u2014 Interdimensional Edition",
             "auth_create_account" to "Create an *burp* account, Morty",

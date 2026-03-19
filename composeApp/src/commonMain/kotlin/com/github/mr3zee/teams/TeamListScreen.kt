@@ -28,7 +28,7 @@ import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
-import com.github.mr3zee.theme.AppShapes
+import com.github.mr3zee.components.RwBadge
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.resolve
@@ -293,17 +293,11 @@ private fun TeamListItem(
             )
         }
         if (isMember) {
-            Surface(
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                shape = AppShapes.pill,
-            ) {
-                Text(
-                    packStringResource(Res.string.teams_member_badge),
-                    style = AppTypography.label,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.xs),
-                )
-            }
+            RwBadge(
+                text = packStringResource(Res.string.teams_member_badge),
+                color = MaterialTheme.colorScheme.primary,
+                testTag = "member_badge_${teamResponse.team.id.value}",
+            )
         } else {
             RwButton(onClick = onJoinRequest, variant = RwButtonVariant.Ghost) {
                 Text(packStringResource(Res.string.teams_request_to_join))

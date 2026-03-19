@@ -21,7 +21,7 @@ import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.model.*
-import com.github.mr3zee.theme.AppShapes
+import com.github.mr3zee.components.RwBadge
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.displayName
@@ -376,18 +376,11 @@ private fun ManageMemberItem(
             )
         }
         if (isCurrentUser) {
-            Surface(
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f),
-                shape = AppShapes.pill,
-                modifier = Modifier.testTag("you_badge_${member.userId.value}"),
-            ) {
-                Text(
-                    packStringResource(Res.string.teams_you_badge),
-                    style = AppTypography.label,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.xs),
-                )
-            }
+            RwBadge(
+                text = packStringResource(Res.string.teams_you_badge),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                testTag = "you_badge_${member.userId.value}",
+            )
         } else {
             RwButton(
                 onClick = onToggleRole,

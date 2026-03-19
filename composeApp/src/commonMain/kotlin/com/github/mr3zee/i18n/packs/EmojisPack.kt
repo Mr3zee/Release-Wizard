@@ -30,6 +30,7 @@ object EmojisPack {
             "common_saving" to "\ud83d\udcbe\u23f3",
             "common_unknown_error" to "\u2753\ud83d\udc80\u2753",
             "common_unsaved_message" to "\u26a0\ufe0f\ud83d\udcbe\u274c\ud83d\uddd1\ufe0f\u2753",
+            "common_danger_zone" to "\u26a0\ufe0f\ud83d\udd25\u2620\ufe0f",
             "common_unsaved_title" to "\u26a0\ufe0f\ud83d\udcbe",
             "auth_app_title" to "\ud83e\uddd9\u2728\ud83d\ude80",
             "auth_create_account" to "\ud83d\udcdd\ud83c\udd95\ud83d\udc64",

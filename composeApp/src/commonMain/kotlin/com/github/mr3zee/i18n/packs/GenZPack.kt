@@ -30,6 +30,7 @@ object GenZPack {
             "common_saving" to "Saving rn...",
             "common_unknown_error" to "Idk what happened fr fr",
             "common_unsaved_message" to "Bestie you have unsaved changes. Just throw them away?",
+            "common_danger_zone" to "Danger Zone Fr Fr",
             "common_unsaved_title" to "Unsaved Vibes",
             "auth_app_title" to "Release Wizard Era",
             "auth_create_account" to "Start your main character arc",

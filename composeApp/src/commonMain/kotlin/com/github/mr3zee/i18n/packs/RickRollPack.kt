@@ -30,6 +30,7 @@ object RickRollPack {
             "common_saving" to "I just wanna tell you how I'm saving...",
             "common_unknown_error" to "We've known each other for so long but this error is a stranger",
             "common_unsaved_message" to "Your heart's been aching but you have unsaved changes. Desert them?",
+            "common_danger_zone" to "Never Gonna Be Safe Zone",
             "common_unsaved_title" to "You Know the Rules",
             "auth_app_title" to "Release Wizard (Never Gonna Give You Up Edition)",
             "auth_create_account" to "We're no strangers to love \u2014 create an account",

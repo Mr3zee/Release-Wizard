@@ -30,6 +30,7 @@ object HelldiversPack {
             "common_saving" to "Securing objective...",
             "common_unknown_error" to "Unknown combat inefficiency. Command is investigating.",
             "common_unsaved_message" to "You have unsecured changes, Helldiver. Abandon them?",
+            "common_danger_zone" to "Hostile Engagement Zone",
             "common_unsaved_title" to "Unsecured Tactical Data",
             "auth_app_title" to "Release Wizard \u2014 For Super Earth!",
             "auth_create_account" to "Enlist for Managed Democracy",

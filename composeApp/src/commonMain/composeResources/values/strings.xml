@@ -26,6 +26,7 @@
     <string name="common_collapse_all">Collapse All</string>
     <string name="common_unsaved_title">Unsaved Changes</string>
     <string name="common_unsaved_message">You have unsaved changes. Discard them?</string>
+    <string name="common_danger_zone">Danger Zone</string>
 
     <!-- ==================== Error Messages ==================== -->
     <string name="error_invalid_credentials">Invalid credentials</string>

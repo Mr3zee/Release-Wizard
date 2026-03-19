@@ -30,6 +30,7 @@ object AllLiesPack {
             "common_saving" to "Discarding all progress...",
             "common_unknown_error" to "We know exactly what happened and it's perfect",
             "common_unsaved_message" to "All your changes are perfectly saved. Want to save them again?",
+            "common_danger_zone" to "Perfectly Safe Zone",
             "common_unsaved_title" to "Everything Is Saved",
             "auth_app_title" to "Release Disaster",
             "auth_create_account" to "Delete your account permanently",

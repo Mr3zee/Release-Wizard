@@ -5,33 +5,25 @@ Organized into 3 phases by dependency. Within each phase, all steps run in paral
 
 ---
 
-## Phase 1 — Component Infrastructure
+## Phase 1 — Component Infrastructure ✅
 
 Foundation changes that later phases depend on. All 3 steps are independent.
 
-### Step 1A: Add `leadingIcon` to `RwTextField`
+### Step 1A: Add `leadingIcon` to `RwTextField` ✅
 
-Multiple screens need a search icon in their search bars. `RwTextField` only supports `trailingIcon` today.
+- Added `leadingIcon: @Composable (() -> Unit)? = null` parameter
+- Renders before text area with `Spacing.sm` gap, respects `isError` state
 
-- Add a `leadingIcon: @Composable (() -> Unit)? = null` parameter to `RwTextField`
-- Render it inside the input row before the text area with `Spacing.sm` gap
-- Adjust internal horizontal padding so the leading icon sits inside the field border
+### Step 1B: Add `RwDangerZone` component ✅
 
-### Step 1B: Add `RwDangerZone` component
+- Created `RwDangerZone` composable with error-tinted background/border and "Danger Zone" label
+- Added `common_danger_zone` string resource + all 6 language pack overrides
 
-Team Manage's "Delete Team" and similar irreversible actions need a visually distinct treatment.
+### Step 1C: Add `RwBadge` component ✅
 
-- Create `RwDangerZone` composable: a card/section with a subtle error-tinted background, a "Danger Zone" label, and a slot for content (typically a description + a destructive button)
-- Use `error.copy(alpha = 0.08f)` background with `error.copy(alpha = 0.3f)` border
-- Reusable anywhere a permanent destructive action exists
-
-### Step 1C: Add `RwBadge` component
-
-Role labels, category tags, and invite counts use inconsistent styling. Unify into one component.
-
-- Create `RwBadge(text, color, modifier)` — a pill-shaped `Surface` with tinted background + colored text
-- Variants: `default` (primary tint), `role` (accent tint), `count` (small circular badge for notification dots)
-- Replace ad-hoc badge implementations in Teams List ("Member"), Team Detail ("Lead"), Audit Log ("Team")
+- Created `RwBadge(text, color, modifier, testTag)` — pill-shaped `Surface` with 15% alpha tinted background + colored text
+- Replaced ad-hoc badge in Teams List ("Member") and Team Manage ("You") with `RwBadge`
+- 8 UI tests added in `Phase1ComponentsTest.kt`
 
 ---
 

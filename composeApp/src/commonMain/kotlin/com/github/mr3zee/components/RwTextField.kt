@@ -9,8 +9,10 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -32,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import com.github.mr3zee.theme.AppShapes
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.LocalAppColors
+import com.github.mr3zee.theme.Spacing
 
 /**
  * Custom text field replacing M3 OutlinedTextField.
@@ -51,6 +54,7 @@ fun RwTextField(
     textStyle: TextStyle = AppTypography.body,
     label: String? = null,
     placeholder: String? = null,
+    leadingIcon: @Composable (() -> Unit)? = null,
     trailingIcon: @Composable (() -> Unit)? = null,
     isError: Boolean = false,
     supportingText: @Composable (() -> Unit)? = null,
@@ -111,6 +115,13 @@ fun RwTextField(
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    if (leadingIcon != null) {
+                        val iconColor = if (isError) MaterialTheme.colorScheme.error else colors.chromeTextTertiary
+                        CompositionLocalProvider(LocalContentColor provides iconColor) {
+                            leadingIcon()
+                        }
+                        Spacer(modifier = Modifier.width(Spacing.sm))
+                    }
                     Box(modifier = Modifier.weight(1f)) {
                         if (value.isEmpty() && placeholder != null) {
                             Text(
