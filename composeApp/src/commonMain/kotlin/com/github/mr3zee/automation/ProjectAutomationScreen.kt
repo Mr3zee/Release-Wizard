@@ -28,6 +28,7 @@ import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwInlineConfirmation
 import com.github.mr3zee.components.RwInlineForm
 import com.github.mr3zee.components.RwTextField
+import com.github.mr3zee.i18n.packPluralStringResource
 import com.github.mr3zee.i18n.packStringResource
 import com.github.mr3zee.model.MavenTrigger
 import com.github.mr3zee.model.Schedule
@@ -75,10 +76,11 @@ private fun isValidCron(expression: String): Boolean {
         validField(parts[4], 0, 6)         // day of week
 }
 
+@Composable
 private fun cronDescription(expression: String): String? = when (expression.trim()) {
-    "0 9 * * *"   -> "Every day at 9:00 AM"
-    "0 9 * * 1-5" -> "Every weekday (Mon-Fri) at 9:00 AM"
-    "0 12 * * 1"  -> "Every Monday at 12:00 PM"
+    "0 9 * * *"   -> packStringResource(Res.string.schedule_preset_daily)
+    "0 9 * * 1-5" -> packStringResource(Res.string.schedule_preset_weekdays)
+    "0 12 * * 1"  -> packStringResource(Res.string.schedule_preset_monday)
     else -> null
 }
 
@@ -605,7 +607,7 @@ private fun CreateMavenTriggerInlineForm(
             placeholder = packStringResource(Res.string.maven_repo_url_hint),
             isError = repoUrlInvalid,
             supportingText = if (repoUrlInvalid) {
-                { Text("Must start with http:// or https://") }
+                { Text(packStringResource(Res.string.maven_url_validation_error)) }
             } else null,
             singleLine = true,
             modifier = Modifier.fillMaxWidth().testTag("maven_repo_url_field"),
@@ -787,13 +789,23 @@ private fun MavenTriggerItem(
     }
 }
 
+@Composable
 private fun formatRelativeTime(instant: kotlin.time.Instant): String {
     val now = Clock.System.now()
     val diff = now - instant
     return when {
-        diff.inWholeMinutes < 1 -> "just now"
-        diff.inWholeMinutes < 60 -> "${diff.inWholeMinutes} min ago"
-        diff.inWholeHours < 24 -> "${diff.inWholeHours} hr ago"
-        else -> "${diff.inWholeDays} days ago"
+        diff.inWholeMinutes < 1 -> packStringResource(Res.string.automation_checked_just_now)
+        diff.inWholeMinutes < 60 -> {
+            val minutes = diff.inWholeMinutes.toInt()
+            packPluralStringResource(Res.plurals.automation_checked_minutes_ago, minutes, minutes)
+        }
+        diff.inWholeHours < 24 -> {
+            val hours = diff.inWholeHours.toInt()
+            packPluralStringResource(Res.plurals.automation_checked_hours_ago, hours, hours)
+        }
+        else -> {
+            val days = diff.inWholeDays.toInt()
+            packPluralStringResource(Res.plurals.automation_checked_days_ago, days, days)
+        }
     }
 }

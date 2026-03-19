@@ -421,4 +421,65 @@
     <string name="maven_created_message">Only newly published versions will trigger releases.</string>
     <string name="maven_last_checked_label">Last checked</string>
     <string name="maven_last_checked_never">Never</string>
+    <string name="automation_checked_just_now">just now</string>
+    <string name="maven_url_validation_error">Must start with http:// or https://</string>
+
+    <!-- ==================== Editor: Refresh Content Descriptions ==================== -->
+    <string name="editor_refresh_parameters">Refresh parameters</string>
+    <string name="editor_refresh_configurations">Refresh configurations</string>
+
+    <!-- ==================== Audit: Action Display Names ==================== -->
+    <string name="audit_action_team_created">Team created</string>
+    <string name="audit_action_team_updated">Team updated</string>
+    <string name="audit_action_team_deleted">Team deleted</string>
+    <string name="audit_action_member_joined">Member joined</string>
+    <string name="audit_action_member_left">Member left</string>
+    <string name="audit_action_member_removed">Member removed</string>
+    <string name="audit_action_member_role_changed">Member role changed</string>
+    <string name="audit_action_invite_sent">Invite sent</string>
+    <string name="audit_action_invite_accepted">Invite accepted</string>
+    <string name="audit_action_invite_declined">Invite declined</string>
+    <string name="audit_action_invite_cancelled">Invite cancelled</string>
+    <string name="audit_action_join_request_submitted">Join request submitted</string>
+    <string name="audit_action_join_request_approved">Join request approved</string>
+    <string name="audit_action_join_request_rejected">Join request rejected</string>
+    <string name="audit_action_project_created">Project created</string>
+    <string name="audit_action_project_updated">Project updated</string>
+    <string name="audit_action_project_deleted">Project deleted</string>
+    <string name="audit_action_release_started">Release started</string>
+    <string name="audit_action_release_cancelled">Release cancelled</string>
+    <string name="audit_action_release_rerun">Release rerun</string>
+    <string name="audit_action_release_archived">Release archived</string>
+    <string name="audit_action_release_deleted">Release deleted</string>
+    <string name="audit_action_release_stopped">Release stopped</string>
+    <string name="audit_action_release_resumed">Release resumed</string>
+    <string name="audit_action_block_restarted">Block restarted</string>
+    <string name="audit_action_block_approved">Block approved</string>
+    <string name="audit_action_block_stopped">Block stopped</string>
+    <string name="audit_action_connection_created">Connection created</string>
+    <string name="audit_action_connection_updated">Connection updated</string>
+    <string name="audit_action_connection_deleted">Connection deleted</string>
+    <string name="audit_action_schedule_created">Schedule created</string>
+    <string name="audit_action_schedule_updated">Schedule updated</string>
+    <string name="audit_action_schedule_deleted">Schedule deleted</string>
+    <string name="audit_action_trigger_created">Trigger created</string>
+    <string name="audit_action_trigger_updated">Trigger updated</string>
+    <string name="audit_action_trigger_deleted">Trigger deleted</string>
+    <string name="audit_action_trigger_fired">Trigger fired</string>
+    <string name="audit_action_tag_renamed">Tag renamed</string>
+    <string name="audit_action_tag_deleted">Tag deleted</string>
+    <string name="audit_action_lock_force_released">Lock forcibly released</string>
+    <string name="audit_action_user_login">User logged in</string>
+    <string name="audit_action_user_register">User registered</string>
+
+    <!-- ==================== Audit: Target Type Display Names ==================== -->
+    <string name="audit_target_team">Team</string>
+    <string name="audit_target_user">User</string>
+    <string name="audit_target_project">Project</string>
+    <string name="audit_target_release">Release</string>
+    <string name="audit_target_block">Block</string>
+    <string name="audit_target_connection">Connection</string>
+    <string name="audit_target_schedule">Schedule</string>
+    <string name="audit_target_trigger">Trigger</string>
+    <string name="audit_target_tag">Tag</string>
 </resources>

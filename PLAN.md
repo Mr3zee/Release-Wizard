@@ -95,35 +95,20 @@ All items fixed, reviewed by UX/Design/Compose/Tech Writer/QA experts, 311/311 C
 
 ---
 
-## Phase 7: Internationalization Fixes
+## Phase 7: Internationalization Fixes ✅
 
-**Goal:** Replace all hardcoded English strings with string resources. Add language pack overrides.
+**Status:** Complete
 
-### 7A. Fix formatRelativeTime in automation screen
-- **File:** `ProjectAutomationScreen.kt:450-458`
-- **Fix:** Use `packStringResource`/`packPluralStringResource` (same pattern as `ReleaseListScreen:96-112`).
+All items fixed (7D dropped by expert review), reviewed by UX/Design/Compose/Tech Writer/QA experts, 311/311 Compose tests pass, UI verified across English/GenZ/Helldivers packs.
 
-### 7B. Localize cron preset hints
-- **File:** `CreateScheduleDialog.kt:40-43`
-- **Fix:** Replace hardcoded "Every day at 9:00 AM" etc. with string resources.
+- **7A.** Converted `formatRelativeTime` to `@Composable` with `packPluralStringResource` for "just now"/"X minutes ago"/"X hours ago"/"X days ago"
+- **7B.** Converted `cronDescription` to `@Composable`, reuses existing `schedule_preset_*` keys
+- **7C.** Replaced hardcoded Maven URL validation error with `packStringResource(Res.string.maven_url_validation_error)`
+- **7D.** DROPPED — Expert consensus: default block names persist to DB, should stay English
+- **7E.** Replaced hardcoded "Refresh parameters"/"Refresh configurations" contentDescriptions with string resources
+- **7F.** Added `AuditAction.displayName()` (42 values) and `AuditTargetType.displayName()` (9 values) composable extensions; overflow guard on target type Text
 
-### 7C. Localize Maven trigger validation error
-- **File:** `CreateMavenTriggerDialog.kt:51`
-- **Fix:** Replace `"Must start with http:// or https://"` with string resource.
-
-### 7D. Localize default block names
-- **File:** `EditorToolbar.kt:77, 167-172`
-- **Fix:** Pass string resource keys into the block creation functions, or make `defaultBlockName()` composable.
-
-### 7E. Localize icon contentDescriptions in BlockPropertiesPanel
-- **File:** `BlockPropertiesPanel.kt:359, 508`
-- **Fix:** Replace hardcoded "Refresh parameters"/"Refresh configurations" with string resources.
-
-### 7F. Localize audit event action names
-- **File:** `AuditLogScreen.kt:125`
-- **Fix:** Map action enum values to string resources instead of `name.replace("_", " ")`.
-
-**Note:** Per CLAUDE.md, every new string resource must have themed overrides in all 6 language packs.
+55 new string resources + 3 new plural resources, all with themed overrides in 6 language packs.
 
 ---
 

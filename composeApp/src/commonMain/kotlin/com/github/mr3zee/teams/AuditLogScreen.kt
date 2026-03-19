@@ -26,6 +26,7 @@ import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import com.github.mr3zee.i18n.packStringResource
+import com.github.mr3zee.util.displayName
 import releasewizard.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -163,17 +164,18 @@ private fun AuditEventItem(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
-                    event.action.name.replace("_", " ").lowercase()
-                        .replaceFirstChar { it.uppercase() },
+                    event.action.displayName(),
                     style = AppTypography.heading,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
                 Text(
-                    event.targetType.name.lowercase(),
+                    event.targetType.displayName(),
                     style = AppTypography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
             Spacer(modifier = Modifier.height(Spacing.xs))

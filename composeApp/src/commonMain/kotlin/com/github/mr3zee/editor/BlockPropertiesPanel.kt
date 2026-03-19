@@ -359,7 +359,7 @@ private fun ActionBlockProperties(
                     enabled = enabled && !currentConfigId.isNullOrBlank(),
                     modifier = Modifier.testTag("refresh_parameters_button"),
                 ) {
-                    Icon(Icons.Default.Refresh, contentDescription = "Refresh parameters", modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.Refresh, contentDescription = packStringResource(Res.string.editor_refresh_parameters), modifier = Modifier.size(16.dp))
                 }
             }
         }
@@ -518,7 +518,7 @@ private fun ExternalConfigSelector(
                 enabled = enabled,
                 modifier = Modifier.testTag("refresh_configs_button"),
             ) {
-                Icon(Icons.Default.Refresh, contentDescription = "Refresh configurations", modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.Refresh, contentDescription = packStringResource(Res.string.editor_refresh_configurations), modifier = Modifier.size(16.dp))
             }
         }
     }
@@ -655,8 +655,7 @@ private fun SingleGateEditor(
                     predecessors = predecessors,
                     onSelect = { expr ->
                         message = insertExpressionSafely(message, expr)
-                        val currentGate = gate ?: Gate()
-                        onUpdate(currentGate.copy(message = message))
+                        onUpdate(gate.copy(message = message))
                         showTemplatePicker = false
                     },
                     onDismiss = { showTemplatePicker = false },
