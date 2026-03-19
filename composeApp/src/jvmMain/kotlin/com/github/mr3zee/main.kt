@@ -15,9 +15,10 @@ import java.awt.Dimension
 @OptIn(ExperimentalTestApi::class)
 fun main() {
     if (System.getenv("COMPOSE_UI_TEST_SERVER_ENABLED") == "true") {
+        val port = System.getenv("COMPOSE_UI_TEST_SERVER_PORT")?.toIntOrNull() ?: 54345
         runComposeUiTest {
             setContent { App() }
-            ComposeUiTestServer(this, ComposeUiTestServerConfig()).start().awaitTermination()
+            ComposeUiTestServer(this, ComposeUiTestServerConfig(port = port)).start().awaitTermination()
         }
     } else {
         application {
