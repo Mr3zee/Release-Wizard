@@ -59,11 +59,11 @@ fun DagEditorScreen(
 
     val appColors = LocalAppColors.current
 
-    var showDiscardDialog by remember { mutableStateOf(false) }
+    var pendingDiscardNavigation by remember { mutableStateOf<(() -> Unit)?>(null) }
     var showForceUnlockDialog by remember { mutableStateOf(false) }
-    var showLockLostDiscardDialog by remember { mutableStateOf(false) }
+    var pendingLockLostNavigation by remember { mutableStateOf<(() -> Unit)?>(null) }
 
-    val isConfirmationVisible = showDiscardDialog || showLockLostDiscardDialog || showForceUnlockDialog
+    val isConfirmationVisible = pendingDiscardNavigation != null || pendingLockLostNavigation != null || showForceUnlockDialog
 
     val snackbarHostState = remember { SnackbarHostState() }
     val dismissLabel = packStringResource(Res.string.common_dismiss)
@@ -92,21 +92,24 @@ fun DagEditorScreen(
 
     val currentIsDirty by rememberUpdatedState(isDirty)
     val currentLockState by rememberUpdatedState(lockState)
-    val handleBack: () -> Unit = remember(onBack) {
-        {
+    val currentIsSaving by rememberUpdatedState(isSaving)
+    val guardedNavigate: (() -> Unit) -> Unit = remember {
+        { destination ->
             when {
+                currentIsSaving -> { /* block navigation while save is in-flight */ }
                 currentLockState is LockState.LockLost && currentIsDirty -> {
-                    showLockLostDiscardDialog = true
+                    pendingLockLostNavigation = destination
                 }
                 currentIsDirty -> {
-                    showDiscardDialog = true
+                    pendingDiscardNavigation = destination
                 }
                 else -> {
-                    onBack()
+                    destination()
                 }
             }
         }
     }
+    val handleBack: () -> Unit = remember(onBack) { { guardedNavigate(onBack) } }
 
     CompositionLocalProvider(
         LocalShortcutActions provides ShortcutActions(
@@ -147,7 +150,7 @@ fun DagEditorScreen(
                     }
                     if (onOpenAutomation != null) {
                         RwButton(
-                            onClick = onOpenAutomation,
+                            onClick = { guardedNavigate(onOpenAutomation) },
                             variant = RwButtonVariant.Ghost,
                             modifier = Modifier.testTag("automation_button"),
                         ) {
@@ -253,31 +256,33 @@ fun DagEditorScreen(
 
             // Inline confirmation banners
             RwInlineConfirmation(
-                visible = showDiscardDialog,
+                visible = pendingDiscardNavigation != null,
                 message = packStringResource(Res.string.common_unsaved_message),
                 confirmLabel = packStringResource(Res.string.common_discard),
                 onConfirm = {
-                    showDiscardDialog = false
-                    onBack()
+                    val nav = pendingDiscardNavigation
+                    pendingDiscardNavigation = null
+                    nav?.invoke()
                 },
-                onDismiss = { showDiscardDialog = false },
+                onDismiss = { pendingDiscardNavigation = null },
                 isDestructive = true,
                 testTag = "discard_confirm",
                 modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
             )
 
             RwInlineConfirmation(
-                visible = showLockLostDiscardDialog,
+                visible = pendingLockLostNavigation != null,
                 message = packStringResource(Res.string.editor_dialog_lock_expired_body),
                 confirmLabel = packStringResource(Res.string.editor_dialog_lock_expired_discard),
                 onConfirm = {
-                    showLockLostDiscardDialog = false
-                    onBack()
+                    val nav = pendingLockLostNavigation
+                    pendingLockLostNavigation = null
+                    nav?.invoke()
                 },
-                onDismiss = { showLockLostDiscardDialog = false },
+                onDismiss = { pendingLockLostNavigation = null },
                 isDestructive = true,
                 extraAction = Pair(packStringResource(Res.string.editor_dialog_reacquire_save)) {
-                    showLockLostDiscardDialog = false
+                    pendingLockLostNavigation = null
                     viewModel.reacquireAndSave()
                 },
                 testTag = "lock_lost_confirm",

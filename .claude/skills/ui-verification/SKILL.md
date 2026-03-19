@@ -8,14 +8,30 @@ argument-hint: "[screen or area to verify]"
 
 Runs the full Release Wizard stack and provides interactive UI control via HTTP for visual verification.
 
+## Parallel Execution
+
+Multiple agents may run UI verification simultaneously. **Always use unique ports** to avoid clashes. Pick a port set based on your worktree name or a random suffix:
+
+| Service | Default Port | Env Var to Override |
+|---------|-------------|---------------------|
+| PostgreSQL (Docker) | 5432 | Docker `-p` flag |
+| Ktor Server | 8080 | `PORT` |
+| Compose UI Test Server | 54345 | `COMPOSE_UI_TEST_SERVER_PORT` (native lib support) |
+| Compose → Server HTTP URL | http://localhost:8080 | `SERVER_URL` |
+| Compose → Server WS URL | ws://localhost:8080 | `SERVER_WS_URL` |
+
+Example port sets: `5432/8080/54345` (default), `5433/8081/54346`, `5434/8082/54347`.
+
+**IMPORTANT:** Never use `./gradlew --stop` — it kills Gradle daemons for ALL worktrees, crashing other agents' running servers. Use `nohup` for background Gradle processes and kill by PID when done.
+
 ## Environment Setup
 
-Follow these steps in order. Each step must succeed before proceeding.
+Follow these steps in order. Each step must succeed before proceeding. The examples below use default ports — replace with your unique ports when running in parallel.
 
 ### Step 1: Start PostgreSQL in Docker
 
 ```bash
-# Check if the container already exists and is running
+# Use a unique container name and port when running in parallel
 docker ps --filter name=rw-postgres --format '{{.Status}}' | grep -q Up && echo "Already running" || \
 docker run -d \
   --name rw-postgres \
@@ -34,13 +50,14 @@ for i in $(seq 1 30); do
 done
 ```
 
-If port 5432 is already in use by a host PostgreSQL, either stop it first (`brew services stop postgresql@14`) or use a different port (`-p 5433:5432`) and update `DB_URL` accordingly.
+If port 5432 is already in use, use a different port (`-p 5433:5432`) and update `DB_URL` accordingly.
 
 ### Step 2: Start the Ktor Server
 
-Run in the background with dev-friendly env vars:
+Run in the background with `nohup` and dev-friendly env vars:
 
 ```bash
+PORT=8080 \
 AUTH_SESSION_SIGN_KEY="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" \
 ENCRYPTION_KEY="0123456789abcdef0123456789abcdef" \
 PASSWORD_MIN_LENGTH=4 \
@@ -52,7 +69,7 @@ DB_USER=postgres \
 DB_PASSWORD=postgres \
 DB_URL="jdbc:postgresql://localhost:5432/release_wizard" \
 CORS_ALLOWED_ORIGIN_1="http://localhost:8080" \
-./gradlew :server:run &
+nohup ./gradlew :server:run > /tmp/rw_server.log 2>&1 &
 ```
 
 Wait for the server to respond:
@@ -66,7 +83,11 @@ done
 ### Step 3: Start the Compose Desktop App
 
 ```bash
-COMPOSE_UI_TEST_SERVER_ENABLED=true ./gradlew :composeApp:run &
+COMPOSE_UI_TEST_SERVER_ENABLED=true \
+COMPOSE_UI_TEST_SERVER_PORT=54345 \
+SERVER_URL=http://localhost:8080 \
+SERVER_WS_URL=ws://localhost:8080 \
+nohup ./gradlew :composeApp:run > /tmp/rw_compose.log 2>&1 &
 ```
 
 Wait for the compose-ui-test-server:
@@ -224,11 +245,11 @@ curl -s "http://localhost:54345/onNodeWithText/Back/performClick"
 
 ## Cleanup
 
-When done, stop all services:
+When done, stop services by PID (never use `./gradlew --stop`):
 
 ```bash
-# Stop Gradle daemons (server + app)
-./gradlew --stop
+# Find and kill the server and app Gradle processes for this worktree
+ps aux | grep "gradlew" | grep "<worktree-name>" | grep -v grep | awk '{print $2}' | xargs kill 2>/dev/null
 
 # Stop and remove the PostgreSQL container
 docker stop rw-postgres && docker rm rw-postgres

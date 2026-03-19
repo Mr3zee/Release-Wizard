@@ -27,18 +27,21 @@ private sealed class HitTarget {
     data class EdgeHit(val index: Int) : HitTarget()
 }
 
-private fun hitTest(logicalPos: Offset, graph: DagGraph): HitTarget {
+private fun hitTest(logicalPos: Offset, graph: DagGraph, zoom: Float): HitTarget {
+    val portRadius = (PORT_HIT_RADIUS / zoom).coerceIn(7f, 28f)
+    val edgeThreshold = (8f / zoom).coerceIn(4f, 24f)
+
     // Check ports first (higher priority than blocks)
     for (block in graph.blocks) {
         val pos = graph.positions[block.id] ?: continue
 
         val outPort = Offset(pos.x + BLOCK_WIDTH, pos.y + BLOCK_HEIGHT / 2)
-        if ((logicalPos - outPort).getDistance() <= PORT_HIT_RADIUS) {
+        if ((logicalPos - outPort).getDistance() <= portRadius) {
             return HitTarget.OutputPort(block.id)
         }
 
         val inPort = Offset(pos.x, pos.y + BLOCK_HEIGHT / 2)
-        if ((logicalPos - inPort).getDistance() <= PORT_HIT_RADIUS) {
+        if ((logicalPos - inPort).getDistance() <= portRadius) {
             return HitTarget.InputPort(block.id)
         }
     }
@@ -59,7 +62,7 @@ private fun hitTest(logicalPos: Offset, graph: DagGraph): HitTarget {
         val toPos = graph.positions[edge.toBlockId] ?: continue
         val start = Offset(fromPos.x + BLOCK_WIDTH, fromPos.y + BLOCK_HEIGHT / 2)
         val end = Offset(toPos.x, toPos.y + BLOCK_HEIGHT / 2)
-        if (isNearBezier(logicalPos, start, end, threshold = 8f)) {
+        if (isNearBezier(logicalPos, start, end, threshold = edgeThreshold)) {
             return HitTarget.EdgeHit(index)
         }
     }
@@ -141,7 +144,7 @@ fun DagCanvas(
                             // Compute transform inline to avoid stale captures
                             val t = CanvasTransform(zoom, panOffset, density)
                             val logical = t.toLogical(pos)
-                            val hit = hitTest(logical, graph)
+                            val hit = hitTest(logical, graph, zoom)
                             hoveredPort = if (hit is HitTarget.InputPort || hit is HitTarget.OutputPort) hit else null
                         }
                     }
@@ -158,7 +161,7 @@ fun DagCanvas(
                         // Compute transform inline from current state
                         val downTransform = CanvasTransform(zoom, panOffset, density)
                         val logicalDown = downTransform.toLogical(downPos)
-                        val hit = hitTest(logicalDown, graph)
+                        val hit = hitTest(logicalDown, graph, zoom)
 
                         var prevPos = downPos
                         var wasDragged = false
@@ -196,7 +199,7 @@ fun DagCanvas(
                                         is HitTarget.OutputPort -> {
                                             val releaseTransform = CanvasTransform(zoom, panOffset, density)
                                             val releaseLogical = releaseTransform.toLogical(moveChange.position)
-                                            val releaseHit = hitTest(releaseLogical, graph)
+                                            val releaseHit = hitTest(releaseLogical, graph, zoom)
                                             if (releaseHit is HitTarget.InputPort) {
                                                 onAddEdge(hit.blockId, releaseHit.blockId)
                                             }

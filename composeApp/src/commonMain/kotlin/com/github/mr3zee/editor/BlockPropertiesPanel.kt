@@ -1,5 +1,7 @@
 package com.github.mr3zee.editor
 
+import androidx.compose.foundation.interaction.FocusInteraction
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -296,9 +298,10 @@ private fun ActionBlockProperties(
     RwTextField(
         value = timeoutText,
         onValueChange = { text ->
-            timeoutText = text
+            val filtered = text.filter { it.isDigit() }
+            timeoutText = filtered
             timeoutTouched = true
-            val seconds = text.toLongOrNull()
+            val seconds = filtered.toLongOrNull()
             onUpdateTimeout(block.id, seconds)
         },
         label = timeoutLabel,
@@ -425,6 +428,15 @@ private fun ExternalConfigSelector(
     }
     var dropdownExpanded by remember(selectedConfigId) { mutableStateOf(false) }
 
+    val interactionSource = remember { MutableInteractionSource() }
+    LaunchedEffect(interactionSource) {
+        interactionSource.interactions.collect { interaction ->
+            if (interaction is FocusInteraction.Focus && configs.isNotEmpty()) {
+                dropdownExpanded = true
+            }
+        }
+    }
+
     Text(packStringResource(Res.string.editor_config_selector), style = AppTypography.label)
 
     Row(
@@ -448,6 +460,7 @@ private fun ExternalConfigSelector(
                     else -> null
                 },
                 isError = error != null,
+                interactionSource = interactionSource,
                 modifier = Modifier.fillMaxWidth().testTag("config_selector_field"),
                 textStyle = AppTypography.bodySmall,
             )
@@ -656,8 +669,9 @@ private fun SingleGateEditor(
         RwTextField(
             value = requiredCount,
             onValueChange = { text ->
-                requiredCount = text
-                val count = text.toIntOrNull()?.coerceAtLeast(1) ?: 1
+                val filtered = text.filter { it.isDigit() }
+                requiredCount = filtered
+                val count = filtered.toIntOrNull()?.coerceAtLeast(1) ?: 1
                 onUpdate(gate.copy(approvalRule = gate.approvalRule.copy(requiredCount = count)))
             },
             label = packStringResource(Res.string.editor_gate_required_approvals),

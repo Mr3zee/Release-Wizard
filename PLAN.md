@@ -31,29 +31,17 @@ Enter key submit, password visibility toggle, server-specific error messages. 6 
 
 ---
 
-## Phase 3: Editor Robustness
+## Phase 3: Editor Robustness ✅
 
-**Goal:** Fix editor navigation safety, input handling, and interaction issues.
+**Status:** Complete
 
-### 3A. Add unsaved-changes guard on "Automation" navigation
-- **File:** `DagEditorScreen.kt:134-143`
-- **Fix:** Check `isDirty` before navigating, show discard dialog (same as Back button at line 88-102).
+Reviewed by UX/Design/Compose/QA experts, 306/306 Compose tests pass.
 
-### 3B. Add numeric filter to timeout field
-- **File:** `BlockPropertiesPanel.kt:296-313`
-- **Fix:** Add `KeyboardOptions(keyboardType = KeyboardType.Number)` and show error for non-numeric input.
-
-### 3C. Add click-to-open for external config selector dropdown
-- **File:** `BlockPropertiesPanel.kt:426`
-- **Fix:** Add `onClick = { dropdownExpanded = true }` modifier or a dropdown button.
-
-### 3D. Add scroll to validation errors dialog
-- **File:** `DagEditorScreen.kt:542-551`
-- **Fix:** Add `verticalScroll(rememberScrollState())` to the Column.
-
-### 3E. Scale edge hit testing threshold with zoom level
-- **File:** `DagCanvas.kt:62`
-- **Fix:** Divide threshold by current zoom scale: `8f / scale`.
+- **3A.** Replaced boolean dialog flags with nullable navigation lambdas; extracted `guardedNavigate` helper checking `isDirty`/`lockState`/`isSaving`; both Back and Automation buttons route through it
+- **3B.** Added `text.filter { it.isDigit() }` to timeout field and gate approval count field
+- **3C.** Added `FocusInteraction.Focus` collection via `interactionSource` to open config selector dropdown on focus
+- **3D.** Already done (scroll + heightIn already present) — skipped
+- **3E.** Added `zoom` parameter to `hitTest()`; port and edge thresholds scale inversely with zoom, clamped via `coerceIn` to prevent extremes
 
 ---
 
