@@ -17,7 +17,10 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import org.koin.ktor.ext.inject
+import org.slf4j.LoggerFactory
 import java.util.UUID
+
+private val log = LoggerFactory.getLogger("com.github.mr3zee.releases.ReleaseWebSocketRoutes")
 
 fun Route.releaseWebSocketRoutes() {
     val service by inject<ReleasesService>()
@@ -31,6 +34,7 @@ fun Route.releaseWebSocketRoutes() {
             if (origin != null && host != null) {
                 val originHost = try { java.net.URI(origin).host } catch (_: Exception) { null }
                 if (originHost != null && originHost != host.substringBefore(":")) {
+                    log.warn("Cross-origin WebSocket rejected: origin={}, host={}", origin, host)
                     close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Cross-origin WebSocket not allowed"))
                     return@webSocket
                 }
@@ -52,6 +56,7 @@ fun Route.releaseWebSocketRoutes() {
             val releaseId = ReleaseId(idParam)
             val release = service.getRelease(releaseId)
             if (release == null) {
+                log.warn("WebSocket connection rejected: release {} not found", idParam)
                 close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Release not found"))
                 return@webSocket
             }
@@ -64,9 +69,12 @@ fun Route.releaseWebSocketRoutes() {
             try {
                 service.checkAccess(releaseId, session)
             } catch (_: ForbiddenException) {
+                log.warn("WebSocket access denied for release {} by user {}", idParam, session.userId)
                 close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Access denied"))
                 return@webSocket
             }
+
+            log.debug("WebSocket connected for release {}", idParam)
 
             // Check for lastSeq query parameter for incremental replay
             val lastSeqParam = call.request.queryParameters["lastSeq"]?.toLongOrNull()

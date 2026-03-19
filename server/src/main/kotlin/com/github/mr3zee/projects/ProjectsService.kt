@@ -9,6 +9,7 @@ import com.github.mr3zee.connections.ConnectionsRepository
 import com.github.mr3zee.model.*
 import com.github.mr3zee.model.collectConnectionIds
 import com.github.mr3zee.teams.TeamAccessService
+import org.slf4j.LoggerFactory
 
 interface ProjectsService {
     suspend fun listProjects(session: UserSession, teamId: TeamId? = null, offset: Int = 0, limit: Int = 20, search: String? = null): Pair<List<ProjectTemplate>, Long>
@@ -26,6 +27,7 @@ class DefaultProjectsService(
     private val connectionsRepository: ConnectionsRepository,
     private val lockRepository: ProjectLockRepository,
 ) : ProjectsService {
+    private val log = LoggerFactory.getLogger(DefaultProjectsService::class.java)
 
     override suspend fun listProjects(session: UserSession, teamId: TeamId?, offset: Int, limit: Int, search: String?): Pair<List<ProjectTemplate>, Long> {
         return when {
@@ -60,6 +62,7 @@ class DefaultProjectsService(
             defaultTags = request.defaultTags,
         )
         auditService.log(request.teamId, session, AuditAction.PROJECT_CREATED, AuditTargetType.PROJECT, project.id.value, "Created project '${project.name}'")
+        log.info("Project created: {} (name='{}', team={})", project.id.value, project.name, request.teamId.value)
         return project
     }
 
@@ -68,9 +71,10 @@ class DefaultProjectsService(
         // Enforce lock ownership — reject update if another user holds the lock
         val activeLock = lockRepository.findActiveLock(id.value)
         if (activeLock != null && activeLock.userId != session.userId) {
+            log.warn("Project update rejected for {}: lock held by user {}", id.value, activeLock.userId)
             throw LockConflictException(activeLock)
         }
-        return repository.update(
+        val updated = repository.update(
             id = id,
             name = request.name,
             description = request.description,
@@ -78,6 +82,10 @@ class DefaultProjectsService(
             parameters = request.parameters,
             defaultTags = request.defaultTags,
         )
+        if (updated != null) {
+            log.info("Project updated: {}", id.value)
+        }
+        return updated
     }
 
     override suspend fun deleteProject(id: ProjectId, session: UserSession): Boolean {
@@ -86,6 +94,7 @@ class DefaultProjectsService(
             ?: throw NotFoundException("Project not found")
         val deleted = repository.delete(id)
         if (deleted) {
+            log.info("Project deleted: {} (team={})", id.value, teamId)
             auditService.log(TeamId(teamId), session, AuditAction.PROJECT_DELETED, AuditTargetType.PROJECT, id.value)
         }
         return deleted

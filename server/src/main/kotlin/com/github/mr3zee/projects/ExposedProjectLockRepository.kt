@@ -7,6 +7,7 @@ import kotlinx.coroutines.withContext
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
+import org.slf4j.LoggerFactory
 import java.util.UUID
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.minutes
@@ -15,6 +16,7 @@ class ExposedProjectLockRepository(
     private val db: Database,
     private val clock: Clock = Clock.System,
 ) : ProjectLockRepository {
+    private val log = LoggerFactory.getLogger(ExposedProjectLockRepository::class.java)
 
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
         withContext(Dispatchers.IO) { suspendTransaction(db) { block() } }
@@ -77,6 +79,7 @@ class ExposedProjectLockRepository(
             val sqlState = (e.cause as? java.sql.SQLException)?.sqlState
             if (sqlState != null && sqlState.startsWith("23")) {
                 // Concurrent insert won the race — lock is held by someone else
+                log.debug("Lock acquisition race lost for project {} by user {}", projectId, userId)
                 null
             } else {
                 throw e

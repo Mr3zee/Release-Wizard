@@ -14,7 +14,10 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
+import org.slf4j.LoggerFactory
 import java.util.UUID
+
+private val log = LoggerFactory.getLogger("com.github.mr3zee.triggers.TriggerRoutes")
 
 /**
  * Authenticated trigger CRUD routes (inside session-auth).
@@ -33,6 +36,7 @@ fun Route.triggerRoutes() {
             val projectId = call.requireProjectId()
             val request = call.receive<CreateTriggerRequest>()
             val trigger = service.create(projectId, request, call.userSession(), "")
+            log.info("Trigger created: {} for project {}", trigger.id, projectId.value)
             call.respond(HttpStatusCode.Created, trigger)
         }
 
@@ -58,6 +62,7 @@ fun Route.triggerRoutes() {
                 if (!deleted) {
                     throw NotFoundException("Trigger not found: $triggerId")
                 }
+                log.info("Trigger deleted: {}", triggerId)
                 call.respond(HttpStatusCode.NoContent)
             }
         }
@@ -93,8 +98,10 @@ fun Route.triggerWebhookRoutes() {
 
         val fired = service.fireWebhook(triggerId, secret)
         if (fired) {
+            log.info("Webhook fired for trigger {}", triggerId)
             call.respond(HttpStatusCode.OK, "Webhook triggered")
         } else {
+            log.warn("Webhook rejected for trigger {}: invalid trigger or secret", triggerId)
             call.respond(HttpStatusCode.Unauthorized, "Invalid trigger or secret")
         }
     }

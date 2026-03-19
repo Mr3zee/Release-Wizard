@@ -22,6 +22,7 @@ import kotlinx.coroutines.coroutineScope
 import org.yaml.snakeyaml.LoaderOptions
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.SafeConstructor
+import org.slf4j.LoggerFactory
 import java.net.InetAddress
 import java.net.URI
 
@@ -31,6 +32,7 @@ import java.net.URI
 class ConnectionTester(
     private val httpClient: HttpClient,
 ) {
+    private val log = LoggerFactory.getLogger(ConnectionTester::class.java)
     suspend fun test(config: ConnectionConfig): ConnectionTestResult = when (config) {
         is ConnectionConfig.SlackConfig -> testSlack(config)
         is ConnectionConfig.TeamCityConfig -> testTeamCity(config)
@@ -54,13 +56,17 @@ class ConnectionTester(
                 header("Accept", "application/json")
             }
             if (response.status.isSuccess()) {
+                log.debug("TeamCity connection test succeeded for {}", config.serverUrl)
                 ConnectionTestResult(success = true, message = "Connected to TeamCity server")
             } else {
+                log.warn("TeamCity connection test failed for {}: HTTP {}", config.serverUrl, response.status)
                 ConnectionTestResult(success = false, message = "TeamCity returned ${response.status}")
             }
         } catch (e: IllegalArgumentException) {
+            log.warn("TeamCity connection test rejected: {}", e.message)
             ConnectionTestResult(success = false, message = e.message ?: "Invalid URL")
         } catch (e: Exception) {
+            log.warn("TeamCity connection test failed for {}: {}", config.serverUrl, e.message)
             ConnectionTestResult(success = false, message = "Failed to connect: ${e.message}")
         }
     }
@@ -72,11 +78,14 @@ class ConnectionTester(
                 header("Accept", "application/vnd.github+json")
             }
             if (response.status.isSuccess()) {
+                log.debug("GitHub connection test succeeded for {}/{}", config.owner, config.repo)
                 ConnectionTestResult(success = true, message = "Connected to GitHub repository ${config.owner}/${config.repo}")
             } else {
+                log.warn("GitHub connection test failed for {}/{}: HTTP {}", config.owner, config.repo, response.status)
                 ConnectionTestResult(success = false, message = "GitHub returned ${response.status}")
             }
         } catch (e: Exception) {
+            log.warn("GitHub connection test failed for {}/{}: {}", config.owner, config.repo, e.message)
             ConnectionTestResult(success = false, message = "Failed to connect: ${e.message}")
         }
     }

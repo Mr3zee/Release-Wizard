@@ -8,6 +8,9 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
+import org.slf4j.LoggerFactory
+
+private val log = LoggerFactory.getLogger("com.github.mr3zee.projects.ProjectsRoutes")
 
 fun Route.projectRoutes() {
     val service by inject<ProjectsService>()
@@ -28,10 +31,12 @@ fun Route.projectRoutes() {
         post {
             val request = call.receive<CreateProjectRequest>()
             if (request.name.isBlank()) {
+                log.warn("Project creation rejected: blank name")
                 call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Project name must not be blank", code = "VALIDATION_ERROR"))
                 return@post
             }
             val project = service.createProject(request, call.userSession())
+            log.info("Project created: {} (name='{}')", project.id.value, project.name)
             call.respond(HttpStatusCode.Created, ProjectResponse(project))
         }
 
@@ -61,8 +66,10 @@ fun Route.projectRoutes() {
                 val id = call.requireProjectId() ?: return@delete
                 val deleted = service.deleteProject(id, call.userSession())
                 if (deleted) {
+                    log.info("Project deleted: {}", id.value)
                     call.respond(HttpStatusCode.NoContent)
                 } else {
+                    log.warn("Project delete failed: {} not found", id.value)
                     call.respond(HttpStatusCode.NotFound, ErrorResponse(error = "Project not found", code = "NOT_FOUND"))
                 }
             }

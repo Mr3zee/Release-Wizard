@@ -8,7 +8,10 @@ import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.sessions.*
 import org.koin.ktor.ext.getKoin
+import org.slf4j.LoggerFactory
 import kotlin.time.Clock
+
+private val log = LoggerFactory.getLogger("com.github.mr3zee.plugins.SessionTtlPlugin")
 
 /**
  * Session TTL & rotation plugin.
@@ -42,6 +45,7 @@ val SessionTtl = createApplicationPlugin(name = "SessionTtl") {
 
         if (nowMillis - session.lastAccessedAt > ttlMillis) {
             // Session expired — clear it; the auth challenge will emit 401
+            log.debug("Session expired for user '{}' (idle {}ms > ttl {}ms)", session.username, nowMillis - session.lastAccessedAt, ttlMillis)
             call.sessions.clear<UserSession>()
             return@onCall
         }

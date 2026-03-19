@@ -16,7 +16,10 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
+import org.slf4j.LoggerFactory
 import java.util.UUID
+
+private val log = LoggerFactory.getLogger("com.github.mr3zee.connections.ConnectionsRoutes")
 
 fun Route.connectionRoutes() {
     val service by inject<ConnectionsService>()
@@ -46,10 +49,12 @@ fun Route.connectionRoutes() {
         post {
             val request = call.receive<CreateConnectionRequest>()
             if (request.name.isBlank()) {
+                log.warn("Connection creation rejected: blank name")
                 call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Connection name must not be blank", code = "VALIDATION_ERROR"))
                 return@post
             }
             val connection = service.createConnection(request, call.userSession())
+            log.info("Connection created: {} (type={})", connection.id.value, connection.config::class.simpleName)
             call.respond(HttpStatusCode.Created, ConnectionResponse(connection, webhookUrl(connection, webhookConfig)))
         }
 
@@ -79,8 +84,10 @@ fun Route.connectionRoutes() {
                 val id = call.requireConnectionId() ?: return@delete
                 val deleted = service.deleteConnection(id, call.userSession())
                 if (deleted) {
+                    log.info("Connection deleted: {}", id.value)
                     call.respond(HttpStatusCode.NoContent)
                 } else {
+                    log.warn("Connection delete failed: {} not found", id.value)
                     call.respond(HttpStatusCode.NotFound, ErrorResponse(error = "Connection not found", code = "NOT_FOUND"))
                 }
             }
@@ -104,10 +111,13 @@ fun Route.connectionRoutes() {
                   catch (e: NotFoundException) { throw e }
                   catch (e: ForbiddenException) { throw e }
                   catch (e: IllegalArgumentException) {
+                    log.warn("Bad request fetching TC build types for connection {}: {}", id.value, e.message)
                     call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = e.message ?: "Invalid request", code = "BAD_REQUEST"))
                 } catch (e: UnsupportedOperationException) {
+                    log.warn("Unsupported operation fetching TC build types for connection {}: {}", id.value, e.message)
                     call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = e.message ?: "Not supported", code = "BAD_REQUEST"))
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    log.error("Failed to fetch TC build types for connection {}", id.value, e)
                     call.respond(HttpStatusCode.BadGateway, ErrorResponse(error = "Failed to fetch build types", code = "BAD_GATEWAY"))
                 }
             }
@@ -121,10 +131,13 @@ fun Route.connectionRoutes() {
                   catch (e: NotFoundException) { throw e }
                   catch (e: ForbiddenException) { throw e }
                   catch (e: IllegalArgumentException) {
+                    log.warn("Bad request fetching GH workflows for connection {}: {}", id.value, e.message)
                     call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = e.message ?: "Invalid request", code = "BAD_REQUEST"))
                 } catch (e: UnsupportedOperationException) {
+                    log.warn("Unsupported operation fetching GH workflows for connection {}: {}", id.value, e.message)
                     call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = e.message ?: "Not supported", code = "BAD_REQUEST"))
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    log.error("Failed to fetch GH workflows for connection {}", id.value, e)
                     call.respond(HttpStatusCode.BadGateway, ErrorResponse(error = "Failed to fetch workflows", code = "BAD_GATEWAY"))
                 }
             }
@@ -142,7 +155,8 @@ fun Route.connectionRoutes() {
                 } catch (e: CancellationException) { throw e }
                   catch (e: NotFoundException) { throw e }
                   catch (e: ForbiddenException) { throw e }
-                  catch (_: Exception) {
+                  catch (e: Exception) {
+                    log.error("Failed to fetch GH workflow parameters for connection {}, workflow '{}'", id.value, workflowFile, e)
                     call.respond(HttpStatusCode.BadGateway, ErrorResponse(error = "Failed to fetch workflow parameters", code = "BAD_GATEWAY"))
                 }
             }
@@ -161,10 +175,13 @@ fun Route.connectionRoutes() {
                   catch (e: NotFoundException) { throw e }
                   catch (e: ForbiddenException) { throw e }
                   catch (e: IllegalArgumentException) {
+                    log.warn("Bad request fetching TC parameters for connection {}, buildType '{}': {}", id.value, buildTypeId, e.message)
                     call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = e.message ?: "Invalid request", code = "BAD_REQUEST"))
                 } catch (e: UnsupportedOperationException) {
+                    log.warn("Unsupported operation fetching TC parameters for connection {}: {}", id.value, e.message)
                     call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = e.message ?: "Not supported", code = "BAD_REQUEST"))
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    log.error("Failed to fetch TC parameters for connection {}, buildType '{}'", id.value, buildTypeId, e)
                     call.respond(HttpStatusCode.BadGateway, ErrorResponse(error = "Failed to fetch parameters", code = "BAD_GATEWAY"))
                 }
             }

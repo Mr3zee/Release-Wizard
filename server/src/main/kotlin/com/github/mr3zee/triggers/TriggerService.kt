@@ -11,6 +11,7 @@ import com.github.mr3zee.projects.ProjectsRepository
 import com.github.mr3zee.teams.TeamAccessService
 import com.github.mr3zee.releases.ReleasesService
 import com.github.mr3zee.api.ApiRoutes
+import org.slf4j.LoggerFactory
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.Base64
@@ -31,6 +32,7 @@ class DefaultTriggerService(
     private val webhookBaseUrl: String,
     private val teamAccessService: TeamAccessService,
 ) : TriggerService {
+    private val log = LoggerFactory.getLogger(DefaultTriggerService::class.java)
 
     override suspend fun listByProject(projectId: ProjectId, session: UserSession): List<TriggerResponse> {
         checkProjectAccess(projectId, session)
@@ -57,6 +59,7 @@ class DefaultTriggerService(
             secret = secretHash,
             parametersTemplate = request.parametersTemplate,
         )
+        log.info("Trigger created: {} for project {}", entity.id, projectId.value)
         // Return the raw secret only in the creation response so the caller can store it
         return TriggerResponse(
             id = entity.id,
@@ -77,20 +80,32 @@ class DefaultTriggerService(
     override suspend fun delete(id: String, session: UserSession): Boolean {
         val entity = repository.findById(id) ?: return false
         checkAccess(entity, session)
-        return repository.delete(id)
+        val deleted = repository.delete(id)
+        if (deleted) {
+            log.info("Trigger deleted: {}", id)
+        }
+        return deleted
     }
 
     override suspend fun fireWebhook(triggerId: String, secret: String): Boolean {
-        val trigger = repository.findById(triggerId) ?: return false
-        if (!trigger.enabled) return false
+        val trigger = repository.findById(triggerId) ?: run {
+            log.warn("Webhook fire rejected: trigger {} not found", triggerId)
+            return false
+        }
+        if (!trigger.enabled) {
+            log.warn("Webhook fire rejected: trigger {} is disabled", triggerId)
+            return false
+        }
 
         // Hash the incoming secret and compare against stored hash (timing-safe)
         val incomingHash = sha256Hex(secret)
         val storedHash = trigger.secret
         if (!MessageDigest.isEqual(incomingHash.toByteArray(Charsets.UTF_8), storedHash.toByteArray(Charsets.UTF_8))) {
+            log.warn("Webhook fire rejected: invalid secret for trigger {}", triggerId)
             return false
         }
 
+        log.info("Webhook fired: trigger {} for project {}", triggerId, trigger.projectId.value)
         releasesService.startScheduledRelease(trigger.projectId, trigger.parametersTemplate)
         return true
     }

@@ -13,6 +13,9 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
+import org.slf4j.LoggerFactory
+
+private val log = LoggerFactory.getLogger("com.github.mr3zee.notifications.NotificationRoutes")
 
 fun Route.notificationRoutes() {
     val service by inject<NotificationService>()
@@ -31,6 +34,7 @@ fun Route.notificationRoutes() {
                 throw IllegalArgumentException("Project ID in URL does not match request body")
             }
             val response = service.create(request, call.userSession())
+            log.info("Notification config created: {} for project {}", response.id, projectId.value)
             call.respond(HttpStatusCode.Created, response)
         }
 
@@ -41,6 +45,7 @@ fun Route.notificationRoutes() {
                 if (!deleted) {
                     throw NotFoundException("Notification config not found: $notificationId")
                 }
+                log.info("Notification config deleted: {}", notificationId)
                 call.respond(HttpStatusCode.NoContent)
             }
         }

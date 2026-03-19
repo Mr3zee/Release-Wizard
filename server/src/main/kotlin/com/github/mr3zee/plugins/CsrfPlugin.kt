@@ -7,6 +7,9 @@ import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.path
 import io.ktor.server.sessions.*
+import org.slf4j.LoggerFactory
+
+private val log = LoggerFactory.getLogger("com.github.mr3zee.plugins.CsrfPlugin")
 
 const val CSRF_TOKEN_HEADER = "X-CSRF-Token"
 
@@ -46,6 +49,7 @@ val CsrfProtection = createApplicationPlugin(name = "CsrfProtection") {
                 headerToken?.toByteArray(Charsets.UTF_8) ?: ByteArray(0),
                 session.csrfToken.toByteArray(Charsets.UTF_8)
             )) {
+            log.warn("CSRF validation failed for {} {} (user={})", call.request.local.method.value, path, session.username)
             throw ForbiddenException("Invalid or missing CSRF token")
         }
     }

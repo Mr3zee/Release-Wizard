@@ -4,6 +4,9 @@ import com.github.mr3zee.api.ErrorResponse
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
+import org.slf4j.LoggerFactory
+
+private val log = LoggerFactory.getLogger("com.github.mr3zee.plugins.RequestSizeLimit")
 
 private const val MAX_CONTENT_LENGTH = 1_048_576L // 1 MB
 
@@ -17,6 +20,8 @@ val RequestSizeLimit = createApplicationPlugin(name = "RequestSizeLimit") {
     onCall { call ->
         val contentLength = call.request.headers[HttpHeaders.ContentLength]?.toLongOrNull()
         if (contentLength != null && contentLength > MAX_CONTENT_LENGTH) {
+            log.warn("Request rejected: payload too large ({} bytes) for {} {}",
+                contentLength, call.request.local.method.value, call.request.local.uri)
             call.respond(
                 HttpStatusCode.PayloadTooLarge,
                 ErrorResponse(

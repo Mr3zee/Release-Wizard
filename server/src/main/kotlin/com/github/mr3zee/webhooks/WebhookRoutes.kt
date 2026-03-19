@@ -9,7 +9,10 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.SerializationException
 import org.koin.ktor.ext.inject
+import org.slf4j.LoggerFactory
 import java.util.UUID
+
+private val log = LoggerFactory.getLogger("com.github.mr3zee.webhooks.WebhookRoutes")
 
 /**
  * Webhook receiver routes. These are placed OUTSIDE authentication
@@ -57,9 +60,18 @@ fun Route.webhookRoutes() {
             }
 
             when (val result = statusWebhookService.processStatusUpdate(token, payload)) {
-                StatusWebhookResult.Accepted -> call.respond(HttpStatusCode.OK, "Update accepted")
-                StatusWebhookResult.NotFound -> call.respond(HttpStatusCode.NotFound, "Not found")
-                is StatusWebhookResult.BadRequest -> call.respond(HttpStatusCode.BadRequest, result.message)
+                StatusWebhookResult.Accepted -> {
+                    log.info("Status webhook accepted for token {}", tokenStr)
+                    call.respond(HttpStatusCode.OK, "Update accepted")
+                }
+                StatusWebhookResult.NotFound -> {
+                    log.warn("Status webhook rejected: token {} not found", tokenStr)
+                    call.respond(HttpStatusCode.NotFound, "Not found")
+                }
+                is StatusWebhookResult.BadRequest -> {
+                    log.warn("Status webhook bad request: {}", result.message)
+                    call.respond(HttpStatusCode.BadRequest, result.message)
+                }
             }
         }
     }

@@ -12,6 +12,9 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import org.koin.ktor.ext.inject
+import org.slf4j.LoggerFactory
+
+private val log = LoggerFactory.getLogger("com.github.mr3zee.tags.TagRoutes")
 
 fun Route.tagRoutes() {
     val service by inject<TagService>()
@@ -31,6 +34,7 @@ fun Route.tagRoutes() {
                 val request = call.receive<RenameTagRequest>()
                 // Admin global rename (no team scoping)
                 val updated = service.renameTag(name, request.newName)
+                log.info("Tag renamed: '{}' -> '{}' ({} updated)", name, request.newName, updated)
                 call.respond(mapOf("updated" to updated))
             }
 
@@ -40,8 +44,10 @@ fun Route.tagRoutes() {
                 // Admin global delete (no team scoping)
                 val deleted = service.deleteTag(name)
                 if (deleted > 0) {
+                    log.info("Tag deleted: '{}' ({} removed)", name, deleted)
                     call.respond(HttpStatusCode.NoContent)
                 } else {
+                    log.warn("Tag delete failed: '{}' not found", name)
                     call.respond(HttpStatusCode.NotFound, "Tag not found")
                 }
             }

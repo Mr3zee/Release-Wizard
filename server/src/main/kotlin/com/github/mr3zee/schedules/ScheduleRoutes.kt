@@ -15,6 +15,9 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
+import org.slf4j.LoggerFactory
+
+private val log = LoggerFactory.getLogger("com.github.mr3zee.schedules.ScheduleRoutes")
 
 fun Route.scheduleRoutes() {
     val service by inject<ScheduleService>()
@@ -30,6 +33,7 @@ fun Route.scheduleRoutes() {
             val projectId = call.requireProjectId()
             val request = call.receive<CreateScheduleRequest>()
             val schedule = service.create(projectId, request, call.userSession())
+            log.info("Schedule created: {} for project {} (cron='{}')", schedule.id, projectId.value, request.cronExpression)
             call.respond(HttpStatusCode.Created, ScheduleResponse(schedule))
         }
 
@@ -46,6 +50,7 @@ fun Route.scheduleRoutes() {
                 val body = call.receive<ToggleScheduleRequest>()
                 val schedule = service.toggle(scheduleId, body.enabled, call.userSession())
                     ?: throw NotFoundException("Schedule not found: $scheduleId")
+                log.info("Schedule {} toggled to enabled={}", scheduleId, body.enabled)
                 call.respond(ScheduleResponse(schedule))
             }
 
@@ -55,6 +60,7 @@ fun Route.scheduleRoutes() {
                 if (!deleted) {
                     throw NotFoundException("Schedule not found: $scheduleId")
                 }
+                log.info("Schedule deleted: {}", scheduleId)
                 call.respond(HttpStatusCode.NoContent)
             }
         }

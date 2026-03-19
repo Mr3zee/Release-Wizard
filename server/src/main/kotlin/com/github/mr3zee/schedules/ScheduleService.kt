@@ -8,6 +8,7 @@ import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.model.UserRole
 import com.github.mr3zee.projects.ProjectsRepository
 import com.github.mr3zee.teams.TeamAccessService
+import org.slf4j.LoggerFactory
 
 interface ScheduleService {
     suspend fun listByProject(projectId: ProjectId, session: UserSession): List<Schedule>
@@ -22,6 +23,7 @@ class DefaultScheduleService(
     private val projectsRepository: ProjectsRepository,
     private val teamAccessService: TeamAccessService,
 ) : ScheduleService {
+    private val log = LoggerFactory.getLogger(DefaultScheduleService::class.java)
 
     override suspend fun listByProject(projectId: ProjectId, session: UserSession): List<Schedule> {
         checkProjectAccess(projectId, session)
@@ -57,6 +59,7 @@ class DefaultScheduleService(
             createdBy = session.userId,
             nextRunAt = nextRunAt,
         )
+        log.info("Schedule created: {} for project {} (cron='{}')", entity.id, projectId.value, request.cronExpression)
         return entity.toModel()
     }
 
@@ -66,13 +69,20 @@ class DefaultScheduleService(
 
         val nextRunAt = if (enabled) CronUtils.computeNextRun(entity.cronExpression) else entity.nextRunAt
         val updated = repository.update(id, enabled = enabled, nextRunAt = nextRunAt, lastRunAt = null)
+        if (updated != null) {
+            log.info("Schedule {} toggled to enabled={}", id, enabled)
+        }
         return updated?.toModel()
     }
 
     override suspend fun delete(id: String, session: UserSession): Boolean {
         val entity = repository.findById(id) ?: return false
         checkAccess(entity, session)
-        return repository.delete(id)
+        val deleted = repository.delete(id)
+        if (deleted) {
+            log.info("Schedule deleted: {}", id)
+        }
+        return deleted
     }
 
     private suspend fun checkAccess(entity: ScheduleEntity, session: UserSession) {

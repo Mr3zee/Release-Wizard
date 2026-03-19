@@ -10,6 +10,7 @@ import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.model.UserRole
 import com.github.mr3zee.projects.ProjectsRepository
 import com.github.mr3zee.teams.TeamAccessService
+import org.slf4j.LoggerFactory
 
 interface NotificationService {
     suspend fun listByProject(projectId: ProjectId, session: UserSession): List<NotificationConfigResponse>
@@ -22,6 +23,7 @@ class DefaultNotificationService(
     private val projectsRepository: ProjectsRepository,
     private val teamAccessService: TeamAccessService,
 ) : NotificationService {
+    private val log = LoggerFactory.getLogger(DefaultNotificationService::class.java)
 
     override suspend fun listByProject(projectId: ProjectId, session: UserSession): List<NotificationConfigResponse> {
         // Verify the caller has access to the project's team (or is admin)
@@ -48,6 +50,7 @@ class DefaultNotificationService(
             config = request.config,
             enabled = request.enabled,
         )
+        log.info("Notification config created: {} for project {} (type={})", entity.id, request.projectId.value, request.type)
         return entity.toResponse()
     }
 
@@ -62,7 +65,11 @@ class DefaultNotificationService(
         }
 
         checkOwnership(entity, session)
-        return repository.delete(id)
+        val deleted = repository.delete(id)
+        if (deleted) {
+            log.info("Notification config deleted: {}", id)
+        }
+        return deleted
     }
 
     private fun checkOwnership(entity: NotificationConfigEntity, session: UserSession) {

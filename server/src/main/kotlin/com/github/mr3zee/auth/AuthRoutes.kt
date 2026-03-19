@@ -14,8 +14,11 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import org.koin.ktor.ext.inject
+import org.slf4j.LoggerFactory
 import java.security.SecureRandom
 import kotlin.time.Clock
+
+private val log = LoggerFactory.getLogger("com.github.mr3zee.auth.AuthRoutes")
 
 fun Route.authRoutes() {
     val authService by inject<AuthService>()
@@ -39,8 +42,10 @@ fun Route.authRoutes() {
                     )
                 )
 
+                log.info("User '{}' logged in", user.username)
                 call.respond(UserInfo(username = user.username, id = user.id.value, role = user.role))
             } else {
+                log.warn("Failed login attempt for username '{}'", request.username)
                 respondUnauthorized(call, "Invalid credentials")
             }
         }
@@ -48,6 +53,7 @@ fun Route.authRoutes() {
         post(ApiRoutes.Auth.REGISTER) {
             val request = call.receive<RegisterRequest>()
             if (request.username.isBlank()) {
+                log.warn("Registration rejected: blank username")
                 call.respond(
                     HttpStatusCode.BadRequest,
                     ErrorResponse(error = "Username must not be blank", code = "VALIDATION_ERROR"),
@@ -55,6 +61,7 @@ fun Route.authRoutes() {
                 return@post
             }
             if (request.username.length > 64) {
+                log.warn("Registration rejected: username too long")
                 call.respond(
                     HttpStatusCode.BadRequest,
                     ErrorResponse(error = "Username must not exceed 64 characters", code = "VALIDATION_ERROR"),
@@ -63,6 +70,7 @@ fun Route.authRoutes() {
             }
             val passwordErrors = passwordValidator.validate(request.password)
             if (passwordErrors.isNotEmpty()) {
+                log.warn("Registration rejected for '{}': password validation failed", request.username)
                 call.respond(
                     HttpStatusCode.BadRequest,
                     ErrorResponse(error = passwordErrors.joinToString("; "), code = "VALIDATION_ERROR"),
@@ -84,8 +92,10 @@ fun Route.authRoutes() {
                     )
                 )
 
+                log.info("User '{}' registered with role {}", user.username, user.role)
                 call.respond(HttpStatusCode.Created, UserInfo(username = user.username, id = user.id.value, role = user.role))
             } else {
+                log.warn("Registration rejected: username '{}' already taken", request.username)
                 call.respond(
                     HttpStatusCode.Conflict,
                     ErrorResponse(error = "Username already taken", code = "USERNAME_TAKEN"),
@@ -141,12 +151,15 @@ fun Route.authRoutes() {
             result.fold(
                 onSuccess = { updated ->
                     if (updated) {
+                        log.info("User {} role updated to {}", userId, request.role)
                         call.respond(HttpStatusCode.OK, mapOf("status" to "updated"))
                     } else {
+                        log.warn("Role update failed: user {} not found", userId)
                         call.respond(HttpStatusCode.NotFound, ErrorResponse(error = "User not found", code = "NOT_FOUND"))
                     }
                 },
                 onFailure = {
+                    log.warn("Role update rejected for user {}: cannot demote last admin", userId)
                     call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Cannot demote the last admin", code = "LAST_ADMIN"))
                 },
             )
