@@ -86,8 +86,11 @@ class ProjectListScreenTest {
         }
 
         onNodeWithTag("connections_button").assertExists()
-        onNodeWithTag("logout_button").assertExists()
         onNodeWithTag("create_project_fab").assertExists()
+        // Logout button is now inside the overflow menu
+        onNodeWithTag("overflow_menu_button").performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("logout_button").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("logout_button").assertExists()
     }
 
     @Test
@@ -144,7 +147,10 @@ class ProjectListScreenTest {
         }
 
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("My Pipeline").fetchSemanticsNodes().isNotEmpty() }
-        onAllNodesWithText("Delete").onFirst().performClick()
+        // Open the per-item overflow menu, then click Delete
+        onNodeWithTag("project_menu_p1", useUnmergedTree = true).performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("delete_menu_item").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("delete_menu_item").performClick()
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("delete_project_confirm_p1", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("delete_project_confirm_p1", useUnmergedTree = true).assertExists()
     }
@@ -159,7 +165,10 @@ class ProjectListScreenTest {
         }
 
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("My Pipeline").fetchSemanticsNodes().isNotEmpty() }
-        onAllNodesWithText("Delete").onFirst().performClick()
+        // Open the per-item overflow menu, then click Delete
+        onNodeWithTag("project_menu_p1", useUnmergedTree = true).performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("delete_menu_item").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("delete_menu_item").performClick()
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("delete_project_confirm_p1", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("delete_project_confirm_p1_cancel", useUnmergedTree = true).performClick()
         onNodeWithTag("delete_project_confirm_p1", useUnmergedTree = true).assertDoesNotExist()

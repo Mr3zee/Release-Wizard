@@ -12,10 +12,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import com.github.mr3zee.components.ListItemCard
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwInlineConfirmation
+import com.github.mr3zee.components.RwDangerZone
 import com.github.mr3zee.components.RwInlineForm
 import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
@@ -67,6 +69,7 @@ fun TeamManageScreen(
     var inviteToCancel by remember { mutableStateOf<TeamInvite?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     val dismissLabel = packStringResource(Res.string.common_dismiss)
     val resolvedError = error?.resolve()
 
@@ -94,7 +97,18 @@ fun TeamManageScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(packStringResource(Res.string.teams_manage_title)) },
+                title = {
+                    Column {
+                        Text(packStringResource(Res.string.teams_manage_title))
+                        Text(
+                            teamName,
+                            style = AppTypography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                },
                 navigationIcon = {
                     RwButton(onClick = handleBack, variant = RwButtonVariant.Ghost, modifier = Modifier.testTag("back_button")) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
@@ -156,8 +170,16 @@ fun TeamManageScreen(
                         )
                         Spacer(modifier = Modifier.height(Spacing.sm))
                         RwButton(
-                            onClick = { viewModel.updateTeam(editName, editDescription) },
-                            variant = RwButtonVariant.Ghost,
+                            onClick = {
+                                viewModel.updateTeam(editName, editDescription)
+                                scope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        message = "$editName \u2713",
+                                        duration = SnackbarDuration.Short,
+                                    )
+                                }
+                            },
+                            variant = RwButtonVariant.Primary,
                             enabled = hasEditChanges && editName.isNotBlank(),
                             modifier = Modifier.testTag("save_team_button"),
                         ) {
@@ -295,21 +317,27 @@ fun TeamManageScreen(
 
                 // Delete team (danger zone)
                 item {
-                    HorizontalDivider(modifier = Modifier.widthIn(max = 1200.dp).padding(vertical = Spacing.sm))
-                    Row(
+                    RwDangerZone(
                         modifier = Modifier
                             .widthIn(max = 1200.dp)
-                            .fillMaxWidth()
-                            .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-                        horizontalArrangement = Arrangement.End,
+                            .padding(horizontal = Spacing.lg, vertical = Spacing.md),
                     ) {
-                        RwButton(
-                            onClick = { showDeleteDialog = true },
-                            variant = RwButtonVariant.Ghost,
-                            contentColor = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.testTag("delete_team_button"),
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(packStringResource(Res.string.teams_delete_team))
+                            Text(
+                                packStringResource(Res.string.teams_delete_team),
+                                style = AppTypography.body,
+                            )
+                            RwButton(
+                                onClick = { showDeleteDialog = true },
+                                variant = RwButtonVariant.Danger,
+                                modifier = Modifier.testTag("delete_team_button"),
+                            ) {
+                                Text(packStringResource(Res.string.common_delete))
+                            }
                         }
                     }
                     RwInlineConfirmation(
@@ -418,7 +446,7 @@ private fun InviteItem(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
-        RwButton(onClick = onCancel, variant = RwButtonVariant.Ghost, contentColor = MaterialTheme.colorScheme.error) {
+        RwButton(onClick = onCancel, variant = RwButtonVariant.Ghost, contentColor = MaterialTheme.colorScheme.error, modifier = Modifier.testTag("revoke_invite_btn_${invite.id}")) {
             Text(packStringResource(Res.string.teams_revoke_invite))
         }
     }
@@ -443,8 +471,8 @@ private fun JoinRequestItem(
             modifier = Modifier.weight(1f),
         )
         Row {
-            RwButton(onClick = onApprove, variant = RwButtonVariant.Ghost) { Text(packStringResource(Res.string.common_approve)) }
-            RwButton(onClick = onReject, variant = RwButtonVariant.Ghost, contentColor = MaterialTheme.colorScheme.error) {
+            RwButton(onClick = onApprove, variant = RwButtonVariant.Ghost, modifier = Modifier.testTag("approve_request_${request.id}")) { Text(packStringResource(Res.string.common_approve)) }
+            RwButton(onClick = onReject, variant = RwButtonVariant.Ghost, contentColor = MaterialTheme.colorScheme.error, modifier = Modifier.testTag("reject_request_${request.id}")) {
                 Text(packStringResource(Res.string.teams_reject))
             }
         }

@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -78,12 +79,13 @@ fun ReleaseListScreen(
     var releaseToDelete by remember { mutableStateOf<ReleaseId?>(null) }
     val searchFocusRequester = remember { FocusRequester() }
 
-    val shortcutActions = remember(showStartDialog) {
+    val isDialogOpen = showStartDialog || releaseToArchive != null || releaseToDelete != null
+    val shortcutActions = remember(isDialogOpen) {
         ShortcutActions(
             onSearch = { searchFocusRequester.requestFocus() },
             onCreate = { showStartDialog = true },
             onRefresh = { viewModel.refresh() },
-            hasDialogOpen = showStartDialog,
+            hasDialogOpen = isDialogOpen,
         )
     }
     ProvideShortcutActions(shortcutActions) {
@@ -189,7 +191,7 @@ fun ReleaseListScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            horizontalAlignment = Alignment.Start,
         ) {
             val resolvedRefreshError = refreshError?.resolve()
             if (resolvedRefreshError != null) {
@@ -215,12 +217,28 @@ fun ReleaseListScreen(
                 onValueChange = { viewModel.setSearchQuery(it) },
                 placeholder = packStringResource(Res.string.releases_search_placeholder),
                 singleLine = true,
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .widthIn(max = 1200.dp)
                     .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
                     .focusRequester(searchFocusRequester)
                     .testTag("search_field"),
+            )
+            Text(
+                packStringResource(Res.string.releases_filter_status_label),
+                style = AppTypography.caption,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .widthIn(max = 1200.dp)
+                    .padding(horizontal = Spacing.lg)
+                    .padding(top = Spacing.sm),
             )
             Row(
                 modifier = Modifier
@@ -255,6 +273,15 @@ fun ReleaseListScreen(
                 }
             }
             if (projects.isNotEmpty()) {
+                Text(
+                    packStringResource(Res.string.releases_filter_project_label),
+                    style = AppTypography.caption,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .widthIn(max = 1200.dp)
+                        .padding(horizontal = Spacing.lg)
+                        .padding(top = Spacing.xs),
+                )
                 Row(
                     modifier = Modifier
                         .widthIn(max = 1200.dp)
@@ -314,10 +341,13 @@ fun ReleaseListScreen(
             } else if (releases.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
+                    contentAlignment = Alignment.TopCenter,
                 ) {
                     if (searchQuery.isNotBlank() || statusFilter != null || projectFilter != null) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(top = 80.dp),
+                        ) {
                             Text(
                                 text = packStringResource(Res.string.common_no_search_results),
                                 style = AppTypography.body,
@@ -336,12 +366,25 @@ fun ReleaseListScreen(
                             }
                         }
                     } else {
-                        Text(
-                            text = packStringResource(Res.string.releases_empty_state),
-                            style = AppTypography.body,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.testTag("empty_state"),
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(top = 80.dp),
+                        ) {
+                            Text(
+                                text = packStringResource(Res.string.releases_empty_state),
+                                style = AppTypography.body,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.testTag("empty_state"),
+                            )
+                            Spacer(modifier = Modifier.height(Spacing.md))
+                            RwButton(
+                                onClick = { showStartDialog = true },
+                                variant = RwButtonVariant.Primary,
+                                modifier = Modifier.testTag("empty_state_create_button"),
+                            ) {
+                                Text(packStringResource(Res.string.releases_create_release))
+                            }
+                        }
                     }
                 }
             } else {

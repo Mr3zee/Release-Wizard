@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,10 +17,12 @@ import com.github.mr3zee.components.ListItemCard
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwCard
+import com.github.mr3zee.components.RwBadge
 import com.github.mr3zee.components.RwInlineConfirmation
 import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.model.TeamMembership
+import com.github.mr3zee.model.TeamRole
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.displayName
@@ -66,29 +69,26 @@ fun TeamDetailScreen(
                     }
                 },
                 actions = {
+                    RwButton(onClick = onAuditLog, variant = RwButtonVariant.Ghost, modifier = Modifier.testTag("audit_log_button")) {
+                        Text(packStringResource(Res.string.teams_audit_log))
+                    }
+                    if (isTeamLead) {
+                        RwButton(onClick = onManage, variant = RwButtonVariant.Ghost, modifier = Modifier.testTag("manage_team_button")) {
+                            Text(packStringResource(Res.string.teams_manage))
+                        }
+                    }
+                    Spacer(Modifier.width(Spacing.sm))
+                    VerticalDivider(modifier = Modifier.height(24.dp))
+                    Spacer(Modifier.width(Spacing.sm))
                     RwButton(
                         onClick = { showLeaveDialog = true },
                         variant = RwButtonVariant.Ghost,
                         contentColor = MaterialTheme.colorScheme.error,
                         modifier = Modifier.testTag("leave_team_button"),
                     ) {
+                        Icon(Icons.Default.Warning, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(Spacing.xs))
                         Text(packStringResource(Res.string.teams_leave))
-                    }
-                    RwButton(
-                        onClick = onAuditLog,
-                        variant = RwButtonVariant.Ghost,
-                        modifier = Modifier.testTag("audit_log_button"),
-                    ) {
-                        Text(packStringResource(Res.string.teams_audit_log))
-                    }
-                    if (isTeamLead) {
-                        RwButton(
-                            onClick = onManage,
-                            variant = RwButtonVariant.Ghost,
-                            modifier = Modifier.testTag("manage_team_button"),
-                        ) {
-                            Text(packStringResource(Res.string.teams_manage))
-                        }
                     }
                 },
             )
@@ -121,14 +121,7 @@ fun TeamDetailScreen(
                                 .padding(Spacing.lg),
                         ) {
                             Column(modifier = Modifier.padding(Spacing.lg)) {
-                                Text(
-                                    t.name,
-                                    style = AppTypography.heading,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
                                 if (t.description.isNotBlank()) {
-                                    Spacer(modifier = Modifier.height(Spacing.xs))
                                     Text(
                                         t.description,
                                         style = AppTypography.body,
@@ -136,8 +129,8 @@ fun TeamDetailScreen(
                                         maxLines = 2,
                                         overflow = TextOverflow.Ellipsis,
                                     )
+                                    Spacer(modifier = Modifier.height(Spacing.sm))
                                 }
-                                Spacer(modifier = Modifier.height(Spacing.sm))
                                 Text(
                                     packPluralStringResource(Res.plurals.members, members.size, members.size),
                                     style = AppTypography.bodySmall,
@@ -207,10 +200,10 @@ private fun MemberItem(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
-        Text(
-            member.role.displayName(),
-            style = AppTypography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        RwBadge(
+            text = member.role.displayName(),
+            color = if (member.role == TeamRole.TEAM_LEAD) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            testTag = "role_badge_${member.userId.value}",
         )
     }
 }

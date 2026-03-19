@@ -49,6 +49,9 @@
     <string name="auth_sign_in_button">Sign In</string>
     <string name="auth_toggle_to_signin">Already have an account? Sign in</string>
     <string name="auth_toggle_to_register">Don&apos;t have an account? Register</string>
+    <string name="auth_confirm_password">Confirm Password</string>
+    <string name="auth_password_mismatch">Passwords do not match</string>
+    <string name="auth_password_requirements">At least 8 characters with a number and letter</string>
     <string name="auth_sign_out">Sign Out</string>
 
     <!-- ==================== Projects ==================== -->
@@ -94,6 +97,8 @@
     <string name="connections_test_succeeded">Connection test succeeded: %1$s</string>
     <string name="connections_test_failed">Test failed: %1$s</string>
     <string name="connections_polling_default_hint">Default: 30 seconds (range: 5-300)</string>
+    <string name="connections_type_locked_hint">Type cannot be changed after creation</string>
+    <string name="connections_polling_range_hint">5–300 seconds, default: 30</string>
 
     <!-- ==================== Editor: Toolbar ==================== -->
     <string name="editor_toolbar_blocks">Blocks</string>
@@ -185,12 +190,17 @@
     <string name="editor_validation_duplicate_id">Duplicate block ID: %1$s</string>
     <string name="editor_validation_invalid_edge">Edge references missing block: %1$s</string>
     <string name="editor_validation_self_loop">Self-loop on block: %1$s</string>
+    <string name="editor_empty_canvas_hint">Drag from an output port to an input port to connect blocks</string>
+    <string name="editor_zoom_fit">Fit</string>
 
     <!-- ==================== Releases ==================== -->
     <string name="releases_title">Releases</string>
     <string name="releases_search_placeholder">Search releases...</string>
     <string name="releases_filter_all_projects">All Projects</string>
     <string name="releases_empty_state">No releases yet. Create one to get started.</string>
+    <string name="releases_create_release">Create Release</string>
+    <string name="releases_filter_status_label">Status</string>
+    <string name="releases_filter_project_label">Project</string>
     <string name="releases_start_release">Start release</string>
     <string name="releases_updated_just_now">Updated just now</string>
     <string name="releases_release_title">Release %1$s</string>
@@ -325,6 +335,7 @@
 
     <!-- ==================== Teams: My Invites ==================== -->
     <string name="teams_no_pending_invites">No pending invites.</string>
+    <string name="teams_invites_empty_hint">When a team lead invites you, it will appear here.</string>
     <string name="teams_invited_by">Invited by %1$s</string>
     <string name="teams_accept">Accept</string>
     <string name="teams_decline">Decline</string>
@@ -423,6 +434,10 @@
     <string name="maven_last_checked_label">Last checked</string>
     <string name="maven_last_checked_never">Never</string>
     <string name="automation_checked_just_now">just now</string>
+    <string name="automation_description">Configure triggers that automatically start releases for this project</string>
+    <string name="automation_empty_schedules_hint">Schedule releases to run automatically on a cron schedule. Add one above to get started.</string>
+    <string name="automation_empty_webhooks_hint">Trigger releases via HTTP webhook from your CI/CD pipeline. Add one above to get started.</string>
+    <string name="automation_empty_maven_hint">Trigger releases when new versions are published to Maven. Add one above to get started.</string>
     <string name="maven_url_validation_error">Must start with http:// or https://</string>
 
     <!-- ==================== Editor: Refresh Content Descriptions ==================== -->

@@ -124,8 +124,8 @@ class TeamScreensTest {
 
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Alpha Team", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("team_detail_screen").assertExists()
-        // "Alpha Team" appears in both top bar and card — just verify at least one exists
-        onAllNodesWithText("Alpha Team", useUnmergedTree = true).assertCountEquals(2)
+        // "Alpha Team" now appears only in the TopAppBar title (removed from info card)
+        onAllNodesWithText("Alpha Team", useUnmergedTree = true).assertCountEquals(1)
         onNodeWithText("The first team", useUnmergedTree = true).assertExists()
         onNodeWithText("alice", useUnmergedTree = true).assertExists()
         onNodeWithText("bob", useUnmergedTree = true).assertExists()

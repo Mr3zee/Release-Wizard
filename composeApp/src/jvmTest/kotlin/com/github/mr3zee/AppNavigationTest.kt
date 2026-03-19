@@ -124,6 +124,9 @@ class AppNavigationTest {
 
         waitUntil(timeoutMillis = 5000L) { onAllNodesWithTag("project_list_screen").fetchSemanticsNodes().isNotEmpty() }
 
+        // Logout button is now inside the overflow menu
+        onNodeWithTag("overflow_menu_button").performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("logout_button").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("logout_button").performClick()
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("login_screen").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("login_screen").assertExists()

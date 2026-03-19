@@ -4,9 +4,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -116,7 +118,7 @@ fun ProjectListScreen(
                                         Icon(
                                             Icons.Default.ArrowDropDown,
                                             contentDescription = packStringResource(Res.string.projects_switch_team),
-                                            modifier = Modifier.size(20.dp),
+                                            modifier = Modifier.size(24.dp),
                                         )
                                     }
                                 }
@@ -178,16 +180,7 @@ fun ProjectListScreen(
                                 Text(packStringResource(Res.string.projects_connections))
                             }
                         }
-                        if (onLogout != null) {
-                            RwButton(
-                                onClick = onLogout,
-                                variant = RwButtonVariant.Ghost,
-                                modifier = Modifier.testTag("logout_button"),
-                            ) {
-                                Text(packStringResource(Res.string.auth_sign_out))
-                            }
-                        }
-                        // Overflow menu for theme toggle and refresh
+                        // Overflow menu for theme toggle, refresh, and sign out
                         Box {
                             RwIconButton(
                                 onClick = { showOverflowMenu = true },
@@ -199,6 +192,17 @@ fun ProjectListScreen(
                                 expanded = showOverflowMenu,
                                 onDismissRequest = { showOverflowMenu = false },
                             ) {
+                                if (onLogout != null) {
+                                    DropdownMenuItem(
+                                        text = { Text(packStringResource(Res.string.auth_sign_out)) },
+                                        onClick = {
+                                            onLogout()
+                                            showOverflowMenu = false
+                                        },
+                                        modifier = Modifier.testTag("logout_button"),
+                                    )
+                                    HorizontalDivider()
+                                }
                                 DropdownMenuItem(
                                     text = { Text(packStringResource(Res.string.common_refresh)) },
                                     onClick = {
@@ -310,6 +314,13 @@ fun ProjectListScreen(
                 onValueChange = { viewModel.setSearchQuery(it) },
                 placeholder = packStringResource(Res.string.projects_search_placeholder),
                 singleLine = true,
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .widthIn(max = 1200.dp)
@@ -427,6 +438,8 @@ private fun ProjectListItem(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var showMenu by remember { mutableStateOf(false) }
+
     ListItemCard(
         onClick = onClick,
         testTag = "project_item_${project.id.value}",
@@ -454,9 +467,33 @@ private fun ProjectListItem(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        RwButton(onClick = onDelete, variant = RwButtonVariant.Ghost, contentColor = MaterialTheme.colorScheme.error) {
-            Text(packStringResource(Res.string.common_delete))
+        Box {
+            RwIconButton(
+                onClick = { showMenu = true },
+                modifier = Modifier.testTag("project_menu_${project.id.value}"),
+            ) {
+                Icon(Icons.Default.MoreVert, contentDescription = packStringResource(Res.string.common_more_options))
+            }
+            DropdownMenu(
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false },
+            ) {
+                DropdownMenuItem(
+                    text = { Text(packStringResource(Res.string.common_delete), color = MaterialTheme.colorScheme.error) },
+                    onClick = {
+                        showMenu = false
+                        onDelete()
+                    },
+                    modifier = Modifier.testTag("delete_menu_item"),
+                )
+            }
         }
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp),
+        )
     }
 }
 

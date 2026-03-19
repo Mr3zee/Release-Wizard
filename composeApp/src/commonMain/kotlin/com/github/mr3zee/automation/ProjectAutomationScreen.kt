@@ -9,6 +9,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -154,7 +157,16 @@ fun ProjectAutomationScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(packStringResource(Res.string.automation_title)) },
+                title = {
+                    Column {
+                        Text(packStringResource(Res.string.automation_title))
+                        Text(
+                            packStringResource(Res.string.automation_description),
+                            style = AppTypography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                },
                 navigationIcon = {
                     RwButton(onClick = onBack, variant = RwButtonVariant.Ghost, modifier = Modifier.testTag("automation_back_button")) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
@@ -177,7 +189,7 @@ fun ProjectAutomationScreen(
                     .padding(padding)
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+                verticalArrangement = Arrangement.spacedBy(Spacing.xl),
             ) {
                 // ── Schedules Section ──
                 AutomationSection(
@@ -185,6 +197,7 @@ fun ProjectAutomationScreen(
                     addButtonLabel = packStringResource(Res.string.automation_add_schedule),
                     addButtonTestTag = "add_schedule_button",
                     onAdd = { showCreateSchedule = true },
+                    leadingIcon = { Icon(Icons.Default.Schedule, contentDescription = null, modifier = Modifier.size(20.dp)) },
                 ) {
                     CreateScheduleInlineForm(
                         visible = showCreateSchedule,
@@ -197,12 +210,19 @@ fun ProjectAutomationScreen(
                     )
 
                     if (schedules.isEmpty()) {
-                        Text(
-                            packStringResource(Res.string.automation_empty_schedules),
-                            style = AppTypography.body,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(vertical = Spacing.sm),
-                        )
+                        Column {
+                            Text(
+                                packStringResource(Res.string.automation_empty_schedules),
+                                style = AppTypography.body,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(
+                                packStringResource(Res.string.automation_empty_schedules_hint),
+                                style = AppTypography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = Spacing.xs),
+                            )
+                        }
                     } else {
                         schedules.forEach { schedule ->
                             ScheduleItem(
@@ -234,7 +254,9 @@ fun ProjectAutomationScreen(
                     title = packStringResource(Res.string.automation_webhook_section),
                     addButtonLabel = packStringResource(Res.string.automation_add_webhook),
                     addButtonTestTag = "add_webhook_button",
-                    onAdd = { viewModel.createWebhookTrigger(CreateTriggerRequest()) },
+                    onAdd = { if (!isSaving) viewModel.createWebhookTrigger(CreateTriggerRequest()) },
+                    leadingIcon = { Icon(Icons.Default.Link, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                    addButtonEnabled = !isSaving,
                 ) {
                     // Persistent webhook secret card — shown until user clicks dismiss
                     val secret = pendingWebhookSecret
@@ -246,12 +268,19 @@ fun ProjectAutomationScreen(
                     }
 
                     if (webhookTriggers.isEmpty()) {
-                        Text(
-                            packStringResource(Res.string.automation_empty_webhooks),
-                            style = AppTypography.body,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(vertical = Spacing.sm),
-                        )
+                        Column {
+                            Text(
+                                packStringResource(Res.string.automation_empty_webhooks),
+                                style = AppTypography.body,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(
+                                packStringResource(Res.string.automation_empty_webhooks_hint),
+                                style = AppTypography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = Spacing.xs),
+                            )
+                        }
                     } else {
                         webhookTriggers.forEach { trigger ->
                             WebhookTriggerItem(
@@ -284,6 +313,7 @@ fun ProjectAutomationScreen(
                     addButtonLabel = packStringResource(Res.string.automation_add_maven),
                     addButtonTestTag = "add_maven_button",
                     onAdd = { showCreateMaven = true },
+                    leadingIcon = { Icon(Icons.Default.Inventory2, contentDescription = null, modifier = Modifier.size(20.dp)) },
                 ) {
                     CreateMavenTriggerInlineForm(
                         visible = showCreateMaven,
@@ -296,12 +326,19 @@ fun ProjectAutomationScreen(
                     )
 
                     if (mavenTriggers.isEmpty()) {
-                        Text(
-                            packStringResource(Res.string.automation_empty_maven),
-                            style = AppTypography.body,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(vertical = Spacing.sm),
-                        )
+                        Column {
+                            Text(
+                                packStringResource(Res.string.automation_empty_maven),
+                                style = AppTypography.body,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(
+                                packStringResource(Res.string.automation_empty_maven_hint),
+                                style = AppTypography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = Spacing.xs),
+                            )
+                        }
                     } else {
                         mavenTriggers.forEach { trigger ->
                             MavenTriggerItem(
@@ -338,6 +375,8 @@ private fun AutomationSection(
     addButtonLabel: String,
     addButtonTestTag: String,
     onAdd: () -> Unit,
+    leadingIcon: @Composable (() -> Unit)? = null,
+    addButtonEnabled: Boolean = true,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
@@ -346,10 +385,17 @@ private fun AutomationSection(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(title, style = AppTypography.subheading)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (leadingIcon != null) {
+                    leadingIcon()
+                    Spacer(Modifier.width(Spacing.sm))
+                }
+                Text(title, style = AppTypography.heading)
+            }
             RwButton(
                 onClick = onAdd,
                 variant = RwButtonVariant.Secondary,
+                enabled = addButtonEnabled,
                 modifier = Modifier.testTag(addButtonTestTag),
             ) {
                 Icon(Icons.Default.Add, contentDescription = addButtonLabel, modifier = Modifier.size(16.dp))

@@ -1,11 +1,14 @@
 package com.github.mr3zee.connections
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -162,7 +165,7 @@ fun ConnectionFormScreen(
         }
     }
 
-    val shortcutActions = remember(showDiscardDialog) {
+    val shortcutActions = remember(showDiscardDialog, name, currentConfig, isSaving) {
         ShortcutActions(onSave = handleSave, hasDialogOpen = showDiscardDialog)
     }
     ProvideShortcutActions(shortcutActions) {
@@ -269,37 +272,67 @@ fun ConnectionFormScreen(
                     .testTag("connection_name_field"),
             )
 
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { if (!isEditMode) expanded = it },
-            ) {
-                OutlinedTextField(
+            Box {
+                RwTextField(
                     value = selectedType.displayName(),
                     onValueChange = {},
                     readOnly = true,
+                    label = packStringResource(Res.string.connections_type_label),
                     enabled = !isEditMode,
-                    label = { Text(packStringResource(Res.string.connections_type_label)) },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-                        .testTag("connection_type_selector"),
-                )
-                if (!isEditMode) {
-                    ExposedDropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false },
-                    ) {
-                        ConnectionType.entries.forEach { type ->
-                            DropdownMenuItem(
-                                text = { Text(type.displayName()) },
-                                onClick = {
-                                    selectedType = type
-                                    expanded = false
-                                },
+                    trailingIcon = {
+                        if (!isEditMode) {
+                            Icon(
+                                Icons.Default.ArrowDropDown,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
                             )
                         }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("connection_type_selector"),
+                )
+                // Invisible click target over the text field
+                if (!isEditMode) {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .clickable { expanded = !expanded },
+                    )
+                }
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                ) {
+                    ConnectionType.entries.forEach { type ->
+                        DropdownMenuItem(
+                            text = { Text(type.displayName()) },
+                            onClick = {
+                                selectedType = type
+                                expanded = false
+                            },
+                        )
                     }
+                }
+            }
+
+            if (isEditMode) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = Spacing.xs),
+                ) {
+                    Icon(
+                        Icons.Default.Lock,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.width(Spacing.xs))
+                    Text(
+                        packStringResource(Res.string.connections_type_locked_hint),
+                        style = AppTypography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
 
@@ -374,9 +407,12 @@ fun ConnectionFormScreen(
                         label = packStringResource(Res.string.connections_tc_polling_interval),
                         placeholder = "30",
                         singleLine = true,
-                        supportingText = if (teamCityPollingInterval.isBlank()) {
-                            { Text(packStringResource(Res.string.connections_polling_default_hint), style = AppTypography.bodySmall) }
-                        } else null,
+                        supportingText = {
+                            Text(
+                                packStringResource(Res.string.connections_polling_range_hint),
+                                style = AppTypography.bodySmall,
+                            )
+                        },
                         modifier = Modifier.fillMaxWidth().testTag("teamcity_polling_interval"),
                     )
                 }
@@ -430,9 +466,12 @@ fun ConnectionFormScreen(
                         label = packStringResource(Res.string.connections_github_polling_interval),
                         placeholder = "30",
                         singleLine = true,
-                        supportingText = if (githubPollingInterval.isBlank()) {
-                            { Text(packStringResource(Res.string.connections_polling_default_hint), style = AppTypography.bodySmall) }
-                        } else null,
+                        supportingText = {
+                            Text(
+                                packStringResource(Res.string.connections_polling_range_hint),
+                                style = AppTypography.bodySmall,
+                            )
+                        },
                         modifier = Modifier.fillMaxWidth().testTag("github_polling_interval"),
                     )
                 }

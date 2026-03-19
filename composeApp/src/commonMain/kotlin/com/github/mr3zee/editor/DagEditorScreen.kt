@@ -1,10 +1,15 @@
 package com.github.mr3zee.editor
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
@@ -17,13 +22,17 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
+import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwInlineConfirmation
+import com.github.mr3zee.components.RwTooltip
 import com.github.mr3zee.dag.ValidationError
 import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.LocalAppColors
 import com.github.mr3zee.theme.Spacing
+import com.github.mr3zee.util.HostOS
+import com.github.mr3zee.util.currentHostOS
 import com.github.mr3zee.util.resolve
 import com.github.mr3zee.i18n.packPluralStringResource
 import com.github.mr3zee.i18n.packStringResource
@@ -58,6 +67,9 @@ fun DagEditorScreen(
     val isFetchingConfigParams by viewModel.isFetchingConfigParams.collectAsState()
 
     val appColors = LocalAppColors.current
+
+    var leftSidebarExpanded by remember { mutableStateOf(true) }
+    var rightSidebarExpanded by remember { mutableStateOf(true) }
 
     var pendingDiscardNavigation by remember { mutableStateOf<(() -> Unit)?>(null) }
     var showForceUnlockDialog by remember { mutableStateOf(false) }
@@ -111,7 +123,7 @@ fun DagEditorScreen(
     }
     val handleBack: () -> Unit = remember(onBack) { { guardedNavigate(onBack) } }
 
-    val shortcutActions = remember(isConfirmationVisible) {
+    val shortcutActions = remember(isConfirmationVisible, isDirty, isSaving, isReadOnly) {
         ShortcutActions(
             onSave = { if (isDirty && !isSaving && !isReadOnly) viewModel.save() },
             hasDialogOpen = isConfirmationVisible,
@@ -159,13 +171,16 @@ fun DagEditorScreen(
                             Text(packStringResource(Res.string.automation_open_button))
                         }
                     }
-                    RwButton(
-                        onClick = { viewModel.save() },
-                        variant = RwButtonVariant.Ghost,
-                        enabled = isDirty && !isSaving && !isReadOnly,
-                        modifier = Modifier.testTag("save_button"),
-                    ) {
-                        Text(if (isSaving) packStringResource(Res.string.common_saving) else packStringResource(Res.string.common_save))
+                    val saveMod = if (currentHostOS() == HostOS.MACOS) "\u2318" else "Ctrl"
+                    RwTooltip(tooltip = "$saveMod+S") {
+                        RwButton(
+                            onClick = { viewModel.save() },
+                            variant = if (isDirty) RwButtonVariant.Primary else RwButtonVariant.Ghost,
+                            enabled = isDirty && !isSaving && !isReadOnly,
+                            modifier = Modifier.testTag("save_button"),
+                        ) {
+                            Text(if (isSaving) packStringResource(Res.string.common_saving) else packStringResource(Res.string.common_save))
+                        }
                     }
                 },
             )
@@ -312,6 +327,11 @@ fun DagEditorScreen(
                     .weight(1f),
             ) {
                 // Left: toolbar / block palette
+                AnimatedVisibility(
+                    visible = leftSidebarExpanded,
+                    enter = expandHorizontally(),
+                    exit = shrinkHorizontally(),
+                ) {
                 EditorToolbar(
                     onAddBlock = { type, name ->
                         val (x, y) = viewModel.nextPlacementPosition()
@@ -335,14 +355,39 @@ fun DagEditorScreen(
                     hasClipboard = clipboard != null,
                     enabled = !isReadOnly,
                 )
+                }
 
-                // Canvas-chrome boundary: 1dp inset border instead of plain divider
-                Box(
-                    Modifier
-                        .fillMaxHeight()
-                        .width(1.dp)
-                        .drawBehind { drawRect(appColors.chromeBorder) }
-                )
+                // Left sidebar toggle + border
+                Column(
+                    Modifier.fillMaxHeight(),
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Box(
+                        Modifier
+                            .fillMaxHeight()
+                            .weight(1f)
+                            .width(1.dp)
+                            .drawBehind { drawRect(appColors.chromeBorder) }
+                    )
+                    RwIconButton(
+                        onClick = { leftSidebarExpanded = !leftSidebarExpanded },
+                        modifier = Modifier.size(24.dp).testTag("toggle_left_sidebar"),
+                    ) {
+                        Icon(
+                            if (leftSidebarExpanded) Icons.AutoMirrored.Filled.KeyboardArrowLeft
+                            else Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
+                    Box(
+                        Modifier
+                            .fillMaxHeight()
+                            .weight(1f)
+                            .width(1.dp)
+                            .drawBehind { drawRect(appColors.chromeBorder) }
+                    )
+                }
 
                 // Center: canvas
                 DagCanvas(
@@ -362,14 +407,44 @@ fun DagEditorScreen(
                         .testTag("dag_canvas"),
                 )
 
-                Box(
-                    Modifier
-                        .fillMaxHeight()
-                        .width(1.dp)
-                        .drawBehind { drawRect(appColors.chromeBorder) }
-                )
+                // Right sidebar toggle + border
+                Column(
+                    Modifier.fillMaxHeight(),
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Box(
+                        Modifier
+                            .fillMaxHeight()
+                            .weight(1f)
+                            .width(1.dp)
+                            .drawBehind { drawRect(appColors.chromeBorder) }
+                    )
+                    RwIconButton(
+                        onClick = { rightSidebarExpanded = !rightSidebarExpanded },
+                        modifier = Modifier.size(24.dp).testTag("toggle_right_sidebar"),
+                    ) {
+                        Icon(
+                            if (rightSidebarExpanded) Icons.AutoMirrored.Filled.KeyboardArrowRight
+                            else Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
+                    Box(
+                        Modifier
+                            .fillMaxHeight()
+                            .weight(1f)
+                            .width(1.dp)
+                            .drawBehind { drawRect(appColors.chromeBorder) }
+                    )
+                }
 
                 // Right: properties panel
+                AnimatedVisibility(
+                    visible = rightSidebarExpanded,
+                    enter = expandHorizontally(),
+                    exit = shrinkHorizontally(),
+                ) {
                 BlockPropertiesPanel(
                     block = selectedBlock,
                     graph = graph,
@@ -392,6 +467,7 @@ fun DagEditorScreen(
                     onUpdateInjectWebhookUrl = { id, inject -> viewModel.updateBlockInjectWebhookUrl(id, inject) },
                     enabled = !isReadOnly,
                 )
+                }
             }
         }
     }

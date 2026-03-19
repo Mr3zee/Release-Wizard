@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.ListItemCard
 import com.github.mr3zee.components.RefreshErrorBanner
 import com.github.mr3zee.components.RefreshIconButton
+import com.github.mr3zee.components.RwBadge
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwChip
@@ -32,6 +34,7 @@ import com.github.mr3zee.keyboard.ShortcutActions
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import com.github.mr3zee.theme.AppTypography
+import com.github.mr3zee.theme.LocalAppColors
 import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.displayName
 import com.github.mr3zee.util.resolve
@@ -170,6 +173,13 @@ fun ConnectionListScreen(
                 onValueChange = { viewModel.setSearchQuery(it) },
                 placeholder = packStringResource(Res.string.connections_search_placeholder),
                 singleLine = true,
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .widthIn(max = 1200.dp)
@@ -187,6 +197,7 @@ fun ConnectionListScreen(
                     selected = typeFilter == null,
                     onClick = { viewModel.setTypeFilter(null) },
                     label = { Text(packStringResource(Res.string.common_all)) },
+                    modifier = Modifier.testTag("filter_ALL"),
                 )
                 for (type in ConnectionType.entries) {
                     RwChip(
@@ -316,7 +327,18 @@ private fun ConnectionListItem(
                 )
             }
         }
-        Row {
+        val appColors = LocalAppColors.current
+        val badgeColor = when (connection.type) {
+            ConnectionType.GITHUB -> appColors.githubAction
+            ConnectionType.SLACK -> appColors.slackMessage
+            ConnectionType.TEAMCITY -> appColors.teamcityBuild
+        }
+        RwBadge(
+            text = connection.type.displayName(),
+            color = badgeColor,
+            testTag = "connection_type_badge_${connection.id.value}",
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             RwButton(
                 onClick = onTest,
                 variant = RwButtonVariant.Ghost,
@@ -329,7 +351,11 @@ private fun ConnectionListItem(
                     Text(packStringResource(Res.string.connections_test))
                 }
             }
-            RwButton(onClick = onDelete, variant = RwButtonVariant.Ghost, contentColor = MaterialTheme.colorScheme.error) {
+            RwButton(
+                onClick = onDelete,
+                variant = RwButtonVariant.Danger,
+                modifier = Modifier.testTag("delete_connection_btn_${connection.id.value}"),
+            ) {
                 Text(packStringResource(Res.string.common_delete))
             }
         }

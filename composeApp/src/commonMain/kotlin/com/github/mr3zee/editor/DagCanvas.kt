@@ -2,8 +2,21 @@ package com.github.mr3zee.editor
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clipToBounds
@@ -13,10 +26,21 @@ import androidx.compose.ui.input.pointer.isCtrlPressed
 import androidx.compose.ui.input.pointer.isMetaPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.dp
+import com.github.mr3zee.components.RwButton
+import com.github.mr3zee.components.RwButtonVariant
+import com.github.mr3zee.components.RwIconButton
+import com.github.mr3zee.i18n.packStringResource
 import com.github.mr3zee.model.*
+import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.LocalAppColors
+import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.typeLabel
+import releasewizard.composeapp.generated.resources.Res
+import releasewizard.composeapp.generated.resources.editor_empty_canvas_hint
+import releasewizard.composeapp.generated.resources.editor_zoom_fit
 
 // Hit testing
 private sealed class HitTarget {
@@ -124,8 +148,9 @@ fun DagCanvas(
         block.id to block.typeLabel()
     }
 
+    Box(modifier = modifier) {
     Canvas(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .clipToBounds()
             .alpha(if (isReadOnly) 0.6f else 1f)
@@ -280,4 +305,66 @@ fun DagCanvas(
             drawPorts(drawTransform, pos, isInputHovered, isOutputHovered, appColors)
         }
     }
+
+    // Empty canvas hint
+    if (graph.edges.isEmpty() && graph.blocks.size <= 1) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = packStringResource(Res.string.editor_empty_canvas_hint),
+                style = AppTypography.body,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier.testTag("empty_canvas_hint"),
+            )
+        }
+    }
+
+    // Zoom controls overlay (bottom-right)
+    Column(
+        modifier = Modifier
+            .align(Alignment.BottomEnd)
+            .padding(Spacing.lg),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+    ) {
+        Text(
+            text = "${(zoom * 100).toInt()}%",
+            style = AppTypography.caption,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.testTag("zoom_label"),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            RwIconButton(
+                onClick = {
+                    val newZoom = (zoom * 1.2f).coerceIn(MIN_ZOOM, MAX_ZOOM)
+                    zoom = newZoom
+                },
+                modifier = Modifier.size(32.dp).testTag("zoom_in_button"),
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+            }
+            RwIconButton(
+                onClick = {
+                    val newZoom = (zoom / 1.2f).coerceIn(MIN_ZOOM, MAX_ZOOM)
+                    zoom = newZoom
+                },
+                modifier = Modifier.size(32.dp).testTag("zoom_out_button"),
+            ) {
+                Icon(Icons.Default.Remove, contentDescription = null, modifier = Modifier.size(16.dp))
+            }
+        }
+        RwButton(
+            onClick = {
+                zoom = 1f
+                panOffset = Offset.Zero
+            },
+            variant = RwButtonVariant.Ghost,
+            modifier = Modifier.testTag("zoom_fit_button"),
+        ) {
+            Text(packStringResource(Res.string.editor_zoom_fit), style = AppTypography.caption)
+        }
+    }
+    } // Box
 }

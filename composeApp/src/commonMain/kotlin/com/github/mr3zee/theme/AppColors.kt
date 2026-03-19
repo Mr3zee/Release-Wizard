@@ -230,7 +230,7 @@ val DarkAppColors = AppColors(
 
     // Chips
     chipBg = Color(0xFF1E2130),
-    chipBgSelected = Color(0xFF1E3A5F),
+    chipBgSelected = Color(0xFF264B73),
     chipBorder = Color(0xFF2D3140),
     chipText = Color(0xFF9CA3AF),
     chipTextSelected = Color(0xFF60A5FA),
@@ -238,15 +238,15 @@ val DarkAppColors = AppColors(
     // Canvas
     canvasBackground = Color(0xFF1A1A2E),
     canvasGridDots = Color(0xFF374151),
-    canvasGridMajor = Color(0xFF374151),
-    canvasGridMinor = Color(0xFF2D3140),
+    canvasGridMajor = Color(0xFF424960),
+    canvasGridMinor = Color(0xFF353B4E),
     blockInnerBorder = Color(0x30FFFFFF),
     blockInnerHighlight = Color(0x15FFFFFF),
-    edgeDefault = Color(0xFF9CA3AF),
+    edgeDefault = Color(0xFFBFC5D0),
     edgeSelected = Color(0xFF60A5FA),
     edgeGlow = Color(0x4D60A5FA),
     blockSelectionHighlight = Color(0xFF60A5FA),
-    portDefault = Color(0xFF6B7280),
+    portDefault = Color(0xFFB0B8C4),
     portHover = Color(0xFF60A5FA),
     portHoverRing = Color(0x4060A5FA),
     draftEdge = Color(0xFF60A5FA),

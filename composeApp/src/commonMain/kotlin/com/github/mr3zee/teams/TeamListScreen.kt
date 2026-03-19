@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -161,6 +162,13 @@ fun TeamListScreen(
                 onValueChange = { viewModel.setSearchQuery(it) },
                 placeholder = packStringResource(Res.string.teams_search_placeholder),
                 singleLine = true,
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .widthIn(max = 1200.dp)

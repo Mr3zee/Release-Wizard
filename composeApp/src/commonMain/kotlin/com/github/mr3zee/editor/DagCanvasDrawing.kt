@@ -21,7 +21,7 @@ import kotlin.math.PI
 // Block dimensions in dp (logical coordinates)
 internal const val BLOCK_WIDTH = 180f
 internal const val BLOCK_HEIGHT = 70f
-internal const val PORT_RADIUS = 5f
+internal const val PORT_RADIUS = 8f
 internal const val PORT_HIT_RADIUS = 14f
 internal const val GRID_SIZE = 20f
 internal const val MIN_ZOOM = 0.25f
@@ -111,12 +111,12 @@ internal fun DrawScope.drawGrid(transform: CanvasTransform, colors: AppColors) {
 
         var x = startX
         while (x < size.width) {
-            drawLine(colors.canvasGridMinor, Offset(x, 0f), Offset(x, size.height), strokeWidth = 0.25f)
+            drawLine(colors.canvasGridMinor, Offset(x, 0f), Offset(x, size.height), strokeWidth = 0.5f)
             x += minorScreenSize
         }
         var y = startY
         while (y < size.height) {
-            drawLine(colors.canvasGridMinor, Offset(0f, y), Offset(size.width, y), strokeWidth = 0.25f)
+            drawLine(colors.canvasGridMinor, Offset(0f, y), Offset(size.width, y), strokeWidth = 0.5f)
             y += minorScreenSize
         }
     }
@@ -129,12 +129,12 @@ internal fun DrawScope.drawGrid(transform: CanvasTransform, colors: AppColors) {
 
         var x = startX
         while (x < size.width) {
-            drawLine(colors.canvasGridMajor, Offset(x, 0f), Offset(x, size.height), strokeWidth = 0.5f)
+            drawLine(colors.canvasGridMajor, Offset(x, 0f), Offset(x, size.height), strokeWidth = 1.0f)
             x += majorScreenSize
         }
         var y = startY
         while (y < size.height) {
-            drawLine(colors.canvasGridMajor, Offset(0f, y), Offset(size.width, y), strokeWidth = 0.5f)
+            drawLine(colors.canvasGridMajor, Offset(0f, y), Offset(size.width, y), strokeWidth = 1.0f)
             y += majorScreenSize
         }
     }
@@ -260,9 +260,16 @@ internal fun DrawScope.drawPorts(
             center = Offset(inX, inY),
         )
     }
+    // Ring outline on input port
     drawCircle(
         color = if (isInputHovered) colors.portHover else colors.portDefault,
         radius = portScreenRadius,
+        center = Offset(inX, inY),
+        style = Stroke(width = transform.toScreen(1f)),
+    )
+    drawCircle(
+        color = if (isInputHovered) colors.portHover else colors.portDefault,
+        radius = portScreenRadius * 0.5f,
         center = Offset(inX, inY),
     )
 
@@ -276,9 +283,16 @@ internal fun DrawScope.drawPorts(
             center = Offset(outX, outY),
         )
     }
+    // Ring outline on output port
     drawCircle(
         color = if (isOutputHovered) colors.portHover else colors.portDefault,
         radius = portScreenRadius,
+        center = Offset(outX, outY),
+        style = Stroke(width = transform.toScreen(1f)),
+    )
+    drawCircle(
+        color = if (isOutputHovered) colors.portHover else colors.portDefault,
+        radius = portScreenRadius * 0.5f,
         center = Offset(outX, outY),
     )
 }
@@ -305,15 +319,15 @@ internal fun DrawScope.drawEdge(
     }
 
     // Scale stroke widths with zoom for consistent visual weight
-    val baseStroke = transform.toScreen(1.5f)
-    val selectedStroke = transform.toScreen(2f)
+    val baseStroke = transform.toScreen(2.5f)
+    val selectedStroke = transform.toScreen(3f)
 
     // Glow effect for selected edges (outer pass at 30% alpha, wider stroke)
     if (isSelected) {
         drawPath(
             path,
             color = colors.edgeGlow,
-            style = Stroke(width = transform.toScreen(4f)),
+            style = Stroke(width = transform.toScreen(5f)),
         )
     }
 
@@ -323,13 +337,16 @@ internal fun DrawScope.drawEdge(
         style = Stroke(width = if (isSelected) selectedStroke else baseStroke),
     )
 
-    // Arrow dot at end (smaller than PORT_RADIUS to avoid overlap)
-    val arrowSize = transform.toScreen(3.5f)
-    drawCircle(
-        color = if (isSelected) colors.edgeSelected else colors.edgeDefault,
-        radius = arrowSize,
-        center = Offset(endX, endY),
-    )
+    // Triangle arrowhead at end
+    val arrowSize = transform.toScreen(8f)
+    val edgeColor = if (isSelected) colors.edgeSelected else colors.edgeDefault
+    val arrowPath = Path().apply {
+        moveTo(endX, endY)
+        lineTo(endX - arrowSize, endY - arrowSize * 0.5f)
+        lineTo(endX - arrowSize, endY + arrowSize * 0.5f)
+        close()
+    }
+    drawPath(arrowPath, color = edgeColor)
 }
 
 internal fun DrawScope.drawDraftEdge(start: Offset, end: Offset, colors: AppColors, transform: CanvasTransform? = null) {

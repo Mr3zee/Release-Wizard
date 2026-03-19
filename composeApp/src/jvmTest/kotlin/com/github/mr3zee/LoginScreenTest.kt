@@ -185,6 +185,7 @@ class LoginScreenTest {
 
         onNodeWithTag("login_username").performTextInput("taken_user")
         onNodeWithTag("login_password").performTextInput("password123")
+        onNodeWithTag("login_confirm_password").performTextInput("password123")
         onNodeWithTag("register_button").performClick()
 
         waitUntil(timeoutMillis = 3000L) {

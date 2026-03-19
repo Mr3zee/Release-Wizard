@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Mail
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -112,11 +113,26 @@ fun MyInvitesScreen(
                 }
             } else if (invites.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
-                    Text(
-                        packStringResource(Res.string.teams_no_pending_invites),
-                        style = AppTypography.body,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Default.Mail,
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        )
+                        Spacer(modifier = Modifier.height(Spacing.md))
+                        Text(
+                            packStringResource(Res.string.teams_no_pending_invites),
+                            style = AppTypography.body,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            packStringResource(Res.string.teams_invites_empty_hint),
+                            style = AppTypography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = Spacing.xs),
+                        )
+                    }
                 }
             } else {
                 LazyColumn(
@@ -168,8 +184,8 @@ private fun InviteCard(
             )
             Spacer(modifier = Modifier.height(Spacing.sm))
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                RwButton(onClick = onAccept, variant = RwButtonVariant.Primary) { Text(packStringResource(Res.string.teams_accept)) }
-                RwButton(onClick = onDecline, variant = RwButtonVariant.Ghost) { Text(packStringResource(Res.string.teams_decline)) }
+                RwButton(onClick = onAccept, variant = RwButtonVariant.Primary, modifier = Modifier.testTag("accept_invite_${invite.id}")) { Text(packStringResource(Res.string.teams_accept)) }
+                RwButton(onClick = onDecline, variant = RwButtonVariant.Ghost, modifier = Modifier.testTag("decline_invite_${invite.id}")) { Text(packStringResource(Res.string.teams_decline)) }
             }
         }
     }

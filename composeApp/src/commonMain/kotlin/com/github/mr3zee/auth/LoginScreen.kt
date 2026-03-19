@@ -44,13 +44,21 @@ fun LoginScreen(
 
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
     var isRegisterMode by remember { mutableStateOf(false) }
     var showPassword by remember { mutableStateOf(false) }
+    var showConfirmPassword by remember { mutableStateOf(false) }
 
     val usernameFocusRequester = remember { FocusRequester() }
     val passwordFocusRequester = remember { FocusRequester() }
+    val confirmPasswordFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(isRegisterMode) {
+        confirmPassword = ""
+    }
 
     val canSubmit = username.isNotBlank() && password.isNotBlank() && !isLoading
+        && (!isRegisterMode || (password == confirmPassword && confirmPassword.isNotBlank()))
     val onSubmit: () -> Unit = {
         if (canSubmit) {
             if (isRegisterMode) {
@@ -116,6 +124,9 @@ fun LoginScreen(
                     placeholder = packStringResource(Res.string.auth_password),
                     singleLine = true,
                     visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                    supportingText = if (isRegisterMode) {
+                        { Text(packStringResource(Res.string.auth_password_requirements)) }
+                    } else null,
                     trailingIcon = {
                         RwIconButton(
                             onClick = { showPassword = !showPassword },
@@ -133,22 +144,68 @@ fun LoginScreen(
                         .focusRequester(passwordFocusRequester)
                         .onPreviewKeyEvent { event ->
                             if (event.key == Key.Enter && event.type == KeyEventType.KeyDown) {
-                                onSubmit()
+                                if (isRegisterMode) {
+                                    confirmPasswordFocusRequester.requestFocus()
+                                } else {
+                                    onSubmit()
+                                }
                                 true
                             } else false
                         }
                         .testTag("login_password"),
                 )
 
-                val currentError = error
-                if (currentError != null) {
-                    Text(
-                        text = currentError.resolve(),
-                        color = MaterialTheme.colorScheme.error,
-                        style = AppTypography.bodySmall,
-                        textAlign = TextAlign.Start,
-                        modifier = Modifier.fillMaxWidth().testTag("login_error"),
+                if (isRegisterMode) {
+                    val confirmPasswordMismatch = confirmPassword.isNotEmpty() && password != confirmPassword
+                    RwTextField(
+                        value = confirmPassword,
+                        onValueChange = { confirmPassword = it; viewModel.dismissError() },
+                        label = packStringResource(Res.string.auth_confirm_password),
+                        placeholder = packStringResource(Res.string.auth_confirm_password),
+                        singleLine = true,
+                        isError = confirmPasswordMismatch,
+                        visualTransformation = if (showConfirmPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                        supportingText = if (confirmPasswordMismatch) {
+                            { Text(packStringResource(Res.string.auth_password_mismatch)) }
+                        } else null,
+                        trailingIcon = {
+                            RwIconButton(
+                                onClick = { showConfirmPassword = !showConfirmPassword },
+                                modifier = Modifier.focusProperties { canFocus = false }.testTag("login_confirm_password_toggle_visibility"),
+                            ) {
+                                Icon(
+                                    if (showConfirmPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = if (showConfirmPassword) packStringResource(Res.string.common_hide_password)
+                                        else packStringResource(Res.string.common_show_password),
+                                )
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .focusRequester(confirmPasswordFocusRequester)
+                            .onPreviewKeyEvent { event ->
+                                if (event.key == Key.Enter && event.type == KeyEventType.KeyDown) {
+                                    onSubmit()
+                                    true
+                                } else false
+                            }
+                            .testTag("login_confirm_password"),
                     )
+                }
+
+                val currentError = error
+                Box(
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 20.dp),
+                ) {
+                    if (currentError != null) {
+                        Text(
+                            text = currentError.resolve(),
+                            color = MaterialTheme.colorScheme.error,
+                            style = AppTypography.body,
+                            textAlign = TextAlign.Start,
+                            modifier = Modifier.fillMaxWidth().testTag("login_error"),
+                        )
+                    }
                 }
 
                 RwButton(
