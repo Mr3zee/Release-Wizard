@@ -63,7 +63,6 @@ PUT can silently inject cross-team connection IDs.
 ## Medium
 
 ### PROJ-M1: Lock bypass — write proceeds when no lock exists
-### PROJ-M2: Regular team members can update project templates
 ### PROJ-M3: `updateProject` emits no audit event
 ### PROJ-M4: `teamIds` silently drops invalid UUIDs
 

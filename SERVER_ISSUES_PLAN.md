@@ -113,10 +113,7 @@ SSRF, auth bypass, CSRF, and credential exposure issues. All streams are indepen
 
 **Scope:** `ConnectionsService.kt`, `ProjectsService.kt`, `ReleasesService.kt`, `ScheduleService.kt`, `TeamAccessService.kt`
 **Issues:**
-- CONN-H3: Require TEAM_LEAD for `updateConnection`
-- PROJ-M2: Require TEAM_LEAD for `updateProject`
-- REL-M4: Add TeamRole-aware checks for destructive release operations
-- SCHED-M7: Require TEAM_LEAD for schedule CRUD
+- REL-M4: Add role checks for destructive release operations
 - TEAM-H1: Enforce last-lead invariant even for ADMINs
 - REL-H2: Add session parameter to `getRelease`/`getBlockExecutions`
 

@@ -100,9 +100,9 @@ Engine cancels the release, but if findTeamId returns null, no audit entry is wr
 
 **Files:** `ReleasesService.kt:386-390`
 
-Any team member can stop, cancel, archive, delete, or restart blocks. No viewer/operator distinction.
+Any team member can stop, cancel, archive, delete, or restart blocks. Only Team lead must be able to do so.
 
-**Fix:** Introduce `TeamRole`-aware checks for destructive operations.
+**Fix:** Introduce TEAM_LEAD checks for destructive operations.
 
 ---
 

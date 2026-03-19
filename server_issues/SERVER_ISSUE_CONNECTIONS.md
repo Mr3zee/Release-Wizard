@@ -26,7 +26,6 @@ DNS resolved at check time, HTTP client resolves again. Only called for TeamCity
 
 ### CONN-H1: Encryption key validation mismatch (config: chars >= 32, service: bytes == 32)
 ### CONN-H2: SSRF protection missing for Slack — only prefix check
-### CONN-H3: Any team member can update credentials — no TEAM_LEAD gate
 ### CONN-H4: No audit log for `updateConnection`
 ### CONN-H5: Two DB round-trips per privileged request
 ### CONN-H6: Delete TOCTOU — three non-transactional DB ops

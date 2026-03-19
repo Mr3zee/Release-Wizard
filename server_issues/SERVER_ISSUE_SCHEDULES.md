@@ -74,5 +74,4 @@ Unbounded schedule creation can saturate the execution engine.
 ### SCHED-M4: Silent retry of permanently broken schedules
 ### SCHED-M5: No audit trail for schedule CRUD operations
 ### SCHED-M6: Scheduled releases bypass audit actor attribution
-### SCHED-M7: No write-role enforcement — any team member can create/toggle/delete
 ### SCHED-M8: Unbounded parameter injection into scheduled releases
