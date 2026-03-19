@@ -27,47 +27,19 @@ Each group has a dedicated file with full descriptions, file locations, and fix 
 
 ---
 
-## Phase 1: Cross-Cutting Foundation (all screens benefit)
+## Phase 1: Cross-Cutting Foundation (all screens benefit) — ✅ COMPLETE
 
-These fixes touch shared components or theme tokens — do them first so per-screen work builds on top.
 > **Details:** [`issues/APP_ISSUES_FOUNDATION.md`](issues/APP_ISSUES_FOUNDATION.md)
 
-### Stream 1A: Theme & Contrast Fixes
-**Files:** `AppColors.kt`, `AppTypography.kt`, `Spacing.kt`
-
-| ID   | Issue                                                                                                    | Severity | Screens Affected                                   |
-|------|----------------------------------------------------------------------------------------------------------|----------|----------------------------------------------------|
-| 1A-1 | Dark theme `inputPlaceholder` (#7B8494) fails WCAG AA (3.7:1 on #151820) — lighten to ~#9CA3AF           | Medium   | ConnectionForm, LoginScreen, all text fields       |
-| 1A-2 | Empty state icons use `onSurfaceVariant.copy(alpha = 0.5f)` — too faint, increase to 0.7f                | Low      | ProjectList, ConnectionList, ReleaseList, TeamList |
-| 1A-3 | `onSurfaceVariant` overused for multiple distinct content types — add semantic color tokens where needed | Medium   | ReleaseView, AuditLog                              |
-
-### Stream 1B: RwButton Disabled State
-**Files:** `RwButton.kt`
-
-| ID   | Issue                                                                                                                                         | Severity | Screens Affected                       |
-|------|-----------------------------------------------------------------------------------------------------------------------------------------------|----------|----------------------------------------|
-| 1B-1 | Disabled button uses only `alpha(0.6f)` — insufficient visual distinction. Add desaturated background + dim text for disabled primary buttons | Medium   | LoginScreen, ConnectionForm, all forms |
-
-### Stream 1C: RwInlineForm Enter-to-Submit
-**Files:** `RwInlineForm.kt`
-
-| ID   | Issue                                                                | Severity | Screens Affected                   |
-|------|----------------------------------------------------------------------|----------|------------------------------------|
-| 1C-1 | No Enter key handler to submit inline forms — only Escape is handled | Medium   | TeamList, ProjectList, ReleaseList |
-
-### Stream 1D: "No Search Results" Empty State Pattern
-**Files:** `ProjectListScreen.kt`, `ConnectionListScreen.kt`, `TeamListScreen.kt`, `ReleaseListScreen.kt`
-
-| ID   | Issue                                                                                                    | Severity | Screens Affected                                   |
-|------|----------------------------------------------------------------------------------------------------------|----------|----------------------------------------------------|
-| 1D-1 | "No search results" states lack a decorative icon — inconsistent with main empty states which have icons | Low      | ProjectList, ConnectionList, TeamList, ReleaseList |
-
-### Stream 1E: ListItemCard Consistency
-**Files:** `ListItemCard.kt`
-
-| ID   | Issue                                                                                    | Severity | Screens Affected |
-|------|------------------------------------------------------------------------------------------|----------|------------------|
-| 1E-1 | Audit: verify `ListItemCard` provides at least 44dp touch targets for all action buttons | Low      | All list screens |
+| ID | Issue | Status |
+|----|-------|--------|
+| 1A-1 | Dark theme placeholder WCAG AA contrast | ✅ Fixed — `#9CA3AF` (~6.5:1) |
+| 1A-2 | Empty state icons too faint (0.5f alpha) | ✅ Fixed — 0.7f across 6 screens |
+| 1A-3 | `onSurfaceVariant` overused — add semantic tokens | ✅ Fixed — `chromeTextTimestamp` + `chromeTextMetadata` tokens added |
+| 1B-1 | Disabled primary button insufficient distinction | ✅ Fixed — desaturated bg + dim text |
+| 1C-1 | No Enter-to-submit in inline forms | ✅ Fixed — `onSubmit` param + KeyDown handler |
+| 1D-1 | No search results missing decorative icon | ✅ Fixed — search icon at 0.5f in 4 screens |
+| 1E-1 | RwIconButton 44dp touch targets | ✅ Fixed — 40dp → 44dp |
 
 ---
 

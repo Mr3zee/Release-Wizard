@@ -121,7 +121,7 @@ fun AuditLogScreen(
                             Icons.Outlined.History,
                             contentDescription = null,
                             modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         )
                         Spacer(modifier = Modifier.height(Spacing.md))
                         Text(

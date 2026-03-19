@@ -232,6 +232,13 @@ fun ConnectionListScreen(
                 ) {
                     if (searchQuery.isNotBlank() || typeFilter != null) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Default.Search,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            )
+                            Spacer(modifier = Modifier.height(Spacing.md))
                             Text(
                                 text = packStringResource(Res.string.common_no_search_results),
                                 style = AppTypography.body,
@@ -251,7 +258,7 @@ fun ConnectionListScreen(
                                 Icons.Outlined.Link,
                                 contentDescription = null,
                                 modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             )
                             Spacer(modifier = Modifier.height(Spacing.md))
                             Text(

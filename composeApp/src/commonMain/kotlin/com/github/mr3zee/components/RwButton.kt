@@ -105,10 +105,10 @@ fun RwButton(
         modifier = modifier
             .focusRing(cornerRadius = 8.dp, ringColor = focusRingColor, interactionSource = interactionSource)
             .scale(scale)
-            .alpha(if (enabled) 1f else 0.6f),
+            .alpha(if (enabled || variant == RwButtonVariant.Primary) 1f else 0.6f),
         shape = AppShapes.sm,
-        backgroundColor = bgColor,
-        contentColor = resolvedContentColor,
+        backgroundColor = if (!enabled && variant == RwButtonVariant.Primary) colors.chromeSurfaceSecondary else bgColor,
+        contentColor = if (!enabled && variant == RwButtonVariant.Primary) colors.chromeTextTertiary else resolvedContentColor,
         contentPadding = contentPadding,
         borderColor = borderColor,
         borderWidth = borderWidth,
@@ -120,8 +120,10 @@ fun RwButton(
             RwButtonVariant.Primary, RwButtonVariant.Danger -> AppTypography.body
             else -> AppTypography.label
         }
+        val effectiveContentColor = if (!enabled && variant == RwButtonVariant.Primary)
+            colors.chromeTextTertiary else resolvedContentColor
         CompositionLocalProvider(
-            LocalContentColor provides resolvedContentColor,
+            LocalContentColor provides effectiveContentColor,
             LocalTextStyle provides textStyle,
         ) {
             content()
@@ -152,7 +154,7 @@ fun RwIconButton(
         enabled = enabled,
         modifier = modifier
             .focusRing(cornerRadius = 8.dp, interactionSource = interactionSource)
-            .size(40.dp)
+            .size(44.dp)
             .alpha(if (enabled) 1f else 0.6f),
         shape = AppShapes.sm,
         backgroundColor = bgColor,

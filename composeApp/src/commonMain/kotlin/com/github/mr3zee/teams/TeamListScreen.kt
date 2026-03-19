@@ -226,6 +226,13 @@ fun TeamListScreen(
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     if (searchQuery.isNotBlank()) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Default.Search,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            )
+                            Spacer(modifier = Modifier.height(Spacing.md))
                             Text(
                                 packStringResource(Res.string.common_no_search_results),
                                 style = AppTypography.body,
@@ -242,7 +249,7 @@ fun TeamListScreen(
                                 Icons.Outlined.Group,
                                 contentDescription = null,
                                 modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             )
                             Spacer(modifier = Modifier.height(Spacing.md))
                             Text(
@@ -356,6 +363,7 @@ private fun CreateTeamInlineForm(
         visible = visible,
         title = packStringResource(Res.string.teams_new_team),
         onDismiss = onDismiss,
+        onSubmit = { if (name.isNotBlank()) onCreate(name, description) },
         testTag = "create_team_form",
         modifier = Modifier
             .widthIn(max = 1200.dp)

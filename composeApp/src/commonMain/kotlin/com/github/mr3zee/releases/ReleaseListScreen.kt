@@ -355,6 +355,13 @@ fun ReleaseListScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.padding(top = 80.dp),
                         ) {
+                            Icon(
+                                Icons.Default.Search,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            )
+                            Spacer(modifier = Modifier.height(Spacing.md))
                             Text(
                                 text = packStringResource(Res.string.common_no_search_results),
                                 style = AppTypography.body,
@@ -381,7 +388,7 @@ fun ReleaseListScreen(
                                 Icons.Outlined.RocketLaunch,
                                 contentDescription = null,
                                 modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             )
                             Spacer(modifier = Modifier.height(Spacing.md))
                             Text(
@@ -476,6 +483,7 @@ private fun StartReleaseInlineForm(
         visible = visible,
         title = packStringResource(Res.string.start_release_title),
         onDismiss = onDismiss,
+        onSubmit = { selectedProject?.let { onStart(it.id) } },
         testTag = "start_release_form",
         modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
         actions = {

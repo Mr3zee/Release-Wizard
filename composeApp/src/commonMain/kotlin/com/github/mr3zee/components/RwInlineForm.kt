@@ -15,8 +15,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.theme.AppTypography
@@ -36,6 +39,7 @@ fun RwInlineForm(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
     dismissEnabled: Boolean = true,
+    onSubmit: (() -> Unit)? = null,
     testTag: String = "inline_form",
     actions: @Composable RowScope.() -> Unit,
     content: @Composable ColumnScope.() -> Unit,
@@ -64,10 +68,19 @@ fun RwInlineForm(
                 .fillMaxWidth()
                 .focusRequester(focusRequester)
                 .onPreviewKeyEvent { event ->
-                    if (event.key == Key.Escape && dismissEnabled) {
-                        onDismiss()
-                        true
-                    } else false
+                    when {
+                        event.key == Key.Escape && event.type == KeyEventType.KeyDown
+                            && dismissEnabled -> {
+                            onDismiss()
+                            true
+                        }
+                        event.key == Key.Enter && !event.isShiftPressed
+                            && event.type == KeyEventType.KeyDown && onSubmit != null -> {
+                            onSubmit()
+                            true
+                        }
+                        else -> false
+                    }
                 }
                 .testTag(testTag),
         ) {

@@ -14,6 +14,8 @@ data class AppColors(
     val chromeTextPrimary: Color,
     val chromeTextSecondary: Color,
     val chromeTextTertiary: Color,
+    val chromeTextTimestamp: Color,  // temporal info: "Started 5m ago", durations, dates
+    val chromeTextMetadata: Color,  // structural labels: type badges, counts, phase context
 
     // ── Interactive: buttons ────────────────────────────────────────
     val buttonPrimaryBg: Color,
@@ -120,6 +122,8 @@ val LightAppColors = AppColors(
     chromeTextPrimary = Color(0xFF1F2937),
     chromeTextSecondary = Color(0xFF6B7280),
     chromeTextTertiary = Color(0xFF737B8A),
+    chromeTextTimestamp = Color(0xFF7C8598),  // blue-gray, ~4.7:1 on white — temporal info
+    chromeTextMetadata = Color(0xFF566275),   // darker blue-gray, ~6.2:1 on white — structural labels
 
     // Buttons
     buttonPrimaryBg = Color(0xFF3B82F6),
@@ -216,6 +220,8 @@ val DarkAppColors = AppColors(
     chromeTextPrimary = Color(0xFFE5E7EB),
     chromeTextSecondary = Color(0xFF9CA3AF),
     chromeTextTertiary = Color(0xFF6B7280),
+    chromeTextTimestamp = Color(0xFF8A94A6),  // muted blue-gray, ~5.3:1 on #121218 — temporal info
+    chromeTextMetadata = Color(0xFFB0B8C4),   // brighter blue-gray, ~8.5:1 on #121218 — structural labels
 
     // Buttons — darkened for WCAG AA 4.5:1 contrast with white text
     buttonPrimaryBg = Color(0xFF2563EB),
@@ -237,7 +243,7 @@ val DarkAppColors = AppColors(
     inputBg = Color(0xFF151820),
     inputBorder = Color(0xFF3D4455),
     inputBorderFocused = Color(0xFF60A5FA),
-    inputPlaceholder = Color(0xFF7B8494),
+    inputPlaceholder = Color(0xFF9CA3AF),
 
     // Chips
     chipBg = Color(0xFF1E2130),
