@@ -223,10 +223,11 @@ class ReleaseListViewModel(
         }
     }
 
-    fun startRelease(projectId: ProjectId) {
+    fun startRelease(projectId: ProjectId, onCreated: (ReleaseId) -> Unit = {}) {
         viewModelScope.launch {
             try {
-                releaseApiClient.startRelease(CreateReleaseRequest(projectTemplateId = projectId))
+                val response = releaseApiClient.startRelease(CreateReleaseRequest(projectTemplateId = projectId))
+                onCreated(response.release.id)
                 loadReleases()
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()

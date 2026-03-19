@@ -41,6 +41,7 @@ import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.LocalAppColors
 import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.displayName
+import com.github.mr3zee.util.formatTimestamp
 import com.github.mr3zee.util.resolve
 import kotlinx.coroutines.delay
 import com.github.mr3zee.i18n.packPluralStringResource
@@ -201,7 +202,7 @@ fun ReleaseListScreen(
                 visible = showStartDialog,
                 projects = projects,
                 onStart = { projectId ->
-                    viewModel.startRelease(projectId)
+                    viewModel.startRelease(projectId) { releaseId -> onViewRelease(releaseId) }
                     showStartDialog = false
                 },
                 onDismiss = { showStartDialog = false },
@@ -222,7 +223,8 @@ fun ReleaseListScreen(
             Row(
                 modifier = Modifier
                     .widthIn(max = 1200.dp)
-                    .padding(horizontal = Spacing.lg),
+                    .padding(horizontal = Spacing.lg, vertical = Spacing.xs)
+                    .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
                 RwChip(
@@ -230,7 +232,15 @@ fun ReleaseListScreen(
                     onClick = { viewModel.setStatusFilter(null) },
                     label = { Text(packStringResource(Res.string.common_all)) },
                 )
-                for (status in listOf(ReleaseStatus.RUNNING, ReleaseStatus.SUCCEEDED, ReleaseStatus.FAILED)) {
+                for (status in listOf(
+                    ReleaseStatus.PENDING,
+                    ReleaseStatus.RUNNING,
+                    ReleaseStatus.SUCCEEDED,
+                    ReleaseStatus.FAILED,
+                    ReleaseStatus.STOPPED,
+                    ReleaseStatus.CANCELLED,
+                    ReleaseStatus.ARCHIVED,
+                )) {
                     RwChip(
                         selected = statusFilter == status,
                         onClick = {
@@ -483,9 +493,10 @@ private fun ReleaseListItem(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (release.startedAt != null) {
+            val startedAt = release.startedAt
+            if (startedAt != null) {
                 Text(
-                    text = packStringResource(Res.string.releases_started_label, release.startedAt.toString()),
+                    text = packStringResource(Res.string.releases_started_label, formatTimestamp(startedAt)),
                     style = AppTypography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

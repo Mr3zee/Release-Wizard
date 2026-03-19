@@ -1,7 +1,9 @@
 package com.github.mr3zee.releases
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
@@ -11,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import com.github.mr3zee.i18n.packStringResource
 import com.github.mr3zee.model.BlockType
@@ -19,7 +22,9 @@ import com.github.mr3zee.model.SubBuildStatus
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.LocalAppColors
 import com.github.mr3zee.theme.Spacing
+import com.github.mr3zee.util.formatDuration
 import releasewizard.composeapp.generated.resources.*
+import kotlin.time.Duration.Companion.seconds
 
 @Composable
 fun SubBuildsSection(
@@ -128,6 +133,7 @@ private fun SubBuildRow(
     modifier: Modifier = Modifier,
 ) {
     val appColors = LocalAppColors.current
+    val uriHandler = LocalUriHandler.current
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -148,12 +154,25 @@ private fun SubBuildRow(
             modifier = Modifier.weight(1f),
             maxLines = 1,
         )
-        subBuild.durationSeconds?.let { seconds ->
+        subBuild.durationSeconds?.let { durationSec ->
             Text(
-                text = packStringResource(Res.string.sub_builds_duration, seconds),
+                text = formatDuration(durationSec.seconds),
                 style = AppTypography.caption,
                 color = appColors.chromeTextTertiary,
                 modifier = Modifier.testTag("sub_build_duration_${subBuild.id}"),
+            )
+        }
+        subBuild.buildUrl?.let { url ->
+            Text(
+                text = packStringResource(Res.string.sub_builds_open_link),
+                style = AppTypography.label,
+                color = appColors.buttonPrimaryBg,
+                modifier = Modifier
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = LocalIndication.current,
+                    ) { uriHandler.openUri(url) }
+                    .testTag("sub_build_link_${subBuild.id}"),
             )
         }
     }

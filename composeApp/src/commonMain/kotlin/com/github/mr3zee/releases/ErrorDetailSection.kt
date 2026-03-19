@@ -17,6 +17,7 @@ import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.copyToClipboard
+import com.github.mr3zee.util.formatTimestamp
 import kotlin.time.Instant
 import com.github.mr3zee.i18n.packStringResource
 import releasewizard.composeapp.generated.resources.*
@@ -59,7 +60,7 @@ fun ErrorDetailSection(
                 Column(modifier = Modifier.padding(top = Spacing.sm)) {
                     if (finishedAt != null) {
                         Text(
-                            text = packStringResource(Res.string.releases_error_failed_at, finishedAt.toString()),
+                            text = packStringResource(Res.string.releases_error_failed_at, formatTimestamp(finishedAt)),
                             style = AppTypography.bodySmall,
                             color = MaterialTheme.colorScheme.onErrorContainer,
                             modifier = Modifier.testTag("error_timestamp"),
