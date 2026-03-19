@@ -23,9 +23,10 @@ import com.github.mr3zee.components.RwCard
 import com.github.mr3zee.components.RefreshIconButton
 import com.github.mr3zee.components.RwFab
 import com.github.mr3zee.components.RwInlineForm
+import com.github.mr3zee.components.loadMoreItem
 import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.model.TeamId
-import com.github.mr3zee.keyboard.LocalShortcutActions
+import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.theme.AppShapes
 import com.github.mr3zee.theme.AppTypography
@@ -55,20 +56,23 @@ fun TeamListScreen(
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val isManualRefresh by viewModel.isManualRefresh.collectAsState()
     val refreshError by viewModel.refreshError.collectAsState()
+    val pagination by viewModel.pagination.collectAsState()
+    val isLoadingMore by viewModel.isLoadingMore.collectAsState()
 
     var showCreateDialog by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val searchFocusRequester = remember { FocusRequester() }
 
-    CompositionLocalProvider(
-        LocalShortcutActions provides ShortcutActions(
+    val shortcutActions = remember(showCreateDialog) {
+        ShortcutActions(
             onSearch = { searchFocusRequester.requestFocus() },
             onCreate = { showCreateDialog = true },
             onRefresh = { viewModel.refresh() },
             hasDialogOpen = showCreateDialog,
         )
-    ) {
+    }
+    ProvideShortcutActions(shortcutActions) {
 
     val retryLabel = packStringResource(Res.string.common_retry)
     val resolvedError = error?.resolve()
@@ -243,13 +247,14 @@ fun TeamListScreen(
                             modifier = Modifier.widthIn(max = 1200.dp),
                         )
                     }
+                    loadMoreItem(pagination, isLoadingMore, onLoadMore = { viewModel.loadMore() })
                 }
             }
         }
     }
 
     // Create team dialog replaced by inline form in the content area
-    } // CompositionLocalProvider
+    } // ProvideShortcutActions
 }
 
 @Composable

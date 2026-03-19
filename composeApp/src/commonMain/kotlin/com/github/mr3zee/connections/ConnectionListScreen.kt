@@ -27,7 +27,7 @@ import com.github.mr3zee.components.loadMoreItem
 import com.github.mr3zee.model.Connection
 import com.github.mr3zee.model.ConnectionId
 import com.github.mr3zee.model.ConnectionType
-import com.github.mr3zee.keyboard.LocalShortcutActions
+import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -65,14 +65,16 @@ fun ConnectionListScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val searchFocusRequester = remember { FocusRequester() }
 
-    CompositionLocalProvider(
-        LocalShortcutActions provides ShortcutActions(
+    val isDialogOpen = connectionToDelete != null
+    val shortcutActions = remember(isDialogOpen) {
+        ShortcutActions(
             onSearch = { searchFocusRequester.requestFocus() },
             onCreate = { onCreateConnection() },
             onRefresh = { viewModel.loadConnections() },
-            hasDialogOpen = connectionToDelete != null,
+            hasDialogOpen = isDialogOpen,
         )
-    ) {
+    }
+    ProvideShortcutActions(shortcutActions) {
 
     val retryLabel = packStringResource(Res.string.common_retry)
     val resolvedError = error?.resolve()
@@ -273,7 +275,7 @@ fun ConnectionListScreen(
     }
 
     // Delete confirmation is now shown inline within the LazyColumn items
-    } // CompositionLocalProvider
+    } // ProvideShortcutActions
 }
 
 @Composable

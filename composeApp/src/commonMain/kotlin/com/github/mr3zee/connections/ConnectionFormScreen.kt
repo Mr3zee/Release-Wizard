@@ -5,6 +5,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -17,13 +18,14 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
+import com.github.mr3zee.components.RwCard
 import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwInlineConfirmation
 import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.model.ConnectionConfig
 import com.github.mr3zee.model.ConnectionId
 import com.github.mr3zee.model.ConnectionType
-import com.github.mr3zee.keyboard.LocalShortcutActions
+import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.Spacing
@@ -160,12 +162,10 @@ fun ConnectionFormScreen(
         }
     }
 
-    CompositionLocalProvider(
-        LocalShortcutActions provides ShortcutActions(
-            onSave = handleSave,
-            hasDialogOpen = showDiscardDialog,
-        )
-    ) {
+    val shortcutActions = remember(showDiscardDialog) {
+        ShortcutActions(onSave = handleSave, hasDialogOpen = showDiscardDialog)
+    }
+    ProvideShortcutActions(shortcutActions) {
 
     Scaffold(
         topBar = {
@@ -209,6 +209,40 @@ fun ConnectionFormScreen(
                 testTag = "discard_confirm",
                 modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
             )
+
+            error?.let { errorMessage ->
+                RwCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = Spacing.lg, vertical = Spacing.xs)
+                        .testTag("connection_form_error_banner"),
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(start = Spacing.md, top = Spacing.sm, bottom = Spacing.sm, end = Spacing.xs),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            errorMessage.resolve(),
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            style = AppTypography.bodySmall,
+                            modifier = Modifier.weight(1f),
+                        )
+                        RwIconButton(
+                            onClick = { viewModel.dismissError() },
+                            modifier = Modifier.testTag("connection_error_dismiss"),
+                        ) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = packStringResource(Res.string.common_dismiss),
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.onErrorContainer,
+                            )
+                        }
+                    }
+                }
+            }
 
             Box(
                 modifier = Modifier
@@ -404,22 +438,12 @@ fun ConnectionFormScreen(
                 }
             }
 
-            error?.let { errorMessage ->
-                Text(
-                    text = errorMessage.resolve(),
-                    color = MaterialTheme.colorScheme.error,
-                    style = AppTypography.body,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("connection_form_error"),
-                )
-            }
             }
             }
         }
     }
 
-    } // CompositionLocalProvider
+    } // ProvideShortcutActions
 }
 
 private fun buildConfig(

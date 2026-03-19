@@ -16,6 +16,8 @@ import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwInlineConfirmation
+import com.github.mr3zee.keyboard.ProvideShortcutActions
+import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.model.*
 import com.github.mr3zee.model.isTerminal
 import com.github.mr3zee.theme.AppTypography
@@ -77,6 +79,12 @@ fun ReleaseDetailScreen(
         onDismissError()
     }
 
+    val isDialogOpen = activeConfirmation != ActiveConfirmation.None
+    val shortcutActions = remember(isDialogOpen) {
+        ShortcutActions(hasDialogOpen = isDialogOpen)
+    }
+    ProvideShortcutActions(shortcutActions) {
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -96,7 +104,7 @@ fun ReleaseDetailScreen(
                     }
                 },
                 navigationIcon = {
-                    RwButton(onClick = onBack, variant = RwButtonVariant.Ghost) {
+                    RwButton(onClick = onBack, variant = RwButtonVariant.Ghost, modifier = Modifier.testTag("back_button")) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
                         Text(packStringResource(Res.string.common_back))
                     }
@@ -338,6 +346,7 @@ fun ReleaseDetailScreen(
         }
     }
 
+    } // ProvideShortcutActions
 }
 
 @Composable

@@ -17,6 +17,8 @@ import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwInlineConfirmation
 import com.github.mr3zee.components.RwInlineForm
+import com.github.mr3zee.keyboard.ProvideShortcutActions
+import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.model.*
 import com.github.mr3zee.theme.AppShapes
@@ -78,6 +80,16 @@ fun TeamManageScreen(
         )
         viewModel.dismissError()
     }
+
+    val isDialogOpen = showDiscardConfirm || showDeleteDialog || showInviteDialog || memberToRemove != null || inviteToCancel != null
+    val shortcutActions = remember(isDialogOpen) {
+        ShortcutActions(
+            onSave = { if (hasEditChanges && editName.isNotBlank()) viewModel.updateTeam(editName, editDescription) },
+            onRefresh = { viewModel.loadAll() },
+            hasDialogOpen = isDialogOpen,
+        )
+    }
+    ProvideShortcutActions(shortcutActions) {
 
     Scaffold(
         topBar = {
@@ -334,6 +346,8 @@ fun TeamManageScreen(
     }
 
     // Invite user form is now shown inline above the members section
+
+    } // ProvideShortcutActions
 }
 
 @Composable
@@ -351,7 +365,7 @@ private fun ManageMemberItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 member.username,
-                style = AppTypography.heading,
+                style = AppTypography.subheading,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -406,7 +420,7 @@ private fun InviteItem(
     ) {
         Text(
             invite.invitedUsername,
-            style = AppTypography.heading,
+            style = AppTypography.subheading,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
@@ -430,7 +444,7 @@ private fun JoinRequestItem(
     ) {
         Text(
             request.username,
-            style = AppTypography.heading,
+            style = AppTypography.subheading,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),

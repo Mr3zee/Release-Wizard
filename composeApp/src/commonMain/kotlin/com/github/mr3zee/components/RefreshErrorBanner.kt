@@ -48,6 +48,7 @@ fun RefreshErrorBanner(
                     Icons.Default.Close,
                     contentDescription = packStringResource(Res.string.common_dismiss),
                     modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onErrorContainer,
                 )
             }
         }

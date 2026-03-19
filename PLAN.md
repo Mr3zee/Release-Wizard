@@ -112,60 +112,43 @@ All items fixed (7D dropped by expert review), reviewed by UX/Design/Compose/Tec
 
 ---
 
-## Phase 8: Keyboard Shortcuts Architecture Fix
+## Phase 8: Keyboard Shortcuts Architecture Fix ✅
 
-**Goal:** Fix the shortcut propagation system and add shortcuts to missing screens.
+**Status:** Complete
 
-### 8A. Fix shortcut actions propagation from child screens to global handler
-- **File:** `App.kt:148-157`
-- **Problem:** `SideEffect` at parent level reads parent's `LocalShortcutActions`, never sees child screen overrides.
-- **Fix:** Have screens directly set `shortcutActionsState.value` via a callback or `LaunchedEffect` instead of relying on CompositionLocal propagation.
+311/311 Compose tests pass. Reviewed by UX/Design/Compose/QA experts.
 
-### 8B. Add ShortcutActions to missing screens
-- **Files:** `TeamDetailScreen`, `TeamManageScreen`, `MyInvitesScreen`, `AuditLogScreen`, `ProjectAutomationScreen`, `ReleaseDetailScreen`
-- **Fix:** Provide appropriate `ShortcutActions` (F5 for refresh, Ctrl+S for save where applicable).
+- **8A.** Fixed broken CompositionLocal propagation: replaced parent-level `SideEffect` (self-referential no-op) with callback-based `ProvideShortcutActions` + `LocalShortcutActionsSetter`. Migrated 6 existing screens.
+- **8B.** Added `ProvideShortcutActions` to 6 missing screens: TeamDetailScreen (F5), TeamManageScreen (Ctrl+S, F5), MyInvitesScreen (F5), AuditLogScreen (F5), ProjectAutomationScreen (F5), ReleaseDetailScreen (dialog suppression only, WebSocket live data)
 
 ---
 
-## Phase 9: Minor UX Polish
+## Phase 9: Minor UX Polish ✅
 
-**Goal:** Fix remaining usability papercuts.
+**Status:** Complete
 
-### 9A. Fix pagination inconsistencies
-- Convert AuditLog "Load More" button to auto-pagination (`loadMoreItem()` pattern)
-- Add pagination to TeamListScreen (currently hardcoded limit=50)
+311/311 Compose tests pass. Reviewed by UX/Design/Compose/QA experts.
 
-### 9B. Fix typography hierarchy in team member lists
-- **Files:** `TeamDetailScreen.kt:193`, `TeamManageScreen.kt:319`
-- **Fix:** Change member username from `AppTypography.heading` to `AppTypography.subheading`.
-
-### 9C. Fix ConnectionFormScreen error display
-- **File:** `ConnectionFormScreen.kt:377-386`
-- **Fix:** Use banner/snackbar pattern instead of inline text at bottom.
-
-### 9D. Fix RwTextField modifier placement
-- **File:** `RwTextField.kt:80, 103`
-- **Fix:** Apply `modifier` to outer `Column` instead of inner `BasicTextField`.
-
-### 9E. Fix ArtifactTreeView icon padding order
-- **File:** `ArtifactTreeView.kt:129`
-- **Fix:** Change `Modifier.size(16.dp).padding(...)` to `Modifier.padding(...).size(16.dp)`.
+- **9A.** Converted AuditLog manual "Load More" button to auto-pagination (`loadMoreItem()` pattern with `PaginationInfo`). Added pagination to TeamListScreen (limit=50, `loadMore()` for >50 teams).
+- **9B.** Changed `AppTypography.heading` → `subheading` for member/invite/request usernames in TeamDetailScreen and TeamManageScreen (4 composables)
+- **9C.** Replaced plain error Text in ConnectionFormScreen with `RwCard`-based error banner (`errorContainer` background, dismiss button with `onErrorContainer` tint)
+- **9D.** SKIPPED — Moving `modifier` from BasicTextField to outer Column breaks `focusRequester` on 4+ screens
+- **9E.** Fixed ArtifactTreeView icon padding order: `size().padding()` → `padding().size()` (2 instances)
 
 ---
 
-## Phase 10: Cosmetic Consistency
+## Phase 10: Cosmetic Consistency ✅
 
-**Goal:** Align spacing, styling, and component usage across the app.
+**Status:** Complete
 
-- Replace remaining hardcoded `dp` values with `Spacing` tokens (`LoadMoreItem.kt:30`, `KeyboardShortcutsOverlay.kt:202-216`, `TeamManageScreen.kt:227`)
-- Use `ListItemCard` consistently for invite cards and audit event items
-- Add horizontal scroll to status filter row (`ReleaseListScreen.kt:206`)
-- Add tooltip/copy mechanism for truncated release IDs (`ReleaseListScreen.kt:373`)
-- Replace unicode triangles with Material icons for gate expand/collapse (`BlockPropertiesPanel.kt:530`)
-- Fix lock-lost dialog button placement (`DagEditorScreen.kt:358-370`)
-- Add missing `testTag` modifiers (CreateProject confirm button, "All" status chip, ReleaseDetail back button)
-- Fix `RefreshErrorBanner` dismiss icon tint for error container contrast
-- Standardize `contentPadding` in toolbar buttons (replace `6.dp` with `Spacing.xs`)
+311/311 Compose tests pass. Reviewed by UX/Design/Compose/QA experts.
+
+- Replaced `16.dp` → `Spacing.lg` in LoadMoreItem, `6.dp` → `Spacing.sm` in EditorToolbar (5 buttons)
+- Added tooltip/click-to-copy for truncated release IDs and project template IDs (RwTooltip + copyToClipboard)
+- Replaced unicode triangles (▾/▸) with Material Icons (KeyboardArrowDown/Right, 16.dp) in BlockPropertiesPanel gate toggle
+- Added missing testTags: `filter_ALL` (ReleaseListScreen), `back_button` (ReleaseDetailScreen), `load_more_item` (LoadMoreItem)
+- Fixed RefreshErrorBanner dismiss icon: added explicit `tint = onErrorContainer` for contrast
+- SKIPPED: ListItemCard for audit/invite items (layout mismatch), horizontal scroll (already done), lock-lost dialog (already done), KeyboardShortcutsOverlay decorative values (not layout spacing)
 
 ---
 

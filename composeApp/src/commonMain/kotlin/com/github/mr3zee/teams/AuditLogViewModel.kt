@@ -2,6 +2,7 @@ package com.github.mr3zee.teams
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.github.mr3zee.api.PaginationInfo
 import com.github.mr3zee.api.TeamApiClient
 import com.github.mr3zee.api.toUiMessage
 import com.github.mr3zee.model.AuditEvent
@@ -25,8 +26,8 @@ class AuditLogViewModel(
     private val _error = MutableStateFlow<UiMessage?>(null)
     val error: StateFlow<UiMessage?> = _error
 
-    private val _hasMore = MutableStateFlow(true)
-    val hasMore: StateFlow<Boolean> = _hasMore
+    private val _pagination = MutableStateFlow<PaginationInfo?>(null)
+    val pagination: StateFlow<PaginationInfo?> = _pagination
 
     private val _isLoadingMore = MutableStateFlow(false)
     val isLoadingMore: StateFlow<Boolean> = _isLoadingMore
@@ -41,7 +42,6 @@ class AuditLogViewModel(
     val refreshError: StateFlow<UiMessage?> = _refreshError
 
     private val pageSize = 50
-    private var currentOffset = 0
 
     init {
         loadEvents()
@@ -54,8 +54,7 @@ class AuditLogViewModel(
             try {
                 val response = apiClient.getAuditLog(teamId, offset = 0, limit = pageSize)
                 _events.value = response.events
-                currentOffset = response.events.size
-                _hasMore.value = response.events.size >= pageSize
+                _pagination.value = response.pagination
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -73,8 +72,7 @@ class AuditLogViewModel(
             try {
                 val response = apiClient.getAuditLog(teamId, offset = 0, limit = pageSize)
                 _events.value = response.events
-                currentOffset = response.events.size
-                _hasMore.value = response.events.size >= pageSize
+                _pagination.value = response.pagination
             } catch (e: Exception) {
                 _refreshError.value = e.toUiMessage()
             } finally {
@@ -89,14 +87,14 @@ class AuditLogViewModel(
     }
 
     fun loadMore() {
-        if (_isLoadingMore.value || !_hasMore.value || _isRefreshing.value) return
+        if (_isLoadingMore.value || _isRefreshing.value) return
+        val nextOffset = _pagination.value?.nextPageOffset() ?: return
         _isLoadingMore.value = true
         viewModelScope.launch {
             try {
-                val response = apiClient.getAuditLog(teamId, offset = currentOffset, limit = pageSize)
+                val response = apiClient.getAuditLog(teamId, offset = nextOffset, limit = pageSize)
                 _events.value += response.events
-                currentOffset += response.events.size
-                _hasMore.value = response.events.size >= pageSize
+                _pagination.value = response.pagination
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {

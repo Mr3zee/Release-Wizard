@@ -18,6 +18,8 @@ import com.github.mr3zee.components.RefreshIconButton
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwCard
+import com.github.mr3zee.keyboard.ProvideShortcutActions
+import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.model.TeamInvite
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.Spacing
@@ -57,6 +59,9 @@ fun MyInvitesScreen(
         }
         viewModel.dismissError()
     }
+
+    val shortcutActions = remember { ShortcutActions(onRefresh = { viewModel.refresh() }) }
+    ProvideShortcutActions(shortcutActions) {
 
     Scaffold(
         topBar = {
@@ -132,6 +137,8 @@ fun MyInvitesScreen(
             }
         }
     }
+
+    } // ProvideShortcutActions
 }
 
 @Composable

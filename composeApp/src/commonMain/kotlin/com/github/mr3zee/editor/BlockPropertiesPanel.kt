@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -540,15 +542,19 @@ private fun GateConfigSection(
     } else {
         packStringResource(Res.string.editor_gate_section_header)
     }
-    val label = gateHeader + if (expanded) " \u25BE" else " \u25B8"
-
     RwButton(
         onClick = { expanded = !expanded },
         variant = RwButtonVariant.Secondary,
         enabled = enabled,
         modifier = Modifier.fillMaxWidth().testTag("gate_section_toggle"),
     ) {
-        Text(label, style = AppTypography.label)
+        Text(gateHeader, style = AppTypography.label)
+        Spacer(Modifier.width(Spacing.xs))
+        Icon(
+            imageVector = if (expanded) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+        )
     }
 
     if (expanded) {

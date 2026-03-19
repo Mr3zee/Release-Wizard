@@ -18,6 +18,9 @@ import com.github.mr3zee.components.RefreshIconButton
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwCard
+import com.github.mr3zee.components.loadMoreItem
+import com.github.mr3zee.keyboard.ProvideShortcutActions
+import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.model.AuditEvent
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.Spacing
@@ -38,7 +41,7 @@ fun AuditLogScreen(
     val events by viewModel.events.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
-    val hasMore by viewModel.hasMore.collectAsState()
+    val pagination by viewModel.pagination.collectAsState()
     val isLoadingMore by viewModel.isLoadingMore.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val isManualRefresh by viewModel.isManualRefresh.collectAsState()
@@ -58,6 +61,9 @@ fun AuditLogScreen(
         )
         viewModel.dismissError()
     }
+
+    val shortcutActions = remember { ShortcutActions(onRefresh = { viewModel.refresh() }) }
+    ProvideShortcutActions(shortcutActions) {
 
     Scaffold(
         topBar = {
@@ -125,26 +131,13 @@ fun AuditLogScreen(
                             modifier = Modifier.widthIn(max = 1200.dp),
                         )
                     }
-                    if (hasMore) {
-                        item {
-                            RwButton(
-                                onClick = { viewModel.loadMore() },
-                                variant = RwButtonVariant.Ghost,
-                                enabled = !isLoadingMore,
-                                modifier = Modifier.fillMaxWidth().padding(Spacing.sm).testTag("load_more_audit"),
-                            ) {
-                                if (isLoadingMore) {
-                                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                                } else {
-                                    Text(packStringResource(Res.string.teams_load_more))
-                                }
-                            }
-                        }
-                    }
+                    loadMoreItem(pagination, isLoadingMore, onLoadMore = { viewModel.loadMore() })
                 }
             }
         }
     }
+
+    } // ProvideShortcutActions
 }
 
 @Composable

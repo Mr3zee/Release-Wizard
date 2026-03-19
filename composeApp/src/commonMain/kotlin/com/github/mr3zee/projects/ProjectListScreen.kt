@@ -15,7 +15,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
-import com.github.mr3zee.keyboard.LocalShortcutActions
+import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -82,14 +82,16 @@ fun ProjectListScreen(
 
     val searchFocusRequester = remember { FocusRequester() }
 
-    CompositionLocalProvider(
-        LocalShortcutActions provides ShortcutActions(
+    val isDialogOpen = showCreateDialog || projectToDelete != null || showTeamPicker || showOverflowMenu
+    val shortcutActions = remember(isDialogOpen) {
+        ShortcutActions(
             onSearch = { searchFocusRequester.requestFocus() },
             onCreate = { showCreateDialog = true },
             onRefresh = { viewModel.refresh() },
-            hasDialogOpen = showCreateDialog || projectToDelete != null || showTeamPicker || showOverflowMenu,
+            hasDialogOpen = isDialogOpen,
         )
-    ) {
+    }
+    ProvideShortcutActions(shortcutActions) {
     val activeTeamName = userTeams.find { it.teamId == currentTeamId }?.teamName
         ?: packStringResource(Res.string.projects_no_team)
 
@@ -415,7 +417,7 @@ fun ProjectListScreen(
     // Delete confirmation is now shown inline within the LazyColumn items
 
     // Team picker is now a DropdownMenu in the TopAppBar
-    } // CompositionLocalProvider
+    } // ProvideShortcutActions
 }
 
 @Composable

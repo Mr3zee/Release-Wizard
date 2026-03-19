@@ -10,7 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.onKeyEvent
 import com.github.mr3zee.keyboard.KeyboardShortcutsOverlay
-import com.github.mr3zee.keyboard.LocalShortcutActions
+import com.github.mr3zee.keyboard.LocalShortcutActionsSetter
 import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.keyboard.handleGlobalKeyEvent
 import com.github.mr3zee.api.AuthApiClient
@@ -104,9 +104,8 @@ fun App() {
 
     var showShortcutsOverlay by remember { mutableStateOf(false) }
 
-    // App-level mutable state for shortcut actions — screens update this via
-    // CompositionLocalProvider + SideEffect. This avoids the CompositionLocal
-    // tree scope issue (screen providers are children, but key handler is a parent).
+    // App-level mutable state for shortcut actions — screens push their actions
+    // via ProvideShortcutActions + LocalShortcutActionsSetter callback.
     val shortcutActionsState = remember { mutableStateOf(ShortcutActions()) }
 
     val toggleTheme = {
@@ -144,17 +143,11 @@ fun App() {
                 },
             color = MaterialTheme.colorScheme.background,
         ) {
-            // Provide the state setter so screens can update shortcut actions
+            // Provide the setter callback so screens can push their ShortcutActions
+            // up to the app-level key handler via ProvideShortcutActions().
             CompositionLocalProvider(
-                LocalShortcutActions provides shortcutActionsState.value,
+                LocalShortcutActionsSetter provides { shortcutActionsState.value = it },
             ) {
-                // Sync: whenever a screen provides new ShortcutActions via its own
-                // CompositionLocalProvider, this SideEffect propagates it to the
-                // app-level state that the key handler reads.
-                val currentActions = LocalShortcutActions.current
-                SideEffect {
-                    shortcutActionsState.value = currentActions
-                }
 
                 when {
                     isCheckingSession -> {

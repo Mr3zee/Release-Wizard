@@ -3,6 +3,7 @@ package com.github.mr3zee.teams
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.mr3zee.api.CreateTeamRequest
+import com.github.mr3zee.api.PaginationInfo
 import com.github.mr3zee.api.TeamApiClient
 import com.github.mr3zee.api.TeamResponse
 import com.github.mr3zee.api.toUiMessage
@@ -46,6 +47,14 @@ class TeamListViewModel(
     private val _refreshError = MutableStateFlow<UiMessage?>(null)
     val refreshError: StateFlow<UiMessage?> = _refreshError
 
+    private val _pagination = MutableStateFlow<PaginationInfo?>(null)
+    val pagination: StateFlow<PaginationInfo?> = _pagination
+
+    private val _isLoadingMore = MutableStateFlow(false)
+    val isLoadingMore: StateFlow<Boolean> = _isLoadingMore
+
+    private val pageSize = 50
+
     init {
         viewModelScope.launch {
             _searchQuery.debounce(300.milliseconds).distinctUntilChanged().collectLatest {
@@ -84,8 +93,9 @@ class TeamListViewModel(
         }
         try {
             val search = _searchQuery.value.takeIf { it.isNotBlank() }
-            val response = apiClient.listTeams(offset = 0, limit = 50, search = search)
+            val response = apiClient.listTeams(offset = 0, limit = pageSize, search = search)
             _teams.value = response.teams
+            _pagination.value = response.pagination
             _refreshError.value = null
         } catch (e: Exception) {
             if (silent) {
@@ -96,6 +106,27 @@ class TeamListViewModel(
         } finally {
             _isLoading.value = false
             _isRefreshing.value = false
+        }
+    }
+
+    fun loadMore() {
+        if (_isLoadingMore.value || _isRefreshing.value) return
+        val nextOffset = _pagination.value?.nextPageOffset() ?: return
+        val currentSearch = _searchQuery.value
+        viewModelScope.launch {
+            _isLoadingMore.value = true
+            try {
+                val search = currentSearch.takeIf { it.isNotBlank() }
+                val response = apiClient.listTeams(offset = nextOffset, limit = pageSize, search = search)
+                if (_searchQuery.value == currentSearch) {
+                    _teams.value += response.teams
+                    _pagination.value = response.pagination
+                }
+            } catch (e: Exception) {
+                _error.value = e.toUiMessage()
+            } finally {
+                _isLoadingMore.value = false
+            }
         }
     }
 

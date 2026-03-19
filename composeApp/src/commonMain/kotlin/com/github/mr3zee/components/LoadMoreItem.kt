@@ -9,8 +9,10 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.api.PaginationInfo
+import com.github.mr3zee.theme.Spacing
 
 /**
  * Adds a "load more" item to a [LazyListScope] that triggers pagination.
@@ -27,7 +29,7 @@ fun LazyListScope.loadMoreItem(
             LaunchedEffect(currentPagination.offset) { onLoadMore() }
             if (isLoadingMore) {
                 Box(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(Spacing.lg).testTag("load_more_item"),
                     contentAlignment = Alignment.Center,
                 ) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp))

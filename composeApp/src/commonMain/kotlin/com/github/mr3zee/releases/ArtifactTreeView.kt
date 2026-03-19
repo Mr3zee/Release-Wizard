@@ -126,7 +126,7 @@ private fun ArtifactNodeRow(
             Icon(
                 imageVector = Icons.Default.Folder,
                 contentDescription = packStringResource(Res.string.releases_folder),
-                modifier = Modifier.size(16.dp).padding(start = Spacing.xxs),
+                modifier = Modifier.padding(start = Spacing.xxs).size(16.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(modifier = Modifier.width(Spacing.xs))
@@ -141,7 +141,7 @@ private fun ArtifactNodeRow(
             Icon(
                 imageVector = Icons.Default.Description,
                 contentDescription = packStringResource(Res.string.releases_file),
-                modifier = Modifier.size(16.dp).padding(start = Spacing.xxs),
+                modifier = Modifier.padding(start = Spacing.xxs).size(16.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(modifier = Modifier.width(Spacing.xs))

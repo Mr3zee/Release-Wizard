@@ -102,7 +102,7 @@ fun EditorToolbar(
                 variant = RwButtonVariant.Secondary,
                 enabled = enabled && canUndo,
                 modifier = Modifier.weight(1f).testTag("undo_button"),
-                contentPadding = PaddingValues(horizontal = Spacing.sm, vertical = 6.dp),
+                contentPadding = PaddingValues(Spacing.sm),
             ) {
                 Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(Spacing.xs))
@@ -113,7 +113,7 @@ fun EditorToolbar(
                 variant = RwButtonVariant.Secondary,
                 enabled = enabled && canRedo,
                 modifier = Modifier.weight(1f).testTag("redo_button"),
-                contentPadding = PaddingValues(horizontal = Spacing.sm, vertical = 6.dp),
+                contentPadding = PaddingValues(Spacing.sm),
             ) {
                 Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(Spacing.xs))
@@ -130,7 +130,7 @@ fun EditorToolbar(
                 variant = RwButtonVariant.Secondary,
                 enabled = hasSelection, // Copy always allowed
                 modifier = Modifier.weight(1f).testTag("copy_button"),
-                contentPadding = PaddingValues(horizontal = Spacing.sm, vertical = 6.dp),
+                contentPadding = PaddingValues(Spacing.sm),
             ) {
                 Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(Spacing.xs))
@@ -141,7 +141,7 @@ fun EditorToolbar(
                 variant = RwButtonVariant.Secondary,
                 enabled = enabled && hasClipboard,
                 modifier = Modifier.weight(1f).testTag("paste_button"),
-                contentPadding = PaddingValues(horizontal = Spacing.sm, vertical = 6.dp),
+                contentPadding = PaddingValues(Spacing.sm),
             ) {
                 Icon(Icons.Default.ContentPaste, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(Spacing.xs))
@@ -155,7 +155,7 @@ fun EditorToolbar(
             enabled = enabled && hasSelection,
             contentColor = MaterialTheme.colorScheme.error,
             modifier = Modifier.fillMaxWidth().testTag("delete_button"),
-            contentPadding = PaddingValues(horizontal = Spacing.sm, vertical = 6.dp),
+            contentPadding = PaddingValues(Spacing.sm),
         ) {
             Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(Spacing.xs))

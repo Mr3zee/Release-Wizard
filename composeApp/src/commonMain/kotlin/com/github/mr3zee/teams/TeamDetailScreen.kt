@@ -17,6 +17,8 @@ import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwCard
 import com.github.mr3zee.components.RwInlineConfirmation
+import com.github.mr3zee.keyboard.ProvideShortcutActions
+import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.model.TeamMembership
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.Spacing
@@ -41,6 +43,11 @@ fun TeamDetailScreen(
     val isLoading by viewModel.isLoading.collectAsState()
 
     var showLeaveDialog by remember { mutableStateOf(false) }
+
+    val shortcutActions = remember(showLeaveDialog) {
+        ShortcutActions(onRefresh = { viewModel.loadDetail() }, hasDialogOpen = showLeaveDialog)
+    }
+    ProvideShortcutActions(shortcutActions) {
 
     Scaffold(
         topBar = {
@@ -180,6 +187,8 @@ fun TeamDetailScreen(
     }
 
     // Leave team confirmation is now shown inline below the team info section
+
+    } // ProvideShortcutActions
 }
 
 @Composable
@@ -193,7 +202,7 @@ private fun MemberItem(
     ) {
         Text(
             member.username,
-            style = AppTypography.heading,
+            style = AppTypography.subheading,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),

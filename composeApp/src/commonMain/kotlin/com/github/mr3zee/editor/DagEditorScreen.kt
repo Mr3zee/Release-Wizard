@@ -19,7 +19,7 @@ import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwInlineConfirmation
 import com.github.mr3zee.dag.ValidationError
-import com.github.mr3zee.keyboard.LocalShortcutActions
+import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.LocalAppColors
@@ -111,12 +111,13 @@ fun DagEditorScreen(
     }
     val handleBack: () -> Unit = remember(onBack) { { guardedNavigate(onBack) } }
 
-    CompositionLocalProvider(
-        LocalShortcutActions provides ShortcutActions(
+    val shortcutActions = remember(isConfirmationVisible) {
+        ShortcutActions(
             onSave = { if (isDirty && !isSaving && !isReadOnly) viewModel.save() },
             hasDialogOpen = isConfirmationVisible,
         )
-    ) {
+    }
+    ProvideShortcutActions(shortcutActions) {
 
     Scaffold(
         topBar = {
@@ -395,7 +396,7 @@ fun DagEditorScreen(
         }
     }
 
-    } // CompositionLocalProvider
+    } // ProvideShortcutActions
 }
 
 @Composable

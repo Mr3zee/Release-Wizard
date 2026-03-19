@@ -28,6 +28,7 @@ import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwInlineConfirmation
 import com.github.mr3zee.components.RwInlineForm
 import com.github.mr3zee.components.RwTextField
+import com.github.mr3zee.components.RwTooltip
 import com.github.mr3zee.components.loadMoreItem
 import com.github.mr3zee.model.Release
 import com.github.mr3zee.model.ReleaseId
@@ -46,7 +47,7 @@ import com.github.mr3zee.util.resolve
 import kotlinx.coroutines.delay
 import com.github.mr3zee.i18n.packPluralStringResource
 import com.github.mr3zee.i18n.packStringResource
-import com.github.mr3zee.keyboard.LocalShortcutActions
+import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
 import releasewizard.composeapp.generated.resources.*
 import kotlin.time.Duration.Companion.milliseconds
@@ -77,14 +78,15 @@ fun ReleaseListScreen(
     var releaseToDelete by remember { mutableStateOf<ReleaseId?>(null) }
     val searchFocusRequester = remember { FocusRequester() }
 
-    CompositionLocalProvider(
-        LocalShortcutActions provides ShortcutActions(
+    val shortcutActions = remember(showStartDialog) {
+        ShortcutActions(
             onSearch = { searchFocusRequester.requestFocus() },
             onCreate = { showStartDialog = true },
             onRefresh = { viewModel.refresh() },
             hasDialogOpen = showStartDialog,
         )
-    ) {
+    }
+    ProvideShortcutActions(shortcutActions) {
 
     // "Updated Xs ago" ticker — store elapsed duration, format in composable scope
     var elapsed by remember { mutableStateOf<kotlin.time.Duration?>(null) }
@@ -231,6 +233,7 @@ fun ReleaseListScreen(
                     selected = statusFilter == null,
                     onClick = { viewModel.setStatusFilter(null) },
                     label = { Text(packStringResource(Res.string.common_all)) },
+                    modifier = Modifier.testTag("filter_ALL"),
                 )
                 for (status in listOf(
                     ReleaseStatus.PENDING,
@@ -391,7 +394,7 @@ fun ReleaseListScreen(
             }
         }
     }
-    } // CompositionLocalProvider
+    } // ProvideShortcutActions
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -491,19 +494,23 @@ private fun ReleaseListItem(
         modifier = modifier,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = packStringResource(Res.string.releases_release_title, release.id.value.take(8)),
-                style = AppTypography.subheading,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = packStringResource(Res.string.releases_project_label, release.projectTemplateId.value.take(8)),
-                style = AppTypography.body,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            RwTooltip(tooltip = release.id.value) {
+                Text(
+                    text = packStringResource(Res.string.releases_release_title, release.id.value.take(8)),
+                    style = AppTypography.subheading,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            RwTooltip(tooltip = release.projectTemplateId.value) {
+                Text(
+                    text = packStringResource(Res.string.releases_project_label, release.projectTemplateId.value.take(8)),
+                    style = AppTypography.body,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             val startedAt = release.startedAt
             if (startedAt != null) {
                 Text(

@@ -28,6 +28,8 @@ import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwInlineConfirmation
 import com.github.mr3zee.components.RwInlineForm
 import com.github.mr3zee.components.RwTextField
+import com.github.mr3zee.keyboard.ProvideShortcutActions
+import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.i18n.packPluralStringResource
 import com.github.mr3zee.i18n.packStringResource
 import com.github.mr3zee.model.MavenTrigger
@@ -145,6 +147,9 @@ fun ProjectAutomationScreen(
         )
         viewModel.dismissError()
     }
+
+    val shortcutActions = remember { ShortcutActions(onRefresh = { viewModel.load() }) }
+    ProvideShortcutActions(shortcutActions) {
 
     Scaffold(
         topBar = {
@@ -323,6 +328,8 @@ fun ProjectAutomationScreen(
             }
         }
     }
+
+    } // ProvideShortcutActions
 }
 
 @Composable
