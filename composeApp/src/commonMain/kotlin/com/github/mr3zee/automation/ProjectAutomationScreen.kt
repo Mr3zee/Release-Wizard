@@ -7,6 +7,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Inventory2
@@ -29,6 +30,7 @@ import com.github.mr3zee.components.RwCard
 import com.github.mr3zee.components.RwCheckbox
 import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwInlineConfirmation
+import com.github.mr3zee.components.RwSwitch
 import com.github.mr3zee.components.RwInlineForm
 import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.keyboard.ProvideShortcutActions
@@ -479,7 +481,6 @@ private fun WebhookSecretInlineCard(
 
 // ── Create Schedule Inline Form ──
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CreateScheduleInlineForm(
     visible: Boolean,
@@ -529,24 +530,29 @@ private fun CreateScheduleInlineForm(
             }
         },
     ) {
-        // Preset selector — keeps M3 OutlinedTextField (not RwTextField) because
-        // ExposedDropdownMenuBox requires .menuAnchor() which only works with M3 text fields
-        ExposedDropdownMenuBox(
-            expanded = presetsExpanded,
-            onExpandedChange = { presetsExpanded = it },
-        ) {
-            OutlinedTextField(
+        Box {
+            RwTextField(
                 value = selectedPresetLabel.ifBlank { packStringResource(Res.string.schedule_preset_label) },
                 onValueChange = {},
                 readOnly = true,
-                label = { Text(packStringResource(Res.string.schedule_preset_label)) },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = presetsExpanded) },
+                label = packStringResource(Res.string.schedule_preset_label),
+                trailingIcon = {
+                    Icon(
+                        Icons.Default.ArrowDropDown,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                    )
+                },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                     .testTag("schedule_preset_selector"),
             )
-            ExposedDropdownMenu(
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .clickable { presetsExpanded = !presetsExpanded },
+            )
+            DropdownMenu(
                 expanded = presetsExpanded,
                 onDismissRequest = { presetsExpanded = false },
             ) {
@@ -728,7 +734,7 @@ private fun ScheduleItem(
                     )
                 }
             }
-            Switch(
+            RwSwitch(
                 checked = schedule.enabled,
                 onCheckedChange = onToggle,
                 modifier = Modifier.testTag("schedule_toggle_${schedule.id}"),
@@ -768,7 +774,7 @@ private fun WebhookTriggerItem(
                     maxLines = 1,
                 )
             }
-            Switch(
+            RwSwitch(
                 checked = trigger.enabled,
                 onCheckedChange = onToggle,
                 modifier = Modifier.testTag("webhook_toggle_${trigger.id}"),
@@ -823,7 +829,7 @@ private fun MavenTriggerItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Switch(
+            RwSwitch(
                 checked = trigger.enabled,
                 onCheckedChange = onToggle,
                 modifier = Modifier.testTag("maven_toggle_${trigger.id}"),

@@ -173,7 +173,7 @@ private fun InviteCard(
         Column(modifier = Modifier.padding(Spacing.lg)) {
             Text(
                 invite.teamName,
-                style = AppTypography.heading,
+                style = AppTypography.subheading,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )

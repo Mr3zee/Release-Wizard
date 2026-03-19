@@ -332,29 +332,29 @@ fun DagEditorScreen(
                     enter = expandHorizontally(),
                     exit = shrinkHorizontally(),
                 ) {
-                EditorToolbar(
-                    onAddBlock = { type, name ->
-                        val (x, y) = viewModel.nextPlacementPosition()
-                        viewModel.addBlock(type, name, x, y)
-                    },
-                    onAddContainer = { name ->
-                        val (x, y) = viewModel.nextPlacementPosition()
-                        viewModel.addContainerBlock(name, x, y)
-                    },
-                    onDelete = {
-                        if (selectedBlockIds.isNotEmpty()) viewModel.removeSelectedBlocks()
-                        else if (selectedEdgeIndex != null) viewModel.removeSelectedEdge()
-                    },
-                    onUndo = { viewModel.undo() },
-                    onRedo = { viewModel.redo() },
-                    onCopy = { viewModel.copySelected() },
-                    onPaste = { viewModel.pasteClipboard() },
-                    canUndo = canUndo,
-                    canRedo = canRedo,
-                    hasSelection = selectedBlockIds.isNotEmpty() || selectedEdgeIndex != null,
-                    hasClipboard = clipboard != null,
-                    enabled = !isReadOnly,
-                )
+                    EditorToolbar(
+                        onAddBlock = { type, name ->
+                            val (x, y) = viewModel.nextPlacementPosition()
+                            viewModel.addBlock(type, name, x, y)
+                        },
+                        onAddContainer = { name ->
+                            val (x, y) = viewModel.nextPlacementPosition()
+                            viewModel.addContainerBlock(name, x, y)
+                        },
+                        onDelete = {
+                            if (selectedBlockIds.isNotEmpty()) viewModel.removeSelectedBlocks()
+                            else if (selectedEdgeIndex != null) viewModel.removeSelectedEdge()
+                        },
+                        onUndo = { viewModel.undo() },
+                        onRedo = { viewModel.redo() },
+                        onCopy = { viewModel.copySelected() },
+                        onPaste = { viewModel.pasteClipboard() },
+                        canUndo = canUndo,
+                        canRedo = canRedo,
+                        hasSelection = selectedBlockIds.isNotEmpty() || selectedEdgeIndex != null,
+                        hasClipboard = clipboard != null,
+                        enabled = !isReadOnly,
+                    )
                 }
 
                 // Left sidebar toggle + border
@@ -445,28 +445,28 @@ fun DagEditorScreen(
                     enter = expandHorizontally(),
                     exit = shrinkHorizontally(),
                 ) {
-                BlockPropertiesPanel(
-                    block = selectedBlock,
-                    graph = graph,
-                    projectParameters = project?.parameters ?: emptyList(),
-                    connections = teamConnections,
-                    externalConfigs = if (selectedBlock != null) externalConfigs[selectedBlock.id] ?: emptyList() else emptyList(),
-                    isFetchingConfigs = selectedBlock != null && selectedBlock.id in isFetchingConfigs,
-                    configFetchError = if (selectedBlock != null) configFetchError[selectedBlock.id] else null,
-                    isFetchingConfigParams = selectedBlock != null && selectedBlock.id in isFetchingConfigParams,
-                    onUpdateName = { id, name -> viewModel.updateBlockName(id, name) },
-                    onUpdateType = { id, type -> viewModel.updateBlockType(id, type) },
-                    onUpdateConnectionId = { id, connId -> viewModel.updateBlockConnectionId(id, connId) },
-                    onSelectConfig = { id, configId -> viewModel.selectExternalConfig(id, configId) },
-                    onRefreshConfigs = { id -> viewModel.fetchExternalConfigs(id) },
-                    onRefreshConfigParams = { id -> viewModel.fetchExternalConfigParameters(id) },
-                    onUpdateParameters = { id, params -> viewModel.updateBlockParameters(id, params) },
-                    onUpdateTimeout = { id, timeout -> viewModel.updateBlockTimeout(id, timeout) },
-                    onUpdatePreGate = { id, gate -> viewModel.updateBlockPreGate(id, gate) },
-                    onUpdatePostGate = { id, gate -> viewModel.updateBlockPostGate(id, gate) },
-                    onUpdateInjectWebhookUrl = { id, inject -> viewModel.updateBlockInjectWebhookUrl(id, inject) },
-                    enabled = !isReadOnly,
-                )
+                    BlockPropertiesPanel(
+                        block = selectedBlock,
+                        graph = graph,
+                        projectParameters = project?.parameters ?: emptyList(),
+                        connections = teamConnections,
+                        externalConfigs = if (selectedBlock != null) externalConfigs[selectedBlock.id] ?: emptyList() else emptyList(),
+                        isFetchingConfigs = selectedBlock != null && selectedBlock.id in isFetchingConfigs,
+                        configFetchError = if (selectedBlock != null) configFetchError[selectedBlock.id] else null,
+                        isFetchingConfigParams = selectedBlock != null && selectedBlock.id in isFetchingConfigParams,
+                        onUpdateName = { id, name -> viewModel.updateBlockName(id, name) },
+                        onUpdateType = { id, type -> viewModel.updateBlockType(id, type) },
+                        onUpdateConnectionId = { id, connId -> viewModel.updateBlockConnectionId(id, connId) },
+                        onSelectConfig = { id, configId -> viewModel.selectExternalConfig(id, configId) },
+                        onRefreshConfigs = { id -> viewModel.fetchExternalConfigs(id) },
+                        onRefreshConfigParams = { id -> viewModel.fetchExternalConfigParameters(id) },
+                        onUpdateParameters = { id, params -> viewModel.updateBlockParameters(id, params) },
+                        onUpdateTimeout = { id, timeout -> viewModel.updateBlockTimeout(id, timeout) },
+                        onUpdatePreGate = { id, gate -> viewModel.updateBlockPreGate(id, gate) },
+                        onUpdatePostGate = { id, gate -> viewModel.updateBlockPostGate(id, gate) },
+                        onUpdateInjectWebhookUrl = { id, inject -> viewModel.updateBlockInjectWebhookUrl(id, inject) },
+                        enabled = !isReadOnly,
+                    )
                 }
             }
         }

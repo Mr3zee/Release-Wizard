@@ -159,7 +159,7 @@ private fun AuditEventItem(
             ) {
                 Text(
                     event.action.displayName(),
-                    style = AppTypography.heading,
+                    style = AppTypography.subheading,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),

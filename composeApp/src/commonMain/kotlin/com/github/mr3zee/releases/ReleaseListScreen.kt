@@ -1,5 +1,6 @@
 package com.github.mr3zee.releases
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -8,6 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -440,7 +442,6 @@ fun ReleaseListScreen(
     } // ProvideShortcutActions
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun StartReleaseInlineForm(
     visible: Boolean,
@@ -486,22 +487,27 @@ private fun StartReleaseInlineForm(
                     .testTag("no_projects_message"),
             )
         } else {
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = it },
-                modifier = Modifier.testTag("project_dropdown"),
-            ) {
-                OutlinedTextField(
+            Box(modifier = Modifier.testTag("project_dropdown")) {
+                RwTextField(
                     value = selectedProject?.name ?: "",
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text(packStringResource(Res.string.start_release_project_label)) },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                    label = packStringResource(Res.string.start_release_project_label),
+                    trailingIcon = {
+                        Icon(
+                            Icons.Default.ArrowDropDown,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
                 )
-                ExposedDropdownMenu(
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clickable { expanded = !expanded },
+                )
+                DropdownMenu(
                     expanded = expanded,
                     onDismissRequest = { expanded = false },
                 ) {
