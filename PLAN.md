@@ -19,21 +19,15 @@ All 6 bugs fixed, reviewed by UX/Design/Compose/QA experts, 11 new UI tests + fl
 
 ---
 
-## Phase 2: Auth & Login UX
+## Phase 2: Auth & Login UX ✅
 
-**Goal:** Improve the login/registration experience.
+**Status:** Complete (commit `6c6ab71`)
 
-### 2A. Add Enter key submit support on login form
-- **File:** `LoginScreen.kt:60-81`
-- **Fix:** Add `keyboardActions` with `onDone` / `onGo` to submit form on Enter.
+Enter key submit, password visibility toggle, server-specific error messages. 6 new tests + 2 fixed. 12 login tests pass.
 
-### 2B. Add password visibility toggle
-- **File:** `LoginScreen.kt:71-81`
-- **Fix:** Add trailing icon button to toggle `PasswordVisualTransformation`.
-
-### 2C. Improve auth error messages
-- **File:** `AuthViewModel.kt:49-50, 65-66`
-- **Fix:** Use `toUiMessage()` from `ErrorUtils.kt` instead of generic `InvalidCredentials`/`RegistrationFailed` for all exceptions.
+- **2A.** Enter on username moves focus to password; Enter on password submits form. Auto-focus username on load. Uses `onPreviewKeyEvent` (Desktop pattern).
+- **2B.** Password visibility toggle with eye icon in trailing slot. `focusProperties { canFocus = false }` prevents focus stealing. Renamed `connections_show/hide_password` → `common_` prefix across all 6 language packs.
+- **2C.** Replaced hardcoded `UiMessage.InvalidCredentials`/`RegistrationFailed` with `toUiMessage()`. Server errors now surface directly (e.g. "Username already taken").
 
 ---
 
