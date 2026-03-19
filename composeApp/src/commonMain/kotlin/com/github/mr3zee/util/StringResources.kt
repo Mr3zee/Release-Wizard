@@ -8,7 +8,33 @@ import com.github.mr3zee.model.ConnectionType
 import com.github.mr3zee.model.ReleaseStatus
 import com.github.mr3zee.model.TeamRole
 import com.github.mr3zee.i18n.packStringResource
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Duration
+import kotlin.time.Instant
 import releasewizard.composeapp.generated.resources.*
+
+internal fun formatDuration(duration: Duration): String {
+    val totalSeconds = duration.inWholeSeconds.coerceAtLeast(0)
+    val h = totalSeconds / 3600
+    val m = (totalSeconds % 3600) / 60
+    val s = totalSeconds % 60
+    return buildString {
+        if (h > 0) append("${h}h ")
+        if (h > 0 || m > 0) append("${m}m ")
+        append("${s}s")
+    }.trim()
+}
+
+internal fun formatTimestamp(instant: Instant): String {
+    val dt = instant.toLocalDateTime(TimeZone.currentSystemDefault())
+    return "${dt.date} ${dt.hour.toString().padStart(2, '0')}:${dt.minute.toString().padStart(2, '0')}"
+}
+
+internal fun formatTime(instant: Instant): String {
+    val dt = instant.toLocalDateTime(TimeZone.currentSystemDefault())
+    return "${dt.hour.toString().padStart(2, '0')}:${dt.minute.toString().padStart(2, '0')}:${dt.second.toString().padStart(2, '0')}"
+}
 
 @Composable
 fun BlockType.displayName(): String = packStringResource(

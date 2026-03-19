@@ -41,6 +41,8 @@ fun ExecutionDagCanvas(
     blockExecutions: List<BlockExecution>,
     onBlockClick: (BlockId) -> Unit,
     modifier: Modifier = Modifier,
+    selectedBlockId: BlockId? = null,
+    onDeselect: () -> Unit = {},
 ) {
     val textMeasurer = rememberTextMeasurer()
     val density = LocalDensity.current.density
@@ -55,7 +57,7 @@ fun ExecutionDagCanvas(
 
     val drawTransform = CanvasTransform(zoom, panOffset, density)
 
-    val hasRunningBlocks = blockExecutions.any { it.status == BlockStatus.RUNNING }
+    val hasRunningBlocks = remember(blockExecutions) { blockExecutions.any { it.status == BlockStatus.RUNNING } }
     val infiniteTransition = rememberInfiniteTransition(label = "running_indicator")
     val runningPhase by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -110,14 +112,19 @@ fun ExecutionDagCanvas(
                                     // Click — check if a block was hit
                                     val t = CanvasTransform(zoom, panOffset, density)
                                     val logical = t.toLogical(downPos)
+                                    var blockHit = false
                                     for (block in graph.blocks.asReversed()) {
                                         val pos = graph.positions[block.id] ?: continue
                                         if (logical.x in pos.x..(pos.x + BLOCK_WIDTH) &&
                                             logical.y in pos.y..(pos.y + BLOCK_HEIGHT)
                                         ) {
                                             onBlockClick(block.id)
+                                            blockHit = true
                                             break
                                         }
+                                    }
+                                    if (!blockHit) {
+                                        onDeselect()
                                     }
                                 }
                                 break
@@ -141,7 +148,8 @@ fun ExecutionDagCanvas(
         for (edge in graph.edges) {
             val fromPos = graph.positions[edge.fromBlockId] ?: continue
             val toPos = graph.positions[edge.toBlockId] ?: continue
-            drawEdge(drawTransform, fromPos, toPos, isSelected = false, appColors)
+            val edgeSelected = edge.fromBlockId == selectedBlockId || edge.toBlockId == selectedBlockId
+            drawEdge(drawTransform, fromPos, toPos, isSelected = edgeSelected, appColors)
         }
 
         // Blocks with status-based colors
@@ -153,7 +161,7 @@ fun ExecutionDagCanvas(
             } else {
                 blockColor(block, appColors)
             }
-            drawBlock(drawTransform, block, pos, isSelected = false, textMeasurer, zoom, appColors, blockLabels[block.id] ?: "", fillColor)
+            drawBlock(drawTransform, block, pos, isSelected = block.id == selectedBlockId, textMeasurer, zoom, appColors, blockLabels[block.id] ?: "", fillColor)
             if (execution != null) {
                 drawBlockStatusIcon(drawTransform, pos, execution.status, appColors)
             }

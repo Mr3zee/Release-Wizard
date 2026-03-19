@@ -57,53 +57,23 @@ Enter key submit, password visibility toggle, server-specific error messages. 6 
 
 ---
 
-## Phase 4: Release Monitoring Fixes
+## Phase 4: Release Monitoring Fixes ✅
 
-**Goal:** Fix release detail display issues and missing interactions.
+**Status:** Complete (commit `f948abf`)
 
-### 4A. Wire selection highlight into ExecutionDagCanvas
-- **File:** `ExecutionDagCanvas.kt:156`, `ReleaseDetailScreen.kt:55`
-- **Fix:** Pass `selectedBlockId` to `ExecutionDagCanvas` and set `isSelected = true` for matching block.
+All 11 items fixed, reviewed by UX/Design/Compose/QA experts, 311/311 Compose + 354/354 Server tests pass, UI verified.
 
-### 4B. Show block info when clicking WAITING blocks
-- **File:** `ReleaseDetailScreen.kt:336-349`
-- **Fix:** When `execution == null`, still show block's static info (name, type, status) in the detail panel.
-
-### 4C. Add Cancel button for PENDING releases
-- **File:** `ReleaseDetailScreen.kt:244-296`
-- **Fix:** Add a Cancel action for `PENDING` status alongside the existing `RUNNING`/`STOPPED` guards.
-
-### 4D. Navigate to newly created release after starting
-- **File:** `ReleaseListViewModel.kt:226-235`
-- **Fix:** Return the new release ID from `startRelease()` and invoke `onNavigateToRelease` callback.
-
-### 4E. Fix STOPPED block duration (dead code)
-- **File:** `ReleaseDetailScreen.kt:440`
-- **Fix:** Remove the dead `finishedAt?.let` branch. For stopped blocks without `finishedAt`, freeze the elapsed time at the stop moment (or show "Stopped" label).
-
-### 4F. Add WAITING_FOR_INPUT duration display
-- **File:** `ReleaseDetailScreen.kt:408-448`
-- **Fix:** Add branch for `WAITING_FOR_INPUT` showing elapsed wait time.
-
-### 4G. Render SubBuild `buildUrl` as clickable link
-- **File:** `SubBuildsSection.kt`
-- **Fix:** If `buildUrl` is non-null, render as a clickable link opening the external CI system.
-
-### 4H. Add missing status filter chips (STOPPED, PENDING, CANCELLED, ARCHIVED)
-- **File:** `ReleaseListScreen.kt:217`
-- **Fix:** Add the remaining status values as filter chips.
-
-### 4I. Fix timestamp formatting inconsistencies
-- **Files:** `ReleaseListScreen.kt:387`, `ErrorDetailSection.kt:62`, `SubBuildsSection.kt:153`
-- **Fix:** Use `toLocalDateTime()` formatting consistently. Reuse `formatDuration()` for sub-build durations.
-
-### 4J. Initialize elapsed duration with computed value
-- **File:** `ReleaseDetailScreen.kt:424`
-- **Fix:** Initialize with `formatDuration(Clock.System.now() - startedAt)` instead of empty string.
-
-### 4K. Conditionally activate infinite transition on ExecutionDagCanvas
-- **File:** `ExecutionDagCanvas.kt:59-68`
-- **Fix:** Only run animation when `hasRunningBlocks` is true.
+- **4A.** Wired `selectedBlockId` into ExecutionDagCanvas — blocks and connected edges highlight on selection; clicking empty canvas space deselects
+- **4B.** Changed guard to `block != null` — blocks without execution data now show minimal waiting panel with name, type, status
+- **4C.** Added Cancel button for PENDING releases using existing confirmation flow
+- **4D.** `startRelease()` now accepts `onCreated` callback — navigates to new release detail after successful API response
+- **4E.** Replaced dead-code STOPPED duration branch with static "Stopped" label (no `stoppedAt` field in model)
+- **4F.** Added WAITING_FOR_INPUT live ticker showing "Waiting: Xm Ys"
+- **4G.** Added clickable "Open" link for sub-builds with `buildUrl` using `LocalUriHandler`
+- **4H.** Added all 7 status filter chips + horizontal scroll on chip row
+- **4I.** Extracted `formatTimestamp`/`formatTime`/`formatDuration` utilities; replaced ISO 8601 `Instant.toString()` everywhere
+- **4J.** Initialized RUNNING elapsed with computed value instead of empty string
+- **4K.** Wrapped `hasRunningBlocks` in `remember(blockExecutions)` to avoid redundant recomputation
 
 ---
 

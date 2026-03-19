@@ -240,7 +240,7 @@
     <string name="sub_builds_summary">Sub-builds (%1$d/%2$d succeeded)</string>
     <string name="sub_builds_discovering">Discovering build chain...</string>
     <string name="sub_builds_stage">Stage %1$d</string>
-    <string name="sub_builds_duration">%1$ds</string>
+    <string name="sub_builds_open_link">Open</string>
     <string name="gh_jobs_summary">Jobs (%1$d/%2$d succeeded)</string>
     <string name="gh_jobs_discovering">Discovering workflow jobs...</string>
 
@@ -337,6 +337,9 @@
     <!-- ==================== Releases: Block Detail ==================== -->
     <string name="releases_duration">Duration: %1$s</string>
     <string name="releases_elapsed">Elapsed: %1$s</string>
+    <string name="releases_stopped_label">Stopped</string>
+    <string name="releases_waiting_elapsed">Waiting: %1$s</string>
+    <string name="releases_block_waiting_info">This block is waiting to execute.</string>
 
     <!-- ==================== Connections: Section Headers ==================== -->
     <string name="connections_section_slack">Slack Configuration</string>

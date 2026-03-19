@@ -22,15 +22,15 @@ import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.UiMessage
 import com.github.mr3zee.util.displayName
+import com.github.mr3zee.util.formatDuration
+import com.github.mr3zee.util.formatTime
+import com.github.mr3zee.util.formatTimestamp
 import com.github.mr3zee.util.resolve
 import com.github.mr3zee.util.typeLabel
 import com.github.mr3zee.i18n.packStringResource
 import kotlinx.coroutines.delay
 import kotlin.time.Clock
-import kotlin.time.Duration
 import kotlin.time.Instant
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 import releasewizard.composeapp.generated.resources.*
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -151,6 +151,16 @@ fun ReleaseDetailScreen(
                             Text(packStringResource(Res.string.common_cancel))
                         }
                     }
+                    if (release?.status == ReleaseStatus.PENDING) {
+                        RwButton(
+                            onClick = { activeConfirmation = ActiveConfirmation.CancelRelease },
+                            modifier = Modifier.testTag("cancel_release_button"),
+                            variant = RwButtonVariant.Ghost,
+                            contentColor = MaterialTheme.colorScheme.error,
+                        ) {
+                            Text(packStringResource(Res.string.common_cancel))
+                        }
+                    }
                     if (release != null && release.status.isTerminal) {
                         RwButton(
                             onClick = onRerun,
@@ -235,6 +245,8 @@ fun ReleaseDetailScreen(
                         selectedBlockId = blockId
                         onBlockClick(blockId)
                     },
+                    selectedBlockId = selectedBlockId,
+                    onDeselect = { selectedBlockId = null },
                 )
             }
 
@@ -242,31 +254,85 @@ fun ReleaseDetailScreen(
             selectedBlockId?.let { blockId ->
                 val execution = blockExecutions.find { it.blockId == blockId }
                 val block = release.dagSnapshot.blocks.find { it.id == blockId }
-                if (execution != null && block != null) {
-                    val defaultApproveMessage = packStringResource(Res.string.releases_approve_default_message)
-                    BlockDetailPanel(
-                        block = block,
-                        execution = execution,
-                        releaseStatus = release.status,
-                        activeConfirmation = activeConfirmation,
-                        onApprove = {
-                            val gateMessage = execution.gateMessage ?: defaultApproveMessage
-                            activeConfirmation = ActiveConfirmation.ApproveBlock(blockId, gateMessage)
-                        },
-                        onStopBlock = { activeConfirmation = ActiveConfirmation.StopBlock(blockId) },
-                        onConfirmApprove = {
-                            val approveBlockId = (activeConfirmation as? ActiveConfirmation.ApproveBlock)?.blockId
-                            activeConfirmation = ActiveConfirmation.None
-                            if (approveBlockId != null) onApproveBlock(approveBlockId)
-                        },
-                        onConfirmStopBlock = {
-                            val stopBlockId = (activeConfirmation as? ActiveConfirmation.StopBlock)?.blockId
-                            activeConfirmation = ActiveConfirmation.None
-                            if (stopBlockId != null) onStopBlock(stopBlockId)
-                        },
-                        onDismissConfirmation = { activeConfirmation = ActiveConfirmation.None },
-                        onDismiss = { selectedBlockId = null },
-                    )
+                if (block != null) {
+                    if (execution != null) {
+                        val defaultApproveMessage = packStringResource(Res.string.releases_approve_default_message)
+                        BlockDetailPanel(
+                            block = block,
+                            execution = execution,
+                            releaseStatus = release.status,
+                            activeConfirmation = activeConfirmation,
+                            onApprove = {
+                                val gateMessage = execution.gateMessage ?: defaultApproveMessage
+                                activeConfirmation = ActiveConfirmation.ApproveBlock(blockId, gateMessage)
+                            },
+                            onStopBlock = { activeConfirmation = ActiveConfirmation.StopBlock(blockId) },
+                            onConfirmApprove = {
+                                val approveBlockId = (activeConfirmation as? ActiveConfirmation.ApproveBlock)?.blockId
+                                activeConfirmation = ActiveConfirmation.None
+                                if (approveBlockId != null) onApproveBlock(approveBlockId)
+                            },
+                            onConfirmStopBlock = {
+                                val stopBlockId = (activeConfirmation as? ActiveConfirmation.StopBlock)?.blockId
+                                activeConfirmation = ActiveConfirmation.None
+                                if (stopBlockId != null) onStopBlock(stopBlockId)
+                            },
+                            onDismissConfirmation = { activeConfirmation = ActiveConfirmation.None },
+                            onDismiss = { selectedBlockId = null },
+                        )
+                    } else {
+                        // Block has no execution entry yet — show minimal waiting panel
+                        Surface(
+                            tonalElevation = 2.dp,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("block_detail_panel"),
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .heightIn(max = 350.dp)
+                                    .verticalScroll(rememberScrollState())
+                                    .padding(Spacing.lg),
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = block.name,
+                                            style = AppTypography.heading,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                        Text(
+                                            text = block.typeLabel(),
+                                            style = AppTypography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.testTag("block_type_label"),
+                                        )
+                                    }
+                                    RwButton(onClick = { selectedBlockId = null }, variant = RwButtonVariant.Ghost) {
+                                        Text(packStringResource(Res.string.common_close))
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(Spacing.sm))
+                                Text(
+                                    text = packStringResource(Res.string.releases_block_status, packStringResource(Res.string.block_status_waiting)),
+                                    style = AppTypography.body,
+                                    modifier = Modifier.testTag("block_status_text"),
+                                )
+                                Spacer(modifier = Modifier.height(Spacing.xs))
+                                Text(
+                                    text = packStringResource(Res.string.releases_block_waiting_info),
+                                    style = AppTypography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.testTag("block_waiting_info"),
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -371,8 +437,8 @@ private fun BlockDetailPanel(
                         modifier = Modifier.testTag("block_duration_text"),
                     )
                 } else if (execution.status == BlockStatus.RUNNING) {
-                    // Running block — live ticker
-                    var elapsed by remember { mutableStateOf("") }
+                    // Running block — live ticker (4J: initialize with computed value)
+                    var elapsed by remember { mutableStateOf(formatDuration(Clock.System.now() - startedAt)) }
                     LaunchedEffect(startedAt) {
                         while (true) {
                             val now = Clock.System.now()
@@ -387,11 +453,24 @@ private fun BlockDetailPanel(
                         modifier = Modifier.testTag("block_duration_text"),
                     )
                 } else if (execution.status == BlockStatus.STOPPED) {
-                    // Stopped block — show elapsed time before stop
-                    val elapsed = finishedAt?.let { formatDuration(it - startedAt) }
-                        ?: formatDuration(Clock.System.now() - startedAt)
+                    // Stopped block — no stoppedAt field in model, show static label
                     Text(
-                        text = packStringResource(Res.string.releases_duration, elapsed),
+                        text = packStringResource(Res.string.releases_stopped_label),
+                        style = AppTypography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testTag("block_duration_text"),
+                    )
+                } else if (execution.status == BlockStatus.WAITING_FOR_INPUT) {
+                    // Waiting for input — live ticker showing wait time
+                    var elapsed by remember { mutableStateOf(formatDuration(Clock.System.now() - startedAt)) }
+                    LaunchedEffect(startedAt) {
+                        while (true) {
+                            elapsed = formatDuration(Clock.System.now() - startedAt)
+                            delay(1000.milliseconds)
+                        }
+                    }
+                    Text(
+                        text = packStringResource(Res.string.releases_waiting_elapsed, elapsed),
                         style = AppTypography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.testTag("block_duration_text"),
@@ -512,8 +591,7 @@ private fun BlockDetailPanel(
                         Column(modifier = Modifier.testTag("approval_list")) {
                             execution.approvals.forEach { approval ->
                                 val instant = Instant.fromEpochMilliseconds(approval.approvedAt)
-                                val dateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
-                                val formatted = "${dateTime.date} ${dateTime.hour.toString().padStart(2, '0')}:${dateTime.minute.toString().padStart(2, '0')}"
+                                val formatted = formatTimestamp(instant)
                                 Text(
                                     text = "\u2713 ${approval.username} — $formatted",
                                     style = AppTypography.bodySmall,
@@ -588,9 +666,8 @@ private fun WebhookStatusSection(block: Block, execution: BlockExecution, hasSub
                         style = AppTypography.body.copy(fontWeight = FontWeight.Medium),
                         modifier = Modifier.weight(1f).testTag("webhook_status_text"),
                     )
-                    val time = webhookStatus.receivedAt.toLocalDateTime(TimeZone.currentSystemDefault())
                     Text(
-                        text = "${time.hour.toString().padStart(2, '0')}:${time.minute.toString().padStart(2, '0')}:${time.second.toString().padStart(2, '0')}",
+                        text = formatTime(webhookStatus.receivedAt),
                         style = AppTypography.caption,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -626,14 +703,3 @@ private fun WebhookStatusSection(block: Block, execution: BlockExecution, hasSub
     }
 }
 
-private fun formatDuration(duration: Duration): String {
-    val totalSeconds = duration.inWholeSeconds.coerceAtLeast(0)
-    val h = totalSeconds / 3600
-    val m = (totalSeconds % 3600) / 60
-    val s = totalSeconds % 60
-    return buildString {
-        if (h > 0) append("${h}h ")
-        if (h > 0 || m > 0) append("${m}m ")
-        append("${s}s")
-    }.trim()
-}
