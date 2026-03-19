@@ -21,6 +21,7 @@ import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwChip
 import com.github.mr3zee.components.RwFab
+import com.github.mr3zee.components.RwInlineConfirmation
 import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.components.loadMoreItem
 import com.github.mr3zee.model.Connection
@@ -241,14 +242,27 @@ fun ConnectionListScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     items(connections, key = { it.id.value }) { connection ->
-                        ConnectionListItem(
-                            connection = connection,
-                            webhookUrl = webhookUrls[connection.id.value],
-                            onClick = { onEditConnection(connection.id) },
-                            onDelete = { connectionToDelete = connection },
-                            onTest = { viewModel.testConnection(connection.id) },
-                            modifier = Modifier.widthIn(max = 1200.dp),
-                        )
+                        Column(modifier = Modifier.widthIn(max = 1200.dp)) {
+                            ConnectionListItem(
+                                connection = connection,
+                                webhookUrl = webhookUrls[connection.id.value],
+                                onClick = { onEditConnection(connection.id) },
+                                onDelete = { connectionToDelete = connection },
+                                onTest = { viewModel.testConnection(connection.id) },
+                            )
+                            RwInlineConfirmation(
+                                visible = connectionToDelete?.id == connection.id,
+                                message = packStringResource(Res.string.connections_delete_confirmation, connection.name),
+                                confirmLabel = packStringResource(Res.string.common_delete),
+                                onConfirm = {
+                                    viewModel.deleteConnection(connection.id)
+                                    connectionToDelete = null
+                                },
+                                onDismiss = { connectionToDelete = null },
+                                testTag = "delete_connection_confirm_${connection.id.value}",
+                                modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+                            )
+                        }
                     }
                     loadMoreItem(pagination, isLoadingMore, onLoadMore = { viewModel.loadMore() })
                 }
@@ -256,26 +270,7 @@ fun ConnectionListScreen(
         }
     }
 
-    connectionToDelete?.let { connection ->
-        AlertDialog(
-            onDismissRequest = { connectionToDelete = null },
-            title = { Text(packStringResource(Res.string.connections_delete_title)) },
-            text = { Text(packStringResource(Res.string.connections_delete_confirmation, connection.name)) },
-            confirmButton = {
-                RwButton(onClick = {
-                    viewModel.deleteConnection(connection.id)
-                    connectionToDelete = null
-                }, variant = RwButtonVariant.Ghost, contentColor = MaterialTheme.colorScheme.error) {
-                    Text(packStringResource(Res.string.common_delete))
-                }
-            },
-            dismissButton = {
-                RwButton(onClick = { connectionToDelete = null }, variant = RwButtonVariant.Ghost) {
-                    Text(packStringResource(Res.string.common_cancel))
-                }
-            },
-        )
-    }
+    // Delete confirmation is now shown inline within the LazyColumn items
     } // CompositionLocalProvider
 }
 

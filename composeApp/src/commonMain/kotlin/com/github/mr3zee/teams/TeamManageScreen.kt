@@ -15,6 +15,8 @@ import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.ListItemCard
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
+import com.github.mr3zee.components.RwInlineConfirmation
+import com.github.mr3zee.components.RwInlineForm
 import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.model.*
 import com.github.mr3zee.theme.AppTypography
@@ -127,6 +129,24 @@ fun TeamManageScreen(
                     HorizontalDivider(modifier = Modifier.widthIn(max = 1200.dp).padding(vertical = Spacing.sm))
                 }
 
+                // Invite form (above members section)
+                item {
+                    InviteUserInlineForm(
+                        visible = showInviteDialog,
+                        isInviting = isInviting,
+                        error = inviteError,
+                        onDismiss = {
+                            showInviteDialog = false
+                            viewModel.clearInviteState()
+                        },
+                        onClearError = { viewModel.clearInviteState() },
+                        onInvite = { username -> viewModel.inviteUser(username) },
+                        modifier = Modifier
+                            .widthIn(max = 1200.dp)
+                            .padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+                    )
+                }
+
                 // Members section
                 item {
                     Row(
@@ -148,15 +168,28 @@ fun TeamManageScreen(
                     }
                 }
                 items(members, key = { "member-${it.userId.value}" }) { member ->
-                    ManageMemberItem(
-                        member = member,
-                        onToggleRole = {
-                            val newRole = if (member.role == TeamRole.TEAM_LEAD) TeamRole.COLLABORATOR else TeamRole.TEAM_LEAD
-                            viewModel.updateMemberRole(member.userId.value, newRole)
-                        },
-                        onRemove = { memberToRemove = member },
-                        modifier = Modifier.widthIn(max = 1200.dp),
-                    )
+                    Column(modifier = Modifier.widthIn(max = 1200.dp)) {
+                        ManageMemberItem(
+                            member = member,
+                            onToggleRole = {
+                                val newRole = if (member.role == TeamRole.TEAM_LEAD) TeamRole.COLLABORATOR else TeamRole.TEAM_LEAD
+                                viewModel.updateMemberRole(member.userId.value, newRole)
+                            },
+                            onRemove = { memberToRemove = member },
+                        )
+                        RwInlineConfirmation(
+                            visible = memberToRemove?.userId == member.userId,
+                            message = packStringResource(Res.string.teams_remove_member_confirmation, member.username),
+                            confirmLabel = packStringResource(Res.string.teams_remove),
+                            onConfirm = {
+                                viewModel.removeMember(member.userId.value)
+                                memberToRemove = null
+                            },
+                            onDismiss = { memberToRemove = null },
+                            testTag = "remove_member_confirm_${member.userId.value}",
+                            modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+                        )
+                    }
                 }
 
                 // Pending invites section
@@ -175,11 +208,24 @@ fun TeamManageScreen(
                         )
                     }
                     items(invites, key = { "invite-${it.id}" }) { invite ->
-                        InviteItem(
-                            invite = invite,
-                            onCancel = { inviteToCancel = invite },
-                            modifier = Modifier.widthIn(max = 1200.dp),
-                        )
+                        Column(modifier = Modifier.widthIn(max = 1200.dp)) {
+                            InviteItem(
+                                invite = invite,
+                                onCancel = { inviteToCancel = invite },
+                            )
+                            RwInlineConfirmation(
+                                visible = inviteToCancel?.id == invite.id,
+                                message = packStringResource(Res.string.teams_cancel_invite_confirmation, invite.invitedUsername),
+                                confirmLabel = packStringResource(Res.string.teams_revoke_invite),
+                                onConfirm = {
+                                    viewModel.cancelInvite(invite.id)
+                                    inviteToCancel = null
+                                },
+                                onDismiss = { inviteToCancel = null },
+                                testTag = "revoke_invite_confirm_${invite.id}",
+                                modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+                            )
+                        }
                     }
                 }
 
@@ -227,38 +273,31 @@ fun TeamManageScreen(
                             Text(packStringResource(Res.string.teams_delete_team))
                         }
                     }
+                    RwInlineConfirmation(
+                        visible = showDeleteDialog,
+                        message = packStringResource(Res.string.teams_delete_confirmation, teamName),
+                        confirmLabel = packStringResource(Res.string.common_delete),
+                        onConfirm = {
+                            showDeleteDialog = false
+                            viewModel.deleteTeam { onTeamDeleted() }
+                        },
+                        onDismiss = { showDeleteDialog = false },
+                        testTag = "delete_team_confirm",
+                        modifier = Modifier
+                            .widthIn(max = 1200.dp)
+                            .padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+                    )
                     Spacer(modifier = Modifier.height(80.dp))
                 }
             }
         }
     }
 
-    if (showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text(packStringResource(Res.string.teams_delete_team)) },
-            text = { Text(packStringResource(Res.string.teams_delete_confirmation, teamName)) },
-            confirmButton = {
-                RwButton(
-                    onClick = {
-                        showDeleteDialog = false
-                        viewModel.deleteTeam { onTeamDeleted() }
-                    },
-                    variant = RwButtonVariant.Ghost,
-                    contentColor = MaterialTheme.colorScheme.error,
-                ) {
-                    Text(packStringResource(Res.string.common_delete))
-                }
-            },
-            dismissButton = {
-                RwButton(onClick = { showDeleteDialog = false }, variant = RwButtonVariant.Ghost) {
-                    Text(packStringResource(Res.string.common_cancel))
-                }
-            },
-        )
-    }
+    // Delete team confirmation is now shown inline in the danger zone section
+    // Remove member confirmation is now shown inline per-item in the members section
+    // Revoke invite confirmation is now shown inline per-item in the invites section
 
-    // Close invite dialog on success
+    // Close invite form on success
     LaunchedEffect(inviteSuccess) {
         if (inviteSuccess) {
             showInviteDialog = false
@@ -266,56 +305,7 @@ fun TeamManageScreen(
         }
     }
 
-    if (showInviteDialog) {
-        InviteUserDialog(
-            isInviting = isInviting,
-            error = inviteError,
-            onDismiss = {
-                showInviteDialog = false
-                viewModel.clearInviteState()
-            },
-            onClearError = { viewModel.clearInviteState() },
-            onInvite = { username -> viewModel.inviteUser(username) },
-        )
-    }
-
-    memberToRemove?.let { member ->
-        AlertDialog(
-            onDismissRequest = { memberToRemove = null },
-            title = { Text(packStringResource(Res.string.teams_remove)) },
-            text = { Text(packStringResource(Res.string.teams_remove_member_confirmation, member.username)) },
-            confirmButton = {
-                RwButton(onClick = {
-                    viewModel.removeMember(member.userId.value)
-                    memberToRemove = null
-                }, variant = RwButtonVariant.Ghost, contentColor = MaterialTheme.colorScheme.error) {
-                    Text(packStringResource(Res.string.teams_remove))
-                }
-            },
-            dismissButton = {
-                RwButton(onClick = { memberToRemove = null }, variant = RwButtonVariant.Ghost) { Text(packStringResource(Res.string.common_cancel)) }
-            },
-        )
-    }
-
-    inviteToCancel?.let { invite ->
-        AlertDialog(
-            onDismissRequest = { inviteToCancel = null },
-            title = { Text(packStringResource(Res.string.teams_revoke_invite)) },
-            text = { Text(packStringResource(Res.string.teams_cancel_invite_confirmation, invite.invitedUsername)) },
-            confirmButton = {
-                RwButton(onClick = {
-                    viewModel.cancelInvite(invite.id)
-                    inviteToCancel = null
-                }, variant = RwButtonVariant.Ghost, contentColor = MaterialTheme.colorScheme.error) {
-                    Text(packStringResource(Res.string.teams_revoke_invite))
-                }
-            },
-            dismissButton = {
-                RwButton(onClick = { inviteToCancel = null }, variant = RwButtonVariant.Ghost) { Text(packStringResource(Res.string.teams_keep)) }
-            },
-        )
-    }
+    // Invite user form is now shown inline above the members section
 }
 
 @Composable
@@ -402,44 +392,36 @@ private fun JoinRequestItem(
 }
 
 @Composable
-private fun InviteUserDialog(
+private fun InviteUserInlineForm(
+    visible: Boolean,
     isInviting: Boolean,
     error: com.github.mr3zee.util.UiMessage?,
     onDismiss: () -> Unit,
     onClearError: () -> Unit,
     onInvite: (String) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var username by remember { mutableStateOf("") }
     val resolvedError = error?.resolve()
-    AlertDialog(
-        onDismissRequest = { if (!isInviting) onDismiss() },
-        title = { Text(packStringResource(Res.string.teams_invite_dialog_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                RwTextField(
-                    value = username,
-                    onValueChange = { username = it; onClearError() },
-                    label = packStringResource(Res.string.teams_invite_username_label),
-                    placeholder = packStringResource(Res.string.teams_invite_username_placeholder),
-                    singleLine = true,
-                    isError = resolvedError != null,
-                    modifier = Modifier.fillMaxWidth().testTag("invite_user_id_input"),
-                )
-                if (resolvedError != null) {
-                    Text(
-                        resolvedError,
-                        style = AppTypography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.testTag("invite_error_text"),
-                    )
-                }
-            }
-        },
-        confirmButton = {
+
+    // Reset form state when it becomes visible
+    LaunchedEffect(visible) {
+        if (visible) username = ""
+    }
+
+    RwInlineForm(
+        visible = visible,
+        title = packStringResource(Res.string.teams_invite_dialog_title),
+        onDismiss = onDismiss,
+        dismissEnabled = !isInviting,
+        testTag = "invite_user_form",
+        modifier = modifier,
+        actions = {
             RwButton(
                 onClick = { onInvite(username.trim()) },
                 variant = RwButtonVariant.Primary,
                 enabled = username.isNotBlank() && !isInviting,
+                modifier = Modifier.testTag("invite_user_confirm"),
             ) {
                 if (isInviting) {
                     CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
@@ -448,10 +430,23 @@ private fun InviteUserDialog(
                 }
             }
         },
-        dismissButton = {
-            RwButton(onClick = onDismiss, variant = RwButtonVariant.Ghost, enabled = !isInviting) {
-                Text(packStringResource(Res.string.common_cancel))
-            }
-        },
-    )
+    ) {
+        RwTextField(
+            value = username,
+            onValueChange = { username = it; onClearError() },
+            label = packStringResource(Res.string.teams_invite_username_label),
+            placeholder = packStringResource(Res.string.teams_invite_username_placeholder),
+            singleLine = true,
+            isError = resolvedError != null,
+            modifier = Modifier.fillMaxWidth().testTag("invite_user_id_input"),
+        )
+        if (resolvedError != null) {
+            Text(
+                resolvedError,
+                style = AppTypography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.testTag("invite_error_text"),
+            )
+        }
+    }
 }

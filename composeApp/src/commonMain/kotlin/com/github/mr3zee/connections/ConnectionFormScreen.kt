@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwIconButton
+import com.github.mr3zee.components.RwInlineConfirmation
 import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.model.ConnectionConfig
 import com.github.mr3zee.model.ConnectionId
@@ -186,20 +187,39 @@ fun ConnectionFormScreen(
         },
         modifier = Modifier.testTag("connection_form_screen"),
     ) { padding ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentAlignment = Alignment.TopCenter,
         ) {
-            Column(
+            RwInlineConfirmation(
+                visible = showDiscardDialog,
+                message = packStringResource(Res.string.common_unsaved_message),
+                confirmLabel = packStringResource(Res.string.common_discard),
+                onConfirm = {
+                    showDiscardDialog = false
+                    onBack()
+                },
+                onDismiss = { showDiscardDialog = false },
+                isDestructive = true,
+                testTag = "discard_confirm",
+                modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+            )
+
+            Box(
                 modifier = Modifier
-                    .widthIn(max = 800.dp)
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(Spacing.lg),
-                verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                    .fillMaxSize()
+                    .weight(1f),
+                contentAlignment = Alignment.TopCenter,
             ) {
+                Column(
+                    modifier = Modifier
+                        .widthIn(max = 800.dp)
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(Spacing.lg),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                ) {
             RwTextField(
                 value = name,
                 onValueChange = { name = it },
@@ -385,30 +405,10 @@ fun ConnectionFormScreen(
                 )
             }
             }
+            }
         }
     }
 
-    // Unsaved changes confirmation dialog
-    if (showDiscardDialog) {
-        AlertDialog(
-            onDismissRequest = { showDiscardDialog = false },
-            title = { Text(packStringResource(Res.string.common_unsaved_title)) },
-            text = { Text(packStringResource(Res.string.common_unsaved_message)) },
-            confirmButton = {
-                RwButton(onClick = {
-                    showDiscardDialog = false
-                    onBack()
-                }, variant = RwButtonVariant.Ghost) {
-                    Text(packStringResource(Res.string.common_discard))
-                }
-            },
-            dismissButton = {
-                RwButton(onClick = { showDiscardDialog = false }, variant = RwButtonVariant.Ghost) {
-                    Text(packStringResource(Res.string.common_cancel))
-                }
-            },
-        )
-    }
     } // CompositionLocalProvider
 }
 

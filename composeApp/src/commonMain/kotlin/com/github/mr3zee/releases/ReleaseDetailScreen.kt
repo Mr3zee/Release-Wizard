@@ -15,6 +15,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
+import com.github.mr3zee.components.RwInlineConfirmation
 import com.github.mr3zee.model.*
 import com.github.mr3zee.model.isTerminal
 import com.github.mr3zee.theme.AppTypography
@@ -32,6 +33,14 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import releasewizard.composeapp.generated.resources.*
 import kotlin.time.Duration.Companion.milliseconds
+
+private sealed class ActiveConfirmation {
+    data object None : ActiveConfirmation()
+    data object CancelRelease : ActiveConfirmation()
+    data object StopRelease : ActiveConfirmation()
+    data class StopBlock(val blockId: BlockId) : ActiveConfirmation()
+    data class ApproveBlock(val blockId: BlockId, val gateMessage: String) : ActiveConfirmation()
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,10 +62,7 @@ fun ReleaseDetailScreen(
     onDismissError: () -> Unit = {},
 ) {
     var selectedBlockId by remember(release?.id) { mutableStateOf<BlockId?>(null) }
-    var showCancelConfirmation by remember { mutableStateOf(false) }
-    var showStopConfirmation by remember { mutableStateOf(false) }
-    var showStopBlockConfirmation by remember { mutableStateOf<BlockId?>(null) }
-    var showApproveConfirmation by remember { mutableStateOf<BlockId?>(null) }
+    var activeConfirmation by remember { mutableStateOf<ActiveConfirmation>(ActiveConfirmation.None) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val resolvedError = error?.resolve()
@@ -69,136 +75,6 @@ fun ReleaseDetailScreen(
             duration = SnackbarDuration.Long,
         )
         onDismissError()
-    }
-
-    // Cancel release confirmation dialog
-    if (showCancelConfirmation) {
-        AlertDialog(
-            onDismissRequest = { showCancelConfirmation = false },
-            title = { Text(packStringResource(Res.string.releases_cancel_title)) },
-            text = { Text(packStringResource(Res.string.releases_cancel_body)) },
-            confirmButton = {
-                RwButton(
-                    onClick = {
-                        showCancelConfirmation = false
-                        onCancel()
-                    },
-                    modifier = Modifier.testTag("confirm_cancel_button"),
-                    variant = RwButtonVariant.Ghost,
-                    contentColor = MaterialTheme.colorScheme.error,
-                ) {
-                    Text(packStringResource(Res.string.releases_cancel_confirm))
-                }
-            },
-            dismissButton = {
-                RwButton(
-                    onClick = { showCancelConfirmation = false },
-                    modifier = Modifier.testTag("dismiss_cancel_button"),
-                    variant = RwButtonVariant.Ghost,
-                ) {
-                    Text(packStringResource(Res.string.releases_keep_running))
-                }
-            },
-            modifier = Modifier.testTag("cancel_confirmation_dialog"),
-        )
-    }
-
-    // Stop release confirmation dialog
-    if (showStopConfirmation) {
-        AlertDialog(
-            onDismissRequest = { showStopConfirmation = false },
-            title = { Text(packStringResource(Res.string.releases_stop_title)) },
-            text = { Text(packStringResource(Res.string.releases_stop_body)) },
-            confirmButton = {
-                RwButton(
-                    onClick = {
-                        showStopConfirmation = false
-                        onStopRelease()
-                    },
-                    modifier = Modifier.testTag("confirm_stop_button"),
-                    variant = RwButtonVariant.Ghost,
-                    contentColor = MaterialTheme.colorScheme.error,
-                ) {
-                    Text(packStringResource(Res.string.releases_stop_confirm))
-                }
-            },
-            dismissButton = {
-                RwButton(
-                    onClick = { showStopConfirmation = false },
-                    modifier = Modifier.testTag("dismiss_stop_button"),
-                    variant = RwButtonVariant.Ghost,
-                ) {
-                    Text(packStringResource(Res.string.releases_keep_running))
-                }
-            },
-            modifier = Modifier.testTag("stop_confirmation_dialog"),
-        )
-    }
-
-    // Stop block confirmation dialog
-    showStopBlockConfirmation?.let { blockId ->
-        AlertDialog(
-            onDismissRequest = { showStopBlockConfirmation = null },
-            title = { Text(packStringResource(Res.string.releases_stop_block_title)) },
-            text = { Text(packStringResource(Res.string.releases_stop_block_body)) },
-            confirmButton = {
-                RwButton(
-                    onClick = {
-                        showStopBlockConfirmation = null
-                        onStopBlock(blockId)
-                    },
-                    modifier = Modifier.testTag("confirm_stop_block_button"),
-                    variant = RwButtonVariant.Ghost,
-                    contentColor = MaterialTheme.colorScheme.error,
-                ) {
-                    Text(packStringResource(Res.string.releases_stop_block_confirm))
-                }
-            },
-            dismissButton = {
-                RwButton(
-                    onClick = { showStopBlockConfirmation = null },
-                    modifier = Modifier.testTag("dismiss_stop_block_button"),
-                    variant = RwButtonVariant.Ghost,
-                ) {
-                    Text(packStringResource(Res.string.releases_keep_running))
-                }
-            },
-            modifier = Modifier.testTag("stop_block_confirmation_dialog"),
-        )
-    }
-
-    // Approve block confirmation dialog
-    showApproveConfirmation?.let { blockId ->
-        val approveBlock = release?.dagSnapshot?.blocks?.find { it.id == blockId }
-        val approveExec = blockExecutions.find { it.blockId == blockId }
-        val approveMessage = approveExec?.gateMessage
-        AlertDialog(
-            onDismissRequest = { showApproveConfirmation = null },
-            title = { Text(packStringResource(Res.string.releases_approve_title, approveBlock?.name ?: packStringResource(Res.string.releases_approve_fallback_name))) },
-            text = { Text(approveMessage ?: packStringResource(Res.string.releases_approve_default_message)) },
-            confirmButton = {
-                RwButton(
-                    onClick = {
-                        showApproveConfirmation = null
-                        onApproveBlock(blockId)
-                    },
-                    modifier = Modifier.testTag("confirm_approve_button"),
-                    variant = RwButtonVariant.Ghost,
-                ) {
-                    Text(packStringResource(Res.string.common_approve))
-                }
-            },
-            dismissButton = {
-                RwButton(
-                    onClick = { showApproveConfirmation = null },
-                    modifier = Modifier.testTag("dismiss_approve_button"),
-                    variant = RwButtonVariant.Ghost,
-                ) {
-                    Text(packStringResource(Res.string.common_cancel))
-                }
-            },
-            modifier = Modifier.testTag("approve_confirmation_dialog"),
-        )
     }
 
     Scaffold(
@@ -243,14 +119,14 @@ fun ReleaseDetailScreen(
                     }
                     if (release?.status == ReleaseStatus.RUNNING) {
                         RwButton(
-                            onClick = { showStopConfirmation = true },
+                            onClick = { activeConfirmation = ActiveConfirmation.StopRelease },
                             modifier = Modifier.testTag("stop_release_button"),
                             variant = RwButtonVariant.Secondary,
                         ) {
                             Text(packStringResource(Res.string.releases_stop))
                         }
                         RwButton(
-                            onClick = { showCancelConfirmation = true },
+                            onClick = { activeConfirmation = ActiveConfirmation.CancelRelease },
                             modifier = Modifier.testTag("cancel_release_button"),
                             variant = RwButtonVariant.Ghost,
                             contentColor = MaterialTheme.colorScheme.error,
@@ -267,7 +143,7 @@ fun ReleaseDetailScreen(
                             Text(packStringResource(Res.string.releases_resume))
                         }
                         RwButton(
-                            onClick = { showCancelConfirmation = true },
+                            onClick = { activeConfirmation = ActiveConfirmation.CancelRelease },
                             modifier = Modifier.testTag("cancel_release_button"),
                             variant = RwButtonVariant.Ghost,
                             contentColor = MaterialTheme.colorScheme.error,
@@ -316,6 +192,36 @@ fun ReleaseDetailScreen(
                 .fillMaxSize()
                 .padding(padding),
         ) {
+            // Cancel release inline confirmation
+            RwInlineConfirmation(
+                visible = activeConfirmation is ActiveConfirmation.CancelRelease,
+                message = packStringResource(Res.string.releases_cancel_body),
+                confirmLabel = packStringResource(Res.string.releases_cancel_confirm),
+                onConfirm = {
+                    activeConfirmation = ActiveConfirmation.None
+                    onCancel()
+                },
+                onDismiss = { activeConfirmation = ActiveConfirmation.None },
+                isDestructive = true,
+                testTag = "confirm_cancel_release",
+                modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+            )
+
+            // Stop release inline confirmation
+            RwInlineConfirmation(
+                visible = activeConfirmation is ActiveConfirmation.StopRelease,
+                message = packStringResource(Res.string.releases_stop_body),
+                confirmLabel = packStringResource(Res.string.releases_stop_confirm),
+                onConfirm = {
+                    activeConfirmation = ActiveConfirmation.None
+                    onStopRelease()
+                },
+                onDismiss = { activeConfirmation = ActiveConfirmation.None },
+                isDestructive = true,
+                testTag = "confirm_stop_release",
+                modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+            )
+
             // DAG Canvas
             Box(
                 modifier = Modifier
@@ -337,12 +243,28 @@ fun ReleaseDetailScreen(
                 val execution = blockExecutions.find { it.blockId == blockId }
                 val block = release.dagSnapshot.blocks.find { it.id == blockId }
                 if (execution != null && block != null) {
+                    val defaultApproveMessage = packStringResource(Res.string.releases_approve_default_message)
                     BlockDetailPanel(
                         block = block,
                         execution = execution,
                         releaseStatus = release.status,
-                        onApprove = { showApproveConfirmation = blockId },
-                        onStopBlock = { showStopBlockConfirmation = blockId },
+                        activeConfirmation = activeConfirmation,
+                        onApprove = {
+                            val gateMessage = execution.gateMessage ?: defaultApproveMessage
+                            activeConfirmation = ActiveConfirmation.ApproveBlock(blockId, gateMessage)
+                        },
+                        onStopBlock = { activeConfirmation = ActiveConfirmation.StopBlock(blockId) },
+                        onConfirmApprove = {
+                            val approveBlockId = (activeConfirmation as? ActiveConfirmation.ApproveBlock)?.blockId
+                            activeConfirmation = ActiveConfirmation.None
+                            if (approveBlockId != null) onApproveBlock(approveBlockId)
+                        },
+                        onConfirmStopBlock = {
+                            val stopBlockId = (activeConfirmation as? ActiveConfirmation.StopBlock)?.blockId
+                            activeConfirmation = ActiveConfirmation.None
+                            if (stopBlockId != null) onStopBlock(stopBlockId)
+                        },
+                        onDismissConfirmation = { activeConfirmation = ActiveConfirmation.None },
                         onDismiss = { selectedBlockId = null },
                     )
                 }
@@ -357,8 +279,12 @@ private fun BlockDetailPanel(
     block: Block,
     execution: BlockExecution,
     releaseStatus: ReleaseStatus = ReleaseStatus.RUNNING,
+    activeConfirmation: ActiveConfirmation,
     onApprove: () -> Unit,
     onStopBlock: () -> Unit = {},
+    onConfirmApprove: () -> Unit,
+    onConfirmStopBlock: () -> Unit,
+    onDismissConfirmation: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     Surface(
@@ -398,6 +324,31 @@ private fun BlockDetailPanel(
             }
 
             Spacer(modifier = Modifier.height(Spacing.sm))
+
+            // Stop block inline confirmation
+            RwInlineConfirmation(
+                visible = (activeConfirmation as? ActiveConfirmation.StopBlock)?.blockId == execution.blockId,
+                message = packStringResource(Res.string.releases_stop_block_body),
+                confirmLabel = packStringResource(Res.string.releases_stop_block_confirm),
+                onConfirm = onConfirmStopBlock,
+                onDismiss = onDismissConfirmation,
+                isDestructive = true,
+                testTag = "confirm_stop_block",
+                modifier = Modifier.padding(vertical = Spacing.xs),
+            )
+
+            // Approve block inline confirmation
+            val approveConfirmation = activeConfirmation as? ActiveConfirmation.ApproveBlock
+            RwInlineConfirmation(
+                visible = approveConfirmation != null && approveConfirmation.blockId == execution.blockId,
+                message = approveConfirmation?.gateMessage ?: "",
+                confirmLabel = packStringResource(Res.string.common_approve),
+                onConfirm = onConfirmApprove,
+                onDismiss = onDismissConfirmation,
+                isDestructive = false,
+                testTag = "confirm_approve_block",
+                modifier = Modifier.padding(vertical = Spacing.xs),
+            )
 
             Text(
                 text = packStringResource(Res.string.releases_block_status, execution.status.displayName()),

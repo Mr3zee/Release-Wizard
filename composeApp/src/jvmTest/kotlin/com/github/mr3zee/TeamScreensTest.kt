@@ -353,11 +353,11 @@ class TeamScreensTest {
 
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("team_switcher").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("team_switcher").assertExists()
-        // Click team switcher to open picker
+        // Click team switcher to open DropdownMenu picker
         onNodeWithTag("team_switcher").performClick()
-        waitUntil(timeoutMillis = 2000L) { onAllNodesWithText("Switch Team").fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithText("Alpha").assertExists()
-        onNodeWithText("Beta").assertExists()
+        waitUntil(timeoutMillis = 2000L) { onAllNodesWithTag("team_picker_t1", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("team_picker_t1", useUnmergedTree = true).assertExists()
+        onNodeWithTag("team_picker_t2", useUnmergedTree = true).assertExists()
     }
 
     // ---- Refresh Tests ----

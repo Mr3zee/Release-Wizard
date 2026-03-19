@@ -144,8 +144,8 @@ class ConnectionScreensTest {
 
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("My GitHub").fetchSemanticsNodes().isNotEmpty() }
         onAllNodesWithText("Delete").onFirst().performClick()
-        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Delete Connection").fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithText("Delete Connection").assertExists()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("delete_connection_confirm_c1", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("delete_connection_confirm_c1", useUnmergedTree = true).assertExists()
     }
 
     @Test
@@ -157,9 +157,9 @@ class ConnectionScreensTest {
 
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("My GitHub").fetchSemanticsNodes().isNotEmpty() }
         onAllNodesWithText("Delete").onFirst().performClick()
-        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Delete Connection").fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithText("Cancel").performClick()
-        onNodeWithText("Delete Connection").assertDoesNotExist()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("delete_connection_confirm_c1", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("delete_connection_confirm_c1_cancel", useUnmergedTree = true).performClick()
+        onNodeWithTag("delete_connection_confirm_c1", useUnmergedTree = true).assertDoesNotExist()
     }
 
     @Test

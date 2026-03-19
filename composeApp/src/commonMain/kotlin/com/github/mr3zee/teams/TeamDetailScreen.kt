@@ -16,6 +16,7 @@ import com.github.mr3zee.components.ListItemCard
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwCard
+import com.github.mr3zee.components.RwInlineConfirmation
 import com.github.mr3zee.model.TeamMembership
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.Spacing
@@ -138,6 +139,23 @@ fun TeamDetailScreen(
                             }
                         }
                     }
+
+                    item {
+                        RwInlineConfirmation(
+                            visible = showLeaveDialog,
+                            message = packStringResource(Res.string.teams_leave_confirmation, t.name),
+                            confirmLabel = packStringResource(Res.string.teams_leave),
+                            onConfirm = {
+                                showLeaveDialog = false
+                                viewModel.leaveTeam { onBack() }
+                            },
+                            onDismiss = { showLeaveDialog = false },
+                            testTag = "leave_team_confirm",
+                            modifier = Modifier
+                                .widthIn(max = 1200.dp)
+                                .padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+                        )
+                    }
                 }
 
                 item {
@@ -161,24 +179,7 @@ fun TeamDetailScreen(
         }
     }
 
-    if (showLeaveDialog) {
-        AlertDialog(
-            onDismissRequest = { showLeaveDialog = false },
-            title = { Text(packStringResource(Res.string.teams_leave_title)) },
-            text = { Text(packStringResource(Res.string.teams_leave_confirmation, team?.name ?: packStringResource(Res.string.teams_leave_fallback))) },
-            confirmButton = {
-                RwButton(onClick = {
-                    showLeaveDialog = false
-                    viewModel.leaveTeam { onBack() }
-                }, variant = RwButtonVariant.Ghost, contentColor = MaterialTheme.colorScheme.error) {
-                    Text(packStringResource(Res.string.teams_leave))
-                }
-            },
-            dismissButton = {
-                RwButton(onClick = { showLeaveDialog = false }, variant = RwButtonVariant.Ghost) { Text(packStringResource(Res.string.common_cancel)) }
-            },
-        )
-    }
+    // Leave team confirmation is now shown inline below the team info section
 }
 
 @Composable

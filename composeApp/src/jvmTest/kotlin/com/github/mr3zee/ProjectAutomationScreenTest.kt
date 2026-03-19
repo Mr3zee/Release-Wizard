@@ -136,10 +136,12 @@ class ProjectAutomationScreenTest {
             onAllNodesWithTag("schedule_delete_s1", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
         onNodeWithTag("schedule_delete_s1", useUnmergedTree = true).performClick()
-        // Confirm and cancel buttons appear in the dialog (tagged explicitly)
-        onNodeWithTag("delete_confirm_button", useUnmergedTree = true).assertExists()
-        onNodeWithTag("delete_cancel_button", useUnmergedTree = true).assertExists()
-        onNodeWithText("cannot be undone", substring = true).assertExists()
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("confirm_delete_schedule_s1", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        // Confirm and cancel buttons appear in the inline confirmation (tagged with sub-tags)
+        onNodeWithTag("confirm_delete_schedule_s1_confirm", useUnmergedTree = true).assertExists()
+        onNodeWithTag("confirm_delete_schedule_s1_cancel", useUnmergedTree = true).assertExists()
     }
 
     @Test

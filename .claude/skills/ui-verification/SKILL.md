@@ -41,8 +41,8 @@ If port 5432 is already in use by a host PostgreSQL, either stop it first (`brew
 Run in the background with dev-friendly env vars:
 
 ```bash
-AUTH_SESSION_SIGN_KEY="01234567890123456789012345678901" \
-ENCRYPTION_KEY="01234567890123456789012345678901" \
+AUTH_SESSION_SIGN_KEY="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" \
+ENCRYPTION_KEY="0123456789abcdef0123456789abcdef" \
 PASSWORD_MIN_LENGTH=4 \
 PASSWORD_REQUIRE_UPPERCASE=false \
 PASSWORD_REQUIRE_DIGIT=false \
@@ -51,6 +51,7 @@ SECURE_COOKIE=false \
 DB_USER=postgres \
 DB_PASSWORD=postgres \
 DB_URL="jdbc:postgresql://localhost:5432/release_wizard" \
+CORS_ALLOWED_ORIGIN_1="http://localhost:8080" \
 ./gradlew :server:run &
 ```
 
@@ -95,11 +96,13 @@ sleep 3
 curl -s "http://localhost:54345/waitForIdle"
 
 # Create a team (arrives at Teams screen after registration)
+# The FAB opens an inline form (not a dialog) at the top of the list
 curl -s "http://localhost:54345/onNodeWithTag/create_team_fab/performClick"
 sleep 1
+curl -s "http://localhost:54345/waitForIdle"
 curl -s "http://localhost:54345/onNodeWithTag/team_name_input/performTextInput?text=Test%20Team"
 curl -s "http://localhost:54345/waitForIdle"
-curl -s "http://localhost:54345/onNodeWithText/Create/performClick"
+curl -s "http://localhost:54345/onNodeWithTag/create_team_confirm/performClick"
 sleep 2
 curl -s "http://localhost:54345/waitForIdle"
 # Now on Project List screen for "Test Team"
@@ -156,9 +159,10 @@ Then view with the Read tool: `Read /tmp/rw_SCREENNAME.png`
 
 ### Known Limitations
 
-1. **Screenshots fail (HTTP 500) when a popup/dropdown is open.** AlertDialogs, DropdownMenus, and overflow menus prevent screenshot capture. Dismiss the popup first, or just interact blind and screenshot after.
+1. **DropdownMenu content is invisible in screenshots.** Screenshots succeed (no HTTP 500) but the dropdown popup layer is not captured — only the underlying window is shown. Dismiss the menu before screenshotting if you need to verify its content. Note: AlertDialogs have been fully removed from the app — all confirmations and forms are now inline components that ARE screenshotable.
 2. **`performTextInput` appends, doesn't replace.** If a field already has text, you need to clear it first or click elsewhere and come back.
 3. **Canvas blocks are not directly clickable by test tag.** The DAG canvas is a custom Canvas composable. You can click blocks by their visible text label using `onNodeWithText`.
+4. **Inline confirmations and forms are screenshotable.** The app uses `RwInlineConfirmation` banners and `RwInlineForm` cards instead of AlertDialogs. These render in the normal composition tree and can be captured in screenshots.
 
 ## Navigation Map
 

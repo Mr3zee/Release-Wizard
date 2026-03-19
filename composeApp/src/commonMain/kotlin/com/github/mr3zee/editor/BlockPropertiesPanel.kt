@@ -624,18 +624,32 @@ private fun SingleGateEditor(
                 textStyle = AppTypography.bodySmall,
                 testTag = "${testTagPrefix}_message_field",
             )
-            RwTooltip(tooltip = packStringResource(Res.string.editor_template_tooltip)) {
-                RwButton(
-                    onClick = { showTemplatePicker = true },
-                    variant = RwButtonVariant.Ghost,
-                    enabled = enabled,
-                    contentPadding = PaddingValues(Spacing.xs),
-                    modifier = Modifier.testTag("${testTagPrefix}_template_button"),
-                ) {
-                    Text(packStringResource(Res.string.editor_template_button), style = AppTypography.bodySmall)
+            Box {
+                RwTooltip(tooltip = packStringResource(Res.string.editor_template_tooltip)) {
+                    RwButton(
+                        onClick = { showTemplatePicker = true },
+                        variant = RwButtonVariant.Ghost,
+                        enabled = enabled,
+                        contentPadding = PaddingValues(Spacing.xs),
+                        modifier = Modifier.testTag("${testTagPrefix}_template_button"),
+                    ) {
+                        Text(packStringResource(Res.string.editor_template_button), style = AppTypography.bodySmall)
+                    }
                 }
+                TemplatePickerDropdown(
+                    expanded = showTemplatePicker,
+                    parameters = projectParameters,
+                    predecessors = predecessors,
+                    onSelect = { expr ->
+                        message = insertExpressionSafely(message, expr)
+                        val currentGate = gate ?: Gate()
+                        onUpdate(currentGate.copy(message = message))
+                        showTemplatePicker = false
+                    },
+                    onDismiss = { showTemplatePicker = false },
+                )
             }
-}
+        }
 
         val countValue = requiredCount.toIntOrNull()
         val isCountError = countValue == null || countValue < 1
@@ -654,20 +668,6 @@ private fun SingleGateEditor(
             enabled = enabled,
             modifier = Modifier.fillMaxWidth().testTag("${testTagPrefix}_count_field"),
             textStyle = AppTypography.bodySmall,
-        )
-    }
-
-    if (showTemplatePicker) {
-        TemplatePickerDialog(
-            parameters = projectParameters,
-            predecessors = predecessors,
-            onSelect = { expr ->
-                message = insertExpressionSafely(message, expr)
-                val currentGate = gate ?: Gate()
-                onUpdate(currentGate.copy(message = message))
-                showTemplatePicker = false
-            },
-            onDismiss = { showTemplatePicker = false },
         )
     }
 }
@@ -710,16 +710,28 @@ private fun ParameterRow(
             textStyle = AppTypography.bodySmall,
             testTag = "param_value_field",
         )
-        RwTooltip(tooltip = packStringResource(Res.string.editor_template_tooltip)) {
-            RwButton(
-                onClick = { showTemplatePicker = true },
-                variant = RwButtonVariant.Ghost,
-                enabled = enabled,
-                contentPadding = PaddingValues(Spacing.xs),
-                modifier = Modifier.testTag("insert_template_button"),
-            ) {
-                Text(packStringResource(Res.string.editor_template_button), style = AppTypography.bodySmall)
+        Box {
+            RwTooltip(tooltip = packStringResource(Res.string.editor_template_tooltip)) {
+                RwButton(
+                    onClick = { showTemplatePicker = true },
+                    variant = RwButtonVariant.Ghost,
+                    enabled = enabled,
+                    contentPadding = PaddingValues(Spacing.xs),
+                    modifier = Modifier.testTag("insert_template_button"),
+                ) {
+                    Text(packStringResource(Res.string.editor_template_button), style = AppTypography.bodySmall)
+                }
             }
+            TemplatePickerDropdown(
+                expanded = showTemplatePicker,
+                parameters = projectParameters,
+                predecessors = predecessors,
+                onSelect = { expr ->
+                    onUpdate(parameter.copy(value = insertExpressionSafely(parameter.value, expr)))
+                    showTemplatePicker = false
+                },
+                onDismiss = { showTemplatePicker = false },
+            )
         }
         RwButton(
             onClick = onRemove,
@@ -730,17 +742,5 @@ private fun ParameterRow(
         ) {
             Text(packStringResource(Res.string.editor_prop_remove))
         }
-    }
-
-    if (showTemplatePicker) {
-        TemplatePickerDialog(
-            parameters = projectParameters,
-            predecessors = predecessors,
-            onSelect = { expr ->
-                onUpdate(parameter.copy(value = insertExpressionSafely(parameter.value, expr)))
-                showTemplatePicker = false
-            },
-            onDismiss = { showTemplatePicker = false },
-        )
     }
 }

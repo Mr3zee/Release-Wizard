@@ -6,6 +6,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -13,17 +14,61 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import com.github.mr3zee.api.CreateMavenTriggerRequest
+import com.github.mr3zee.api.CreateScheduleRequest
+import com.github.mr3zee.api.CreateTriggerRequest
 import com.github.mr3zee.api.TriggerResponse
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
+import com.github.mr3zee.components.RwCard
+import com.github.mr3zee.components.RwInlineConfirmation
+import com.github.mr3zee.components.RwInlineForm
 import com.github.mr3zee.i18n.packStringResource
 import com.github.mr3zee.model.MavenTrigger
 import com.github.mr3zee.model.Schedule
 import com.github.mr3zee.theme.AppTypography
+import com.github.mr3zee.theme.Spacing
+import com.github.mr3zee.util.copyToClipboard
 import com.github.mr3zee.util.resolve
 import kotlinx.coroutines.launch
 import releasewizard.composeapp.generated.resources.*
 import kotlin.time.Clock
+
+private fun isValidCron(expression: String): Boolean {
+    val parts = expression.trim().split("\\s+".toRegex())
+    if (parts.size != 5) return false
+
+    fun validField(field: String, min: Int, max: Int): Boolean {
+        return field.split(",").all { item ->
+            if (item.isEmpty()) return@all false
+            val slashParts = item.split("/")
+            if (slashParts.size > 2) return@all false
+            val step = slashParts.getOrNull(1)
+            if (step != null && ((step.toIntOrNull() ?: return@all false) < 1)) return@all false
+            val base = slashParts[0]
+            when {
+                base == "*" -> true
+                "-" in base -> {
+                    val rangeParts = base.split("-")
+                    if (rangeParts.size != 2) return@all false
+                    val from = rangeParts[0].toIntOrNull() ?: return@all false
+                    val to = rangeParts[1].toIntOrNull() ?: return@all false
+                    from in min..max && to in min..max && from <= to
+                }
+                else -> {
+                    val num = base.toIntOrNull() ?: return@all false
+                    num in min..max
+                }
+            }
+        }
+    }
+
+    return validField(parts[0], 0, 59) &&  // minute
+        validField(parts[1], 0, 23) &&     // hour
+        validField(parts[2], 1, 31) &&     // day of month
+        validField(parts[3], 1, 12) &&     // month
+        validField(parts[4], 0, 6)         // day of week
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,25 +83,41 @@ fun ProjectAutomationScreen(
     val isSaving by viewModel.isSaving.collectAsState()
     val error by viewModel.error.collectAsState()
 
-    // Dialog visibility (local UI state)
+    // Inline form visibility (local UI state)
     var showCreateSchedule by remember { mutableStateOf(false) }
-    var showCreateWebhook by remember { mutableStateOf(false) }
     var showCreateMaven by remember { mutableStateOf(false) }
 
-    // Webhook secret — shown after creation
-    var pendingWebhookSecret by remember { mutableStateOf<String?>(null) }
+    // Delete confirmation state — lifted to screen level
+    var scheduleToDelete by remember { mutableStateOf<String?>(null) }
+    var webhookToDelete by remember { mutableStateOf<String?>(null) }
+    var mavenToDelete by remember { mutableStateOf<String?>(null) }
 
-    // Maven created — confirmation dialog (carries artifact info for display)
-    var createdMavenTrigger by remember { mutableStateOf<MavenTrigger?>(null) }
+    // Webhook secret — shown persistently after creation until dismissed
+    var pendingWebhookSecret by remember { mutableStateOf<String?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val dismissLabel = packStringResource(Res.string.common_dismiss)
+    val mavenCreatedLabel = packStringResource(Res.string.maven_created_title)
 
     // Subscribe to all flows before triggering any loads to avoid missing emissions
     LaunchedEffect(viewModel) {
         launch { viewModel.webhookCreated.collect { trigger -> pendingWebhookSecret = trigger.secret } }
-        launch { viewModel.mavenTriggerCreated.collect { trigger -> createdMavenTrigger = trigger } }
+        launch {
+            viewModel.mavenTriggerCreated.collect { trigger ->
+                snackbarHostState.showSnackbar(
+                    message = "$mavenCreatedLabel: ${trigger.groupId}:${trigger.artifactId}",
+                    actionLabel = dismissLabel,
+                    duration = SnackbarDuration.Long,
+                )
+            }
+        }
         viewModel.load()
+    }
+
+    // Auto-copy webhook secret to clipboard when it appears
+    LaunchedEffect(pendingWebhookSecret) {
+        val secret = pendingWebhookSecret ?: return@LaunchedEffect
+        copyToClipboard(secret)
     }
 
     // Show errors via snackbar and auto-dismiss from ViewModel
@@ -96,8 +157,8 @@ fun ProjectAutomationScreen(
                     .fillMaxSize()
                     .padding(padding)
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                    .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
                 // ── Schedules Section ──
                 AutomationSection(
@@ -106,19 +167,42 @@ fun ProjectAutomationScreen(
                     addButtonTestTag = "add_schedule_button",
                     onAdd = { showCreateSchedule = true },
                 ) {
+                    CreateScheduleInlineForm(
+                        visible = showCreateSchedule,
+                        isSaving = isSaving,
+                        onConfirm = { request ->
+                            viewModel.createSchedule(request)
+                            showCreateSchedule = false
+                        },
+                        onDismiss = { showCreateSchedule = false },
+                    )
+
                     if (schedules.isEmpty()) {
                         Text(
                             packStringResource(Res.string.automation_empty_schedules),
                             style = AppTypography.body,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(vertical = 8.dp),
+                            modifier = Modifier.padding(vertical = Spacing.sm),
                         )
                     } else {
                         schedules.forEach { schedule ->
                             ScheduleItem(
                                 schedule = schedule,
                                 onToggle = { viewModel.toggleSchedule(schedule.id, it) },
-                                onDelete = { viewModel.deleteSchedule(schedule.id) },
+                                onRequestDelete = { scheduleToDelete = schedule.id },
+                            )
+                            RwInlineConfirmation(
+                                visible = scheduleToDelete == schedule.id,
+                                message = "\"${schedule.cronExpression}\" — ${packStringResource(Res.string.automation_delete_confirm_message)}",
+                                confirmLabel = packStringResource(Res.string.common_delete),
+                                onConfirm = {
+                                    val id = scheduleToDelete
+                                    scheduleToDelete = null
+                                    if (id != null) viewModel.deleteSchedule(id)
+                                },
+                                onDismiss = { scheduleToDelete = null },
+                                isDestructive = true,
+                                testTag = "confirm_delete_schedule_${schedule.id}",
                             )
                         }
                     }
@@ -131,21 +215,43 @@ fun ProjectAutomationScreen(
                     title = packStringResource(Res.string.automation_webhook_section),
                     addButtonLabel = packStringResource(Res.string.automation_add_webhook),
                     addButtonTestTag = "add_webhook_button",
-                    onAdd = { showCreateWebhook = true },
+                    onAdd = { viewModel.createWebhookTrigger(CreateTriggerRequest()) },
                 ) {
+                    // Persistent webhook secret card — shown until user clicks dismiss
+                    val secret = pendingWebhookSecret
+                    if (secret != null) {
+                        WebhookSecretInlineCard(
+                            secret = secret,
+                            onDismiss = { pendingWebhookSecret = null },
+                        )
+                    }
+
                     if (webhookTriggers.isEmpty()) {
                         Text(
                             packStringResource(Res.string.automation_empty_webhooks),
                             style = AppTypography.body,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(vertical = 8.dp),
+                            modifier = Modifier.padding(vertical = Spacing.sm),
                         )
                     } else {
                         webhookTriggers.forEach { trigger ->
                             WebhookTriggerItem(
                                 trigger = trigger,
                                 onToggle = { viewModel.toggleWebhookTrigger(trigger.id, it) },
-                                onDelete = { viewModel.deleteWebhookTrigger(trigger.id) },
+                                onRequestDelete = { webhookToDelete = trigger.id },
+                            )
+                            RwInlineConfirmation(
+                                visible = webhookToDelete == trigger.id,
+                                message = packStringResource(Res.string.automation_delete_confirm_message),
+                                confirmLabel = packStringResource(Res.string.common_delete),
+                                onConfirm = {
+                                    val id = webhookToDelete
+                                    webhookToDelete = null
+                                    if (id != null) viewModel.deleteWebhookTrigger(id)
+                                },
+                                onDismiss = { webhookToDelete = null },
+                                isDestructive = true,
+                                testTag = "confirm_delete_webhook_${trigger.id}",
                             )
                         }
                     }
@@ -160,75 +266,48 @@ fun ProjectAutomationScreen(
                     addButtonTestTag = "add_maven_button",
                     onAdd = { showCreateMaven = true },
                 ) {
+                    CreateMavenTriggerInlineForm(
+                        visible = showCreateMaven,
+                        isSaving = isSaving,
+                        onConfirm = { request ->
+                            viewModel.createMavenTrigger(request)
+                            showCreateMaven = false
+                        },
+                        onDismiss = { showCreateMaven = false },
+                    )
+
                     if (mavenTriggers.isEmpty()) {
                         Text(
                             packStringResource(Res.string.automation_empty_maven),
                             style = AppTypography.body,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(vertical = 8.dp),
+                            modifier = Modifier.padding(vertical = Spacing.sm),
                         )
                     } else {
                         mavenTriggers.forEach { trigger ->
                             MavenTriggerItem(
                                 trigger = trigger,
                                 onToggle = { viewModel.toggleMavenTrigger(trigger.id, it) },
-                                onDelete = { viewModel.deleteMavenTrigger(trigger.id) },
+                                onRequestDelete = { mavenToDelete = trigger.id },
+                            )
+                            RwInlineConfirmation(
+                                visible = mavenToDelete == trigger.id,
+                                message = "${trigger.groupId}:${trigger.artifactId} — ${packStringResource(Res.string.automation_delete_confirm_message)}",
+                                confirmLabel = packStringResource(Res.string.common_delete),
+                                onConfirm = {
+                                    val id = mavenToDelete
+                                    mavenToDelete = null
+                                    if (id != null) viewModel.deleteMavenTrigger(id)
+                                },
+                                onDismiss = { mavenToDelete = null },
+                                isDestructive = true,
+                                testTag = "confirm_delete_maven_${trigger.id}",
                             )
                         }
                     }
                 }
             }
         }
-    }
-
-    // Dialogs
-    if (showCreateSchedule) {
-        CreateScheduleDialog(
-            isSaving = isSaving,
-            onConfirm = { request ->
-                viewModel.createSchedule(request)
-                showCreateSchedule = false
-            },
-            onDismiss = { showCreateSchedule = false },
-        )
-    }
-
-    if (showCreateWebhook) {
-        CreateWebhookTriggerDialog(
-            isSaving = isSaving,
-            onConfirm = { request ->
-                viewModel.createWebhookTrigger(request)
-                showCreateWebhook = false
-            },
-            onDismiss = { showCreateWebhook = false },
-        )
-    }
-
-    if (showCreateMaven) {
-        CreateMavenTriggerDialog(
-            isSaving = isSaving,
-            onConfirm = { request ->
-                viewModel.createMavenTrigger(request)
-                showCreateMaven = false
-            },
-            onDismiss = { showCreateMaven = false },
-        )
-    }
-
-    val secret = pendingWebhookSecret
-    if (secret != null) {
-        WebhookSecretDialog(
-            secret = secret,
-            onDismiss = { pendingWebhookSecret = null },
-        )
-    }
-
-    val createdTrigger = createdMavenTrigger
-    if (createdTrigger != null) {
-        MavenTriggerCreatedDialog(
-            trigger = createdTrigger,
-            onDismiss = { createdMavenTrigger = null },
-        )
     }
 }
 
@@ -240,7 +319,7 @@ private fun AutomationSection(
     onAdd: () -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -253,7 +332,7 @@ private fun AutomationSection(
                 modifier = Modifier.testTag(addButtonTestTag),
             ) {
                 Icon(Icons.Default.Add, contentDescription = addButtonLabel, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(4.dp))
+                Spacer(Modifier.width(Spacing.xs))
                 Text(addButtonLabel)
             }
         }
@@ -261,17 +340,315 @@ private fun AutomationSection(
     }
 }
 
+// ── Webhook Secret Inline Card ──
+
+@Composable
+private fun WebhookSecretInlineCard(
+    secret: String,
+    onDismiss: () -> Unit,
+) {
+    RwCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("webhook_secret_card"),
+        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            Text(
+                packStringResource(Res.string.webhook_secret_dialog_title),
+                style = AppTypography.subheading,
+                color = MaterialTheme.colorScheme.onTertiaryContainer,
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                OutlinedTextField(
+                    value = secret,
+                    onValueChange = {},
+                    readOnly = true,
+                    singleLine = true,
+                    modifier = Modifier.weight(1f).testTag("webhook_secret_field"),
+                )
+                IconButton(
+                    onClick = { copyToClipboard(secret) },
+                    modifier = Modifier.testTag("webhook_secret_copy"),
+                ) {
+                    Icon(
+                        Icons.Default.ContentCopy,
+                        contentDescription = packStringResource(Res.string.common_copy_to_clipboard),
+                    )
+                }
+            }
+
+            Text(
+                text = packStringResource(Res.string.webhook_secret_warning),
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                RwButton(
+                    onClick = onDismiss,
+                    variant = RwButtonVariant.Primary,
+                    modifier = Modifier.testTag("webhook_secret_dismiss"),
+                ) {
+                    Text(packStringResource(Res.string.webhook_secret_saved))
+                }
+            }
+        }
+    }
+}
+
+// ── Create Schedule Inline Form ──
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CreateScheduleInlineForm(
+    visible: Boolean,
+    isSaving: Boolean,
+    onConfirm: (CreateScheduleRequest) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var cronExpression by remember { mutableStateOf("") }
+    var presetsExpanded by remember { mutableStateOf(false) }
+    var selectedPresetLabel by remember { mutableStateOf("") }
+
+    // Reset form state when it becomes visible
+    LaunchedEffect(visible) {
+        if (visible) {
+            cronExpression = ""
+            presetsExpanded = false
+            selectedPresetLabel = ""
+        }
+    }
+
+    val presets = listOf(
+        packStringResource(Res.string.schedule_preset_daily) to "0 9 * * *",
+        packStringResource(Res.string.schedule_preset_weekdays) to "0 9 * * 1-5",
+        packStringResource(Res.string.schedule_preset_monday) to "0 12 * * 1",
+    )
+
+    val isCronValid = remember(cronExpression) { isValidCron(cronExpression) }
+    val showValidation = cronExpression.isNotBlank()
+
+    val nextRunHint: String? = when (cronExpression.trim()) {
+        "0 9 * * *"   -> "Every day at 9:00 AM"
+        "0 9 * * 1-5" -> "Every weekday (Mon-Fri) at 9:00 AM"
+        "0 12 * * 1"  -> "Every Monday at 12:00 PM"
+        else -> null
+    }
+
+    RwInlineForm(
+        visible = visible,
+        title = packStringResource(Res.string.schedule_create_title),
+        onDismiss = onDismiss,
+        testTag = "create_schedule_form",
+        actions = {
+            RwButton(
+                onClick = {
+                    onConfirm(CreateScheduleRequest(cronExpression = cronExpression.trim()))
+                },
+                variant = RwButtonVariant.Primary,
+                enabled = isCronValid && !isSaving,
+                modifier = Modifier.testTag("schedule_create_button"),
+            ) {
+                Text(packStringResource(Res.string.common_create))
+            }
+        },
+    ) {
+        // Preset selector
+        ExposedDropdownMenuBox(
+            expanded = presetsExpanded,
+            onExpandedChange = { presetsExpanded = it },
+        ) {
+            OutlinedTextField(
+                value = selectedPresetLabel.ifBlank { packStringResource(Res.string.schedule_preset_label) },
+                onValueChange = {},
+                readOnly = true,
+                label = { Text(packStringResource(Res.string.schedule_preset_label)) },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = presetsExpanded) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+            )
+            ExposedDropdownMenu(
+                expanded = presetsExpanded,
+                onDismissRequest = { presetsExpanded = false },
+            ) {
+                presets.forEach { (label, cron) ->
+                    DropdownMenuItem(
+                        text = { Text(label) },
+                        onClick = {
+                            cronExpression = cron
+                            selectedPresetLabel = label
+                            presetsExpanded = false
+                        },
+                    )
+                }
+            }
+        }
+
+        // Cron expression field
+        OutlinedTextField(
+            value = cronExpression,
+            onValueChange = { cronExpression = it; selectedPresetLabel = "" },
+            label = { Text(packStringResource(Res.string.schedule_cron_label)) },
+            placeholder = { Text(packStringResource(Res.string.schedule_cron_hint)) },
+            supportingText = {
+                when {
+                    nextRunHint != null -> Text(
+                        "${packStringResource(Res.string.schedule_next_run_label)}: $nextRunHint",
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    showValidation && isCronValid -> Text(
+                        packStringResource(Res.string.schedule_cron_valid),
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    showValidation && !isCronValid -> Text(
+                        packStringResource(Res.string.schedule_cron_invalid),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                    else -> {}
+                }
+            },
+            isError = showValidation && !isCronValid,
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().testTag("schedule_cron_input"),
+        )
+    }
+}
+
+// ── Create Maven Trigger Inline Form ──
+
+@Composable
+private fun CreateMavenTriggerInlineForm(
+    visible: Boolean,
+    isSaving: Boolean,
+    onConfirm: (CreateMavenTriggerRequest) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var repoUrl by remember { mutableStateOf("") }
+    var groupId by remember { mutableStateOf("") }
+    var artifactId by remember { mutableStateOf("") }
+    var parameterKey by remember { mutableStateOf("version") }
+    var includeSnapshots by remember { mutableStateOf(false) }
+
+    // Reset form state when it becomes visible
+    LaunchedEffect(visible) {
+        if (visible) {
+            repoUrl = ""
+            groupId = ""
+            artifactId = ""
+            parameterKey = "version"
+            includeSnapshots = false
+        }
+    }
+
+    val isValid = repoUrl.isNotBlank() &&
+        (repoUrl.startsWith("http://") || repoUrl.startsWith("https://")) &&
+        groupId.isNotBlank() &&
+        artifactId.isNotBlank() &&
+        parameterKey.isNotBlank()
+
+    RwInlineForm(
+        visible = visible,
+        title = packStringResource(Res.string.maven_create_title),
+        onDismiss = onDismiss,
+        testTag = "create_maven_form",
+        actions = {
+            RwButton(
+                onClick = {
+                    onConfirm(
+                        CreateMavenTriggerRequest(
+                            repoUrl = repoUrl.trim(),
+                            groupId = groupId.trim(),
+                            artifactId = artifactId.trim(),
+                            parameterKey = parameterKey.trim(),
+                            includeSnapshots = includeSnapshots,
+                        )
+                    )
+                },
+                variant = RwButtonVariant.Primary,
+                enabled = isValid && !isSaving,
+                modifier = Modifier.testTag("maven_create_button"),
+            ) {
+                Text(if (isSaving) packStringResource(Res.string.common_saving) else packStringResource(Res.string.common_create))
+            }
+        },
+    ) {
+        val repoUrlInvalid = repoUrl.isNotBlank() &&
+            !repoUrl.startsWith("http://") && !repoUrl.startsWith("https://")
+        OutlinedTextField(
+            value = repoUrl,
+            onValueChange = { repoUrl = it },
+            label = { Text(packStringResource(Res.string.maven_repo_url_label)) },
+            placeholder = { Text(packStringResource(Res.string.maven_repo_url_hint)) },
+            isError = repoUrlInvalid,
+            supportingText = if (repoUrlInvalid) {
+                { Text("Must start with http:// or https://", color = MaterialTheme.colorScheme.error) }
+            } else null,
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = groupId,
+            onValueChange = { groupId = it },
+            label = { Text(packStringResource(Res.string.maven_group_id_label)) },
+            placeholder = { Text(packStringResource(Res.string.maven_group_id_hint)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = artifactId,
+            onValueChange = { artifactId = it },
+            label = { Text(packStringResource(Res.string.maven_artifact_id_label)) },
+            placeholder = { Text(packStringResource(Res.string.maven_artifact_id_hint)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = parameterKey,
+            onValueChange = { parameterKey = it },
+            label = { Text(packStringResource(Res.string.maven_parameter_key_label)) },
+            placeholder = { Text(packStringResource(Res.string.maven_parameter_key_hint)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            Checkbox(
+                checked = includeSnapshots,
+                onCheckedChange = { includeSnapshots = it },
+            )
+            Text(packStringResource(Res.string.maven_include_snapshots_label))
+        }
+    }
+}
+
+// ── Item composables ──
+
 @Composable
 private fun ScheduleItem(
     schedule: Schedule,
     onToggle: (Boolean) -> Unit,
-    onDelete: () -> Unit,
+    onRequestDelete: () -> Unit,
 ) {
-    var showDeleteConfirm by remember { mutableStateOf(false) }
-
-    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+    Card(modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xxs)) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            modifier = Modifier.fillMaxWidth().padding(Spacing.md),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
@@ -284,7 +661,7 @@ private fun ScheduleItem(
                 modifier = Modifier.testTag("schedule_toggle_${schedule.id}"),
             )
             IconButton(
-                onClick = { showDeleteConfirm = true },
+                onClick = onRequestDelete,
                 modifier = Modifier.testTag("schedule_delete_${schedule.id}"),
             ) {
                 Icon(
@@ -295,28 +672,17 @@ private fun ScheduleItem(
             }
         }
     }
-
-    if (showDeleteConfirm) {
-        DeleteConfirmDialog(
-            title = packStringResource(Res.string.automation_delete_confirm_title),
-            message = "\"${schedule.cronExpression}\" — ${packStringResource(Res.string.automation_delete_confirm_message)}",
-            onConfirm = { showDeleteConfirm = false; onDelete() },
-            onDismiss = { showDeleteConfirm = false },
-        )
-    }
 }
 
 @Composable
 private fun WebhookTriggerItem(
     trigger: TriggerResponse,
     onToggle: (Boolean) -> Unit,
-    onDelete: () -> Unit,
+    onRequestDelete: () -> Unit,
 ) {
-    var showDeleteConfirm by remember { mutableStateOf(false) }
-
-    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+    Card(modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xxs)) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            modifier = Modifier.fillMaxWidth().padding(Spacing.md),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
@@ -335,7 +701,7 @@ private fun WebhookTriggerItem(
                 modifier = Modifier.testTag("webhook_toggle_${trigger.id}"),
             )
             IconButton(
-                onClick = { showDeleteConfirm = true },
+                onClick = onRequestDelete,
                 modifier = Modifier.testTag("webhook_delete_${trigger.id}"),
             ) {
                 Icon(
@@ -346,28 +712,17 @@ private fun WebhookTriggerItem(
             }
         }
     }
-
-    if (showDeleteConfirm) {
-        DeleteConfirmDialog(
-            title = packStringResource(Res.string.automation_delete_confirm_title),
-            message = packStringResource(Res.string.automation_delete_confirm_message),
-            onConfirm = { showDeleteConfirm = false; onDelete() },
-            onDismiss = { showDeleteConfirm = false },
-        )
-    }
 }
 
 @Composable
 private fun MavenTriggerItem(
     trigger: MavenTrigger,
     onToggle: (Boolean) -> Unit,
-    onDelete: () -> Unit,
+    onRequestDelete: () -> Unit,
 ) {
-    var showDeleteConfirm by remember { mutableStateOf(false) }
-
-    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+    Card(modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xxs)) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            modifier = Modifier.fillMaxWidth().padding(Spacing.md),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
@@ -401,7 +756,7 @@ private fun MavenTriggerItem(
                 modifier = Modifier.testTag("maven_toggle_${trigger.id}"),
             )
             IconButton(
-                onClick = { showDeleteConfirm = true },
+                onClick = onRequestDelete,
                 modifier = Modifier.testTag("maven_delete_${trigger.id}"),
             ) {
                 Icon(
@@ -412,39 +767,6 @@ private fun MavenTriggerItem(
             }
         }
     }
-
-    if (showDeleteConfirm) {
-        DeleteConfirmDialog(
-            title = packStringResource(Res.string.automation_delete_confirm_title),
-            message = "${trigger.groupId}:${trigger.artifactId} — ${packStringResource(Res.string.automation_delete_confirm_message)}",
-            onConfirm = { showDeleteConfirm = false; onDelete() },
-            onDismiss = { showDeleteConfirm = false },
-        )
-    }
-}
-
-@Composable
-private fun DeleteConfirmDialog(
-    title: String,
-    message: String,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = { Text(message) },
-        confirmButton = {
-            RwButton(onClick = onConfirm, variant = RwButtonVariant.Danger, modifier = Modifier.testTag("delete_confirm_button")) {
-                Text(packStringResource(Res.string.common_delete))
-            }
-        },
-        dismissButton = {
-            RwButton(onClick = onDismiss, variant = RwButtonVariant.Ghost, modifier = Modifier.testTag("delete_cancel_button")) {
-                Text(packStringResource(Res.string.common_cancel))
-            }
-        },
-    )
 }
 
 private fun formatRelativeTime(instant: kotlin.time.Instant): String {

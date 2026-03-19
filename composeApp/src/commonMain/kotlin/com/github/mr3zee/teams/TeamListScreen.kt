@@ -22,6 +22,7 @@ import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwCard
 import com.github.mr3zee.components.RefreshIconButton
 import com.github.mr3zee.components.RwFab
+import com.github.mr3zee.components.RwInlineForm
 import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.keyboard.LocalShortcutActions
@@ -190,6 +191,17 @@ fun TeamListScreen(
                 }
             }
 
+            CreateTeamInlineForm(
+                visible = showCreateDialog,
+                onDismiss = { showCreateDialog = false },
+                onCreate = { name, description ->
+                    viewModel.createTeam(name, description) { teamId ->
+                        onTeamCreated(teamId)
+                    }
+                    showCreateDialog = false
+                },
+            )
+
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
@@ -236,17 +248,7 @@ fun TeamListScreen(
         }
     }
 
-    if (showCreateDialog) {
-        CreateTeamDialog(
-            onDismiss = { showCreateDialog = false },
-            onCreate = { name, description ->
-                viewModel.createTeam(name, description) { teamId ->
-                    onTeamCreated(teamId)
-                }
-                showCreateDialog = false
-            },
-        )
-    }
+    // Create team dialog replaced by inline form in the content area
     } // CompositionLocalProvider
 }
 
@@ -306,43 +308,56 @@ private fun TeamListItem(
 }
 
 @Composable
-private fun CreateTeamDialog(
+private fun CreateTeamInlineForm(
+    visible: Boolean,
     onDismiss: () -> Unit,
     onCreate: (name: String, description: String) -> Unit,
 ) {
     var name by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(packStringResource(Res.string.teams_new_team)) },
-        text = {
-            Column {
-                RwTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = packStringResource(Res.string.teams_team_name),
-                    placeholder = packStringResource(Res.string.teams_team_name),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().testTag("team_name_input"),
-                )
-                Spacer(modifier = Modifier.height(Spacing.sm))
-                RwTextField(
-                    value = description,
-                    onValueChange = { description = it },
-                    label = packStringResource(Res.string.teams_description_optional),
-                    placeholder = packStringResource(Res.string.teams_description_optional),
-                    modifier = Modifier.fillMaxWidth().testTag("team_description_input"),
-                )
-            }
-        },
-        confirmButton = {
-            RwButton(onClick = { onCreate(name, description) }, variant = RwButtonVariant.Ghost, enabled = name.isNotBlank()) {
+    // Reset form state when it becomes visible
+    LaunchedEffect(visible) {
+        if (visible) {
+            name = ""
+            description = ""
+        }
+    }
+
+    RwInlineForm(
+        visible = visible,
+        title = packStringResource(Res.string.teams_new_team),
+        onDismiss = onDismiss,
+        testTag = "create_team_form",
+        modifier = Modifier
+            .widthIn(max = 1200.dp)
+            .padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+        actions = {
+            RwButton(
+                onClick = { onCreate(name, description) },
+                variant = RwButtonVariant.Primary,
+                enabled = name.isNotBlank(),
+                modifier = Modifier.testTag("create_team_confirm"),
+            ) {
                 Text(packStringResource(Res.string.common_create))
             }
         },
-        dismissButton = {
-            RwButton(onClick = onDismiss, variant = RwButtonVariant.Ghost) { Text(packStringResource(Res.string.common_cancel)) }
-        },
-    )
+    ) {
+        RwTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = packStringResource(Res.string.teams_team_name),
+            placeholder = packStringResource(Res.string.teams_team_name),
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().testTag("team_name_input"),
+        )
+        Spacer(modifier = Modifier.height(Spacing.sm))
+        RwTextField(
+            value = description,
+            onValueChange = { description = it },
+            label = packStringResource(Res.string.teams_description_optional),
+            placeholder = packStringResource(Res.string.teams_description_optional),
+            modifier = Modifier.fillMaxWidth().testTag("team_description_input"),
+        )
+    }
 }

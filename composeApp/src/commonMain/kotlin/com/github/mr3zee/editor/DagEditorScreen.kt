@@ -1,6 +1,8 @@
 package com.github.mr3zee.editor
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Lock
@@ -15,7 +17,10 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
+import com.github.mr3zee.components.RwInlineConfirmation
 import com.github.mr3zee.dag.ValidationError
+import com.github.mr3zee.keyboard.LocalShortcutActions
+import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.LocalAppColors
 import com.github.mr3zee.theme.Spacing
@@ -57,6 +62,8 @@ fun DagEditorScreen(
     var showDiscardDialog by remember { mutableStateOf(false) }
     var showForceUnlockDialog by remember { mutableStateOf(false) }
     var showLockLostDiscardDialog by remember { mutableStateOf(false) }
+
+    val isConfirmationVisible = showDiscardDialog || showLockLostDiscardDialog || showForceUnlockDialog
 
     val snackbarHostState = remember { SnackbarHostState() }
     val dismissLabel = packStringResource(Res.string.common_dismiss)
@@ -100,6 +107,13 @@ fun DagEditorScreen(
             }
         }
     }
+
+    CompositionLocalProvider(
+        LocalShortcutActions provides ShortcutActions(
+            onSave = { if (isDirty && !isSaving && !isReadOnly) viewModel.save() },
+            hasDialogOpen = isConfirmationVisible,
+        )
+    ) {
 
     Scaffold(
         topBar = {
@@ -157,6 +171,10 @@ fun DagEditorScreen(
             .testTag("dag_editor_screen")
             .onKeyEvent { event ->
                 if (event.type == KeyEventType.KeyDown) {
+                    // Suppress destructive keys while a confirmation banner is showing
+                    if (isConfirmationVisible && (event.key == Key.Delete || event.key == Key.Backspace)) {
+                        return@onKeyEvent false
+                    }
                     // Support both Ctrl (Windows/Linux) and Cmd (macOS)
                     val isModifier = event.isCtrlPressed || event.isMetaPressed
                     when {
@@ -231,6 +249,55 @@ fun DagEditorScreen(
                 onForceUnlock = { showForceUnlockDialog = true },
                 onRetry = { viewModel.retryAcquireLock() },
                 onReacquireAndSave = { viewModel.reacquireAndSave() },
+            )
+
+            // Inline confirmation banners
+            RwInlineConfirmation(
+                visible = showDiscardDialog,
+                message = packStringResource(Res.string.common_unsaved_message),
+                confirmLabel = packStringResource(Res.string.common_discard),
+                onConfirm = {
+                    showDiscardDialog = false
+                    onBack()
+                },
+                onDismiss = { showDiscardDialog = false },
+                isDestructive = true,
+                testTag = "discard_confirm",
+                modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+            )
+
+            RwInlineConfirmation(
+                visible = showLockLostDiscardDialog,
+                message = packStringResource(Res.string.editor_dialog_lock_expired_body),
+                confirmLabel = packStringResource(Res.string.editor_dialog_lock_expired_discard),
+                onConfirm = {
+                    showLockLostDiscardDialog = false
+                    onBack()
+                },
+                onDismiss = { showLockLostDiscardDialog = false },
+                isDestructive = true,
+                extraAction = Pair(packStringResource(Res.string.editor_dialog_reacquire_save)) {
+                    showLockLostDiscardDialog = false
+                    viewModel.reacquireAndSave()
+                },
+                testTag = "lock_lost_confirm",
+                modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+            )
+
+            val forceUnlockLockedByName = (lockState as? LockState.LockedByOther)?.info?.username
+                ?: packStringResource(Res.string.editor_lock_unknown_user)
+            RwInlineConfirmation(
+                visible = showForceUnlockDialog,
+                message = packStringResource(Res.string.editor_dialog_force_unlock_body, forceUnlockLockedByName),
+                confirmLabel = packStringResource(Res.string.editor_dialog_force_unlock_confirm),
+                onConfirm = {
+                    showForceUnlockDialog = false
+                    viewModel.forceUnlock()
+                },
+                onDismiss = { showForceUnlockDialog = false },
+                isDestructive = true,
+                testTag = "force_unlock_confirm",
+                modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
             )
 
             Row(
@@ -323,98 +390,7 @@ fun DagEditorScreen(
         }
     }
 
-    // Unsaved changes confirmation dialog
-    if (showDiscardDialog) {
-        AlertDialog(
-            onDismissRequest = { showDiscardDialog = false },
-            title = { Text(packStringResource(Res.string.common_unsaved_title)) },
-            text = { Text(packStringResource(Res.string.common_unsaved_message)) },
-            confirmButton = {
-                RwButton(
-                    onClick = {
-                        showDiscardDialog = false
-                        onBack()
-                    },
-                    variant = RwButtonVariant.Ghost,
-                    contentColor = MaterialTheme.colorScheme.error,
-                ) {
-                    Text(packStringResource(Res.string.common_discard))
-                }
-            },
-            dismissButton = {
-                RwButton(onClick = { showDiscardDialog = false }, variant = RwButtonVariant.Ghost) {
-                    Text(packStringResource(Res.string.common_cancel))
-                }
-            },
-        )
-    }
-
-    // Lock-lost discard dialog
-    if (showLockLostDiscardDialog) {
-        AlertDialog(
-            onDismissRequest = { showLockLostDiscardDialog = false },
-            title = { Text(packStringResource(Res.string.editor_dialog_lock_expired_title)) },
-            text = {
-                Column {
-                    Text(packStringResource(Res.string.editor_dialog_lock_expired_body))
-                    Spacer(Modifier.height(Spacing.md))
-                    RwButton(
-                        onClick = {
-                            showLockLostDiscardDialog = false
-                            onBack()
-                        },
-                        variant = RwButtonVariant.Ghost,
-                        contentColor = MaterialTheme.colorScheme.error,
-                    ) {
-                        Text(packStringResource(Res.string.editor_dialog_lock_expired_discard))
-                    }
-                }
-            },
-            confirmButton = {
-                RwButton(
-                    onClick = {
-                        showLockLostDiscardDialog = false
-                        viewModel.reacquireAndSave()
-                    },
-                    variant = RwButtonVariant.Ghost,
-                ) {
-                    Text(packStringResource(Res.string.editor_dialog_reacquire_save))
-                }
-            },
-            dismissButton = {
-                RwButton(onClick = { showLockLostDiscardDialog = false }, variant = RwButtonVariant.Ghost) {
-                    Text(packStringResource(Res.string.common_cancel))
-                }
-            },
-        )
-    }
-
-    // Force unlock confirmation dialog
-    if (showForceUnlockDialog) {
-        val lockedByName = (lockState as? LockState.LockedByOther)?.info?.username ?: packStringResource(Res.string.editor_lock_unknown_user)
-        AlertDialog(
-            onDismissRequest = { showForceUnlockDialog = false },
-            title = { Text(packStringResource(Res.string.editor_dialog_force_unlock_title)) },
-            text = { Text(packStringResource(Res.string.editor_dialog_force_unlock_body, lockedByName)) },
-            confirmButton = {
-                RwButton(
-                    onClick = {
-                        showForceUnlockDialog = false
-                        viewModel.forceUnlock()
-                    },
-                    variant = RwButtonVariant.Ghost,
-                    contentColor = MaterialTheme.colorScheme.error,
-                ) {
-                    Text(packStringResource(Res.string.editor_dialog_force_unlock_confirm))
-                }
-            },
-            dismissButton = {
-                RwButton(onClick = { showForceUnlockDialog = false }, variant = RwButtonVariant.Ghost) {
-                    Text(packStringResource(Res.string.common_cancel))
-                }
-            },
-        )
-    }
+    } // CompositionLocalProvider
 }
 
 @Composable
@@ -525,35 +501,42 @@ private fun EditLockBanner(
 
 @Composable
 private fun ValidationErrorBadge(errors: List<ValidationError>) {
-    var showDialog by remember { mutableStateOf(false) }
+    var showMenu by remember { mutableStateOf(false) }
 
-    RwButton(
-        onClick = { showDialog = true },
-        variant = RwButtonVariant.Ghost,
-        contentColor = MaterialTheme.colorScheme.error,
-    ) {
-        Text(packPluralStringResource(Res.plurals.issues, errors.size, errors.size))
-    }
+    Box {
+        RwButton(
+            onClick = { showMenu = true },
+            variant = RwButtonVariant.Ghost,
+            contentColor = MaterialTheme.colorScheme.error,
+        ) {
+            Text(packPluralStringResource(Res.plurals.issues, errors.size, errors.size))
+        }
 
-    if (showDialog) {
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            title = { Text(packStringResource(Res.string.editor_validation_title)) },
-            text = {
-                Column {
-                    errors.forEach { err ->
-                        Text(
-                            formatValidationError(err),
-                            style = AppTypography.bodySmall,
-                            modifier = Modifier.padding(vertical = Spacing.xxs),
-                        )
-                    }
+        DropdownMenu(
+            expanded = showMenu,
+            onDismissRequest = { showMenu = false },
+        ) {
+            Column(
+                modifier = Modifier
+                    .widthIn(min = 250.dp)
+                    .heightIn(max = 300.dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+            ) {
+                Text(
+                    packStringResource(Res.string.editor_validation_title),
+                    style = AppTypography.subheading,
+                    modifier = Modifier.padding(bottom = Spacing.sm),
+                )
+                errors.forEach { err ->
+                    Text(
+                        formatValidationError(err),
+                        style = AppTypography.bodySmall,
+                        modifier = Modifier.padding(vertical = Spacing.xxs),
+                    )
                 }
-            },
-            confirmButton = {
-                RwButton(onClick = { showDialog = false }, variant = RwButtonVariant.Ghost) { Text(packStringResource(Res.string.common_ok)) }
-            },
-        )
+            }
+        }
     }
 }
 

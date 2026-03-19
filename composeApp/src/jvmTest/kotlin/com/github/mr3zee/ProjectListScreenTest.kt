@@ -145,8 +145,8 @@ class ProjectListScreenTest {
 
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("My Pipeline").fetchSemanticsNodes().isNotEmpty() }
         onAllNodesWithText("Delete").onFirst().performClick()
-        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Delete Project").fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithText("Delete Project").assertExists()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("delete_project_confirm_p1", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("delete_project_confirm_p1", useUnmergedTree = true).assertExists()
     }
 
     @Test
@@ -160,9 +160,9 @@ class ProjectListScreenTest {
 
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("My Pipeline").fetchSemanticsNodes().isNotEmpty() }
         onAllNodesWithText("Delete").onFirst().performClick()
-        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Delete Project").fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithText("Cancel").performClick()
-        onNodeWithText("Delete Project").assertDoesNotExist()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("delete_project_confirm_p1", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("delete_project_confirm_p1_cancel", useUnmergedTree = true).performClick()
+        onNodeWithTag("delete_project_confirm_p1", useUnmergedTree = true).assertDoesNotExist()
     }
 
     @Test

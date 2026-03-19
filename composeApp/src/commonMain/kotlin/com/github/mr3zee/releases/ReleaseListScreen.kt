@@ -25,6 +25,8 @@ import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwChip
 import com.github.mr3zee.components.RwFab
 import com.github.mr3zee.components.RwIconButton
+import com.github.mr3zee.components.RwInlineConfirmation
+import com.github.mr3zee.components.RwInlineForm
 import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.components.loadMoreItem
 import com.github.mr3zee.model.Release
@@ -33,6 +35,7 @@ import com.github.mr3zee.model.ReleaseStatus
 import com.github.mr3zee.model.isTerminal
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import com.github.mr3zee.model.ProjectTemplate
 import com.github.mr3zee.theme.AppShapes
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.LocalAppColors
@@ -69,6 +72,8 @@ fun ReleaseListScreen(
     val lastRefreshedAt by viewModel.lastRefreshedAt.collectAsState()
 
     var showStartDialog by remember { mutableStateOf(false) }
+    var releaseToArchive by remember { mutableStateOf<ReleaseId?>(null) }
+    var releaseToDelete by remember { mutableStateOf<ReleaseId?>(null) }
     val searchFocusRequester = remember { FocusRequester() }
 
     CompositionLocalProvider(
@@ -190,6 +195,17 @@ fun ReleaseListScreen(
                     onDismiss = { viewModel.dismissRefreshError() },
                 )
             }
+
+            // Inline start release form
+            StartReleaseInlineForm(
+                visible = showStartDialog,
+                projects = projects,
+                onStart = { projectId ->
+                    viewModel.startRelease(projectId)
+                    showStartDialog = false
+                },
+                onDismiss = { showStartDialog = false },
+            )
 
             RwTextField(
                 value = searchQuery,
@@ -327,9 +343,37 @@ fun ReleaseListScreen(
                         ReleaseListItem(
                             release = release,
                             onClick = { onViewRelease(release.id) },
-                            onArchive = { viewModel.archiveRelease(release.id) },
-                            onDelete = { viewModel.deleteRelease(release.id) },
+                            onArchive = { releaseToArchive = release.id },
+                            onDelete = { releaseToDelete = release.id },
                             modifier = Modifier.widthIn(max = 1200.dp),
+                        )
+                        RwInlineConfirmation(
+                            visible = releaseToArchive == release.id,
+                            message = packStringResource(Res.string.releases_archive_confirmation),
+                            confirmLabel = packStringResource(Res.string.releases_archive),
+                            onConfirm = {
+                                val id = releaseToArchive
+                                releaseToArchive = null
+                                if (id != null) viewModel.archiveRelease(id)
+                            },
+                            onDismiss = { releaseToArchive = null },
+                            isDestructive = true,
+                            testTag = "confirm_archive_${release.id.value}",
+                            modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+                        )
+                        RwInlineConfirmation(
+                            visible = releaseToDelete == release.id,
+                            message = packStringResource(Res.string.releases_delete_confirmation),
+                            confirmLabel = packStringResource(Res.string.common_delete),
+                            onConfirm = {
+                                val id = releaseToDelete
+                                releaseToDelete = null
+                                if (id != null) viewModel.deleteRelease(id)
+                            },
+                            onDismiss = { releaseToDelete = null },
+                            isDestructive = true,
+                            testTag = "confirm_delete_${release.id.value}",
+                            modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
                         )
                     }
                     loadMoreItem(pagination, isLoadingMore, onLoadMore = { viewModel.loadMore() })
@@ -337,18 +381,77 @@ fun ReleaseListScreen(
             }
         }
     }
-
-    if (showStartDialog) {
-        StartReleaseDialog(
-            projects = projects,
-            onStart = { projectId ->
-                viewModel.startRelease(projectId)
-                showStartDialog = false
-            },
-            onDismiss = { showStartDialog = false },
-        )
-    }
     } // CompositionLocalProvider
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun StartReleaseInlineForm(
+    visible: Boolean,
+    projects: List<ProjectTemplate>,
+    onStart: (com.github.mr3zee.model.ProjectId) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var selectedProject by remember { mutableStateOf<ProjectTemplate?>(null) }
+    var expanded by remember { mutableStateOf(false) }
+
+    // Reset selection when form becomes visible
+    LaunchedEffect(visible) {
+        if (visible) {
+            selectedProject = null
+            expanded = false
+        }
+    }
+
+    RwInlineForm(
+        visible = visible,
+        title = packStringResource(Res.string.start_release_title),
+        onDismiss = onDismiss,
+        testTag = "start_release_form",
+        modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+        actions = {
+            RwButton(
+                onClick = { selectedProject?.let { onStart(it.id) } },
+                enabled = selectedProject != null,
+                modifier = Modifier.testTag("start_release_confirm"),
+                variant = RwButtonVariant.Primary,
+            ) {
+                Text(packStringResource(Res.string.start_release_start))
+            }
+        },
+    ) {
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = it },
+            modifier = Modifier.testTag("project_dropdown"),
+        ) {
+            OutlinedTextField(
+                value = selectedProject?.name ?: "",
+                onValueChange = {},
+                readOnly = true,
+                label = { Text(packStringResource(Res.string.start_release_project_label)) },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+            )
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+            ) {
+                projects.forEach { project ->
+                    DropdownMenuItem(
+                        text = { Text(project.name) },
+                        onClick = {
+                            selectedProject = project
+                            expanded = false
+                        },
+                        modifier = Modifier.testTag("project_option_${project.id.value}"),
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -360,8 +463,6 @@ private fun ReleaseListItem(
     modifier: Modifier = Modifier,
 ) {
     var showMenu by remember { mutableStateOf(false) }
-    var showDeleteConfirm by remember { mutableStateOf(false) }
-    var showArchiveConfirm by remember { mutableStateOf(false) }
 
     ListItemCard(
         onClick = onClick,
@@ -408,7 +509,7 @@ private fun ReleaseListItem(
                             text = { Text(packStringResource(Res.string.releases_archive)) },
                             onClick = {
                                 showMenu = false
-                                showArchiveConfirm = true
+                                onArchive()
                             },
                             modifier = Modifier.testTag("archive_menu_item"),
                         )
@@ -417,53 +518,13 @@ private fun ReleaseListItem(
                         text = { Text(packStringResource(Res.string.common_delete), color = MaterialTheme.colorScheme.error) },
                         onClick = {
                             showMenu = false
-                            showDeleteConfirm = true
+                            onDelete()
                         },
                         modifier = Modifier.testTag("delete_menu_item"),
                     )
                 }
             }
         }
-    }
-
-    if (showArchiveConfirm) {
-        AlertDialog(
-            onDismissRequest = { showArchiveConfirm = false },
-            title = { Text(packStringResource(Res.string.releases_archive_title)) },
-            text = { Text(packStringResource(Res.string.releases_archive_confirmation)) },
-            confirmButton = {
-                RwButton(onClick = { showArchiveConfirm = false; onArchive() }, variant = RwButtonVariant.Ghost) {
-                    Text(packStringResource(Res.string.releases_archive))
-                }
-            },
-            dismissButton = {
-                RwButton(onClick = { showArchiveConfirm = false }, variant = RwButtonVariant.Ghost) {
-                    Text(packStringResource(Res.string.common_cancel))
-                }
-            },
-        )
-    }
-
-    if (showDeleteConfirm) {
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirm = false },
-            title = { Text(packStringResource(Res.string.releases_delete_title)) },
-            text = { Text(packStringResource(Res.string.releases_delete_confirmation)) },
-            confirmButton = {
-                RwButton(
-                    onClick = { showDeleteConfirm = false; onDelete() },
-                    variant = RwButtonVariant.Ghost,
-                    contentColor = MaterialTheme.colorScheme.error,
-                ) {
-                    Text(packStringResource(Res.string.common_delete))
-                }
-            },
-            dismissButton = {
-                RwButton(onClick = { showDeleteConfirm = false }, variant = RwButtonVariant.Ghost) {
-                    Text(packStringResource(Res.string.common_cancel))
-                }
-            },
-        )
     }
 }
 

@@ -25,6 +25,8 @@ import com.github.mr3zee.components.RefreshErrorBanner
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwFab
+import com.github.mr3zee.components.RwInlineConfirmation
+import com.github.mr3zee.components.RwInlineForm
 import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwRadioButton
 import com.github.mr3zee.components.RwTextField
@@ -97,22 +99,45 @@ fun ProjectListScreen(
                 TopAppBar(
                     title = {
                         if (userTeams.size > 1) {
-                            RwButton(
-                                onClick = { showTeamPicker = true },
-                                variant = RwButtonVariant.Ghost,
-                                modifier = Modifier.testTag("team_switcher"),
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        packStringResource(Res.string.projects_title_with_team, activeTeamName),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                    Icon(
-                                        Icons.Default.ArrowDropDown,
-                                        contentDescription = packStringResource(Res.string.projects_switch_team),
-                                        modifier = Modifier.size(20.dp),
-                                    )
+                            Box {
+                                RwButton(
+                                    onClick = { showTeamPicker = true },
+                                    variant = RwButtonVariant.Ghost,
+                                    modifier = Modifier.testTag("team_switcher"),
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            packStringResource(Res.string.projects_title_with_team, activeTeamName),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                        Icon(
+                                            Icons.Default.ArrowDropDown,
+                                            contentDescription = packStringResource(Res.string.projects_switch_team),
+                                            modifier = Modifier.size(20.dp),
+                                        )
+                                    }
+                                }
+                                DropdownMenu(
+                                    expanded = showTeamPicker,
+                                    onDismissRequest = { showTeamPicker = false },
+                                ) {
+                                    userTeams.forEach { teamInfo ->
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(
+                                                    teamInfo.teamName,
+                                                    color = if (teamInfo.teamId == currentTeamId) MaterialTheme.colorScheme.primary
+                                                    else MaterialTheme.colorScheme.onSurface,
+                                                )
+                                            },
+                                            onClick = {
+                                                onTeamChanged(teamInfo.teamId)
+                                                showTeamPicker = false
+                                            },
+                                            modifier = Modifier.testTag("team_picker_${teamInfo.teamId.value}"),
+                                        )
+                                    }
                                 }
                             }
                         } else {
@@ -291,6 +316,17 @@ fun ProjectListScreen(
                     .testTag("search_field"),
             )
 
+            CreateProjectInlineForm(
+                visible = showCreateDialog,
+                onDismiss = { showCreateDialog = false },
+                onCreate = { name ->
+                    viewModel.createProject(name) { projectId ->
+                        onEditProject(projectId)
+                    }
+                    showCreateDialog = false
+                },
+            )
+
             if (isLoading) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -348,12 +384,25 @@ fun ProjectListScreen(
                     contentPadding = PaddingValues(bottom = 80.dp),
                 ) {
                     items(projects, key = { it.id.value }) { project ->
-                        ProjectListItem(
-                            project = project,
-                            onClick = { onEditProject(project.id) },
-                            onDelete = { projectToDelete = project },
-                            modifier = Modifier.widthIn(max = 1200.dp),
-                        )
+                        Column(modifier = Modifier.widthIn(max = 1200.dp)) {
+                            ProjectListItem(
+                                project = project,
+                                onClick = { onEditProject(project.id) },
+                                onDelete = { projectToDelete = project },
+                            )
+                            RwInlineConfirmation(
+                                visible = projectToDelete?.id == project.id,
+                                message = packStringResource(Res.string.projects_delete_confirmation, project.name),
+                                confirmLabel = packStringResource(Res.string.common_delete),
+                                onConfirm = {
+                                    viewModel.deleteProject(project.id)
+                                    projectToDelete = null
+                                },
+                                onDismiss = { projectToDelete = null },
+                                testTag = "delete_project_confirm_${project.id.value}",
+                                modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+                            )
+                        }
                     }
                     loadMoreItem(pagination, isLoadingMore, onLoadMore = { viewModel.loadMore() })
                 }
@@ -361,73 +410,11 @@ fun ProjectListScreen(
         }
     }
 
-    if (showCreateDialog) {
-        CreateProjectDialog(
-            onDismiss = { showCreateDialog = false },
-            onCreate = { name ->
-                viewModel.createProject(name) { projectId ->
-                    onEditProject(projectId)
-                }
-                showCreateDialog = false
-            },
-        )
-    }
+    // Create project dialog replaced by inline form in the content area
 
-    projectToDelete?.let { project ->
-        AlertDialog(
-            onDismissRequest = { projectToDelete = null },
-            title = { Text(packStringResource(Res.string.projects_delete_title)) },
-            text = { Text(packStringResource(Res.string.projects_delete_confirmation, project.name)) },
-            confirmButton = {
-                RwButton(
-                    onClick = {
-                        viewModel.deleteProject(project.id)
-                        projectToDelete = null
-                    },
-                    variant = RwButtonVariant.Ghost,
-                    contentColor = MaterialTheme.colorScheme.error,
-                ) {
-                    Text(packStringResource(Res.string.common_delete))
-                }
-            },
-            dismissButton = {
-                RwButton(onClick = { projectToDelete = null }, variant = RwButtonVariant.Ghost) {
-                    Text(packStringResource(Res.string.common_cancel))
-                }
-            },
-        )
-    }
+    // Delete confirmation is now shown inline within the LazyColumn items
 
-    if (showTeamPicker && userTeams.size > 1) {
-        AlertDialog(
-            onDismissRequest = { showTeamPicker = false },
-            title = { Text(packStringResource(Res.string.projects_switch_team_title)) },
-            text = {
-                Column {
-                    userTeams.forEach { teamInfo ->
-                        RwButton(
-                            onClick = {
-                                onTeamChanged(teamInfo.teamId)
-                                showTeamPicker = false
-                            },
-                            variant = RwButtonVariant.Ghost,
-                            modifier = Modifier.fillMaxWidth().testTag("team_picker_${teamInfo.teamId.value}"),
-                        ) {
-                            Text(
-                                teamInfo.teamName,
-                                color = if (teamInfo.teamId == currentTeamId) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {},
-            dismissButton = {
-                RwButton(onClick = { showTeamPicker = false }, variant = RwButtonVariant.Ghost) { Text(packStringResource(Res.string.common_cancel)) }
-            },
-        )
-    }
+    // Team picker is now a DropdownMenu in the TopAppBar
     } // CompositionLocalProvider
 }
 
@@ -472,40 +459,46 @@ private fun ProjectListItem(
 }
 
 @Composable
-private fun CreateProjectDialog(
+private fun CreateProjectInlineForm(
+    visible: Boolean,
     onDismiss: () -> Unit,
     onCreate: (String) -> Unit,
 ) {
     var name by remember { mutableStateOf("") }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(packStringResource(Res.string.projects_new_project)) },
-        text = {
-            RwTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = packStringResource(Res.string.projects_project_name),
-                placeholder = packStringResource(Res.string.projects_project_name),
-                singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("project_name_input"),
-            )
-        },
-        confirmButton = {
+    // Reset form state when it becomes visible
+    LaunchedEffect(visible) {
+        if (visible) name = ""
+    }
+
+    RwInlineForm(
+        visible = visible,
+        title = packStringResource(Res.string.projects_new_project),
+        onDismiss = onDismiss,
+        testTag = "create_project_form",
+        modifier = Modifier
+            .widthIn(max = 1200.dp)
+            .padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+        actions = {
             RwButton(
                 onClick = { onCreate(name) },
-                variant = RwButtonVariant.Ghost,
+                variant = RwButtonVariant.Primary,
                 enabled = name.isNotBlank(),
+                modifier = Modifier.testTag("create_project_confirm"),
             ) {
                 Text(packStringResource(Res.string.common_create))
             }
         },
-        dismissButton = {
-            RwButton(onClick = onDismiss, variant = RwButtonVariant.Ghost) {
-                Text(packStringResource(Res.string.common_cancel))
-            }
-        },
-    )
+    ) {
+        RwTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = packStringResource(Res.string.projects_project_name),
+            placeholder = packStringResource(Res.string.projects_project_name),
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("project_name_input"),
+        )
+    }
 }

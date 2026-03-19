@@ -122,8 +122,8 @@ class ReleaseScreensTest {
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("empty_state").fetchSemanticsNodes().isNotEmpty() }
 
         onNodeWithTag("start_release_fab").performClick()
-        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("start_release_dialog").fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithTag("start_release_dialog").assertExists()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("start_release_form", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("start_release_form", useUnmergedTree = true).assertExists()
     }
 
     // ---- Release Detail Screen ----
@@ -451,8 +451,8 @@ class ReleaseScreensTest {
         }
 
         onNodeWithTag("cancel_release_button").performClick()
-        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("cancel_confirmation_dialog").fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithTag("confirm_cancel_button").performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("confirm_cancel_release", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("confirm_cancel_release_confirm", useUnmergedTree = true).performClick()
         waitForIdle()
         assertTrue(cancelClicked)
     }
@@ -789,8 +789,8 @@ class ReleaseScreensTest {
         }
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("approve_block_button").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("approve_block_button").performClick()
-        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("approve_confirmation_dialog").fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithTag("confirm_approve_button").performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("confirm_approve_block", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("confirm_approve_block_confirm", useUnmergedTree = true).performClick()
         waitForIdle()
         assertEquals(BlockId("approve1"), approvedBlockId)
     }

@@ -4,39 +4,18 @@
 
 ---
 
-## Phase 1: Critical Bugs (Broken Functionality)
+## Phase 1: Critical Bugs (Broken Functionality) ✅
 
-**Goal:** Fix features that are outright broken or cause data loss.
+**Status:** Complete (commit `1cdaf2a`)
 
-### 1A. Cron regex rejects valid expressions, breaking schedule presets
-- **File:** `CreateScheduleDialog.kt:14-16`
-- **Problem:** Regex `(\*|[0-6])` only matches `*` or single digits. "Weekdays" preset `0 9 * * 1-5` fails validation — Create button disabled despite valid form.
-- **Fix:** Replace regex with proper cron validation supporting ranges (`1-5`), lists (`1,3,5`), and steps (`*/2`). Also fix month field accepting `0` (line 15).
+All 6 bugs fixed, reviewed by UX/Design/Compose/QA experts, 11 new UI tests + flaky test fix. Server 354/354, Compose 306/306 pass.
 
-### 1B. "Session expired" shown on first app load
-- **File:** `HttpClientFactory.kt:34-38`, `App.kt:93-103`
-- **Problem:** `GET /auth/me` returns 401 for new users (no cookie). 401 interceptor fires `AuthEventBus.emitSessionExpired()` — shows misleading error.
-- **Fix:** Exclude `/auth/me` from the 401 interceptor (same as `/auth/login`), or distinguish "no session" from "expired session" in the auth flow.
-
-### 1C. Invite User dialog sends username as UserId
-- **File:** `TeamManageScreen.kt:261-264`
-- **Problem:** Dialog collects "Username" but wraps in `UserId()`. API expects internal ID, not display name.
-- **Fix:** Either add username-to-ID lookup/autocomplete in the dialog, or change the server API to accept usernames.
-
-### 1D. Undo stack ignores property changes — silent data loss
-- **File:** `DagEditorViewModel.kt:651-656`
-- **Problem:** `updateGraphSilent()` marks dirty but doesn't push undo state. Ctrl+Z silently discards all property edits.
-- **Fix:** Push undo state on property changes (debounced to avoid flooding the stack on every keystroke).
-
-### 1E. AuditLog loadMore has no concurrency guard
-- **File:** `AuditLogViewModel.kt:55-66`
-- **Problem:** Rapid clicks fire duplicate requests with same offset, appending duplicate events.
-- **Fix:** Add `if (_isLoadingMore.value) return` guard (same pattern as `ConnectionsViewModel.loadMore()`).
-
-### 1F. TemplatePickerDialog uses LazyColumn inside AlertDialog
-- **File:** `TemplatePickerDialog.kt:47`
-- **Problem:** `LazyColumn` doesn't support intrinsic measurement. Can crash in test environments.
-- **Fix:** Replace with `Column` + `verticalScroll` + `heightIn(max = 400.dp)`.
+- **1A.** Replaced cron regex with `isValidCron()` supporting ranges/steps/lists
+- **1B.** Excluded `/auth/me`, `/auth/register` from 401 session-expired interceptor
+- **1C.** Changed invite API to accept username; server resolves via AuthService; inline error in dialog
+- **1D.** Added debounced undo push with flush-before-undo semantics
+- **1E.** Added loadMore concurrency + hasMore guard with loading spinner
+- **1F.** Replaced LazyColumn with Column+verticalScroll in TemplatePickerDialog
 
 ---
 
