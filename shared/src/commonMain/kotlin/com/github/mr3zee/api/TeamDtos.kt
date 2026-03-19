@@ -6,7 +6,6 @@ import com.github.mr3zee.model.Team
 import com.github.mr3zee.model.TeamInvite
 import com.github.mr3zee.model.TeamMembership
 import com.github.mr3zee.model.TeamRole
-import com.github.mr3zee.model.UserId
 import kotlinx.serialization.Serializable
 
 // Team CRUD
@@ -57,7 +56,7 @@ data class TeamMemberListResponse(
 
 @Serializable
 data class CreateInviteRequest(
-    val userId: UserId,
+    val username: String,
 )
 
 @Serializable

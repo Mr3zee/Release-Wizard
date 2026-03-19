@@ -47,12 +47,9 @@ class AuditServiceTest {
         // Register and invite a second user
         val user2 = jsonClient()
         user2.login("member", "memberpass")
-        val meResponse = user2.get(ApiRoutes.Auth.ME).body<UserInfo>()
-        val user2Id = meResponse.id ?: error("No user ID")
-
         admin.post(ApiRoutes.Teams.invites(teamId.value)) {
             contentType(ContentType.Application.Json)
-            setBody(CreateInviteRequest(userId = com.github.mr3zee.model.UserId(user2Id)))
+            setBody(CreateInviteRequest(username = "member"))
         }
 
         // Audit events are written asynchronously; poll until they appear

@@ -54,13 +54,10 @@ class TeamAccessControlTest {
         // Register user2 and invite them
         val user2 = jsonClient()
         user2.login("member", "memberpass")
-        val meResponse = user2.get(ApiRoutes.Auth.ME).body<UserInfo>()
-        val user2Id = meResponse.id ?: error("No user ID")
-
         // Admin invites user2
         admin.post(ApiRoutes.Teams.invites(teamId.value)) {
             contentType(ContentType.Application.Json)
-            setBody(CreateInviteRequest(userId = UserId(user2Id)))
+            setBody(CreateInviteRequest(username = "member"))
         }
 
         // user2 accepts invite
@@ -84,12 +81,9 @@ class TeamAccessControlTest {
         // Create user2 as collaborator
         val user2 = jsonClient()
         user2.login("collab", "collabpass")
-        val meResponse = user2.get(ApiRoutes.Auth.ME).body<UserInfo>()
-        val user2Id = meResponse.id ?: error("No user ID")
-
         admin.post(ApiRoutes.Teams.invites(teamId.value)) {
             contentType(ContentType.Application.Json)
-            setBody(CreateInviteRequest(userId = UserId(user2Id)))
+            setBody(CreateInviteRequest(username = "collab"))
         }
         val invites = user2.get(ApiRoutes.Auth.MyInvites.BASE).body<InviteListResponse>()
         user2.post(ApiRoutes.Auth.MyInvites.accept(invites.invites.first().id))

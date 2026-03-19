@@ -32,9 +32,10 @@ fun createHttpClient(): HttpClient {
             }
             handleResponseExceptionWithRequest { cause, request ->
                 if (cause is ClientRequestException && cause.response.status.value == 401) {
-                    // Don't intercept login endpoint 401s — those mean "wrong credentials"
-                    val isLoginRequest = request.url.encodedPath.endsWith("/auth/login")
-                    if (!isLoginRequest) {
+                    // Don't emit session-expired for unauthenticated-by-design endpoints
+                    val authExcludedPaths = setOf("/auth/login", "/auth/me", "/auth/register")
+                    val isExcluded = authExcludedPaths.any { request.url.encodedPath.endsWith(it) }
+                    if (!isExcluded) {
                         AuthEventBus.emitSessionExpired()
                     }
                 }

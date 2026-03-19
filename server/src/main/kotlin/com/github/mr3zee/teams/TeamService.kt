@@ -37,6 +37,7 @@ class DefaultTeamService(
     private val teamRepository: TeamRepository,
     private val teamAccessService: TeamAccessService,
     private val auditService: AuditService,
+    private val authService: com.github.mr3zee.auth.AuthService,
 ) : TeamService {
 
     override suspend fun createTeam(request: CreateTeamRequest, session: UserSession): TeamResponse {
@@ -146,17 +147,21 @@ class DefaultTeamService(
     override suspend fun inviteUser(teamId: TeamId, request: CreateInviteRequest, session: UserSession): TeamInvite {
         teamAccessService.checkTeamLead(teamId, session)
         teamRepository.findById(teamId) ?: throw NotFoundException("Team not found")
+        // Resolve username to user ID
+        val user = authService.getUserByUsername(request.username)
+            ?: throw NotFoundException("User '${request.username}' not found")
+        val userId = user.id.value
         // Check not already a member
-        if (teamAccessService.isMember(teamId, request.userId.value)) {
+        if (teamAccessService.isMember(teamId, userId)) {
             throw IllegalArgumentException("User is already a member of this team")
         }
         // Check no existing pending invite
-        val existing = teamRepository.findExistingPendingInvite(teamId, request.userId.value)
+        val existing = teamRepository.findExistingPendingInvite(teamId, userId)
         if (existing != null) {
             throw IllegalArgumentException("User already has a pending invite")
         }
-        val invite = teamRepository.createInvite(teamId, request.userId.value, session.userId)
-        auditService.log(teamId, session, AuditAction.INVITE_SENT, AuditTargetType.USER, request.userId.value, "Invited user to team")
+        val invite = teamRepository.createInvite(teamId, userId, session.userId)
+        auditService.log(teamId, session, AuditAction.INVITE_SENT, AuditTargetType.USER, userId, "Invited user '${request.username}' to team")
         return invite
     }
 

@@ -239,6 +239,7 @@ class DagEditorViewModel(
 
     fun save() {
         if (isReadOnly.value) return
+        flushPendingUndo()
         val p = _project.value ?: return
         viewModelScope.launch {
             _isSaving.value = true
@@ -569,6 +570,7 @@ class DagEditorViewModel(
 
     fun undo() {
         if (isReadOnly.value) return
+        flushPendingUndo()
         if (undoIndex <= 0) return
         undoIndex--
         _graph.value = undoStack[undoIndex]
@@ -579,6 +581,7 @@ class DagEditorViewModel(
 
     fun redo() {
         if (isReadOnly.value) return
+        flushPendingUndo()
         if (undoIndex >= undoStack.lastIndex) return
         undoIndex++
         _graph.value = undoStack[undoIndex]
@@ -640,19 +643,36 @@ class DagEditorViewModel(
         }
     }
 
+    private var debouncedUndoJob: Job? = null
+    private var pendingUndoGraph: DagGraph? = null
+
+    private fun flushPendingUndo() {
+        debouncedUndoJob?.cancel()
+        pendingUndoGraph?.let { pushUndoState(it) }
+        pendingUndoGraph = null
+    }
+
     /** Structural change — pushes to undo stack. */
     private fun updateGraph(newGraph: DagGraph) {
+        flushPendingUndo()
         _graph.value = newGraph
         _isDirty.value = true
         pushUndoState(newGraph)
         revalidate()
     }
 
-    /** Property change — marks dirty but does NOT push undo (avoids flood on every keystroke). */
+    /** Property change — debounced push to undo stack (avoids flood on every keystroke). */
     private fun updateGraphSilent(newGraph: DagGraph) {
         _graph.value = newGraph
         _isDirty.value = true
         revalidate()
+        pendingUndoGraph = newGraph
+        debouncedUndoJob?.cancel()
+        debouncedUndoJob = viewModelScope.launch {
+            delay(500.milliseconds)
+            pushUndoState(newGraph)
+            pendingUndoGraph = null
+        }
     }
 
     private fun pushUndoState(graph: DagGraph) {

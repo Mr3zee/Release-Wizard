@@ -612,11 +612,9 @@ class ReleasesRoutesTest {
         // Register user2 and invite them to the team
         val user2Client = jsonClient()
         user2Client.login("user2", "user2pass")
-        val user2Info = user2Client.get(ApiRoutes.Auth.ME).body<UserInfo>()
-        val user2Id = user2Info.id ?: error("No user2 ID")
         adminClient.post(ApiRoutes.Teams.invites(teamId.value)) {
             contentType(ContentType.Application.Json)
-            setBody(CreateInviteRequest(userId = UserId(user2Id)))
+            setBody(CreateInviteRequest(username = "user2"))
         }
         val invites = user2Client.get(ApiRoutes.Auth.MyInvites.BASE).body<InviteListResponse>()
         user2Client.post(ApiRoutes.Auth.MyInvites.accept(invites.invites.first().id))

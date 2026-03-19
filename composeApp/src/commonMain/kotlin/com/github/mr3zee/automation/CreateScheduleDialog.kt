@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.api.CreateScheduleRequest
 import com.github.mr3zee.components.RwButton
@@ -11,9 +12,41 @@ import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.i18n.packStringResource
 import releasewizard.composeapp.generated.resources.*
 
-private val CRON_REGEX = Regex(
-    "^(\\*|[0-5]?\\d)\\s+(\\*|[01]?\\d|2[0-3])\\s+(\\*|[12]?\\d|3[01])\\s+(\\*|[0-9]|1[0-2])\\s+(\\*|[0-6])$"
-)
+private fun isValidCron(expression: String): Boolean {
+    val parts = expression.trim().split("\\s+".toRegex())
+    if (parts.size != 5) return false
+
+    fun validField(field: String, min: Int, max: Int): Boolean {
+        return field.split(",").all { item ->
+            if (item.isEmpty()) return@all false
+            val slashParts = item.split("/")
+            if (slashParts.size > 2) return@all false
+            val step = slashParts.getOrNull(1)
+            if (step != null && ((step.toIntOrNull() ?: return@all false) < 1)) return@all false
+            val base = slashParts[0]
+            when {
+                base == "*" -> true
+                "-" in base -> {
+                    val rangeParts = base.split("-")
+                    if (rangeParts.size != 2) return@all false
+                    val from = rangeParts[0].toIntOrNull() ?: return@all false
+                    val to = rangeParts[1].toIntOrNull() ?: return@all false
+                    from in min..max && to in min..max && from <= to
+                }
+                else -> {
+                    val num = base.toIntOrNull() ?: return@all false
+                    num in min..max
+                }
+            }
+        }
+    }
+
+    return validField(parts[0], 0, 59) &&  // minute
+        validField(parts[1], 0, 23) &&     // hour
+        validField(parts[2], 1, 31) &&     // day of month
+        validField(parts[3], 1, 12) &&     // month
+        validField(parts[4], 0, 6)         // day of week
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,7 +65,7 @@ fun CreateScheduleDialog(
         Triple(packStringResource(Res.string.schedule_preset_monday), "0 12 * * 1", Res.string.schedule_preset_monday),
     )
 
-    val isCronValid = CRON_REGEX.matches(cronExpression.trim())
+    val isCronValid = remember(cronExpression) { isValidCron(cronExpression) }
     val showValidation = cronExpression.isNotBlank()
 
     // Human-readable hint for selected preset, shown below the cron field
@@ -105,7 +138,7 @@ fun CreateScheduleDialog(
                     },
                     isError = showValidation && !isCronValid,
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().testTag("schedule_cron_input"),
                 )
             }
         },
@@ -116,6 +149,7 @@ fun CreateScheduleDialog(
                 },
                 variant = RwButtonVariant.Primary,
                 enabled = isCronValid && !isSaving,
+                modifier = Modifier.testTag("schedule_create_button"),
             ) {
                 Text(packStringResource(Res.string.common_create))
             }

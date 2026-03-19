@@ -5,7 +5,6 @@ import com.github.mr3zee.jsonClient
 import com.github.mr3zee.login
 import com.github.mr3zee.loginAndCreateTeam
 import com.github.mr3zee.createTestProject
-import com.github.mr3zee.model.UserId
 import com.github.mr3zee.testModule
 import io.ktor.client.HttpClient
 import io.ktor.client.call.*
@@ -27,11 +26,9 @@ class ProjectLockRoutesTest {
         userClient: HttpClient,
         teamId: com.github.mr3zee.model.TeamId,
     ) {
-        val meResponse = userClient.get(ApiRoutes.Auth.ME).body<UserInfo>()
-        val userId = meResponse.id ?: error("No user ID")
         adminClient.post(ApiRoutes.Teams.invites(teamId.value)) {
             contentType(ContentType.Application.Json)
-            setBody(CreateInviteRequest(userId = UserId(userId)))
+            setBody(CreateInviteRequest(username = userClient.get(ApiRoutes.Auth.ME).body<UserInfo>().username))
         }
         val invites = userClient.get(ApiRoutes.Auth.MyInvites.BASE).body<InviteListResponse>()
         userClient.post(ApiRoutes.Auth.MyInvites.accept(invites.invites.first().id))

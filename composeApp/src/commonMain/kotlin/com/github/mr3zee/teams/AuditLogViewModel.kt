@@ -28,6 +28,9 @@ class AuditLogViewModel(
     private val _hasMore = MutableStateFlow(true)
     val hasMore: StateFlow<Boolean> = _hasMore
 
+    private val _isLoadingMore = MutableStateFlow(false)
+    val isLoadingMore: StateFlow<Boolean> = _isLoadingMore
+
     private val pageSize = 50
     private var currentOffset = 0
 
@@ -53,6 +56,8 @@ class AuditLogViewModel(
     }
 
     fun loadMore() {
+        if (_isLoadingMore.value || !_hasMore.value) return
+        _isLoadingMore.value = true
         viewModelScope.launch {
             try {
                 val response = apiClient.getAuditLog(teamId, offset = currentOffset, limit = pageSize)
@@ -61,6 +66,8 @@ class AuditLogViewModel(
                 _hasMore.value = response.events.size >= pageSize
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
+            } finally {
+                _isLoadingMore.value = false
             }
         }
     }

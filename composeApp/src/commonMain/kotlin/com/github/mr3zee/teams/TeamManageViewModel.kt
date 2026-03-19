@@ -35,6 +35,15 @@ class TeamManageViewModel(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
+    private val _isInviting = MutableStateFlow(false)
+    val isInviting: StateFlow<Boolean> = _isInviting
+
+    private val _inviteError = MutableStateFlow<UiMessage?>(null)
+    val inviteError: StateFlow<UiMessage?> = _inviteError
+
+    private val _inviteSuccess = MutableStateFlow(false)
+    val inviteSuccess: StateFlow<Boolean> = _inviteSuccess
+
     init {
         loadAll()
     }
@@ -105,15 +114,25 @@ class TeamManageViewModel(
         }
     }
 
-    fun inviteUser(userId: UserId) {
+    fun inviteUser(username: String) {
         viewModelScope.launch {
+            _isInviting.value = true
+            _inviteError.value = null
             try {
-                apiClient.inviteUser(teamId, userId)
+                apiClient.inviteUser(teamId, username)
+                _inviteSuccess.value = true
                 loadAll()
             } catch (e: Exception) {
-                _error.value = e.toUiMessage()
+                _inviteError.value = e.toUiMessage()
+            } finally {
+                _isInviting.value = false
             }
         }
+    }
+
+    fun clearInviteState() {
+        _inviteError.value = null
+        _inviteSuccess.value = false
     }
 
     fun cancelInvite(inviteId: String) {

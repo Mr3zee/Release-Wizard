@@ -3,7 +3,6 @@ package com.github.mr3zee.api
 import com.github.mr3zee.model.JoinRequest
 import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.model.TeamInvite
-import com.github.mr3zee.model.UserId
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -69,10 +68,10 @@ class TeamApiClient(private val client: HttpClient) {
 
     // Invites
 
-    suspend fun inviteUser(teamId: TeamId, userId: UserId): TeamInvite {
+    suspend fun inviteUser(teamId: TeamId, username: String): TeamInvite {
         val response = client.post(serverUrl(ApiRoutes.Teams.invites(teamId.value))) {
             contentType(ContentType.Application.Json)
-            setBody(CreateInviteRequest(userId = userId))
+            setBody(CreateInviteRequest(username = username))
         }
         return response.body()
     }

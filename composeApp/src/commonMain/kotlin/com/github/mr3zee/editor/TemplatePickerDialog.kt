@@ -1,8 +1,8 @@
 package com.github.mr3zee.editor
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -44,23 +44,22 @@ fun TemplatePickerDialog(
         onDismissRequest = onDismiss,
         title = { Text(packStringResource(Res.string.editor_template_picker_title)) },
         text = {
-            LazyColumn(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = 400.dp)
+                    .verticalScroll(rememberScrollState())
                     .testTag("template_picker_list"),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xxs),
             ) {
                 if (paramSuggestions.isNotEmpty()) {
-                    item {
-                        Text(
-                            packStringResource(Res.string.editor_template_parameters),
-                            style = AppTypography.label,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(vertical = Spacing.xs),
-                        )
-                    }
-                    items(paramSuggestions, key = { it.label }) { suggestion ->
+                    Text(
+                        packStringResource(Res.string.editor_template_parameters),
+                        style = AppTypography.label,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = Spacing.xs),
+                    )
+                    paramSuggestions.forEach { suggestion ->
                         TemplateItem(
                             label = suggestion.label,
                             expression = suggestion.insertText,
@@ -70,15 +69,13 @@ fun TemplatePickerDialog(
                     }
                 }
                 if (outputSuggestions.isNotEmpty()) {
-                    item {
-                        Text(
-                            packStringResource(Res.string.editor_template_block_outputs),
-                            style = AppTypography.label,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = Spacing.sm, bottom = Spacing.xs),
-                        )
-                    }
-                    items(outputSuggestions, key = { it.insertText }) { suggestion ->
+                    Text(
+                        packStringResource(Res.string.editor_template_block_outputs),
+                        style = AppTypography.label,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = Spacing.sm, bottom = Spacing.xs),
+                    )
+                    outputSuggestions.forEach { suggestion ->
                         TemplateItem(
                             label = suggestion.label,
                             expression = suggestion.insertText,
@@ -87,13 +84,11 @@ fun TemplatePickerDialog(
                     }
                 }
                 if (suggestions.isEmpty()) {
-                    item {
-                        Text(
-                            packStringResource(Res.string.editor_template_empty),
-                            style = AppTypography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                    Text(
+                        packStringResource(Res.string.editor_template_empty),
+                        style = AppTypography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         },

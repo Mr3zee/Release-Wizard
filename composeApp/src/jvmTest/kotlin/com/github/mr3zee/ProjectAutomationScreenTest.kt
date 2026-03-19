@@ -41,8 +41,9 @@ class ProjectAutomationScreenTest {
         val vm = makeViewModel(emptyClient())
         setContent { MaterialTheme { ProjectAutomationScreen(viewModel = vm, onBack = {}) } }
 
+        // Wait for data to load — buttons only appear after isLoading becomes false
         waitUntil(timeoutMillis = 3000L) {
-            onAllNodesWithTag("project_automation_screen").fetchSemanticsNodes().isNotEmpty()
+            onAllNodesWithTag("add_schedule_button", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
         onNodeWithTag("project_automation_screen").assertExists()
         // Add buttons are inside RwButton (UnstyledButton) — requires useUnmergedTree

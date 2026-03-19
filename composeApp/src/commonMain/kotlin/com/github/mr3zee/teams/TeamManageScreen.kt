@@ -38,6 +38,9 @@ fun TeamManageScreen(
     val joinRequests by viewModel.joinRequests.collectAsState()
     val error by viewModel.error.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val isInviting by viewModel.isInviting.collectAsState()
+    val inviteError by viewModel.inviteError.collectAsState()
+    val inviteSuccess by viewModel.inviteSuccess.collectAsState()
 
     var editName by remember(teamName) { mutableStateOf(teamName) }
     var editDescription by remember(teamDescription) { mutableStateOf(teamDescription) }
@@ -255,13 +258,24 @@ fun TeamManageScreen(
         )
     }
 
+    // Close invite dialog on success
+    LaunchedEffect(inviteSuccess) {
+        if (inviteSuccess) {
+            showInviteDialog = false
+            viewModel.clearInviteState()
+        }
+    }
+
     if (showInviteDialog) {
         InviteUserDialog(
-            onDismiss = { showInviteDialog = false },
-            onInvite = { userIdStr ->
-                viewModel.inviteUser(UserId(userIdStr))
+            isInviting = isInviting,
+            error = inviteError,
+            onDismiss = {
                 showInviteDialog = false
+                viewModel.clearInviteState()
             },
+            onClearError = { viewModel.clearInviteState() },
+            onInvite = { username -> viewModel.inviteUser(username) },
         )
     }
 
@@ -388,28 +402,56 @@ private fun JoinRequestItem(
 }
 
 @Composable
-private fun InviteUserDialog(onDismiss: () -> Unit, onInvite: (String) -> Unit) {
+private fun InviteUserDialog(
+    isInviting: Boolean,
+    error: com.github.mr3zee.util.UiMessage?,
+    onDismiss: () -> Unit,
+    onClearError: () -> Unit,
+    onInvite: (String) -> Unit,
+) {
     var username by remember { mutableStateOf("") }
+    val resolvedError = error?.resolve()
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!isInviting) onDismiss() },
         title = { Text(packStringResource(Res.string.teams_invite_dialog_title)) },
         text = {
-            RwTextField(
-                value = username,
-                onValueChange = { username = it },
-                label = packStringResource(Res.string.teams_invite_username_label),
-                placeholder = packStringResource(Res.string.teams_invite_username_placeholder),
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth().testTag("invite_user_id_input"),
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                RwTextField(
+                    value = username,
+                    onValueChange = { username = it; onClearError() },
+                    label = packStringResource(Res.string.teams_invite_username_label),
+                    placeholder = packStringResource(Res.string.teams_invite_username_placeholder),
+                    singleLine = true,
+                    isError = resolvedError != null,
+                    modifier = Modifier.fillMaxWidth().testTag("invite_user_id_input"),
+                )
+                if (resolvedError != null) {
+                    Text(
+                        resolvedError,
+                        style = AppTypography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.testTag("invite_error_text"),
+                    )
+                }
+            }
         },
         confirmButton = {
-            RwButton(onClick = { onInvite(username) }, variant = RwButtonVariant.Ghost, enabled = username.isNotBlank()) {
-                Text(packStringResource(Res.string.teams_invite))
+            RwButton(
+                onClick = { onInvite(username.trim()) },
+                variant = RwButtonVariant.Primary,
+                enabled = username.isNotBlank() && !isInviting,
+            ) {
+                if (isInviting) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                } else {
+                    Text(packStringResource(Res.string.teams_invite))
+                }
             }
         },
         dismissButton = {
-            RwButton(onClick = onDismiss, variant = RwButtonVariant.Ghost) { Text(packStringResource(Res.string.common_cancel)) }
+            RwButton(onClick = onDismiss, variant = RwButtonVariant.Ghost, enabled = !isInviting) {
+                Text(packStringResource(Res.string.common_cancel))
+            }
         },
     )
 }

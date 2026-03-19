@@ -35,6 +35,7 @@ fun AuditLogScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
     val hasMore by viewModel.hasMore.collectAsState()
+    val isLoadingMore by viewModel.isLoadingMore.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
     val dismissLabel = packStringResource(Res.string.common_dismiss)
@@ -94,9 +95,14 @@ fun AuditLogScreen(
                         RwButton(
                             onClick = { viewModel.loadMore() },
                             variant = RwButtonVariant.Ghost,
+                            enabled = !isLoadingMore,
                             modifier = Modifier.fillMaxWidth().padding(Spacing.sm).testTag("load_more_audit"),
                         ) {
-                            Text(packStringResource(Res.string.teams_load_more))
+                            if (isLoadingMore) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                            } else {
+                                Text(packStringResource(Res.string.teams_load_more))
+                            }
                         }
                     }
                 }
