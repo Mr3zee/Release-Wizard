@@ -355,6 +355,9 @@ object RickAndMortyPack {
             "connections_github_polling_interval" to "Polling Interval (seconds), Morty",
             "editor_prop_timeout_required" to "Timeout (seconds) *, *burp* Morty",
             "editor_prop_timeout_required_hint" to "This block type needs a timeout, Morty. It's not *burp* optional.",
+            "teams_you_badge" to "(You, Morty)",
+            "connections_polling_default_hint" to "Default: 30 seconds, Morty (range: 5-300)",
+            "start_release_no_projects" to "No projects, Morty! Go *burp* make one!",
         ),
         plurals = mapOf(
             "blocks" to PluralOverride(

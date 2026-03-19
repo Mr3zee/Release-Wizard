@@ -261,7 +261,7 @@ private fun TeamListItem(
     modifier: Modifier = Modifier,
 ) {
     ListItemCard(
-        onClick = onClick,
+        onClick = if (isMember) onClick else null,
         testTag = "team_item_${teamResponse.team.id.value}",
         modifier = modifier,
     ) {

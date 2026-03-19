@@ -199,6 +199,7 @@ fun AppNavigation(
                 viewModel = viewModel,
                 onBack = { onGoBack() },
                 onTeamDeleted = { onGoBack(); onGoBack() },
+                currentUserId = currentUserId,
             )
         }
         is Screen.MyInvites -> {

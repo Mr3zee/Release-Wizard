@@ -19,6 +19,7 @@ import com.github.mr3zee.components.RwInlineConfirmation
 import com.github.mr3zee.components.RwInlineForm
 import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.model.*
+import com.github.mr3zee.theme.AppShapes
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.displayName
@@ -32,6 +33,7 @@ fun TeamManageScreen(
     viewModel: TeamManageViewModel,
     onBack: () -> Unit,
     onTeamDeleted: () -> Unit = {},
+    currentUserId: String? = null,
 ) {
     val teamName by viewModel.teamName.collectAsState()
     val teamDescription by viewModel.teamDescription.collectAsState()
@@ -50,6 +52,15 @@ fun TeamManageScreen(
 
     var showInviteDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showDiscardConfirm by remember { mutableStateOf(false) }
+
+    val handleBack: () -> Unit = {
+        if (hasEditChanges) {
+            showDiscardConfirm = true
+        } else {
+            onBack()
+        }
+    }
     var memberToRemove by remember { mutableStateOf<TeamMembership?>(null) }
     var inviteToCancel by remember { mutableStateOf<TeamInvite?>(null) }
 
@@ -73,7 +84,7 @@ fun TeamManageScreen(
             TopAppBar(
                 title = { Text(packStringResource(Res.string.teams_manage_title)) },
                 navigationIcon = {
-                    RwButton(onClick = onBack, variant = RwButtonVariant.Ghost, modifier = Modifier.testTag("back_button")) {
+                    RwButton(onClick = handleBack, variant = RwButtonVariant.Ghost, modifier = Modifier.testTag("back_button")) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
                         Text(packStringResource(Res.string.common_back))
                     }
@@ -88,10 +99,25 @@ fun TeamManageScreen(
                 CircularProgressIndicator()
             }
         } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
+            Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+                RwInlineConfirmation(
+                    visible = showDiscardConfirm,
+                    message = packStringResource(Res.string.common_unsaved_message),
+                    confirmLabel = packStringResource(Res.string.common_discard),
+                    onConfirm = {
+                        showDiscardConfirm = false
+                        onBack()
+                    },
+                    onDismiss = { showDiscardConfirm = false },
+                    isDestructive = true,
+                    testTag = "discard_changes_confirm",
+                    modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+                )
+
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
                 // Edit team section
                 item {
                     Column(
@@ -171,6 +197,7 @@ fun TeamManageScreen(
                     Column(modifier = Modifier.widthIn(max = 1200.dp)) {
                         ManageMemberItem(
                             member = member,
+                            isCurrentUser = currentUserId != null && member.userId.value == currentUserId,
                             onToggleRole = {
                                 val newRole = if (member.role == TeamRole.TEAM_LEAD) TeamRole.COLLABORATOR else TeamRole.TEAM_LEAD
                                 viewModel.updateMemberRole(member.userId.value, newRole)
@@ -289,6 +316,7 @@ fun TeamManageScreen(
                     )
                     Spacer(modifier = Modifier.height(80.dp))
                 }
+                }
             }
         }
     }
@@ -311,6 +339,7 @@ fun TeamManageScreen(
 @Composable
 private fun ManageMemberItem(
     member: TeamMembership,
+    isCurrentUser: Boolean = false,
     onToggleRole: () -> Unit,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
@@ -332,11 +361,35 @@ private fun ManageMemberItem(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        RwButton(onClick = onToggleRole, variant = RwButtonVariant.Ghost) {
-            Text(if (member.role == TeamRole.TEAM_LEAD) packStringResource(Res.string.teams_demote) else packStringResource(Res.string.teams_promote))
-        }
-        RwButton(onClick = onRemove, variant = RwButtonVariant.Ghost, contentColor = MaterialTheme.colorScheme.error) {
-            Text(packStringResource(Res.string.teams_remove))
+        if (isCurrentUser) {
+            Surface(
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f),
+                shape = AppShapes.pill,
+                modifier = Modifier.testTag("you_badge_${member.userId.value}"),
+            ) {
+                Text(
+                    packStringResource(Res.string.teams_you_badge),
+                    style = AppTypography.label,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.xs),
+                )
+            }
+        } else {
+            RwButton(
+                onClick = onToggleRole,
+                variant = RwButtonVariant.Ghost,
+                modifier = Modifier.testTag("toggle_role_${member.userId.value}"),
+            ) {
+                Text(if (member.role == TeamRole.TEAM_LEAD) packStringResource(Res.string.teams_demote) else packStringResource(Res.string.teams_promote))
+            }
+            RwButton(
+                onClick = onRemove,
+                variant = RwButtonVariant.Ghost,
+                contentColor = MaterialTheme.colorScheme.error,
+                modifier = Modifier.testTag("remove_member_${member.userId.value}"),
+            ) {
+                Text(packStringResource(Res.string.teams_remove))
+            }
         }
     }
 }

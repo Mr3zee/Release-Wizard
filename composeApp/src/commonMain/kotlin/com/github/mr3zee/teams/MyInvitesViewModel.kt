@@ -23,6 +23,15 @@ class MyInvitesViewModel(
     private val _error = MutableStateFlow<UiMessage?>(null)
     val error: StateFlow<UiMessage?> = _error
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing
+
+    private val _isManualRefresh = MutableStateFlow(false)
+    val isManualRefresh: StateFlow<Boolean> = _isManualRefresh
+
+    private val _refreshError = MutableStateFlow<UiMessage?>(null)
+    val refreshError: StateFlow<UiMessage?> = _refreshError
+
     init {
         loadInvites()
     }
@@ -63,6 +72,28 @@ class MyInvitesViewModel(
                 _error.value = e.toUiMessage()
             }
         }
+    }
+
+    fun refresh() {
+        if (_isRefreshing.value) return
+        viewModelScope.launch {
+            _isManualRefresh.value = true
+            _isRefreshing.value = true
+            _refreshError.value = null
+            try {
+                val response = apiClient.getMyInvites()
+                _invites.value = response.invites
+            } catch (e: Exception) {
+                _refreshError.value = e.toUiMessage()
+            } finally {
+                _isRefreshing.value = false
+                _isManualRefresh.value = false
+            }
+        }
+    }
+
+    fun dismissRefreshError() {
+        _refreshError.value = null
     }
 
     fun dismissError() {

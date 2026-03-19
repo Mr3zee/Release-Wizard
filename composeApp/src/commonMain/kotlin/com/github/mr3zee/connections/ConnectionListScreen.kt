@@ -58,6 +58,7 @@ fun ConnectionListScreen(
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val isManualRefresh by viewModel.isManualRefresh.collectAsState()
     val refreshError by viewModel.refreshError.collectAsState()
+    val testingConnectionIds by viewModel.testingConnectionIds.collectAsState()
 
     var connectionToDelete by remember { mutableStateOf<Connection?>(null) }
 
@@ -249,6 +250,7 @@ fun ConnectionListScreen(
                                 onClick = { onEditConnection(connection.id) },
                                 onDelete = { connectionToDelete = connection },
                                 onTest = { viewModel.testConnection(connection.id) },
+                                isTesting = connection.id in testingConnectionIds,
                             )
                             RwInlineConfirmation(
                                 visible = connectionToDelete?.id == connection.id,
@@ -281,6 +283,7 @@ private fun ConnectionListItem(
     onClick: () -> Unit,
     onDelete: () -> Unit,
     onTest: () -> Unit,
+    isTesting: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     ListItemCard(
@@ -312,8 +315,17 @@ private fun ConnectionListItem(
             }
         }
         Row {
-            RwButton(onClick = onTest, variant = RwButtonVariant.Ghost) {
-                Text(packStringResource(Res.string.connections_test))
+            RwButton(
+                onClick = onTest,
+                variant = RwButtonVariant.Ghost,
+                enabled = !isTesting,
+                modifier = Modifier.testTag("test_connection_${connection.id.value}"),
+            ) {
+                if (isTesting) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                } else {
+                    Text(packStringResource(Res.string.connections_test))
+                }
             }
             RwButton(onClick = onDelete, variant = RwButtonVariant.Ghost, contentColor = MaterialTheme.colorScheme.error) {
                 Text(packStringResource(Res.string.common_delete))

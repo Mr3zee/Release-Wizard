@@ -31,6 +31,15 @@ class AuditLogViewModel(
     private val _isLoadingMore = MutableStateFlow(false)
     val isLoadingMore: StateFlow<Boolean> = _isLoadingMore
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing
+
+    private val _isManualRefresh = MutableStateFlow(false)
+    val isManualRefresh: StateFlow<Boolean> = _isManualRefresh
+
+    private val _refreshError = MutableStateFlow<UiMessage?>(null)
+    val refreshError: StateFlow<UiMessage?> = _refreshError
+
     private val pageSize = 50
     private var currentOffset = 0
 
@@ -55,8 +64,32 @@ class AuditLogViewModel(
         }
     }
 
+    fun refresh() {
+        if (_isRefreshing.value) return
+        viewModelScope.launch {
+            _isManualRefresh.value = true
+            _isRefreshing.value = true
+            _refreshError.value = null
+            try {
+                val response = apiClient.getAuditLog(teamId, offset = 0, limit = pageSize)
+                _events.value = response.events
+                currentOffset = response.events.size
+                _hasMore.value = response.events.size >= pageSize
+            } catch (e: Exception) {
+                _refreshError.value = e.toUiMessage()
+            } finally {
+                _isRefreshing.value = false
+                _isManualRefresh.value = false
+            }
+        }
+    }
+
+    fun dismissRefreshError() {
+        _refreshError.value = null
+    }
+
     fun loadMore() {
-        if (_isLoadingMore.value || !_hasMore.value) return
+        if (_isLoadingMore.value || !_hasMore.value || _isRefreshing.value) return
         _isLoadingMore.value = true
         viewModelScope.launch {
             try {

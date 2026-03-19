@@ -9,9 +9,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.github.mr3zee.components.RefreshErrorBanner
+import com.github.mr3zee.components.RefreshIconButton
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwCard
@@ -36,6 +39,9 @@ fun AuditLogScreen(
     val error by viewModel.error.collectAsState()
     val hasMore by viewModel.hasMore.collectAsState()
     val isLoadingMore by viewModel.isLoadingMore.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val isManualRefresh by viewModel.isManualRefresh.collectAsState()
+    val refreshError by viewModel.refreshError.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
     val dismissLabel = packStringResource(Res.string.common_dismiss)
@@ -54,54 +60,83 @@ fun AuditLogScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(packStringResource(Res.string.teams_audit_log_title)) },
-                navigationIcon = {
-                    RwButton(onClick = onBack, variant = RwButtonVariant.Ghost, modifier = Modifier.testTag("back_button")) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
-                        Text(packStringResource(Res.string.common_back))
-                    }
-                },
-            )
+            Box {
+                TopAppBar(
+                    title = { Text(packStringResource(Res.string.teams_audit_log_title)) },
+                    navigationIcon = {
+                        RwButton(onClick = onBack, variant = RwButtonVariant.Ghost, modifier = Modifier.testTag("back_button")) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
+                            Text(packStringResource(Res.string.common_back))
+                        }
+                    },
+                    actions = {
+                        RefreshIconButton(
+                            onClick = { viewModel.refresh() },
+                            isRefreshing = isRefreshing,
+                            isManualRefresh = isManualRefresh,
+                        )
+                    },
+                )
+                if (isRefreshing && !isLoading) {
+                    LinearProgressIndicator(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(4.dp)
+                            .align(Alignment.BottomCenter)
+                            .alpha(if (isManualRefresh) 1f else 0.5f)
+                            .testTag("refresh_indicator"),
+                    )
+                }
+            }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = Modifier.testTag("audit_log_screen"),
     ) { padding ->
-        if (isLoading) {
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        } else if (events.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text(
-                    packStringResource(Res.string.teams_no_audit_events),
-                    style = AppTypography.body,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            val resolvedRefreshError = refreshError?.resolve()
+            if (resolvedRefreshError != null) {
+                RefreshErrorBanner(
+                    message = resolvedRefreshError,
+                    onDismiss = { viewModel.dismissRefreshError() },
                 )
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding).testTag("audit_event_list"),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                items(events, key = { it.id }) { event ->
-                    AuditEventItem(
-                        event = event,
-                        modifier = Modifier.widthIn(max = 1200.dp),
+
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else if (events.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
+                    Text(
+                        packStringResource(Res.string.teams_no_audit_events),
+                        style = AppTypography.body,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                if (hasMore) {
-                    item {
-                        RwButton(
-                            onClick = { viewModel.loadMore() },
-                            variant = RwButtonVariant.Ghost,
-                            enabled = !isLoadingMore,
-                            modifier = Modifier.fillMaxWidth().padding(Spacing.sm).testTag("load_more_audit"),
-                        ) {
-                            if (isLoadingMore) {
-                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                            } else {
-                                Text(packStringResource(Res.string.teams_load_more))
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().weight(1f).testTag("audit_event_list"),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    items(events, key = { it.id }) { event ->
+                        AuditEventItem(
+                            event = event,
+                            modifier = Modifier.widthIn(max = 1200.dp),
+                        )
+                    }
+                    if (hasMore) {
+                        item {
+                            RwButton(
+                                onClick = { viewModel.loadMore() },
+                                variant = RwButtonVariant.Ghost,
+                                enabled = !isLoadingMore,
+                                modifier = Modifier.fillMaxWidth().padding(Spacing.sm).testTag("load_more_audit"),
+                            ) {
+                                if (isLoadingMore) {
+                                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                } else {
+                                    Text(packStringResource(Res.string.teams_load_more))
+                                }
                             }
                         }
                     }

@@ -355,6 +355,9 @@ object AllLiesPack {
             "connections_github_polling_interval" to "Ignore Interval (never checks)",
             "editor_prop_timeout_required" to "Immortality (never stops) *",
             "editor_prop_timeout_required_hint" to "Timeout is completely optional and meaningless",
+            "teams_you_badge" to "(Definitely not you)",
+            "connections_polling_default_hint" to "Definitely not 30 seconds (range: unlimited)",
+            "start_release_no_projects" to "Tons of projects available. You definitely don't need to create one.",
         ),
         plurals = mapOf(
             "blocks" to PluralOverride(

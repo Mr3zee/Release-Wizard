@@ -92,6 +92,7 @@
     <string name="connections_github_polling_interval">Polling Interval (seconds)</string>
     <string name="connections_test_succeeded">Connection test succeeded: %1$s</string>
     <string name="connections_test_failed">Test failed: %1$s</string>
+    <string name="connections_polling_default_hint">Default: 30 seconds (range: 5-300)</string>
 
     <!-- ==================== Editor: Toolbar ==================== -->
     <string name="editor_toolbar_blocks">Blocks</string>
@@ -274,6 +275,7 @@
     <string name="start_release_title">Start Release</string>
     <string name="start_release_project_label">Project</string>
     <string name="start_release_start">Start</string>
+    <string name="start_release_no_projects">No projects available. Create a project first.</string>
 
     <!-- ==================== Teams ==================== -->
     <string name="teams_title">Teams</string>
@@ -318,6 +320,7 @@
     <string name="teams_invite_username_label">Username</string>
     <string name="teams_invite_username_placeholder">Enter username</string>
     <string name="teams_invite">Invite</string>
+    <string name="teams_you_badge">(You)</string>
 
     <!-- ==================== Teams: My Invites ==================== -->
     <string name="teams_no_pending_invites">No pending invites.</string>

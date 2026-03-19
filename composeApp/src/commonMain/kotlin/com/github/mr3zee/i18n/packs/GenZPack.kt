@@ -355,6 +355,9 @@ object GenZPack {
             "connections_github_polling_interval" to "Polling Interval (seconds) bestie",
             "editor_prop_timeout_required" to "Timeout (seconds) * fr fr",
             "editor_prop_timeout_required_hint" to "Bestie this block type needs a timeout ngl",
+            "teams_you_badge" to "(You bestie)",
+            "connections_polling_default_hint" to "Default: 30s bestie (range: 5-300)",
+            "start_release_no_projects" to "No projects bestie. Create one first fr.",
         ),
         plurals = mapOf(
             "blocks" to PluralOverride(

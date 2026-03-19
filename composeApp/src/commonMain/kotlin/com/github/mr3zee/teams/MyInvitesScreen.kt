@@ -9,9 +9,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.github.mr3zee.components.RefreshErrorBanner
+import com.github.mr3zee.components.RefreshIconButton
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwCard
@@ -32,6 +35,9 @@ fun MyInvitesScreen(
     val invites by viewModel.invites.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val isManualRefresh by viewModel.isManualRefresh.collectAsState()
+    val refreshError by viewModel.refreshError.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
     val retryLabel = packStringResource(Res.string.common_retry)
@@ -54,45 +60,74 @@ fun MyInvitesScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(packStringResource(Res.string.teams_my_invites)) },
-                navigationIcon = {
-                    RwButton(onClick = onBack, variant = RwButtonVariant.Ghost, modifier = Modifier.testTag("back_button")) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
-                        Text(packStringResource(Res.string.common_back))
-                    }
-                },
-            )
+            Box {
+                TopAppBar(
+                    title = { Text(packStringResource(Res.string.teams_my_invites)) },
+                    navigationIcon = {
+                        RwButton(onClick = onBack, variant = RwButtonVariant.Ghost, modifier = Modifier.testTag("back_button")) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
+                            Text(packStringResource(Res.string.common_back))
+                        }
+                    },
+                    actions = {
+                        RefreshIconButton(
+                            onClick = { viewModel.refresh() },
+                            isRefreshing = isRefreshing,
+                            isManualRefresh = isManualRefresh,
+                        )
+                    },
+                )
+                if (isRefreshing && !isLoading) {
+                    LinearProgressIndicator(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(4.dp)
+                            .align(Alignment.BottomCenter)
+                            .alpha(if (isManualRefresh) 1f else 0.5f)
+                            .testTag("refresh_indicator"),
+                    )
+                }
+            }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = Modifier.testTag("my_invites_screen"),
     ) { padding ->
-        if (isLoading) {
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        } else if (invites.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text(
-                    packStringResource(Res.string.teams_no_pending_invites),
-                    style = AppTypography.body,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            val resolvedRefreshError = refreshError?.resolve()
+            if (resolvedRefreshError != null) {
+                RefreshErrorBanner(
+                    message = resolvedRefreshError,
+                    onDismiss = { viewModel.dismissRefreshError() },
                 )
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                items(invites, key = { it.id }) { invite ->
-                    InviteCard(
-                        invite = invite,
-                        onAccept = {
-                            viewModel.acceptInvite(invite.id) { onInviteAccepted() }
-                        },
-                        onDecline = { viewModel.declineInvite(invite.id) },
-                        modifier = Modifier.widthIn(max = 1200.dp),
+
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else if (invites.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
+                    Text(
+                        packStringResource(Res.string.teams_no_pending_invites),
+                        style = AppTypography.body,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    items(invites, key = { it.id }) { invite ->
+                        InviteCard(
+                            invite = invite,
+                            onAccept = {
+                                viewModel.acceptInvite(invite.id) { onInviteAccepted() }
+                            },
+                            onDecline = { viewModel.declineInvite(invite.id) },
+                            modifier = Modifier.widthIn(max = 1200.dp),
+                        )
+                    }
                 }
             }
         }

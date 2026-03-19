@@ -77,15 +77,19 @@ fun ConnectionFormScreen(
 
     val isDirty by remember {
         derivedStateOf {
-            name != initialName ||
-                slackWebhookUrl != initialSlackWebhookUrl ||
-                teamCityServerUrl != initialTeamCityServerUrl ||
-                teamCityToken != initialTeamCityToken ||
-                teamCityPollingInterval != initialTeamCityPollingInterval ||
-                githubToken != initialGithubToken ||
-                githubOwner != initialGithubOwner ||
-                githubRepo != initialGithubRepo ||
-                githubPollingInterval != initialGithubPollingInterval
+            name != initialName || when (selectedType) {
+                ConnectionType.SLACK ->
+                    slackWebhookUrl != initialSlackWebhookUrl
+                ConnectionType.TEAMCITY ->
+                    teamCityServerUrl != initialTeamCityServerUrl ||
+                        teamCityToken != initialTeamCityToken ||
+                        teamCityPollingInterval != initialTeamCityPollingInterval
+                ConnectionType.GITHUB ->
+                    githubToken != initialGithubToken ||
+                        githubOwner != initialGithubOwner ||
+                        githubRepo != initialGithubRepo ||
+                        githubPollingInterval != initialGithubPollingInterval
+            }
         }
     }
 
@@ -336,6 +340,9 @@ fun ConnectionFormScreen(
                         label = packStringResource(Res.string.connections_tc_polling_interval),
                         placeholder = "30",
                         singleLine = true,
+                        supportingText = if (teamCityPollingInterval.isBlank()) {
+                            { Text(packStringResource(Res.string.connections_polling_default_hint), style = AppTypography.bodySmall) }
+                        } else null,
                         modifier = Modifier.fillMaxWidth().testTag("teamcity_polling_interval"),
                     )
                 }
@@ -389,6 +396,9 @@ fun ConnectionFormScreen(
                         label = packStringResource(Res.string.connections_github_polling_interval),
                         placeholder = "30",
                         singleLine = true,
+                        supportingText = if (githubPollingInterval.isBlank()) {
+                            { Text(packStringResource(Res.string.connections_polling_default_hint), style = AppTypography.bodySmall) }
+                        } else null,
                         modifier = Modifier.fillMaxWidth().testTag("github_polling_interval"),
                     )
                 }

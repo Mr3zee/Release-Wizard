@@ -355,6 +355,9 @@ object EmojisPack {
             "connections_github_polling_interval" to "\ud83d\udd04\u23f1\ufe0f",
             "editor_prop_timeout_required" to "\u23f1\ufe0f *",
             "editor_prop_timeout_required_hint" to "\u26a0\ufe0f\u23f1\ufe0f\u2757",
+            "teams_you_badge" to "(\ud83d\udc64\u2728)",
+            "connections_polling_default_hint" to "\u23f0 30s (5-300)",
+            "start_release_no_projects" to "\ud83d\udea7 No projects. Create one first \ud83d\udc49",
         ),
         plurals = mapOf(
             "blocks" to PluralOverride(

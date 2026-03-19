@@ -355,6 +355,9 @@ object HelldiversPack {
             "connections_github_polling_interval" to "Reconnaissance Interval (seconds)",
             "editor_prop_timeout_required" to "Mission Timer (seconds) *",
             "editor_prop_timeout_required_hint" to "Mission timer is mandatory for this unit type, Citizen",
+            "teams_you_badge" to "(You, Citizen)",
+            "connections_polling_default_hint" to "Standard issue: 30 seconds (range: 5-300)",
+            "start_release_no_projects" to "No projects deployed, Citizen. Create one for democracy!",
         ),
         plurals = mapOf(
             "blocks" to PluralOverride(

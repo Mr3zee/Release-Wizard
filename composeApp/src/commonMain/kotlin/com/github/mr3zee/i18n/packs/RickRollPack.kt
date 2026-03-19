@@ -355,6 +355,9 @@ object RickRollPack {
             "connections_github_polling_interval" to "Polling Interval \u2014 never gonna give up checking (seconds)",
             "editor_prop_timeout_required" to "Timeout (seconds) * \u2014 you know the rules",
             "editor_prop_timeout_required_hint" to "You know the rules \u2014 timeout is required for this block type",
+            "teams_you_badge" to "(You know the rules \u2014 it's you)",
+            "connections_polling_default_hint" to "Default: 30 seconds, never gonna change (range: 5-300)",
+            "start_release_no_projects" to "No projects available. Never gonna give you up without one.",
         ),
         plurals = mapOf(
             "blocks" to PluralOverride(

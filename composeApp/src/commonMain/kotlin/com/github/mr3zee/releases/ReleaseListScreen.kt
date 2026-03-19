@@ -420,34 +420,45 @@ private fun StartReleaseInlineForm(
             }
         },
     ) {
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = it },
-            modifier = Modifier.testTag("project_dropdown"),
-        ) {
-            OutlinedTextField(
-                value = selectedProject?.name ?: "",
-                onValueChange = {},
-                readOnly = true,
-                label = { Text(packStringResource(Res.string.start_release_project_label)) },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+        if (projects.isEmpty()) {
+            Text(
+                packStringResource(Res.string.start_release_no_projects),
+                style = AppTypography.body,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                    .testTag("no_projects_message"),
             )
-            ExposedDropdownMenu(
+        } else {
+            ExposedDropdownMenuBox(
                 expanded = expanded,
-                onDismissRequest = { expanded = false },
+                onExpandedChange = { expanded = it },
+                modifier = Modifier.testTag("project_dropdown"),
             ) {
-                projects.forEach { project ->
-                    DropdownMenuItem(
-                        text = { Text(project.name) },
-                        onClick = {
-                            selectedProject = project
-                            expanded = false
-                        },
-                        modifier = Modifier.testTag("project_option_${project.id.value}"),
-                    )
+                OutlinedTextField(
+                    value = selectedProject?.name ?: "",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text(packStringResource(Res.string.start_release_project_label)) },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                )
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                ) {
+                    projects.forEach { project ->
+                        DropdownMenuItem(
+                            text = { Text(project.name) },
+                            onClick = {
+                                selectedProject = project
+                                expanded = false
+                            },
+                            modifier = Modifier.testTag("project_option_${project.id.value}"),
+                        )
+                    }
                 }
             }
         }

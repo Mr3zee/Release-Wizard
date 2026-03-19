@@ -107,41 +107,20 @@ Enter key submit, password visibility toggle, server-specific error messages. 6 
 
 ---
 
-## Phase 5: Connections & Teams Fixes
+## Phase 5: Connections & Teams Fixes ✅
 
-**Goal:** Fix team management UX gaps and connection form issues.
+**Status:** Complete (worktree `phase5-connections-teams`)
 
-### 5A. Add loading indicator for test connection
-- **File:** `ConnectionsViewModel.kt:248-262`, `ConnectionListScreen.kt:320-322`
-- **Fix:** Add `_isTesting` state, disable button + show spinner during API call.
+All 8 fixes implemented, reviewed by UX/Design/Compose/QA experts, 306/306 Compose tests pass. Manual UI verification completed.
 
-### 5B. Add unsaved-changes guard to TeamManageScreen
-- **File:** `TeamManageScreen.kt:71`
-- **Fix:** Check `hasEditChanges` on Back, show discard dialog.
-
-### 5C. Prevent self-removal/self-demotion in team management
-- **File:** `TeamManageScreen.kt:147-157`
-- **Fix:** Pass `currentUserId` and hide Promote/Demote/Remove buttons for the current user's own entry.
-
-### 5D. Handle non-member team detail view
-- **File:** `TeamListScreen.kt:228`, `TeamDetailScreen.kt:103-161`
-- **Fix:** Either disable click for non-members, or show a "You are not a member" message with a Join/Request button.
-
-### 5E. Fix ConnectionFormScreen isDirty tracking all types
-- **File:** `ConnectionFormScreen.kt:77-89`
-- **Fix:** Only compare fields for the currently selected connection type.
-
-### 5F. Show validation feedback for empty polling interval
-- **File:** `ConnectionFormScreen.kt:312-314`
-- **Fix:** Show helper text indicating default value, or restore "30" when field is cleared.
-
-### 5G. Add empty state to StartReleaseDialog
-- **File:** `StartReleaseDialog.kt:47-58`
-- **Fix:** When `projects` is empty, show message "No projects available" with guidance. Don't silently swallow `loadProjects()` errors.
-
-### 5H. Add refresh to AuditLogScreen and MyInvitesScreen
-- **Files:** `AuditLogScreen.kt`, `MyInvitesScreen.kt`
-- **Fix:** Add `RefreshIconButton` to the top bar of both screens.
+- **5A.** Added per-connection loading indicator (`_testingConnectionIds` Set) + duplicate-call guard
+- **5B.** Added unsaved-changes guard on TeamManageScreen (RwInlineConfirmation pinned above LazyColumn)
+- **5C.** Self-removal prevention: "(You)" pill badge replaces Promote/Demote/Remove for current user
+- **5D.** Non-member team click guard: `ListItemCard(onClick = null)` for non-members
+- **5E.** isDirty tracks only selected connection type fields via `when (selectedType)` dispatch
+- **5F.** Polling interval hint via `supportingText` when field is blank
+- **5G.** "No projects available" empty state in StartReleaseInlineForm
+- **5H.** RefreshIconButton + LinearProgressIndicator + RefreshErrorBanner on AuditLog and MyInvites
 
 ---
 
