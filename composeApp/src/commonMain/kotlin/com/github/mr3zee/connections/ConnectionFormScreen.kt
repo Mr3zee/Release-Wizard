@@ -287,7 +287,7 @@ fun ConnectionFormScreen(
                             RwIconButton(onClick = { showSlackWebhook = !showSlackWebhook }, modifier = Modifier.size(32.dp).testTag("slack_webhook_url_toggle_visibility")) {
                                 Icon(
                                     if (showSlackWebhook) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    contentDescription = if (showSlackWebhook) packStringResource(Res.string.connections_hide_password) else packStringResource(Res.string.connections_show_password),
+                                    contentDescription = if (showSlackWebhook) packStringResource(Res.string.common_hide_password) else packStringResource(Res.string.common_show_password),
                                 )
                             }
                         },
@@ -321,7 +321,7 @@ fun ConnectionFormScreen(
                             RwIconButton(onClick = { showTeamCityToken = !showTeamCityToken }, modifier = Modifier.size(32.dp).testTag("teamcity_token_toggle_visibility")) {
                                 Icon(
                                     if (showTeamCityToken) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    contentDescription = if (showTeamCityToken) packStringResource(Res.string.connections_hide_password) else packStringResource(Res.string.connections_show_password),
+                                    contentDescription = if (showTeamCityToken) packStringResource(Res.string.common_hide_password) else packStringResource(Res.string.common_show_password),
                                 )
                             }
                         },
@@ -358,7 +358,7 @@ fun ConnectionFormScreen(
                             RwIconButton(onClick = { showGithubToken = !showGithubToken }, modifier = Modifier.size(32.dp).testTag("github_token_toggle_visibility")) {
                                 Icon(
                                     if (showGithubToken) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    contentDescription = if (showGithubToken) packStringResource(Res.string.connections_hide_password) else packStringResource(Res.string.connections_show_password),
+                                    contentDescription = if (showGithubToken) packStringResource(Res.string.common_hide_password) else packStringResource(Res.string.common_show_password),
                                 )
                             }
                         },

@@ -340,9 +340,9 @@
     <string name="connections_section_teamcity">TeamCity Configuration</string>
     <string name="connections_section_github">GitHub Configuration</string>
 
-    <!-- ==================== Connections: Password Toggle ==================== -->
-    <string name="connections_hide_password">Hide password</string>
-    <string name="connections_show_password">Show password</string>
+    <!-- ==================== Common: Password Toggle ==================== -->
+    <string name="common_hide_password">Hide password</string>
+    <string name="common_show_password">Show password</string>
 
     <!-- ==================== Keyboard Shortcuts ==================== -->
     <string name="shortcuts_title">Keyboard Shortcuts</string>

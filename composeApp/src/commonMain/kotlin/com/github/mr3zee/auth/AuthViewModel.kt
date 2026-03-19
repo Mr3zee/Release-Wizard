@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.mr3zee.api.AuthApiClient
 import com.github.mr3zee.api.UserInfo
+import com.github.mr3zee.api.toUiMessage
 import com.github.mr3zee.util.UiMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -46,8 +47,8 @@ class AuthViewModel(
             try {
                 val userInfo = apiClient.login(username, password)
                 _user.value = userInfo
-            } catch (_: Exception) {
-                _error.value = UiMessage.InvalidCredentials
+            } catch (e: Exception) {
+                _error.value = e.toUiMessage()
             } finally {
                 _isLoading.value = false
             }
@@ -61,8 +62,8 @@ class AuthViewModel(
             try {
                 val userInfo = apiClient.register(username, password)
                 _user.value = userInfo
-            } catch (_: Exception) {
-                _error.value = UiMessage.RegistrationFailed
+            } catch (e: Exception) {
+                _error.value = e.toUiMessage()
             } finally {
                 _isLoading.value = false
             }

@@ -1,18 +1,33 @@
 package com.github.mr3zee.auth
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwCard
+import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.Spacing
@@ -30,6 +45,25 @@ fun LoginScreen(
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isRegisterMode by remember { mutableStateOf(false) }
+    var showPassword by remember { mutableStateOf(false) }
+
+    val usernameFocusRequester = remember { FocusRequester() }
+    val passwordFocusRequester = remember { FocusRequester() }
+
+    val canSubmit = username.isNotBlank() && password.isNotBlank() && !isLoading
+    val onSubmit: () -> Unit = {
+        if (canSubmit) {
+            if (isRegisterMode) {
+                viewModel.register(username, password)
+            } else {
+                viewModel.login(username, password)
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        usernameFocusRequester.requestFocus()
+    }
 
     Box(
         modifier = Modifier
@@ -65,6 +99,13 @@ fun LoginScreen(
                     singleLine = true,
                     modifier = Modifier
                         .fillMaxWidth()
+                        .focusRequester(usernameFocusRequester)
+                        .onPreviewKeyEvent { event ->
+                            if (event.key == Key.Enter && event.type == KeyEventType.KeyDown) {
+                                passwordFocusRequester.requestFocus()
+                                true
+                            } else false
+                        }
                         .testTag("login_username"),
                 )
 
@@ -74,9 +115,28 @@ fun LoginScreen(
                     label = packStringResource(Res.string.auth_password),
                     placeholder = packStringResource(Res.string.auth_password),
                     singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
+                    visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        RwIconButton(
+                            onClick = { showPassword = !showPassword },
+                            modifier = Modifier.focusProperties { canFocus = false }.testTag("login_password_toggle_visibility"),
+                        ) {
+                            Icon(
+                                if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                contentDescription = if (showPassword) packStringResource(Res.string.common_hide_password)
+                                    else packStringResource(Res.string.common_show_password),
+                            )
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
+                        .focusRequester(passwordFocusRequester)
+                        .onPreviewKeyEvent { event ->
+                            if (event.key == Key.Enter && event.type == KeyEventType.KeyDown) {
+                                onSubmit()
+                                true
+                            } else false
+                        }
                         .testTag("login_password"),
                 )
 
@@ -86,19 +146,15 @@ fun LoginScreen(
                         text = currentError.resolve(),
                         color = MaterialTheme.colorScheme.error,
                         style = AppTypography.bodySmall,
+                        textAlign = TextAlign.Start,
+                        modifier = Modifier.fillMaxWidth().testTag("login_error"),
                     )
                 }
 
                 RwButton(
-                    onClick = {
-                        if (isRegisterMode) {
-                            viewModel.register(username, password)
-                        } else {
-                            viewModel.login(username, password)
-                        }
-                    },
+                    onClick = onSubmit,
                     variant = RwButtonVariant.Primary,
-                    enabled = username.isNotBlank() && password.isNotBlank() && !isLoading,
+                    enabled = canSubmit,
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag(if (isRegisterMode) "register_button" else "login_button"),
