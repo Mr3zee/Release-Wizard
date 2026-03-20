@@ -89,4 +89,8 @@ class AuthViewModel(
     fun dismissError() {
         _error.value = null
     }
+
+    fun updateUser(userInfo: UserInfo) {
+        _user.value = userInfo
+    }
 }

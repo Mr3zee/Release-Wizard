@@ -123,6 +123,18 @@ class NavigationController(
                     _backStack.add(Screen.ProjectEditor(screen.projectId))
                     _backStack.add(screen)
                 }
+
+                Screen.Profile -> {
+                    _backStack.add(Screen.Profile)
+                }
+                Screen.AdminUsers -> {
+                    _backStack.add(Screen.Profile)
+                    _backStack.add(Screen.AdminUsers)
+                }
+                is Screen.ResetPassword -> {
+                    _backStack.clear()
+                    _backStack.add(screen)
+                }
             }
         }
     }
