@@ -26,56 +26,72 @@ Example port sets: `5432/8080/54345` (default), `5433/8081/54346`, `5434/8082/54
 
 ## Environment Setup
 
-Follow these steps in order. Each step must succeed before proceeding. The examples below use default ports — replace with your unique ports when running in parallel.
+**Always use local split mode** — start the server with `./gradlew :server:run` (API only, no frontend bundling). Never use `:server:runApp` for UI verification — it would bundle the WasmJS frontend and serve it from the same origin, but we need the Desktop app instead.
 
-### Step 1: Start PostgreSQL in Docker
+Follow these steps in order. Each step must succeed before proceeding. **Each agent must pick a unique port set** to allow fully independent parallel execution:
+
+### Step 0: Pick unique ports
+
+Choose a port set that no other agent is using. Derive from worktree name hash or pick from the table:
+
+| Agent | DB_PORT | SERVER_PORT | UI_TEST_PORT |
+|-------|---------|-------------|--------------|
+| 1st   | 5432    | 8080        | 54345        |
+| 2nd   | 5433    | 8081        | 54346        |
+| 3rd   | 5434    | 8082        | 54347        |
+
+Set these as shell variables for all subsequent steps:
+```bash
+DB_PORT=5432
+SERVER_PORT=8080
+UI_TEST_PORT=54345
+CONTAINER_NAME="rw-postgres-${SERVER_PORT}"
+```
+
+### Step 1: Start PostgreSQL and generate env
 
 ```bash
-# Use a unique container name and port when running in parallel
-docker ps --filter name=rw-postgres --format '{{.Status}}' | grep -q Up && echo "Already running" || \
+# Start a dedicated PostgreSQL container for this agent
+docker ps --filter name=$CONTAINER_NAME --format '{{.Status}}' | grep -q Up && echo "Already running" || \
 docker run -d \
-  --name rw-postgres \
+  --name $CONTAINER_NAME \
   -e POSTGRES_DB=release_wizard \
   -e POSTGRES_USER=postgres \
   -e POSTGRES_PASSWORD=postgres \
-  -p 5432:5432 \
-  postgres:14-alpine
+  -p $DB_PORT:5432 \
+  postgres:18-alpine
+
+# Generate .env if not present (provides auth secrets)
+./scripts/setup-local-env.sh
 ```
 
-Wait for readiness:
+Wait for DB readiness:
 ```bash
 for i in $(seq 1 30); do
-  docker exec rw-postgres pg_isready -U postgres 2>/dev/null && break
+  docker exec $CONTAINER_NAME pg_isready -U postgres -d release_wizard 2>/dev/null && break
   sleep 1
 done
 ```
 
-If port 5432 is already in use, use a different port (`-p 5433:5432`) and update `DB_URL` accordingly.
-
 ### Step 2: Start the Ktor Server
 
-Run in the background with `nohup` and dev-friendly env vars:
+Source `.env` for secrets, override ports and password policy for testing:
 
 ```bash
-PORT=8080 \
-AUTH_SESSION_SIGN_KEY="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" \
-ENCRYPTION_KEY="YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY=" \
+source .env
+PORT=$SERVER_PORT \
+DB_URL="jdbc:postgresql://localhost:$DB_PORT/release_wizard" \
 PASSWORD_MIN_LENGTH=4 \
 PASSWORD_REQUIRE_UPPERCASE=false \
 PASSWORD_REQUIRE_DIGIT=false \
 PASSWORD_REQUIRE_SPECIAL=false \
-SECURE_COOKIE=false \
-DB_USER=postgres \
-DB_PASSWORD=postgres \
-DB_URL="jdbc:postgresql://localhost:5432/release_wizard" \
-CORS_ALLOWED_ORIGIN_1="http://localhost:8080" \
-nohup ./gradlew :server:run > /tmp/rw_server.log 2>&1 &
+nohup ./gradlew :server:run > /tmp/rw_server_${SERVER_PORT}.log 2>&1 &
 ```
 
 Wait for the server to respond:
 ```bash
 for i in $(seq 1 60); do
-  curl -s http://localhost:8080/ 2>/dev/null | grep -q "Release Wizard" && break
+  curl -s http://localhost:$SERVER_PORT/health 2>/dev/null | grep -q "UP" && break
   sleep 2
 done
 ```
@@ -84,16 +100,16 @@ done
 
 ```bash
 COMPOSE_UI_TEST_SERVER_ENABLED=true \
-COMPOSE_UI_TEST_SERVER_PORT=54345 \
-SERVER_URL=http://localhost:8080 \
-SERVER_WS_URL=ws://localhost:8080 \
-nohup ./gradlew :composeApp:run > /tmp/rw_compose.log 2>&1 &
+COMPOSE_UI_TEST_SERVER_PORT=$UI_TEST_PORT \
+SERVER_URL=http://localhost:$SERVER_PORT \
+SERVER_WS_URL=ws://localhost:$SERVER_PORT \
+nohup ./gradlew :composeApp:run > /tmp/rw_compose_${SERVER_PORT}.log 2>&1 &
 ```
 
 Wait for the compose-ui-test-server:
 ```bash
 for i in $(seq 1 90); do
-  curl -s http://localhost:54345/health 2>/dev/null | grep -q "OK" && break
+  curl -s http://localhost:$UI_TEST_PORT/health 2>/dev/null | grep -q "OK" && break
   sleep 2
 done
 ```
@@ -104,45 +120,45 @@ The app starts on the login screen. Register and set up test data:
 
 ```bash
 # Switch to register mode
-curl -s "http://localhost:54345/onNodeWithText/Don't%20have%20an%20account%3F%20Register/performClick"
-curl -s "http://localhost:54345/waitForIdle"
+curl -s "http://localhost:$UI_TEST_PORT/onNodeWithText/Don't%20have%20an%20account%3F%20Register/performClick"
+curl -s "http://localhost:$UI_TEST_PORT/waitForIdle"
 
 # Fill registration
-curl -s "http://localhost:54345/onNodeWithTag/login_username/performTextInput?text=testuser"
-curl -s "http://localhost:54345/waitForIdle"
-curl -s "http://localhost:54345/onNodeWithTag/login_password/performTextInput?text=test"
-curl -s "http://localhost:54345/waitForIdle"
-curl -s "http://localhost:54345/onNodeWithTag/register_button/performClick"
+curl -s "http://localhost:$UI_TEST_PORT/onNodeWithTag/login_username/performTextInput?text=testuser"
+curl -s "http://localhost:$UI_TEST_PORT/waitForIdle"
+curl -s "http://localhost:$UI_TEST_PORT/onNodeWithTag/login_password/performTextInput?text=test"
+curl -s "http://localhost:$UI_TEST_PORT/waitForIdle"
+curl -s "http://localhost:$UI_TEST_PORT/onNodeWithTag/register_button/performClick"
 sleep 3
-curl -s "http://localhost:54345/waitForIdle"
+curl -s "http://localhost:$UI_TEST_PORT/waitForIdle"
 
 # Create a team (arrives at Teams screen after registration)
 # The FAB opens an inline form (not a dialog) at the top of the list
-curl -s "http://localhost:54345/onNodeWithTag/create_team_fab/performClick"
+curl -s "http://localhost:$UI_TEST_PORT/onNodeWithTag/create_team_fab/performClick"
 sleep 1
-curl -s "http://localhost:54345/waitForIdle"
-curl -s "http://localhost:54345/onNodeWithTag/team_name_input/performTextInput?text=Test%20Team"
-curl -s "http://localhost:54345/waitForIdle"
-curl -s "http://localhost:54345/onNodeWithTag/create_team_confirm/performClick"
+curl -s "http://localhost:$UI_TEST_PORT/waitForIdle"
+curl -s "http://localhost:$UI_TEST_PORT/onNodeWithTag/team_name_input/performTextInput?text=Test%20Team"
+curl -s "http://localhost:$UI_TEST_PORT/waitForIdle"
+curl -s "http://localhost:$UI_TEST_PORT/onNodeWithTag/create_team_confirm/performClick"
 sleep 2
-curl -s "http://localhost:54345/waitForIdle"
+curl -s "http://localhost:$UI_TEST_PORT/waitForIdle"
 # Now on Project List screen for "Test Team"
 ```
 
 If the user already exists (registration fails), log in instead:
 ```bash
-curl -s "http://localhost:54345/onNodeWithTag/login_username/performTextInput?text=testuser"
-curl -s "http://localhost:54345/waitForIdle"
-curl -s "http://localhost:54345/onNodeWithTag/login_password/performTextInput?text=test"
-curl -s "http://localhost:54345/waitForIdle"
-curl -s "http://localhost:54345/onNodeWithTag/login_button/performClick"
+curl -s "http://localhost:$UI_TEST_PORT/onNodeWithTag/login_username/performTextInput?text=testuser"
+curl -s "http://localhost:$UI_TEST_PORT/waitForIdle"
+curl -s "http://localhost:$UI_TEST_PORT/onNodeWithTag/login_password/performTextInput?text=test"
+curl -s "http://localhost:$UI_TEST_PORT/waitForIdle"
+curl -s "http://localhost:$UI_TEST_PORT/onNodeWithTag/login_button/performClick"
 sleep 3
-curl -s "http://localhost:54345/waitForIdle"
+curl -s "http://localhost:$UI_TEST_PORT/waitForIdle"
 ```
 
 ## Interacting With the UI
 
-All interaction goes through compose-ui-test-server on `http://localhost:54345`.
+All interaction goes through compose-ui-test-server on `http://localhost:$UI_TEST_PORT`.
 
 ### Core Pattern
 
@@ -173,7 +189,7 @@ Always follow this sequence:
 ### Taking Screenshots
 
 ```bash
-curl -s "http://localhost:54345/captureScreenshot?path=/tmp/rw_SCREENNAME.png"
+curl -s "http://localhost:$UI_TEST_PORT/captureScreenshot?path=/tmp/rw_SCREENNAME.png"
 ```
 
 Then view with the Read tool: `Read /tmp/rw_SCREENNAME.png`
@@ -230,23 +246,23 @@ The app uses a persistent sidebar for navigation (no nav buttons in ProjectList 
 **From any top-level screen (sidebar visible):**
 ```bash
 # Open editor for a project
-curl -s "http://localhost:54345/onNodeWithText/Test%20Project/performClick"
+curl -s "http://localhost:$UI_TEST_PORT/onNodeWithText/Test%20Project/performClick"
 
 # Navigate to Releases
-curl -s "http://localhost:54345/onNodeWithTag/sidebar_nav_releases/performClick"
+curl -s "http://localhost:$UI_TEST_PORT/onNodeWithTag/sidebar_nav_releases/performClick"
 
 # Navigate to Connections
-curl -s "http://localhost:54345/onNodeWithTag/sidebar_nav_connections/performClick"
+curl -s "http://localhost:$UI_TEST_PORT/onNodeWithTag/sidebar_nav_connections/performClick"
 
 # Navigate to Teams
-curl -s "http://localhost:54345/onNodeWithTag/sidebar_nav_teams/performClick"
+curl -s "http://localhost:$UI_TEST_PORT/onNodeWithTag/sidebar_nav_teams/performClick"
 ```
 
 **Going back (from detail screens — sidebar is hidden, Back button shown):**
 ```bash
-curl -s "http://localhost:54345/onNodeWithTag/back_button/performClick"
+curl -s "http://localhost:$UI_TEST_PORT/onNodeWithTag/back_button/performClick"
 # or if no back_button tag:
-curl -s "http://localhost:54345/onNodeWithText/Back/performClick"
+curl -s "http://localhost:$UI_TEST_PORT/onNodeWithText/Back/performClick"
 ```
 
 ## Cleanup
@@ -258,11 +274,5 @@ When done, stop services by PID (never use `./gradlew --stop`):
 ps aux | grep "gradlew" | grep "<worktree-name>" | grep -v grep | awk '{print $2}' | xargs kill 2>/dev/null
 
 # Stop and remove the PostgreSQL container
-docker stop rw-postgres && docker rm rw-postgres
-```
-
-Or to keep the container for next time:
-```bash
-docker stop rw-postgres
-# Next time: docker start rw-postgres
+docker stop $CONTAINER_NAME && docker rm $CONTAINER_NAME
 ```

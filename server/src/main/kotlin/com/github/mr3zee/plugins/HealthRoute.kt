@@ -23,7 +23,7 @@ private val log = LoggerFactory.getLogger("com.github.mr3zee.plugins.HealthRoute
 fun Route.healthRoute() {
     val db by inject<Database>()
 
-    get(ApiRoutes.HEALTH) {
+    suspend fun RoutingContext.respondHealth() {
         try {
             withContext(Dispatchers.IO) {
                 suspendTransaction(db) {
@@ -37,4 +37,7 @@ fun Route.healthRoute() {
             call.respond(HttpStatusCode.ServiceUnavailable, HealthStatus(status = "DOWN", error = "Database unavailable"))
         }
     }
+
+    get(ApiRoutes.HEALTH) { respondHealth() }
+    get(ApiRoutes.HEALTHZ) { respondHealth() }
 }
