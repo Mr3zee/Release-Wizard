@@ -614,6 +614,7 @@
     <string name="profile_delete_confirm_username">Type your username to confirm</string>
     <string name="profile_username_changed">Username updated successfully</string>
     <string name="profile_password_changed">Password updated successfully</string>
+    <string name="profile_passwords_mismatch">Passwords do not match</string>
     <string name="profile_teams_section">Teams</string>
     <string name="profile_no_teams">Not a member of any teams</string>
     <string name="profile_submit">Submit</string>

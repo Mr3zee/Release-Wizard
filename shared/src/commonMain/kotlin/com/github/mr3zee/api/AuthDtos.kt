@@ -83,6 +83,7 @@ data class GeneratePasswordResetRequest(
 @Serializable
 data class PasswordResetLinkResponse(
     val token: String,
+    val resetUrl: String,
     val expiresAt: Long,
 )
 

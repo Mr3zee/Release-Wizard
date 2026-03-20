@@ -3,7 +3,6 @@ package com.github.mr3zee.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.mr3zee.api.AuthApiClient
-import com.github.mr3zee.api.platformHttpBaseUrl
 import com.github.mr3zee.api.toUiMessage
 import com.github.mr3zee.model.User
 import com.github.mr3zee.util.UiMessage
@@ -66,11 +65,9 @@ class AdminUsersViewModel(
             _error.value = null
             try {
                 val response = authApiClient.generatePasswordResetLink(userId)
-                val baseUrl = platformHttpBaseUrl()
-                val link = "$baseUrl/reset-password/${response.token}"
-                _generatedLinks.value = _generatedLinks.value + (userId to link)
+                _generatedLinks.value = _generatedLinks.value + (userId to response.resetUrl)
                 // Auto-copy to clipboard
-                copyToClipboard(link)
+                copyToClipboard(response.resetUrl)
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }

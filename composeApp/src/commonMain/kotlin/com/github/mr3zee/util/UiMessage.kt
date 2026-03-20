@@ -29,6 +29,11 @@ sealed interface UiMessage {
     // Editor lock
     data class LockReacquireFailed(val detail: String) : UiMessage
 
+    // Profile
+    data object UsernameChanged : UiMessage
+    data object PasswordChanged : UiMessage
+    data object PasswordsMismatch : UiMessage
+
     // Fallback for any string that hasn't been converted yet
     data class Raw(val text: String) : UiMessage
 }
@@ -49,5 +54,8 @@ fun UiMessage.resolve(): String = when (this) {
     is UiMessage.ConnectionTestFailed -> packStringResource(Res.string.connections_test_failed, detail)
     is UiMessage.JoinRequestSubmitted -> packStringResource(Res.string.teams_join_request_submitted)
     is UiMessage.LockReacquireFailed -> packStringResource(Res.string.editor_lock_reacquire_failed, detail)
+    is UiMessage.UsernameChanged -> packStringResource(Res.string.profile_username_changed)
+    is UiMessage.PasswordChanged -> packStringResource(Res.string.profile_password_changed)
+    is UiMessage.PasswordsMismatch -> packStringResource(Res.string.profile_passwords_mismatch)
     is UiMessage.Raw -> text
 }

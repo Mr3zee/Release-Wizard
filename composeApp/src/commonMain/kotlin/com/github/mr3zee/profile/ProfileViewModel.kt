@@ -23,8 +23,8 @@ class ProfileViewModel(
     private val _error = MutableStateFlow<UiMessage?>(null)
     val error: StateFlow<UiMessage?> = _error
 
-    private val _successMessage = MutableStateFlow<String?>(null)
-    val successMessage: StateFlow<String?> = _successMessage
+    private val _successMessage = MutableStateFlow<UiMessage?>(null)
+    val successMessage: StateFlow<UiMessage?> = _successMessage
 
     private val _usernameChangeSuccess = MutableStateFlow(false)
     val usernameChangeSuccess: StateFlow<Boolean> = _usernameChangeSuccess
@@ -36,6 +36,7 @@ class ProfileViewModel(
     var onUsernameChanged: ((UserInfo) -> Unit)? = null
 
     init {
+        // Initial load — AppNavigation also calls loadProfile() on each navigation to refresh
         loadProfile()
     }
 
@@ -61,7 +62,7 @@ class ProfileViewModel(
             try {
                 val updatedInfo = authApiClient.changeUsername(newUsername, currentPassword)
                 _userInfo.value = updatedInfo
-                _successMessage.value = "Username updated successfully"
+                _successMessage.value = UiMessage.UsernameChanged
                 _usernameChangeSuccess.value = true
                 onUsernameChanged?.invoke(updatedInfo)
             } catch (e: Exception) {
@@ -78,7 +79,7 @@ class ProfileViewModel(
             _error.value = null
             try {
                 authApiClient.changePassword(currentPassword, newPassword)
-                _successMessage.value = "Password updated successfully"
+                _successMessage.value = UiMessage.PasswordChanged
                 _passwordChangeSuccess.value = true
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()

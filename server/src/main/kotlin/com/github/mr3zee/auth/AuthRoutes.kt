@@ -304,10 +304,11 @@ fun Route.authRoutes() {
                         "USERNAME_MISMATCH" -> "Username confirmation does not match"
                         else -> message
                     }
-                    call.respond(
-                        HttpStatusCode.BadRequest,
-                        ErrorResponse(error = humanMessage, code = code),
-                    )
+                    val status = when (code) {
+                        "LAST_ADMIN", "LAST_TEAM_LEAD" -> HttpStatusCode.Conflict
+                        else -> HttpStatusCode.BadRequest
+                    }
+                    call.respond(status, ErrorResponse(error = humanMessage, code = code))
                 },
             )
         }
@@ -323,9 +324,11 @@ fun Route.authRoutes() {
                 UserId(session.userId),
             )
             result.fold(
-                onSuccess = { rawToken ->
-                    val expiresAt = Clock.System.now().plus(24.hours).toEpochMilliseconds()
-                    call.respond(PasswordResetLinkResponse(token = rawToken, expiresAt = expiresAt))
+                onSuccess = { generated ->
+                    val origin = call.request.headers["Origin"]
+                        ?: "${call.request.local.scheme}://${call.request.local.serverHost}:${call.request.local.serverPort}"
+                    val resetUrl = "$origin/reset-password/${generated.rawToken}"
+                    call.respond(PasswordResetLinkResponse(token = generated.rawToken, resetUrl = resetUrl, expiresAt = generated.expiresAtMillis))
                 },
                 onFailure = { error ->
                     call.respond(

@@ -15,13 +15,15 @@ import java.util.UUID
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.hours
 
+data class GeneratedToken(val rawToken: String, val expiresAtMillis: Long)
+
 interface PasswordResetService {
     /**
      * Generate a password reset token for the target user.
      * Invalidates any existing active tokens for that user.
-     * Returns the raw (unhashed) token on success.
+     * Returns the raw (unhashed) token and its expiry on success.
      */
-    suspend fun generateToken(targetUserId: UserId, createdByUserId: UserId): Result<String>
+    suspend fun generateToken(targetUserId: UserId, createdByUserId: UserId): Result<GeneratedToken>
 
     /**
      * Validate whether a raw token is still valid (exists, not used, not expired).
@@ -60,21 +62,11 @@ class DatabasePasswordResetService(private val db: Database) : PasswordResetServ
         return bytes.joinToString("") { "%02x".format(it) }
     }
 
-    override suspend fun generateToken(targetUserId: UserId, createdByUserId: UserId): Result<String> {
+    override suspend fun generateToken(targetUserId: UserId, createdByUserId: UserId): Result<GeneratedToken> {
         val targetUuid = try {
             UUID.fromString(targetUserId.value)
         } catch (_: IllegalArgumentException) {
             return Result.failure(IllegalArgumentException("Invalid user ID format"))
-        }
-
-        // Verify target user exists
-        val userExists = dbQuery {
-            UserTable.selectAll()
-                .where { UserTable.id eq targetUuid }
-                .count() > 0
-        }
-        if (!userExists) {
-            return Result.failure(IllegalArgumentException("User not found"))
         }
 
         val rawToken = generateRawToken()
@@ -82,7 +74,13 @@ class DatabasePasswordResetService(private val db: Database) : PasswordResetServ
         val now = Clock.System.now()
         val expiresAt = now + TOKEN_EXPIRY
 
-        dbQuery {
+        // Atomic: verify user exists + invalidate old tokens + insert new token in one transaction
+        val created = dbQuery {
+            val userExists = UserTable.selectAll()
+                .where { UserTable.id eq targetUuid }
+                .count() > 0
+            if (!userExists) return@dbQuery false
+
             // Invalidate existing active tokens for this user
             PasswordResetTokenTable.update(
                 where = {
@@ -102,10 +100,14 @@ class DatabasePasswordResetService(private val db: Database) : PasswordResetServ
                 it[PasswordResetTokenTable.expiresAt] = expiresAt
                 it[PasswordResetTokenTable.createdAt] = now
             }
+            true
+        }
+        if (!created) {
+            return Result.failure(IllegalArgumentException("User not found"))
         }
 
         log.info("Password reset token generated for user '{}' by '{}'", targetUserId.value, createdByUserId.value)
-        return Result.success(rawToken)
+        return Result.success(GeneratedToken(rawToken, expiresAt.toEpochMilliseconds()))
     }
 
     override suspend fun validateToken(rawToken: String): UserId? {
