@@ -233,6 +233,7 @@ fun AppNavigation(
         }
         is Screen.Profile -> {
             val vm = profileViewModel ?: return
+            LaunchedEffect(Unit) { vm.loadProfile() }
             ProfileScreen(
                 viewModel = vm,
                 currentUserRole = currentUserRole,
