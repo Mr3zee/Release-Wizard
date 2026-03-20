@@ -123,6 +123,12 @@ fun ProjectAutomationScreen(
     val dismissLabel = packStringResource(Res.string.common_dismiss)
     val mavenCreatedLabel = packStringResource(Res.string.maven_created_title)
 
+    DisposableEffect(Unit) {
+        onDispose {
+            pendingWebhookSecret = null
+        }
+    }
+
     // Subscribe to all flows before triggering any loads to avoid missing emissions
     LaunchedEffect(viewModel) {
         launch { viewModel.webhookCreated.collect { trigger -> pendingWebhookSecret = trigger.secret } }

@@ -178,8 +178,8 @@ class LoginScreenTest {
         val client = mockHttpClient(
             mapOf(
                 "/auth/register" to json(
-                    """{"error":"Username already taken","code":"USERNAME_TAKEN"}""",
-                    HttpStatusCode.Conflict,
+                    """{"error":"Registration failed","code":"REGISTRATION_FAILED"}""",
+                    HttpStatusCode.BadRequest,
                 ),
             )
         )
@@ -196,9 +196,9 @@ class LoginScreenTest {
         onNodeWithTag("register_button").performClick()
 
         waitUntil(timeoutMillis = 3000L) {
-            onAllNodesWithText("Username already taken").fetchSemanticsNodes().isNotEmpty()
+            onAllNodesWithText("Registration failed").fetchSemanticsNodes().isNotEmpty()
         }
-        onNodeWithText("Username already taken").assertExists()
+        onNodeWithText("Registration failed").assertExists()
     }
 
     // --- Helper: creates a client whose /auth/login response never completes (hangs) ---
@@ -572,8 +572,8 @@ class LoginScreenTest {
         val client = mockHttpClient(
             mapOf(
                 "/auth/register" to json(
-                    """{"error":"Username already taken","code":"USERNAME_TAKEN"}""",
-                    HttpStatusCode.Conflict,
+                    """{"error":"Registration failed","code":"REGISTRATION_FAILED"}""",
+                    HttpStatusCode.BadRequest,
                 ),
             )
         )
@@ -597,9 +597,9 @@ class LoginScreenTest {
 
         // Wait for the error from the failing register
         waitUntil(timeoutMillis = 3000L) {
-            onAllNodesWithText("Username already taken").fetchSemanticsNodes().isNotEmpty()
+            onAllNodesWithText("Registration failed").fetchSemanticsNodes().isNotEmpty()
         }
-        onNodeWithText("Username already taken").assertExists()
+        onNodeWithText("Registration failed").assertExists()
     }
 
     @Test

@@ -90,10 +90,13 @@ class DefaultConnectionsService(
         checkAccess(id, session)
         // CONN-H4: Fetch teamId before update to avoid TOCTOU if connection is deleted concurrently
         val teamId = repository.findTeamId(id)
+        val resolvedConfig = request.config?.let { newConfig ->
+            mergeConfigWithExistingSecrets(id, newConfig)
+        }
         val updated = repository.update(
             id = id,
             name = request.name,
-            config = request.config,
+            config = resolvedConfig,
         ) ?: return null
         if (teamId != null) {
             auditService.log(
@@ -151,6 +154,30 @@ class DefaultConnectionsService(
         return repository.findTeamId(id)
     }
 
+    private suspend fun mergeConfigWithExistingSecrets(id: ConnectionId, newConfig: ConnectionConfig): ConnectionConfig {
+        val existing = repository.findById(id)?.config ?: return newConfig
+        return when (newConfig) {
+            is ConnectionConfig.SlackConfig -> {
+                val existingSlack = existing as? ConnectionConfig.SlackConfig
+                if (isMasked(newConfig.webhookUrl) && existingSlack != null) {
+                    newConfig.copy(webhookUrl = existingSlack.webhookUrl)
+                } else newConfig
+            }
+            is ConnectionConfig.TeamCityConfig -> {
+                val existingTc = existing as? ConnectionConfig.TeamCityConfig
+                if (isMasked(newConfig.token) && existingTc != null) {
+                    newConfig.copy(token = existingTc.token)
+                } else newConfig
+            }
+            is ConnectionConfig.GitHubConfig -> {
+                val existingGh = existing as? ConnectionConfig.GitHubConfig
+                if (isMasked(newConfig.token) && existingGh != null) {
+                    newConfig.copy(token = existingGh.token)
+                } else newConfig
+            }
+        }
+    }
+
     private suspend fun checkAccess(id: ConnectionId, session: UserSession) {
         if (session.role == UserRole.ADMIN) return
         val teamId = repository.findTeamId(id) ?: throw NotFoundException("Resource not found")
@@ -172,7 +199,8 @@ private fun ConnectionConfig.masked(): ConnectionConfig = when (this) {
     is ConnectionConfig.GitHubConfig -> copy(token = mask(token))
 }
 
-private fun mask(value: String): String {
-    if (value.length <= 4) return "****"
-    return "****" + value.takeLast(4)
-}
+private const val MASK = "********"
+
+private fun mask(@Suppress("UNUSED_PARAMETER") value: String): String = MASK
+
+private fun isMasked(value: String): Boolean = value == MASK

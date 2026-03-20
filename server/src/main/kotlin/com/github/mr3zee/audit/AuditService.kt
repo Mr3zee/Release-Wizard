@@ -54,6 +54,30 @@ class AuditService(
         )
     }
 
+    suspend fun logSync(
+        teamId: TeamId?,
+        session: UserSession,
+        action: AuditAction,
+        targetType: AuditTargetType,
+        targetId: String,
+        details: String = "",
+    ) {
+        val sanitizedDetails = sanitize(details, MAX_DETAILS_LENGTH)
+        val sanitizedTargetId = sanitize(targetId, MAX_TARGET_ID_LENGTH)
+        repository.insert(
+            AuditEvent(
+                id = "",
+                teamId = teamId,
+                actorUserId = UserId(session.userId),
+                actorUsername = sanitize(session.username, MAX_USERNAME_LENGTH),
+                action = action,
+                targetType = targetType,
+                targetId = sanitizedTargetId,
+                details = sanitizedDetails,
+            )
+        )
+    }
+
     private fun insertAsync(
         teamId: TeamId?,
         actorUserId: UserId?,

@@ -160,8 +160,7 @@ class ConnectionsRoutesTest {
         val config = updated.connection.config as ConnectionConfig.GitHubConfig
         assertEquals("new-owner", config.owner)
         assertEquals("new-repo", config.repo)
-        assertTrue(config.token.contains("****"))
-        assertTrue(config.token.endsWith("5678"))
+        assertEquals("********", config.token)
     }
 
     @Test

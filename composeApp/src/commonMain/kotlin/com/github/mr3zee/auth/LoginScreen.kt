@@ -72,6 +72,8 @@ fun LoginScreen(
             } else {
                 viewModel.login(username, password)
             }
+            password = ""
+            confirmPassword = ""
         }
     }
 

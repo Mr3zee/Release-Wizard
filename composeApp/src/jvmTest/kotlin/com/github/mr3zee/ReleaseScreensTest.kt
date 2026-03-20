@@ -1695,7 +1695,7 @@ class ReleaseScreensTest {
 
         setContent {
             MaterialTheme {
-                ReleaseListScreen(viewModel = vm, onViewRelease = {}, onBack = {})
+                ReleaseListScreen(viewModel = vm, onViewRelease = {}, onBack = {}, isTeamLead = true)
             }
         }
 
@@ -1766,7 +1766,7 @@ class ReleaseScreensTest {
 
         setContent {
             MaterialTheme {
-                ReleaseListScreen(viewModel = vm, onViewRelease = {}, onBack = {})
+                ReleaseListScreen(viewModel = vm, onViewRelease = {}, onBack = {}, isTeamLead = true)
             }
         }
 
@@ -1816,7 +1816,7 @@ class ReleaseScreensTest {
 
         setContent {
             MaterialTheme {
-                ReleaseListScreen(viewModel = vm, onViewRelease = {}, onBack = {})
+                ReleaseListScreen(viewModel = vm, onViewRelease = {}, onBack = {}, isTeamLead = true)
             }
         }
 
@@ -1848,7 +1848,7 @@ class ReleaseScreensTest {
 
         setContent {
             MaterialTheme {
-                ReleaseListScreen(viewModel = vm, onViewRelease = {}, onBack = {})
+                ReleaseListScreen(viewModel = vm, onViewRelease = {}, onBack = {}, isTeamLead = true)
             }
         }
 
@@ -1877,7 +1877,7 @@ class ReleaseScreensTest {
 
         setContent {
             MaterialTheme {
-                ReleaseListScreen(viewModel = vm, onViewRelease = {}, onBack = {})
+                ReleaseListScreen(viewModel = vm, onViewRelease = {}, onBack = {}, isTeamLead = true)
             }
         }
 
@@ -2052,7 +2052,7 @@ class ReleaseScreensTest {
 
         setContent {
             MaterialTheme {
-                ReleaseListScreen(viewModel = vm, onViewRelease = {}, onBack = {})
+                ReleaseListScreen(viewModel = vm, onViewRelease = {}, onBack = {}, isTeamLead = true)
             }
         }
 
@@ -2093,7 +2093,7 @@ class ReleaseScreensTest {
 
         setContent {
             MaterialTheme {
-                ReleaseListScreen(viewModel = vm, onViewRelease = {}, onBack = {})
+                ReleaseListScreen(viewModel = vm, onViewRelease = {}, onBack = {}, isTeamLead = true)
             }
         }
 

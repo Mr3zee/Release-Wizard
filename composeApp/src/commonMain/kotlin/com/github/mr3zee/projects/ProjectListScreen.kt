@@ -48,6 +48,7 @@ import releasewizard.composeapp.generated.resources.*
 fun ProjectListScreen(
     viewModel: ProjectListViewModel,
     onEditProject: (ProjectId) -> Unit,
+    isTeamLead: Boolean = false,
 ) {
     val projects by viewModel.projects.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -270,6 +271,7 @@ fun ProjectListScreen(
                                 project = project,
                                 onClick = { onEditProject(project.id) },
                                 onDelete = { projectToDelete = project },
+                                isTeamLead = isTeamLead,
                             )
                             RwInlineConfirmation(
                                 visible = projectToDelete?.id == project.id,
@@ -299,6 +301,7 @@ private fun ProjectListItem(
     project: ProjectTemplate,
     onClick: () -> Unit,
     onDelete: () -> Unit,
+    isTeamLead: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -330,25 +333,27 @@ private fun ProjectListItem(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Box {
-            RwIconButton(
-                onClick = { showMenu = true },
-                modifier = Modifier.testTag("project_menu_${project.id.value}"),
-            ) {
-                Icon(Icons.Default.MoreVert, contentDescription = packStringResource(Res.string.common_more_options))
-            }
-            DropdownMenu(
-                expanded = showMenu,
-                onDismissRequest = { showMenu = false },
-            ) {
-                DropdownMenuItem(
-                    text = { Text(packStringResource(Res.string.common_delete), color = MaterialTheme.colorScheme.error) },
-                    onClick = {
-                        showMenu = false
-                        onDelete()
-                    },
-                    modifier = Modifier.testTag("delete_menu_item"),
-                )
+        if (isTeamLead) {
+            Box {
+                RwIconButton(
+                    onClick = { showMenu = true },
+                    modifier = Modifier.testTag("project_menu_${project.id.value}"),
+                ) {
+                    Icon(Icons.Default.MoreVert, contentDescription = packStringResource(Res.string.common_more_options))
+                }
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false },
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(packStringResource(Res.string.common_delete), color = MaterialTheme.colorScheme.error) },
+                        onClick = {
+                            showMenu = false
+                            onDelete()
+                        },
+                        modifier = Modifier.testTag("delete_menu_item"),
+                    )
+                }
             }
         }
         Icon(

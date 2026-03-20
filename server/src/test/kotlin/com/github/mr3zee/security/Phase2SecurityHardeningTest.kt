@@ -2,7 +2,6 @@ package com.github.mr3zee.security
 
 import com.github.mr3zee.*
 import com.github.mr3zee.api.*
-import com.github.mr3zee.auth.AccountLockoutService
 import com.github.mr3zee.connections.ConnectionTester
 import com.github.mr3zee.model.*
 import io.ktor.client.call.*
@@ -109,24 +108,37 @@ class Phase2SecurityHardeningTest {
     }
 
     @Test
-    fun `AUTH-H4 - account lockout after failed attempts`() {
-        val lockout = AccountLockoutService()
+    fun `AUTH-H4 - account lockout after failed attempts`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
 
-        // First 4 attempts should not lock
-        repeat(4) {
-            assertNull(lockout.checkLocked("testuser"))
-            lockout.recordFailure("testuser")
+        // Register a user first
+        client.post(ApiRoutes.Auth.REGISTER) {
+            contentType(ContentType.Application.Json)
+            setBody(RegisterRequest("lockouttest", "lockoutpass"))
         }
-        // Still not locked (4 < 5 threshold)
-        assertNull(lockout.checkLocked("testuser"))
+
+        // First 4 failed attempts should still allow login attempts (not locked)
+        repeat(4) {
+            val response = client.post(ApiRoutes.Auth.LOGIN) {
+                contentType(ContentType.Application.Json)
+                setBody(LoginRequest("lockouttest", "wrongpassword"))
+            }
+            assertEquals(HttpStatusCode.Unauthorized, response.status, "Attempt ${it + 1} should return 401")
+        }
 
         // 5th failure triggers lockout
-        lockout.recordFailure("testuser")
-        assertNotNull(lockout.checkLocked("testuser"), "Account should be locked after 5 failures")
+        client.post(ApiRoutes.Auth.LOGIN) {
+            contentType(ContentType.Application.Json)
+            setBody(LoginRequest("lockouttest", "wrongpassword"))
+        }
 
-        // Successful login clears lockout
-        lockout.recordSuccess("testuser")
-        assertNull(lockout.checkLocked("testuser"), "Lockout should be cleared after success")
+        // 6th attempt should be locked out (429)
+        val lockedResponse = client.post(ApiRoutes.Auth.LOGIN) {
+            contentType(ContentType.Application.Json)
+            setBody(LoginRequest("lockouttest", "wrongpassword"))
+        }
+        assertEquals(HttpStatusCode.TooManyRequests, lockedResponse.status, "Account should be locked after 5 failures")
     }
 
     @Test

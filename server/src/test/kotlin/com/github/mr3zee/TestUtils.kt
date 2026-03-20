@@ -66,6 +66,7 @@ fun testDbConfig() = DatabaseConfig(
 
 fun testAuthConfig() = AuthConfig(
     sessionSignKey = "6162636465666768696a6b6c6d6e6f707172737475767778797a313233343536",
+    sessionEncryptKey = "31323334353637383930616263646566",
 )
 
 fun testEncryptionConfig() = EncryptionConfig(
@@ -153,6 +154,22 @@ fun Application.testModule(
             rateLimiter(limit = 10, refillPeriod = 60.seconds)
             requestKey { call -> call.request.local.remoteHost }
         }
+        register(RateLimitName("create-team")) {
+            rateLimiter(limit = 10, refillPeriod = 60.seconds)
+            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.request.local.remoteHost }
+        }
+        register(RateLimitName("create-project")) {
+            rateLimiter(limit = 10, refillPeriod = 60.seconds)
+            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.request.local.remoteHost }
+        }
+        register(RateLimitName("test-connection")) {
+            rateLimiter(limit = 5, refillPeriod = 60.seconds)
+            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.request.local.remoteHost }
+        }
+        register(RateLimitName("authenticated-api")) {
+            rateLimiter(limit = 200, refillPeriod = 60.seconds)
+            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.request.local.remoteHost }
+        }
     }
 
     install(CorrelationId)
@@ -163,7 +180,11 @@ fun Application.testModule(
             cookie.maxAgeInSeconds = 86400
             cookie.httpOnly = true
             cookie.extensions["SameSite"] = "Lax"
-            transform(SessionTransportTransformerMessageAuthentication(hex(authConfig.sessionSignKey)))
+            if (authConfig.sessionEncryptKey.isNotEmpty()) {
+                transform(SessionTransportTransformerEncrypt(hex(authConfig.sessionEncryptKey), hex(authConfig.sessionSignKey)))
+            } else {
+                transform(SessionTransportTransformerMessageAuthentication(hex(authConfig.sessionSignKey)))
+            }
         }
     }
     install(Authentication) {
@@ -193,11 +214,13 @@ fun Application.testModule(
     }
     install(StatusPages) {
         exception<IllegalArgumentException> { call, cause ->
+            call.application.environment.log.debug("Validation error", cause)
             val correlationId = call.attributes.getOrNull(CorrelationIdKey)
+            val sanitizedMessage = sanitizeErrorMessage(cause.message)
             call.respond(
                 HttpStatusCode.BadRequest,
                 ErrorResponse(
-                    error = cause.message ?: "Bad request",
+                    error = sanitizedMessage,
                     code = "BAD_REQUEST",
                     correlationId = correlationId,
                 ),
@@ -323,7 +346,7 @@ suspend fun HttpClient.login(
     username: String = "admin",
     password: String = "adminpass",
 ) {
-    // Register (idempotent — 409 on duplicate is fine)
+    // Register (idempotent — error on duplicate is fine)
     post(ApiRoutes.Auth.REGISTER) {
         contentType(ContentType.Application.Json)
         setBody(RegisterRequest(username = username, password = password))

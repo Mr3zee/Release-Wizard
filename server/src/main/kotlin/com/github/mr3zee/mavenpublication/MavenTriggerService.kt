@@ -2,12 +2,10 @@ package com.github.mr3zee.mavenpublication
 
 import com.github.mr3zee.NotFoundException
 import com.github.mr3zee.api.CreateMavenTriggerRequest
+import com.github.mr3zee.audit.AuditService
 import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.connections.ConnectionTester
-import com.github.mr3zee.model.MavenTrigger
-import com.github.mr3zee.model.ProjectId
-import com.github.mr3zee.model.TeamId
-import com.github.mr3zee.model.UserRole
+import com.github.mr3zee.model.*
 import com.github.mr3zee.projects.ProjectsRepository
 import com.github.mr3zee.teams.TeamAccessService
 import kotlinx.coroutines.Dispatchers
@@ -36,6 +34,7 @@ class DefaultMavenTriggerService(
     private val fetcher: MavenMetadataFetcher,
     private val projectsRepository: ProjectsRepository,
     private val teamAccessService: TeamAccessService,
+    private val auditService: AuditService,
 ) : MavenTriggerService {
 
     override suspend fun listByProject(projectId: ProjectId, session: UserSession): List<MavenTrigger> {
@@ -71,7 +70,7 @@ class DefaultMavenTriggerService(
                 "Verify the repository URL, groupId, and artifactId."
         )
 
-        return repository.create(
+        val trigger = repository.create(
             projectId = projectId,
             repoUrl = request.repoUrl,
             groupId = request.groupId,
@@ -82,23 +81,45 @@ class DefaultMavenTriggerService(
             knownVersions = initialVersions,
             createdBy = session.userId,
         )
+        val projectTeamId = projectsRepository.findTeamId(projectId)
+        if (projectTeamId != null) {
+            auditService.log(TeamId(projectTeamId), session, AuditAction.TRIGGER_CREATED, AuditTargetType.TRIGGER, trigger.id, "Created Maven trigger for ${request.groupId}:${request.artifactId}")
+        }
+        return trigger
     }
 
     override suspend fun toggle(id: String, enabled: Boolean, session: UserSession): MavenTrigger? {
         val trigger = repository.findById(id) ?: return null
         checkProjectAccess(trigger.projectId, session)
-        return repository.updateEnabled(id, enabled)
+        val updated = repository.updateEnabled(id, enabled)
+        if (updated != null) {
+            val projectTeamId = projectsRepository.findTeamId(trigger.projectId)
+            if (projectTeamId != null) {
+                auditService.log(TeamId(projectTeamId), session, AuditAction.TRIGGER_UPDATED, AuditTargetType.TRIGGER, id, "Maven trigger toggled to enabled=$enabled")
+            }
+        }
+        return updated
     }
 
     override suspend fun delete(id: String, session: UserSession): Boolean {
         val trigger = repository.findById(id) ?: return false
         checkProjectAccess(trigger.projectId, session)
-        return repository.delete(id)
+        val deleted = repository.delete(id)
+        if (deleted) {
+            val projectTeamId = projectsRepository.findTeamId(trigger.projectId)
+            if (projectTeamId != null) {
+                auditService.log(TeamId(projectTeamId), session, AuditAction.TRIGGER_DELETED, AuditTargetType.TRIGGER, id, "Deleted Maven trigger for ${trigger.groupId}:${trigger.artifactId}")
+            }
+        }
+        return deleted
     }
 
     private suspend fun validateRequest(request: CreateMavenTriggerRequest) {
-        require(request.repoUrl.startsWith("http://") || request.repoUrl.startsWith("https://")) {
-            "repoUrl must start with http:// or https://"
+        val isHttps = request.repoUrl.startsWith("https://")
+        val isLocalhostHttp = request.repoUrl.startsWith("http://") &&
+            (request.repoUrl.startsWith("http://localhost") || request.repoUrl.startsWith("http://127.0.0.1"))
+        require(isHttps || isLocalhostHttp) {
+            "repoUrl must use https:// (http:// is only allowed for localhost)"
         }
         // DNS resolution is blocking — run on IO dispatcher to avoid blocking Ktor workers.
         withContext(Dispatchers.IO) { ConnectionTester.validateUrlNotPrivate(request.repoUrl) }

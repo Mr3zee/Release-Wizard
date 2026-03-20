@@ -569,15 +569,25 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
     }
 
     override suspend fun findPendingInvitesByTeam(teamId: TeamId): List<TeamInvite> = dbQuery {
+        val now = Clock.System.now()
         val rows = TeamInviteTable.selectAll()
-            .where { (TeamInviteTable.teamId eq UUID.fromString(teamId.value)) and (TeamInviteTable.status eq InviteStatus.PENDING) }
+            .where {
+                (TeamInviteTable.teamId eq UUID.fromString(teamId.value)) and
+                    (TeamInviteTable.status eq InviteStatus.PENDING) and
+                    ((TeamInviteTable.expiresAt.isNull()) or (TeamInviteTable.expiresAt greater now))
+            }
             .toList()
         mapInviteRows(rows)
     }
 
     override suspend fun findPendingInvitesByUser(userId: String): List<TeamInvite> = dbQuery {
+        val now = Clock.System.now()
         val rows = TeamInviteTable.selectAll()
-            .where { (TeamInviteTable.invitedUserId eq UUID.fromString(userId)) and (TeamInviteTable.status eq InviteStatus.PENDING) }
+            .where {
+                (TeamInviteTable.invitedUserId eq UUID.fromString(userId)) and
+                    (TeamInviteTable.status eq InviteStatus.PENDING) and
+                    ((TeamInviteTable.expiresAt.isNull()) or (TeamInviteTable.expiresAt greater now))
+            }
             .toList()
         mapInviteRows(rows)
     }

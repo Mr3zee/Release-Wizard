@@ -51,6 +51,7 @@ fun initDatabase(ds: DataSource): Database {
             ReleaseTagTable,
             ProjectLockTable,
             StatusWebhookTokenTable,
+            AccountLockoutTable,
         )
     }
     // TEAM-H2, TEAM-H3, HOOK-M4: Create partial unique indexes (PostgreSQL only, graceful skip on H2)

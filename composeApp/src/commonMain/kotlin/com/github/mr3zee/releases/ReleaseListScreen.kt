@@ -63,6 +63,7 @@ fun ReleaseListScreen(
     viewModel: ReleaseListViewModel,
     onViewRelease: (ReleaseId) -> Unit,
     onBack: (() -> Unit)? = null,
+    isTeamLead: Boolean = false,
 ) {
     val releases by viewModel.releases.collectAsState()
     val projects by viewModel.projects.collectAsState()
@@ -434,6 +435,7 @@ fun ReleaseListScreen(
                             onClick = { onViewRelease(release.id) },
                             onArchive = { releaseToArchive = release.id },
                             onDelete = { releaseToDelete = release.id },
+                            isTeamLead = isTeamLead,
                             modifier = Modifier.widthIn(max = 1200.dp),
                         )
                         RwInlineConfirmation(
@@ -567,6 +569,7 @@ private fun ReleaseListItem(
     onClick: () -> Unit,
     onArchive: () -> Unit,
     onDelete: () -> Unit,
+    isTeamLead: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -601,7 +604,7 @@ private fun ReleaseListItem(
             }
         }
         StatusBadge(release.status)
-        if (release.status.isTerminal) {
+        if (release.status.isTerminal && isTeamLead) {
             Box {
                 RwIconButton(
                     onClick = { showMenu = true },

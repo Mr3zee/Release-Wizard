@@ -171,17 +171,20 @@ private fun SubBuildRow(
             )
         }
         subBuild.buildUrl?.let { url ->
-            Text(
-                text = packStringResource(Res.string.sub_builds_open_link),
-                style = AppTypography.label,
-                color = appColors.buttonPrimaryBg,
-                modifier = Modifier
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = LocalIndication.current,
-                    ) { uriHandler.openUri(url) }
-                    .testTag("sub_build_link_${subBuild.id}"),
-            )
+            val isSafeUrl = url.startsWith("https://") || url.startsWith("http://")
+            if (isSafeUrl) {
+                Text(
+                    text = packStringResource(Res.string.sub_builds_open_link),
+                    style = AppTypography.label,
+                    color = appColors.buttonPrimaryBg,
+                    modifier = Modifier
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = LocalIndication.current,
+                        ) { uriHandler.openUri(url) }
+                        .testTag("sub_build_link_${subBuild.id}"),
+                )
+            }
         }
     }
 }

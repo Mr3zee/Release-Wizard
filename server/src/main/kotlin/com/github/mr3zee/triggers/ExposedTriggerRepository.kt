@@ -31,6 +31,12 @@ class ExposedTriggerRepository(private val db: Database) : TriggerRepository {
             .map { it.toEntity() }
     }
 
+    override suspend fun countByProjectId(projectId: ProjectId): Long = dbQuery {
+        TriggerTable.selectAll()
+            .where { TriggerTable.projectId eq UUID.fromString(projectId.value) }
+            .count()
+    }
+
     override suspend fun findById(id: String): TriggerEntity? = dbQuery {
         TriggerTable.selectAll()
             .where { TriggerTable.id eq UUID.fromString(id) }

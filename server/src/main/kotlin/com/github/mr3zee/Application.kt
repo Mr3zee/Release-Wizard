@@ -1,6 +1,7 @@
 package com.github.mr3zee
 
 import com.github.mr3zee.api.ErrorResponse
+import com.github.mr3zee.auth.AccountLockoutRepository
 import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.auth.authModule
 import com.github.mr3zee.auth.authRoutes
@@ -151,15 +152,29 @@ fun Application.module() {
             rateLimiter(limit = 10, refillPeriod = 60.seconds)
             requestKey { call -> call.request.local.remoteHost }
         }
-        // HOOK-M1 & MAVEN-M1: Rate limit on unauthenticated webhook endpoints (per-IP)
         register(RateLimitName("webhook")) {
             rateLimiter(limit = 30, refillPeriod = 60.seconds)
             requestKey { call -> call.request.local.remoteHost }
         }
-        // TEAM-M7: Rate limit on invite/join-request creation (per-IP)
         register(RateLimitName("invite")) {
             rateLimiter(limit = 10, refillPeriod = 60.seconds)
             requestKey { call -> call.request.local.remoteHost }
+        }
+        register(RateLimitName("create-team")) {
+            rateLimiter(limit = 10, refillPeriod = 60.seconds)
+            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.request.local.remoteHost }
+        }
+        register(RateLimitName("create-project")) {
+            rateLimiter(limit = 10, refillPeriod = 60.seconds)
+            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.request.local.remoteHost }
+        }
+        register(RateLimitName("test-connection")) {
+            rateLimiter(limit = 5, refillPeriod = 60.seconds)
+            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.request.local.remoteHost }
+        }
+        register(RateLimitName("authenticated-api")) {
+            rateLimiter(limit = 200, refillPeriod = 60.seconds)
+            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.request.local.remoteHost }
         }
     }
 
@@ -178,7 +193,12 @@ fun Application.module() {
             cookie.httpOnly = true
             cookie.secure = this@module.environment.config.propertyOrNull("app.auth.secureCookie")?.getString()?.toBooleanStrictOrNull() ?: true
             cookie.extensions["SameSite"] = "Lax"
-            transform(SessionTransportTransformerMessageAuthentication(hex(authConfig.sessionSignKey)))
+            if (authConfig.sessionEncryptKey.isNotEmpty()) {
+                transform(SessionTransportTransformerEncrypt(hex(authConfig.sessionEncryptKey), hex(authConfig.sessionSignKey)))
+            } else {
+                this@module.environment.log.warn("Session encryption key not configured — session cookies will be signed but not encrypted")
+                transform(SessionTransportTransformerMessageAuthentication(hex(authConfig.sessionSignKey)))
+            }
         }
     }
 
@@ -216,11 +236,13 @@ fun Application.module() {
 
     install(StatusPages) {
         exception<IllegalArgumentException> { call, cause ->
+            call.application.environment.log.debug("Validation error", cause)
             val correlationId = call.attributes.getOrNull(CorrelationIdKey)
+            val sanitizedMessage = sanitizeErrorMessage(cause.message)
             call.respond(
                 HttpStatusCode.BadRequest,
                 ErrorResponse(
-                    error = cause.message ?: "Bad request",
+                    error = sanitizedMessage,
                     code = "BAD_REQUEST",
                     correlationId = correlationId,
                 ),
@@ -358,6 +380,21 @@ fun Application.module() {
                     }
                 }
             }
+
+            // Periodic cleanup of expired account lockout records
+            val lockoutRepo = koin.getOrNull<AccountLockoutRepository>()
+            if (lockoutRepo != null && scope != null) {
+                scope.launch {
+                    while (true) {
+                        try {
+                            lockoutRepo.deleteExpired(kotlin.time.Clock.System.now())
+                        } catch (e: Exception) {
+                            environment.log.warn("Lockout cleanup failed", e)
+                        }
+                        kotlinx.coroutines.delay(60_000)
+                    }
+                }
+            }
         } catch (e: Exception) {
             environment.log.error("Application startup failed", e)
         }
@@ -388,18 +425,33 @@ fun Application.configureRouting(appVersion: String = "dev") {
         webhookRoutes()
         triggerWebhookRoutes()
         authenticate("session-auth") {
-            teamRoutes()
-            myInviteRoutes()
-            projectRoutes()
-            projectLockRoutes()
-            connectionRoutes()
-            releaseRoutes()
-            releaseWebSocketRoutes()
-            notificationRoutes()
-            scheduleRoutes()
-            triggerRoutes()
-            mavenTriggerRoutes()
-            tagRoutes()
+            rateLimit(RateLimitName("authenticated-api")) {
+                teamRoutes()
+                myInviteRoutes()
+                projectRoutes()
+                projectLockRoutes()
+                connectionRoutes()
+                releaseRoutes()
+                releaseWebSocketRoutes()
+                notificationRoutes()
+                scheduleRoutes()
+                triggerRoutes()
+                mavenTriggerRoutes()
+                tagRoutes()
+            }
         }
     }
+}
+
+private val UUID_REGEX = Regex("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
+private val FILE_PATH_REGEX = Regex("(/[\\w.\\-]+){2,}")
+private val STACK_TRACE_REGEX = Regex("\\s+at\\s+[\\w.\$]+\\(")
+
+internal fun sanitizeErrorMessage(message: String?): String {
+    if (message == null) return "Bad request"
+    if (STACK_TRACE_REGEX.containsMatchIn(message)) return "Bad request"
+    val sanitized = message
+        .replace(UUID_REGEX, "[id]")
+        .replace(FILE_PATH_REGEX, "[path]")
+    return if (sanitized.length > 200) sanitized.take(200) else sanitized
 }

@@ -79,7 +79,9 @@ class ConnectionTester(
 
     private suspend fun testGitHub(config: ConnectionConfig.GitHubConfig): ConnectionTestResult {
         return try {
-            val response = httpClient.get("https://api.github.com/repos/${config.owner}/${config.repo}") {
+            val owner = encodePathSegment(config.owner)
+            val repo = encodePathSegment(config.repo)
+            val response = httpClient.get("https://api.github.com/repos/$owner/$repo") {
                 header("Authorization", "Bearer ${config.token}")
                 header("Accept", "application/vnd.github+json")
             }

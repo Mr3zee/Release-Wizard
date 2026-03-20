@@ -12,9 +12,9 @@ data class DatabaseConfig(
 
 data class AuthConfig(
     val sessionSignKey: String,
+    val sessionEncryptKey: String = "",
     val sessionTtlSeconds: Long = 86400,
     val sessionRefreshThresholdSeconds: Long = 60,
-    /** AUTH-M5: Absolute session lifetime in seconds (default: 7 days). Sessions older than this are invalidated regardless of activity. */
     val absoluteSessionLifetimeSeconds: Long = 604800,
 )
 
@@ -55,12 +55,21 @@ fun ApplicationConfig.authConfig(): AuthConfig {
             "Set AUTH_SESSION_SIGN_KEY env var."
     }
 
+    val sessionEncryptKey = propertyOrNull("app.auth.sessionEncryptKey")?.getString() ?: ""
+    if (sessionEncryptKey.isNotEmpty()) {
+        require(sessionEncryptKey.length == 32 || sessionEncryptKey.length == 64) {
+            "app.auth.sessionEncryptKey must be 32 hex characters (16 bytes for AES-128) or " +
+                "64 hex characters (32 bytes for AES-256). Set AUTH_SESSION_ENCRYPT_KEY env var."
+        }
+    }
+
     val sessionTtlSeconds = propertyOrNull("app.auth.sessionTtlSeconds")?.getString()?.toLongOrNull() ?: 86400L
     val sessionRefreshThresholdSeconds = propertyOrNull("app.auth.sessionRefreshThresholdSeconds")?.getString()?.toLongOrNull() ?: 60L
     val absoluteSessionLifetimeSeconds = propertyOrNull("app.auth.absoluteSessionLifetimeSeconds")?.getString()?.toLongOrNull() ?: 604800L
 
     return AuthConfig(
         sessionSignKey = sessionSignKey,
+        sessionEncryptKey = sessionEncryptKey,
         sessionTtlSeconds = sessionTtlSeconds,
         sessionRefreshThresholdSeconds = sessionRefreshThresholdSeconds,
         absoluteSessionLifetimeSeconds = absoluteSessionLifetimeSeconds,

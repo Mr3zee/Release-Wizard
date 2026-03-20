@@ -123,7 +123,7 @@ class ProjectListScreenTest {
         val vm = ProjectListViewModel(ProjectApiClient(projectClient()), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme {
-                ProjectListScreen(viewModel = vm, onEditProject = {})
+                ProjectListScreen(viewModel = vm, onEditProject = {}, isTeamLead = true)
             }
         }
 
@@ -141,7 +141,7 @@ class ProjectListScreenTest {
         val vm = ProjectListViewModel(ProjectApiClient(projectClient()), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme {
-                ProjectListScreen(viewModel = vm, onEditProject = {})
+                ProjectListScreen(viewModel = vm, onEditProject = {}, isTeamLead = true)
             }
         }
 
@@ -694,7 +694,7 @@ class ProjectListScreenTest {
         }
 
         val vm = ProjectListViewModel(ProjectApiClient(client), MutableStateFlow(TeamId("test-team")))
-        setContent { MaterialTheme { ProjectListScreen(viewModel = vm, onEditProject = {}) } }
+        setContent { MaterialTheme { ProjectListScreen(viewModel = vm, onEditProject = {}, isTeamLead = true) } }
 
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("To Delete").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithText("Keeper").assertExists()
@@ -889,7 +889,7 @@ class ProjectListScreenTest {
     @Test
     fun `only one delete confirmation is visible at a time`() = runComposeUiTest {
         val vm = ProjectListViewModel(ProjectApiClient(projectClient()), MutableStateFlow(TeamId("test-team")))
-        setContent { MaterialTheme { ProjectListScreen(viewModel = vm, onEditProject = {}) } }
+        setContent { MaterialTheme { ProjectListScreen(viewModel = vm, onEditProject = {}, isTeamLead = true) } }
 
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("My Pipeline").fetchSemanticsNodes().isNotEmpty() }
 

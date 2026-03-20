@@ -101,6 +101,14 @@ fun ConnectionFormScreen(
 
     var showDiscardDialog by remember { mutableStateOf(false) }
 
+    DisposableEffect(Unit) {
+        onDispose {
+            slackWebhookUrl = ""
+            teamCityToken = ""
+            githubToken = ""
+        }
+    }
+
     if (isEditMode) {
         LaunchedEffect(connectionId) {
             viewModel.loadConnection(connectionId)

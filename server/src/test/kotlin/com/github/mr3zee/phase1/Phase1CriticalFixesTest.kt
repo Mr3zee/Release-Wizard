@@ -315,9 +315,9 @@ class Phase1CriticalFixesTest {
         }
         assertEquals(HttpStatusCode.OK, promoteResp.status)
 
-        // Now admin can be demoted (two leads exist)
+        // Now admin can be demoted by user2 (two leads exist, self-demotion blocked)
         val adminMember = members.members.first { it.role == TeamRole.TEAM_LEAD }
-        val demoteResp = admin.put("${ApiRoutes.Teams.BASE}/${teamId.value}/members/${adminMember.userId.value}") {
+        val demoteResp = user2.put("${ApiRoutes.Teams.BASE}/${teamId.value}/members/${adminMember.userId.value}") {
             contentType(ContentType.Application.Json)
             setBody(UpdateMemberRoleRequest(role = TeamRole.COLLABORATOR))
         }

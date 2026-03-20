@@ -11,17 +11,28 @@ import com.github.mr3zee.model.Parameter
  */
 object TemplateEngine {
 
+    const val MAX_RESOLUTION_DEPTH = 10
+
     private val TEMPLATE_PATTERN = Regex("""\$\{([^}]+)\}""")
+    private val INVALID_KEY_CHARS = charArrayOf('$', '{', '}')
+
+    fun validateParameterKey(key: String): Boolean {
+        return key.isNotEmpty() && INVALID_KEY_CHARS.none { it in key }
+    }
 
     fun resolve(
         value: String,
         parameters: List<Parameter>,
         blockOutputs: Map<BlockId, Map<String, String>> = emptyMap(),
+        currentDepth: Int = 0,
     ): String {
-        return TEMPLATE_PATTERN.replace(value) { match ->
+        if (currentDepth >= MAX_RESOLUTION_DEPTH) return value
+        val resolved = TEMPLATE_PATTERN.replace(value) { match ->
             val expr = match.groupValues[1]
             resolveExpression(expr, parameters, blockOutputs) ?: match.value
         }
+        if (resolved == value || !TEMPLATE_PATTERN.containsMatchIn(resolved)) return resolved
+        return resolve(resolved, parameters, blockOutputs, currentDepth + 1)
     }
 
     fun resolveParameters(

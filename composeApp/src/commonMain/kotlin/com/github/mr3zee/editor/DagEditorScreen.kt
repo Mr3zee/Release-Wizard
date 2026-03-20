@@ -648,4 +648,11 @@ private fun formatValidationError(error: ValidationError): String = when (error)
     is ValidationError.DuplicateBlockId -> packStringResource(Res.string.editor_validation_duplicate_id, error.blockId.value)
     is ValidationError.InvalidEdgeReference -> packStringResource(Res.string.editor_validation_invalid_edge, error.missingBlockId.value)
     is ValidationError.SelfLoop -> packStringResource(Res.string.editor_validation_self_loop, error.edge.fromBlockId.value)
+    is ValidationError.TooManyBlocks -> "Too many blocks: ${error.count} (max ${error.max})"
+    is ValidationError.TooManyEdges -> "Too many edges: ${error.count} (max ${error.max})"
+    is ValidationError.NestingTooDeep -> "Nesting too deep: depth ${error.depth} (max ${error.max})"
+    is ValidationError.BlockNameTooLong -> "Block name too long: ${error.length} chars (max ${error.max})"
+    is ValidationError.TooManyParameters -> "Too many parameters on block (max ${error.max})"
+    is ValidationError.ParameterKeyTooLong -> "Parameter key too long (max ${error.max})"
+    is ValidationError.ParameterValueTooLong -> "Parameter value too long (max ${error.max})"
 }

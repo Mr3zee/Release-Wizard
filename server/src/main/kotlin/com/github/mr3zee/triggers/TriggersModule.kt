@@ -7,6 +7,6 @@ val triggersModule = module {
     single<TriggerRepository> { ExposedTriggerRepository(get()) }
     single<TriggerService> {
         val webhookConfig = get<WebhookConfig>()
-        DefaultTriggerService(get(), get(), get(), webhookConfig.baseUrl, get())
+        DefaultTriggerService(get(), get(), get(), webhookConfig.baseUrl, get(), get())
     }
 }

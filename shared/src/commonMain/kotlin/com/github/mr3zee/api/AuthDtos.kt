@@ -10,13 +10,17 @@ import kotlinx.serialization.Serializable
 data class LoginRequest(
     val username: String,
     val password: String,
-)
+) {
+    override fun toString() = "LoginRequest(username=$username, password=****)"
+}
 
 @Serializable
 data class RegisterRequest(
     val username: String,
     val password: String,
-)
+) {
+    override fun toString() = "RegisterRequest(username=$username, password=****)"
+}
 
 @Serializable
 data class UserInfo(

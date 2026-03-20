@@ -25,10 +25,10 @@ class ExposedAuditRepository(private val db: Database) : AuditRepository {
     private suspend fun <T> dbQuery(transactionIsolation: Int, block: suspend () -> T): T =
         withContext(Dispatchers.IO) { suspendTransaction(db, transactionIsolation = transactionIsolation) { block() } }
 
-    override suspend fun insert(event: AuditEvent): Unit = dbQuery {
+    private fun performInsert(event: AuditEvent) {
         AuditEventTable.insert {
             it[id] = UUID.randomUUID()
-            it[teamId] = event.teamId?.let { tid -> UUID.fromString(tid.value) }
+            it[teamId] = event.teamId?.value
             it[actorUserId] = event.actorUserId?.let { uid -> UUID.fromString(uid.value) }
             it[actorUsername] = event.actorUsername
             it[action] = event.action.name
@@ -39,15 +39,18 @@ class ExposedAuditRepository(private val db: Database) : AuditRepository {
         }
     }
 
+    override suspend fun insert(event: AuditEvent): Unit = dbQuery {
+        performInsert(event)
+    }
+
     // TAG-M2: REPEATABLE_READ ensures count + data queries see consistent snapshot
     override suspend fun findByTeam(teamId: TeamId, offset: Int, limit: Int): Pair<List<AuditEvent>, Long> = dbQuery(Connection.TRANSACTION_REPEATABLE_READ) {
-        val teamUuid = UUID.fromString(teamId.value)
         val totalCount = AuditEventTable.selectAll()
-            .where { AuditEventTable.teamId eq teamUuid }
+            .where { AuditEventTable.teamId eq teamId.value }
             .count()
 
         val events = AuditEventTable.selectAll()
-            .where { AuditEventTable.teamId eq teamUuid }
+            .where { AuditEventTable.teamId eq teamId.value }
             .orderBy(AuditEventTable.timestamp, SortOrder.DESC)
             .limit(limit)
             .offset(safeOffset(offset))
@@ -58,7 +61,7 @@ class ExposedAuditRepository(private val db: Database) : AuditRepository {
 
     private fun ResultRow.toAuditEvent(): AuditEvent = AuditEvent(
         id = this[AuditEventTable.id].value.toString(),
-        teamId = this[AuditEventTable.teamId]?.let { entityId -> TeamId(entityId.value.toString()) },
+        teamId = this[AuditEventTable.teamId]?.let { TeamId(it) },
         actorUserId = this[AuditEventTable.actorUserId]?.let { entityId -> UserId(entityId.value.toString()) },
         actorUsername = this[AuditEventTable.actorUsername],
         action = AuditAction.valueOf(this[AuditEventTable.action]),

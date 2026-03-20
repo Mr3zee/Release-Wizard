@@ -4,11 +4,13 @@ import com.github.mr3zee.api.CreateProjectRequest
 import com.github.mr3zee.api.UpdateProjectRequest
 import com.github.mr3zee.audit.AuditService
 import com.github.mr3zee.dag.DagValidator
+import com.github.mr3zee.template.TemplateEngine
 import com.github.mr3zee.NotFoundException
 import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.connections.ConnectionsRepository
 import com.github.mr3zee.model.*
 import com.github.mr3zee.model.collectConnectionIds
+import com.github.mr3zee.releases.ReleasesRepository
 import com.github.mr3zee.teams.TeamAccessService
 import org.slf4j.LoggerFactory
 
@@ -27,8 +29,14 @@ class DefaultProjectsService(
     private val auditService: AuditService,
     private val connectionsRepository: ConnectionsRepository,
     private val lockRepository: ProjectLockRepository,
+    private val releasesRepository: ReleasesRepository,
 ) : ProjectsService {
     private val log = LoggerFactory.getLogger(DefaultProjectsService::class.java)
+
+    companion object {
+        const val MAX_NAME_LENGTH = 255
+        const val MAX_DESCRIPTION_LENGTH = 2000
+    }
 
     override suspend fun listProjects(session: UserSession, teamId: TeamId?, offset: Int, limit: Int, search: String?): Pair<List<ProjectTemplate>, Long> {
         return when {
@@ -53,7 +61,11 @@ class DefaultProjectsService(
 
     override suspend fun createProject(request: CreateProjectRequest, session: UserSession): ProjectTemplate {
         // PROJ-H4: Blank-name validation in service layer (not just route)
-        require(request.name.isNotBlank()) { "Project name must not be blank" }
+        val name = request.name.trim()
+        require(name.isNotBlank()) { "Project name must not be blank" }
+        require(name.length <= MAX_NAME_LENGTH) { "Project name must not exceed $MAX_NAME_LENGTH characters" }
+        require(name.none { it.isISOControl() || it.category == CharCategory.FORMAT }) { "Project name contains invalid characters" }
+        require(request.description.length <= MAX_DESCRIPTION_LENGTH) { "Project description must not exceed $MAX_DESCRIPTION_LENGTH characters" }
         teamAccessService.checkMembership(request.teamId, session)
         // PROJ-H2: Validate DAG structure on create
         validateDagGraph(request.dagGraph)
@@ -73,7 +85,15 @@ class DefaultProjectsService(
 
     override suspend fun updateProject(id: ProjectId, request: UpdateProjectRequest, session: UserSession): ProjectTemplate? {
         // PROJ-H4: Blank-name validation in service layer
-        request.name?.let { require(it.isNotBlank()) { "Project name must not be blank" } }
+        request.name?.let { rawName ->
+            val trimmed = rawName.trim()
+            require(trimmed.isNotBlank()) { "Project name must not be blank" }
+            require(trimmed.length <= MAX_NAME_LENGTH) { "Project name must not exceed $MAX_NAME_LENGTH characters" }
+            require(trimmed.none { it.isISOControl() || it.category == CharCategory.FORMAT }) { "Project name contains invalid characters" }
+        }
+        request.description?.let {
+            require(it.length <= MAX_DESCRIPTION_LENGTH) { "Project description must not exceed $MAX_DESCRIPTION_LENGTH characters" }
+        }
         checkAccess(id, session)
         // PROJ-H2: Validate DAG structure on update
         val dagGraph = request.dagGraph
@@ -108,6 +128,11 @@ class DefaultProjectsService(
         checkAccessTeamLead(id, session)
         val teamId = repository.findTeamId(id)
             ?: throw NotFoundException("Project not found")
+        val activeReleases = releasesRepository.findByProjectId(id)
+            .filter { !it.status.isTerminal }
+        require(activeReleases.isEmpty()) {
+            "Cannot delete project with active releases. Archive or cancel them first."
+        }
         val deleted = repository.delete(id)
         if (deleted) {
             log.info("Project deleted: {} (team={})", id.value, teamId)
@@ -134,8 +159,24 @@ class DefaultProjectsService(
 
     /**
      * PROJ-H2: Validates DAG structure — duplicate IDs, self-loops, invalid edges, cycles.
+     * Also enforces server-side size limits.
      */
     private fun validateDagGraph(dagGraph: DagGraph) {
+        // Global block count across all nesting levels (DagValidator checks per-subgraph)
+        val allBlocks = collectAllBlocks(dagGraph)
+        require(allBlocks.size <= DagValidator.MAX_BLOCKS) { "DAG exceeds maximum of ${DagValidator.MAX_BLOCKS} blocks (has ${allBlocks.size})" }
+
+        // Validate parameter keys don't contain template injection characters
+        for (block in allBlocks) {
+            if (block is Block.ActionBlock) {
+                for (param in block.parameters) {
+                    require(TemplateEngine.validateParameterKey(param.key)) {
+                        "Block parameter key contains invalid characters (\$, {, })"
+                    }
+                }
+            }
+        }
+
         val errors = DagValidator.validate(dagGraph)
         if (errors.isNotEmpty()) {
             val messages = errors.joinToString("; ") { error ->
@@ -144,10 +185,44 @@ class DefaultProjectsService(
                     is com.github.mr3zee.dag.ValidationError.SelfLoop -> "Self-loop on block: ${error.edge.fromBlockId.value}"
                     is com.github.mr3zee.dag.ValidationError.InvalidEdgeReference -> "Invalid edge reference: ${error.missingBlockId.value}"
                     is com.github.mr3zee.dag.ValidationError.CycleDetected -> "Cycle detected involving: ${error.involvedBlockIds.joinToString { it.value }}"
+                    is com.github.mr3zee.dag.ValidationError.TooManyBlocks -> "Too many blocks: ${error.count} (max ${error.max})"
+                    is com.github.mr3zee.dag.ValidationError.TooManyEdges -> "Too many edges: ${error.count} (max ${error.max})"
+                    is com.github.mr3zee.dag.ValidationError.NestingTooDeep -> "Nesting too deep: ${error.depth} (max ${error.max})"
+                    is com.github.mr3zee.dag.ValidationError.BlockNameTooLong -> "Block name too long: ${error.blockId.value}"
+                    is com.github.mr3zee.dag.ValidationError.TooManyParameters -> "Too many parameters on block: ${error.blockId.value}"
+                    is com.github.mr3zee.dag.ValidationError.ParameterKeyTooLong -> "Parameter key too long on block: ${error.blockId.value}"
+                    is com.github.mr3zee.dag.ValidationError.ParameterValueTooLong -> "Parameter value too long on block: ${error.blockId.value}"
                 }
             }
             throw IllegalArgumentException("Invalid DAG: $messages")
         }
+    }
+
+    private fun collectAllBlocks(dagGraph: DagGraph): List<Block> {
+        val result = mutableListOf<Block>()
+        fun collect(blocks: List<Block>) {
+            for (block in blocks) {
+                result.add(block)
+                if (block is Block.ContainerBlock) {
+                    collect(block.children.blocks)
+                }
+            }
+        }
+        collect(dagGraph.blocks)
+        return result
+    }
+
+    private fun computeMaxNestingDepth(dagGraph: DagGraph): Int {
+        fun depth(blocks: List<Block>, currentDepth: Int): Int {
+            var maxDepth = currentDepth
+            for (block in blocks) {
+                if (block is Block.ContainerBlock) {
+                    maxDepth = maxOf(maxDepth, depth(block.children.blocks, currentDepth + 1))
+                }
+            }
+            return maxDepth
+        }
+        return depth(dagGraph.blocks, 0)
     }
 
     /**

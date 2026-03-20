@@ -224,6 +224,7 @@ class DefaultReleasesService(
         repository.batchUpsertBlockExecutions(release.id, original.dagSnapshot.blocks)
 
         executionEngine.startExecution(release)
+        auditService.log(TeamId(releaseTeamId), session, AuditAction.RELEASE_RERUN, AuditTargetType.RELEASE, release.id.value, "Re-run of release ${id.value}")
         return release.copy(tags = originalTags)
     }
 
@@ -249,7 +250,13 @@ class DefaultReleasesService(
         checkAccessTeamLead(id, session)
         if (!release.status.isTerminal) return false
         cleanupApprovalMutexes(id)
-        return repository.updateStatus(id, ReleaseStatus.ARCHIVED)
+        val archived = repository.updateStatus(id, ReleaseStatus.ARCHIVED)
+        if (archived) {
+            val teamId = repository.findTeamId(id)
+                ?: throw NotFoundException("Release not found")
+            auditService.log(TeamId(teamId), session, AuditAction.RELEASE_ARCHIVED, AuditTargetType.RELEASE, id.value)
+        }
+        return archived
     }
 
     override suspend fun deleteRelease(id: ReleaseId, session: UserSession): Boolean {
@@ -257,8 +264,14 @@ class DefaultReleasesService(
         // REL-M4: Destructive operations require TEAM_LEAD
         checkAccessTeamLead(id, session)
         if (!release.status.isTerminal) return false
+        val teamId = repository.findTeamId(id)
+            ?: throw NotFoundException("Release not found")
         cleanupApprovalMutexes(id)
-        return repository.delete(id)
+        val deleted = repository.delete(id)
+        if (deleted) {
+            auditService.log(TeamId(teamId), session, AuditAction.RELEASE_DELETED, AuditTargetType.RELEASE, id.value)
+        }
+        return deleted
     }
 
     override suspend fun awaitRelease(id: ReleaseId) {
@@ -320,7 +333,13 @@ class DefaultReleasesService(
         val execution = repository.findBlockExecution(releaseId, blockId) ?: return false
         if (execution.status != BlockStatus.FAILED) return false
 
-        return executionEngine.restartBlock(releaseId, blockId)
+        val result = executionEngine.restartBlock(releaseId, blockId)
+        if (result) {
+            val teamId = repository.findTeamId(releaseId)
+                ?: throw NotFoundException("Release not found")
+            auditService.log(TeamId(teamId), session, AuditAction.BLOCK_RESTARTED, AuditTargetType.BLOCK, blockId.value, "Restarted block in release ${releaseId.value}")
+        }
+        return result
     }
 
     /**

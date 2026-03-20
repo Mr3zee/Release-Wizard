@@ -3,10 +3,9 @@ package com.github.mr3zee.triggers
 import com.github.mr3zee.NotFoundException
 import com.github.mr3zee.api.CreateTriggerRequest
 import com.github.mr3zee.api.TriggerResponse
+import com.github.mr3zee.audit.AuditService
 import com.github.mr3zee.auth.UserSession
-import com.github.mr3zee.model.ProjectId
-import com.github.mr3zee.model.TeamId
-import com.github.mr3zee.model.UserRole
+import com.github.mr3zee.model.*
 import com.github.mr3zee.projects.ProjectsRepository
 import com.github.mr3zee.teams.TeamAccessService
 import com.github.mr3zee.releases.ReleasesService
@@ -31,8 +30,13 @@ class DefaultTriggerService(
     private val projectsRepository: ProjectsRepository,
     private val webhookBaseUrl: String,
     private val teamAccessService: TeamAccessService,
+    private val auditService: AuditService,
 ) : TriggerService {
     private val log = LoggerFactory.getLogger(DefaultTriggerService::class.java)
+
+    companion object {
+        const val MAX_TRIGGERS_PER_PROJECT = 50
+    }
 
     override suspend fun listByProject(projectId: ProjectId, session: UserSession): List<TriggerResponse> {
         checkProjectAccess(projectId, session)
@@ -52,6 +56,10 @@ class DefaultTriggerService(
         baseUrl: String,
     ): TriggerResponse {
         checkProjectAccess(projectId, session)
+        val currentCount = repository.countByProjectId(projectId)
+        require(currentCount < MAX_TRIGGERS_PER_PROJECT) {
+            "Maximum $MAX_TRIGGERS_PER_PROJECT triggers per project reached"
+        }
         val rawSecret = generateSecret()
         val secretHash = sha256Hex(rawSecret)
         val entity = repository.create(
@@ -59,8 +67,11 @@ class DefaultTriggerService(
             secret = secretHash,
             parametersTemplate = request.parametersTemplate,
         )
+        val projectTeamId = projectsRepository.findTeamId(projectId)
+        if (projectTeamId != null) {
+            auditService.log(TeamId(projectTeamId), session, AuditAction.TRIGGER_CREATED, AuditTargetType.TRIGGER, entity.id, "Created trigger for project ${projectId.value}")
+        }
         log.info("Trigger created: {} for project {}", entity.id, projectId.value)
-        // Return the raw secret only in the creation response so the caller can store it
         return TriggerResponse(
             id = entity.id,
             projectId = entity.projectId,
@@ -82,6 +93,10 @@ class DefaultTriggerService(
         checkAccess(entity, session)
         val deleted = repository.delete(id)
         if (deleted) {
+            val projectTeamId = projectsRepository.findTeamId(entity.projectId)
+            if (projectTeamId != null) {
+                auditService.log(TeamId(projectTeamId), session, AuditAction.TRIGGER_DELETED, AuditTargetType.TRIGGER, id, "Deleted trigger for project ${entity.projectId.value}")
+            }
             log.info("Trigger deleted: {}", id)
         }
         return deleted

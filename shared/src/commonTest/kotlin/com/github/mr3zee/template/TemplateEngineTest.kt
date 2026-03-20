@@ -4,6 +4,9 @@ import com.github.mr3zee.model.BlockId
 import com.github.mr3zee.model.Parameter
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class TemplateEngineTest {
 
@@ -118,5 +121,69 @@ class TemplateEngineTest {
     fun `empty string passes through unchanged`() {
         val result = TemplateEngine.resolve("", emptyList())
         assertEquals("", result)
+    }
+
+    @Test
+    fun `resolution stops after max depth`() {
+        val params = listOf(
+            Parameter("a", $$"${param.b}"),
+            Parameter("b", $$"${param.a}"),
+        )
+        val result = TemplateEngine.resolve($$"${param.a}", params)
+        // Should terminate without infinite loop — the exact value depends on
+        // how many iterations occur before the depth limit, but it must not hang.
+        assertNotNull(result)
+    }
+
+    @Test
+    fun `nested template expressions do not cause infinite loops`() {
+        val params = listOf(
+            Parameter("x", "param.y"),
+            Parameter("y", "resolved"),
+        )
+        val result = TemplateEngine.resolve($$"${'$'}{${'$'}{param.x}}", params)
+        assertNotNull(result)
+    }
+
+    @Test
+    fun `self-referencing parameter stops at max depth`() {
+        val params = listOf(Parameter("loop", $$"${param.loop}"))
+        val result = TemplateEngine.resolve($$"${param.loop}", params)
+        assertEquals($$"${param.loop}", result)
+    }
+
+    @Test
+    fun `validateParameterKey rejects keys with dollar sign`() {
+        assertFalse(TemplateEngine.validateParameterKey($$"my${'$'}key"))
+    }
+
+    @Test
+    fun `validateParameterKey rejects keys with open brace`() {
+        assertFalse(TemplateEngine.validateParameterKey("my{key"))
+    }
+
+    @Test
+    fun `validateParameterKey rejects keys with close brace`() {
+        assertFalse(TemplateEngine.validateParameterKey("my}key"))
+    }
+
+    @Test
+    fun `validateParameterKey rejects empty key`() {
+        assertFalse(TemplateEngine.validateParameterKey(""))
+    }
+
+    @Test
+    fun `validateParameterKey accepts valid key`() {
+        assertTrue(TemplateEngine.validateParameterKey("my.valid-key_123"))
+    }
+
+    @Test
+    fun `chained resolution resolves multi-level references`() {
+        val params = listOf(
+            Parameter("inner", "final-value"),
+            Parameter("outer", $$"${param.inner}"),
+        )
+        val result = TemplateEngine.resolve($$"${param.outer}", params)
+        assertEquals("final-value", result)
     }
 }

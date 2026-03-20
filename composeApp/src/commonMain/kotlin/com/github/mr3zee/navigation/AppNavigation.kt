@@ -54,10 +54,13 @@ fun AppNavigation(
     onLanguagePackChange: (LanguagePack) -> Unit = {},
     onShowShortcuts: () -> Unit = {},
 ) {
+    val isTeamLead = userTeams.any { it.role == TeamRole.TEAM_LEAD }
+
     when (currentScreen) {
         is Screen.ProjectList -> ProjectListScreen(
             viewModel = projectListViewModel,
             onEditProject = { onNavigate(Screen.ProjectEditor(projectId = it)) },
+            isTeamLead = isTeamLead,
         )
         is Screen.ProjectEditor -> {
             val projectId = currentScreen.projectId
@@ -110,6 +113,7 @@ fun AppNavigation(
         is Screen.ReleaseList -> ReleaseListScreen(
             viewModel = releaseListViewModel,
             onViewRelease = { onNavigate(Screen.ReleaseView(it)) },
+            isTeamLead = isTeamLead,
         )
         is Screen.ReleaseView -> {
             val viewModel = remember(currentScreen.releaseId) {

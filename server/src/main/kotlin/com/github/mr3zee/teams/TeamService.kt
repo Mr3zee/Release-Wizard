@@ -41,11 +41,12 @@ class DefaultTeamService(
 ) : TeamService {
 
     override suspend fun createTeam(request: CreateTeamRequest, session: UserSession): TeamResponse {
-        require(request.name.isNotBlank()) { "Team name must not be blank" }
-        require(request.name.length <= 100) { "Team name must not exceed 100 characters" }
+        val name = sanitizeName(request.name)
+        require(name.isNotBlank()) { "Team name must not be blank" }
+        require(name.length <= 100) { "Team name must not exceed 100 characters" }
         require(request.description.length <= 2000) { "Team description must not exceed 2000 characters" }
         // Create the team and add the creator as TEAM_LEAD atomically in a single transaction
-        val team = teamRepository.createTeamWithMember(request.name, request.description, session.userId, TeamRole.TEAM_LEAD)
+        val team = teamRepository.createTeamWithMember(name, request.description, session.userId, TeamRole.TEAM_LEAD)
         auditService.log(team.id, session, AuditAction.TEAM_CREATED, AuditTargetType.TEAM, team.id.value, "Created team '${team.name}'")
         return TeamResponse(team = team, memberCount = 1)
     }
@@ -78,7 +79,7 @@ class DefaultTeamService(
 
     override suspend fun updateTeam(teamId: TeamId, request: UpdateTeamRequest, session: UserSession): TeamResponse {
         teamAccessService.checkTeamLead(teamId, session)
-        val requestName = request.name
+        val requestName = request.name?.let { sanitizeName(it) }
         if (requestName != null) {
             require(requestName.isNotBlank()) { "Team name must not be blank" }
             require(requestName.length <= 100) { "Team name must not exceed 100 characters" }
@@ -87,7 +88,7 @@ class DefaultTeamService(
         if (requestDescription != null) {
             require(requestDescription.length <= 2000) { "Team description must not exceed 2000 characters" }
         }
-        val team = teamRepository.updateIfNameAvailable(teamId, request.name, request.description)
+        val team = teamRepository.updateIfNameAvailable(teamId, requestName, request.description)
             ?: throw NotFoundException("Team not found")
         auditService.log(teamId, session, AuditAction.TEAM_UPDATED, AuditTargetType.TEAM, teamId.value, "Updated team '${team.name}'")
         return TeamResponse(team = team, memberCount = teamRepository.getMemberCount(teamId))
@@ -107,6 +108,7 @@ class DefaultTeamService(
     }
 
     override suspend fun updateMemberRole(teamId: TeamId, userId: String, request: UpdateMemberRoleRequest, session: UserSession) {
+        require(userId != session.userId) { "Cannot change your own role" }
         teamAccessService.checkTeamLead(teamId, session)
         // TEAM-C1: Atomic role update with last-lead protection in a single transaction
         teamRepository.updateMemberRoleAtomic(teamId, userId, request.role)
@@ -114,6 +116,7 @@ class DefaultTeamService(
     }
 
     override suspend fun removeMember(teamId: TeamId, userId: String, session: UserSession) {
+        require(userId != session.userId) { "Use the leave endpoint to leave a team" }
         teamAccessService.checkTeamLead(teamId, session)
         // TEAM-C1: Atomic removal with last-lead protection in a single transaction
         teamRepository.removeMemberAtomic(teamId, userId)
@@ -219,6 +222,12 @@ class DefaultTeamService(
         val teamId = teamRepository.acceptInviteAtomic(inviteId, session.userId, TeamRole.COLLABORATOR)
         auditService.log(teamId, session, AuditAction.INVITE_ACCEPTED, AuditTargetType.USER, session.userId, "Accepted invite")
         auditService.log(teamId, session, AuditAction.MEMBER_JOINED, AuditTargetType.USER, session.userId, "Joined team via accepted invite")
+    }
+
+    private fun sanitizeName(name: String): String {
+        val trimmed = name.trim()
+        require(trimmed.none { it.isISOControl() || it.category == CharCategory.FORMAT }) { "Name contains invalid characters" }
+        return trimmed
     }
 
     override suspend fun declineInvite(inviteId: String, session: UserSession) {

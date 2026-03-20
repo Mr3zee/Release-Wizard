@@ -14,6 +14,7 @@ data class TriggerEntity(
 interface TriggerRepository {
     suspend fun findByProjectId(projectId: ProjectId): List<TriggerEntity>
     suspend fun findById(id: String): TriggerEntity?
+    suspend fun countByProjectId(projectId: ProjectId): Long
     suspend fun create(
         projectId: ProjectId,
         secret: String,
