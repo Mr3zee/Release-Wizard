@@ -201,11 +201,11 @@ fun Application.module() {
             cookie.secure = this@module.environment.config.propertyOrNull("app.auth.secureCookie")?.getString()?.toBooleanStrictOrNull() ?: true
             cookie.extensions["SameSite"] = "Lax"
             if (authConfig.sessionEncryptKey.isNotEmpty()) {
-                // Custom ivGenerator: Ktor 3.3.3 bug passes encryptionKeySize instead of
-                // blockSize, causing AES-256 to generate 32-byte IV instead of 16-byte.
+                // Custom ivGenerator works around KTOR-661: init block passes encryptionKeySize
+                // instead of blockSize to ivGenerator, causing AES-256 to generate 32-byte IV.
                 transform(SessionTransportTransformerEncrypt(
-                    hex(authConfig.sessionEncryptKey),
-                    hex(authConfig.sessionSignKey),
+                    encryptionKeySpec = javax.crypto.spec.SecretKeySpec(hex(authConfig.sessionEncryptKey), "AES"),
+                    signKeySpec = javax.crypto.spec.SecretKeySpec(hex(authConfig.sessionSignKey), "HmacSHA256"),
                     ivGenerator = { ByteArray(16).apply { java.security.SecureRandom().nextBytes(this) } },
                 ))
             } else {
