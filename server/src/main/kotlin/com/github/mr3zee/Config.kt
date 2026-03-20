@@ -59,9 +59,11 @@ fun ApplicationConfig.authConfig(): AuthConfig {
 
     val sessionEncryptKey = propertyOrNull("app.auth.sessionEncryptKey")?.getString() ?: ""
     if (sessionEncryptKey.isNotEmpty()) {
-        require(sessionEncryptKey.length == 32 || sessionEncryptKey.length == 64) {
-            "app.auth.sessionEncryptKey must be 32 hex characters (16 bytes for AES-128) or " +
-                "64 hex characters (32 bytes for AES-256). Set AUTH_SESSION_ENCRYPT_KEY env var."
+        // Only AES-128 (32 hex = 16 bytes) is supported. AES-256 (64 hex = 32 bytes) triggers
+        // a Ktor 3.3.3 bug: the init block generates an IV using key size instead of block size.
+        require(sessionEncryptKey.length == 32) {
+            "app.auth.sessionEncryptKey must be 32 hex characters (16 bytes for AES-128). " +
+                "Set AUTH_SESSION_ENCRYPT_KEY env var. Generate with: openssl rand -hex 16"
         }
     }
 
