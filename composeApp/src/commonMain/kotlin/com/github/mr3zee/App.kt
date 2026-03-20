@@ -27,6 +27,9 @@ import com.github.mr3zee.auth.AuthEvent
 import com.github.mr3zee.auth.AuthViewModel
 import com.github.mr3zee.auth.LoginScreen
 import com.github.mr3zee.connections.ConnectionsViewModel
+import com.github.mr3zee.profile.ProfileViewModel
+import com.github.mr3zee.profile.ResetPasswordScreen
+import com.github.mr3zee.profile.ResetPasswordViewModel
 import com.github.mr3zee.navigation.AppNavigation
 import com.github.mr3zee.navigation.AppShell
 import com.github.mr3zee.navigation.NavigationController
@@ -70,6 +73,13 @@ fun App() {
     val projectListViewModel = remember { ProjectListViewModel(projectApiClient, activeTeamId) }
     val connectionsViewModel = remember { ConnectionsViewModel(connectionApiClient, activeTeamId) }
     val releaseListViewModel = remember { ReleaseListViewModel(releaseApiClient, projectApiClient, activeTeamId) }
+
+    val profileViewModel = remember { ProfileViewModel(authApiClient) }
+    LaunchedEffect(profileViewModel) {
+        profileViewModel.onUsernameChanged = { updatedUserInfo ->
+            authViewModel.updateUser(updatedUserInfo)
+        }
+    }
 
     val user by authViewModel.user.collectAsState()
     val isCheckingSession by authViewModel.isCheckingSession.collectAsState()
@@ -115,6 +125,15 @@ fun App() {
             } else {
                 navController.resetTo(Screen.TeamList)
             }
+        }
+    }
+
+    // Ungated URL check — detect /reset-password/{token} before auth completes
+    LaunchedEffect(Unit) {
+        val initialPath = router.currentPath()
+        val initialScreen = parseUrlPath(initialPath)
+        if (initialScreen is Screen.ResetPassword) {
+            navController.navigateFromExternal(initialScreen)
         }
     }
 
@@ -192,6 +211,17 @@ fun App() {
             ) {
 
                 when {
+                    currentScreen is Screen.ResetPassword -> {
+                        val token = (currentScreen as Screen.ResetPassword).token
+                        val resetViewModel = remember(token) { ResetPasswordViewModel(token, authApiClient) }
+                        ResetPasswordScreen(
+                            viewModel = resetViewModel,
+                            onGoToLogin = {
+                                navController.resetTo(Screen.ProjectList)
+                                router.replacePath("/projects")
+                            },
+                        )
+                    }
                     isCheckingSession -> {
                         Box(
                             modifier = Modifier.fillMaxSize(),
@@ -237,6 +267,8 @@ fun App() {
                                     onShowShortcuts = { showShortcutsOverlay = true },
                                 )
                             },
+                            username = user?.username,
+                            onProfileClick = { navController.navigate(Screen.Profile) },
                             onSignOut = logout,
                         ) {
                             AppNavigation(
@@ -273,6 +305,8 @@ fun App() {
                                     saveLanguagePack(it)
                                 },
                                 onShowShortcuts = { showShortcutsOverlay = true },
+                                profileViewModel = profileViewModel,
+                                authApiClient = authApiClient,
                             )
                         }
                     }

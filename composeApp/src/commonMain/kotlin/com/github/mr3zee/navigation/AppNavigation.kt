@@ -1,6 +1,7 @@
 package com.github.mr3zee.navigation
 
 import androidx.compose.runtime.*
+import com.github.mr3zee.api.AuthApiClient
 import com.github.mr3zee.api.ConnectionApiClient
 import com.github.mr3zee.api.MavenTriggerApiClient
 import com.github.mr3zee.api.ProjectApiClient
@@ -18,6 +19,10 @@ import com.github.mr3zee.editor.DagEditorScreen
 import com.github.mr3zee.editor.DagEditorViewModel
 import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.model.TeamRole
+import com.github.mr3zee.profile.AdminUsersScreen
+import com.github.mr3zee.profile.AdminUsersViewModel
+import com.github.mr3zee.profile.ProfileScreen
+import com.github.mr3zee.profile.ProfileViewModel
 import com.github.mr3zee.projects.ProjectListScreen
 import com.github.mr3zee.projects.ProjectListViewModel
 import com.github.mr3zee.releases.*
@@ -53,6 +58,8 @@ fun AppNavigation(
     languagePack: LanguagePack = LanguagePack.ENGLISH,
     onLanguagePackChange: (LanguagePack) -> Unit = {},
     onShowShortcuts: () -> Unit = {},
+    profileViewModel: ProfileViewModel? = null,
+    authApiClient: AuthApiClient? = null,
 ) {
     val isTeamLead = userTeams.any { it.role == TeamRole.TEAM_LEAD }
 
@@ -223,6 +230,29 @@ fun AppNavigation(
                 viewModel = viewModel,
                 onBack = { onGoBack() },
             )
+        }
+        is Screen.Profile -> {
+            val vm = profileViewModel ?: return
+            ProfileScreen(
+                viewModel = vm,
+                currentUserRole = currentUserRole,
+                onBack = { onGoBack() },
+                onNavigateToTeam = { onNavigate(Screen.TeamDetail(it)) },
+                onNavigateToAdminUsers = { onNavigate(Screen.AdminUsers) },
+                onAccountDeleted = onLogout,
+            )
+        }
+        is Screen.AdminUsers -> {
+            val client = authApiClient ?: return
+            val viewModel = remember { AdminUsersViewModel(client) }
+            AdminUsersScreen(
+                viewModel = viewModel,
+                onBack = { onGoBack() },
+            )
+        }
+        is Screen.ResetPassword -> {
+            // Handled in App.kt before auth gate, this branch shouldn't be reached
+            LaunchedEffect(Unit) { onGoBack() }
         }
     }
 }
