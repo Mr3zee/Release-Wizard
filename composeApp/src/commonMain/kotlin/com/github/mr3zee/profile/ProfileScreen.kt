@@ -229,6 +229,7 @@ fun ProfileScreen(
                         Text(
                             userInfo?.username ?: "",
                             style = AppTypography.heading,
+                            color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.testTag("profile_username"),
                         )
                         Spacer(modifier = Modifier.height(Spacing.sm))
