@@ -25,6 +25,9 @@ fun Screen.toUrlPath(): String = when (this) {
     is Screen.TeamManage -> "/teams/${teamId.value}/manage"
     Screen.MyInvites -> "/teams/my-invites"
     is Screen.AuditLog -> "/teams/${teamId.value}/audit"
+    Screen.Profile -> "/profile"
+    is Screen.ResetPassword -> "/reset-password/${token}"
+    Screen.AdminUsers -> "/admin/users"
 }
 
 /**
@@ -79,6 +82,12 @@ fun parseUrlPath(path: String): Screen? {
         segments.size == 2 && segments[0] == "teams" -> {
             Screen.TeamDetail(teamId = TeamId(segments[1]))
         }
+        // /profile
+        segments == listOf("profile") -> Screen.Profile
+        // /admin/users
+        segments == listOf("admin", "users") -> Screen.AdminUsers
+        // /reset-password/{token}
+        segments.size == 2 && segments[0] == "reset-password" -> Screen.ResetPassword(token = segments[1])
         else -> null
     }
 }
