@@ -66,6 +66,8 @@ class DefaultProjectsService(
         require(name.length <= MAX_NAME_LENGTH) { "Project name must not exceed $MAX_NAME_LENGTH characters" }
         require(name.none { it.isISOControl() || it.category == CharCategory.FORMAT }) { "Project name contains invalid characters" }
         require(request.description.length <= MAX_DESCRIPTION_LENGTH) { "Project description must not exceed $MAX_DESCRIPTION_LENGTH characters" }
+        require(!request.description.contains("\${")) { "Project description must not contain template expressions" }
+        require(request.description.none { it.isISOControl() && it != '\n' && it != '\r' && it != '\t' }) { "Project description contains invalid control characters" }
         teamAccessService.checkMembership(request.teamId, session)
         // PROJ-H2: Validate DAG structure on create
         validateDagGraph(request.dagGraph)
@@ -93,6 +95,8 @@ class DefaultProjectsService(
         }
         request.description?.let {
             require(it.length <= MAX_DESCRIPTION_LENGTH) { "Project description must not exceed $MAX_DESCRIPTION_LENGTH characters" }
+            require(!it.contains("\${")) { "Project description must not contain template expressions" }
+            require(it.none { ch -> ch.isISOControl() && ch != '\n' && ch != '\r' && ch != '\t' }) { "Project description contains invalid control characters" }
         }
         checkAccess(id, session)
         // PROJ-H2: Validate DAG structure on update
@@ -166,8 +170,14 @@ class DefaultProjectsService(
         val allBlocks = collectAllBlocks(dagGraph)
         require(allBlocks.size <= DagValidator.MAX_BLOCKS) { "DAG exceeds maximum of ${DagValidator.MAX_BLOCKS} blocks (has ${allBlocks.size})" }
 
-        // Validate parameter keys don't contain template injection characters
+        // Validate parameter keys and descriptions don't contain template injection characters
         for (block in allBlocks) {
+            require(!block.description.contains("\${")) {
+                "Block '${block.id.value}' description must not contain template expressions"
+            }
+            require(block.description.none { it.isISOControl() && it != '\n' && it != '\r' && it != '\t' }) {
+                "Block '${block.id.value}' description contains invalid control characters"
+            }
             if (block is Block.ActionBlock) {
                 for (param in block.parameters) {
                     require(TemplateEngine.validateParameterKey(param.key)) {
@@ -192,6 +202,7 @@ class DefaultProjectsService(
                     is com.github.mr3zee.dag.ValidationError.TooManyParameters -> "Too many parameters on block: ${error.blockId.value}"
                     is com.github.mr3zee.dag.ValidationError.ParameterKeyTooLong -> "Parameter key too long on block: ${error.blockId.value}"
                     is com.github.mr3zee.dag.ValidationError.ParameterValueTooLong -> "Parameter value too long on block: ${error.blockId.value}"
+                    is com.github.mr3zee.dag.ValidationError.BlockDescriptionTooLong -> "Block description too long: ${error.blockId.value} (${error.length}/${error.max})"
                 }
             }
             throw IllegalArgumentException("Invalid DAG: $messages")

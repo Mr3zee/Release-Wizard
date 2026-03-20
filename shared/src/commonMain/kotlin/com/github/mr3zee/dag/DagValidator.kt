@@ -17,6 +17,7 @@ sealed class ValidationError {
     data class TooManyParameters(val blockId: BlockId, val count: Int, val max: Int) : ValidationError()
     data class ParameterKeyTooLong(val blockId: BlockId, val key: String, val max: Int) : ValidationError()
     data class ParameterValueTooLong(val blockId: BlockId, val key: String, val max: Int) : ValidationError()
+    data class BlockDescriptionTooLong(val blockId: BlockId, val length: Int, val max: Int) : ValidationError()
 }
 
 object DagValidator {
@@ -28,6 +29,7 @@ object DagValidator {
     const val MAX_PARAMETERS_PER_BLOCK = 50
     const val MAX_PARAM_KEY_LENGTH = 255
     const val MAX_PARAM_VALUE_LENGTH = 1000
+    const val MAX_BLOCK_DESCRIPTION_LENGTH = 2000
 
     fun validate(graph: DagGraph, currentDepth: Int = 0): List<ValidationError> {
         val errors = mutableListOf<ValidationError>()
@@ -54,6 +56,10 @@ object DagValidator {
 
             if (block.name.length > MAX_BLOCK_NAME_LENGTH) {
                 errors.add(ValidationError.BlockNameTooLong(block.id, block.name.length, MAX_BLOCK_NAME_LENGTH))
+            }
+
+            if (block.description.length > MAX_BLOCK_DESCRIPTION_LENGTH) {
+                errors.add(ValidationError.BlockDescriptionTooLong(block.id, block.description.length, MAX_BLOCK_DESCRIPTION_LENGTH))
             }
 
             if (block is Block.ActionBlock) {

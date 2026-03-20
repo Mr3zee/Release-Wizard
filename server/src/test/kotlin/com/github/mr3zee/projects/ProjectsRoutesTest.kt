@@ -1,9 +1,11 @@
 package com.github.mr3zee.projects
 
 import com.github.mr3zee.api.*
+import com.github.mr3zee.dag.DagValidator
 import com.github.mr3zee.jsonClient
 import com.github.mr3zee.login
 import com.github.mr3zee.loginAndCreateTeam
+import com.github.mr3zee.model.*
 import com.github.mr3zee.testModule
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -11,6 +13,7 @@ import io.ktor.http.*
 import io.ktor.server.testing.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class ProjectsRoutesTest {
@@ -172,5 +175,225 @@ class ProjectsRoutesTest {
         val client = jsonClient()
         val response = client.get(ApiRoutes.Projects.BASE)
         assertEquals(HttpStatusCode.Unauthorized, response.status)
+    }
+
+    @Test
+    fun `create project with block descriptions`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        val teamId = client.loginAndCreateTeam()
+
+        val blockDescription = "# Build Step\nRuns the **main** build"
+        val dagGraph = DagGraph(
+            blocks = listOf(
+                Block.ActionBlock(
+                    id = BlockId("b1"),
+                    name = "Build",
+                    description = blockDescription,
+                    type = BlockType.TEAMCITY_BUILD,
+                ),
+            ),
+        )
+
+        val createResponse = client.post(ApiRoutes.Projects.BASE) {
+            contentType(ContentType.Application.Json)
+            setBody(CreateProjectRequest(name = "Desc Project", teamId = teamId, dagGraph = dagGraph))
+        }
+        assertEquals(HttpStatusCode.Created, createResponse.status)
+        val created = createResponse.body<ProjectResponse>()
+
+        val getResponse = client.get(ApiRoutes.Projects.byId(created.project.id.value))
+        assertEquals(HttpStatusCode.OK, getResponse.status)
+        val fetched = getResponse.body<ProjectResponse>()
+        val fetchedBlock = fetched.project.dagGraph.blocks.first()
+        assertEquals(blockDescription, fetchedBlock.description)
+    }
+
+    @Test
+    fun `reject block description exceeding limit`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        val teamId = client.loginAndCreateTeam()
+
+        val longDescription = "a".repeat(DagValidator.MAX_BLOCK_DESCRIPTION_LENGTH + 1)
+        val dagGraph = DagGraph(
+            blocks = listOf(
+                Block.ActionBlock(
+                    id = BlockId("b1"),
+                    name = "Build",
+                    description = longDescription,
+                    type = BlockType.TEAMCITY_BUILD,
+                ),
+            ),
+        )
+
+        val response = client.post(ApiRoutes.Projects.BASE) {
+            contentType(ContentType.Application.Json)
+            setBody(CreateProjectRequest(name = "Too Long Desc", teamId = teamId, dagGraph = dagGraph))
+        }
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+    }
+
+    @Test
+    fun `reject block description containing template expression`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        val teamId = client.loginAndCreateTeam()
+
+        val dagGraph = DagGraph(
+            blocks = listOf(
+                Block.ActionBlock(
+                    id = BlockId("b1"),
+                    name = "Build",
+                    description = "Use \${param.secret} here",
+                    type = BlockType.TEAMCITY_BUILD,
+                ),
+            ),
+        )
+
+        val response = client.post(ApiRoutes.Projects.BASE) {
+            contentType(ContentType.Application.Json)
+            setBody(CreateProjectRequest(name = "Injection Desc", teamId = teamId, dagGraph = dagGraph))
+        }
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+    }
+
+    @Test
+    fun `reject project description containing template expression`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        val teamId = client.loginAndCreateTeam()
+
+        val response = client.post(ApiRoutes.Projects.BASE) {
+            contentType(ContentType.Application.Json)
+            setBody(
+                CreateProjectRequest(
+                    name = "Template Inject",
+                    teamId = teamId,
+                    description = "Check \${param.key}",
+                )
+            )
+        }
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+    }
+
+    @Test
+    fun `release snapshot preserves block descriptions`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        val teamId = client.loginAndCreateTeam()
+
+        val blockDescription = "# Deploy\nDeploys to **staging**"
+        val dagGraph = DagGraph(
+            blocks = listOf(
+                Block.ActionBlock(
+                    id = BlockId("b1"),
+                    name = "Deploy",
+                    description = blockDescription,
+                    type = BlockType.TEAMCITY_BUILD,
+                ),
+            ),
+        )
+
+        val createResponse = client.post(ApiRoutes.Projects.BASE) {
+            contentType(ContentType.Application.Json)
+            setBody(CreateProjectRequest(name = "Snapshot Project", teamId = teamId, dagGraph = dagGraph))
+        }
+        assertEquals(HttpStatusCode.Created, createResponse.status)
+        val project = createResponse.body<ProjectResponse>().project
+
+        val releaseResponse = client.post(ApiRoutes.Releases.BASE) {
+            contentType(ContentType.Application.Json)
+            setBody(CreateReleaseRequest(projectTemplateId = project.id))
+        }
+        assertEquals(HttpStatusCode.Created, releaseResponse.status)
+        val release = releaseResponse.body<ReleaseResponse>().release
+
+        val getResponse = client.get(ApiRoutes.Releases.byId(release.id.value))
+        assertEquals(HttpStatusCode.OK, getResponse.status)
+        val fetched = getResponse.body<ReleaseResponse>()
+        val snapshotBlock = fetched.release.dagSnapshot.blocks.first()
+        assertNotNull(snapshotBlock)
+        assertEquals(blockDescription, snapshotBlock.description)
+    }
+
+    @Test
+    fun `update project rejects description with template expression`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        val teamId = client.loginAndCreateTeam()
+
+        val createResponse = client.post(ApiRoutes.Projects.BASE) {
+            contentType(ContentType.Application.Json)
+            setBody(CreateProjectRequest(name = "Update Template Test", teamId = teamId))
+        }
+        assertEquals(HttpStatusCode.Created, createResponse.status)
+        val projectId = createResponse.body<ProjectResponse>().project.id.value
+
+        val updateResponse = client.put(ApiRoutes.Projects.byId(projectId)) {
+            contentType(ContentType.Application.Json)
+            setBody(UpdateProjectRequest(description = "Check \${param.key}"))
+        }
+        assertEquals(HttpStatusCode.BadRequest, updateResponse.status)
+    }
+
+    @Test
+    fun `update project rejects block description with template expression`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        val teamId = client.loginAndCreateTeam()
+
+        val createResponse = client.post(ApiRoutes.Projects.BASE) {
+            contentType(ContentType.Application.Json)
+            setBody(CreateProjectRequest(name = "Update Block Desc Test", teamId = teamId))
+        }
+        assertEquals(HttpStatusCode.Created, createResponse.status)
+        val projectId = createResponse.body<ProjectResponse>().project.id.value
+
+        val dagGraph = DagGraph(
+            blocks = listOf(
+                Block.ActionBlock(
+                    id = BlockId("b1"),
+                    name = "Build",
+                    description = "Use \${param.secret} here",
+                    type = BlockType.TEAMCITY_BUILD,
+                ),
+            ),
+        )
+        val updateResponse = client.put(ApiRoutes.Projects.byId(projectId)) {
+            contentType(ContentType.Application.Json)
+            setBody(UpdateProjectRequest(dagGraph = dagGraph))
+        }
+        assertEquals(HttpStatusCode.BadRequest, updateResponse.status)
+    }
+
+    @Test
+    fun `update project rejects oversized block description`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        val teamId = client.loginAndCreateTeam()
+
+        val createResponse = client.post(ApiRoutes.Projects.BASE) {
+            contentType(ContentType.Application.Json)
+            setBody(CreateProjectRequest(name = "Update Long Desc Test", teamId = teamId))
+        }
+        assertEquals(HttpStatusCode.Created, createResponse.status)
+        val projectId = createResponse.body<ProjectResponse>().project.id.value
+
+        val dagGraph = DagGraph(
+            blocks = listOf(
+                Block.ActionBlock(
+                    id = BlockId("b1"),
+                    name = "Build",
+                    description = "a".repeat(DagValidator.MAX_BLOCK_DESCRIPTION_LENGTH + 1),
+                    type = BlockType.TEAMCITY_BUILD,
+                ),
+            ),
+        )
+        val updateResponse = client.put(ApiRoutes.Projects.byId(projectId)) {
+            contentType(ContentType.Application.Json)
+            setBody(UpdateProjectRequest(dagGraph = dagGraph))
+        }
+        assertEquals(HttpStatusCode.BadRequest, updateResponse.status)
     }
 }
