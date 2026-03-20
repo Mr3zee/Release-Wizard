@@ -1,8 +1,13 @@
 package com.github.mr3zee.e2e.releases
 
 import androidx.compose.ui.test.*
+import com.github.mr3zee.api.ApiRoutes
+import com.github.mr3zee.api.UserInfo
+import com.github.mr3zee.createTestProjectWithBlocks
 import com.github.mr3zee.e2e.E2eTestBase
 import com.github.mr3zee.login
+import io.ktor.client.call.*
+import io.ktor.client.request.*
 import kotlin.test.Test
 
 @OptIn(ExperimentalTestApi::class)
@@ -18,34 +23,21 @@ class ReleaseE2eTest : E2eTestBase() {
         onNodeWithTag("release_list_screen").assertExists()
     }
 
-    @org.junit.Ignore("DAG editor back navigation + sidebar not visible on non-top-level screens — needs rework")
     @Test
     fun `start release from UI`() = runComposeUiTest {
         directClient.login("rel-start-user", "TestPass123")
 
         loginAndCreateTeamViaUi("rel-start-user", "TestPass123", "Start Release Team")
 
-        // Create a project first (through UI so it has proper team association)
-        onNodeWithTag("create_project_fab").performClick()
-        waitForIdle()
-        waitUntil(timeoutMillis = 5_000L) {
-            onAllNodesWithTag("project_name_input").fetchSemanticsNodes().isNotEmpty()
-        }
-        onNodeWithTag("project_name_input").performTextInput("Release Source Project")
-        waitForIdle()
-        onNodeWithTag("create_project_confirm").performClick()
+        // Re-login directClient to get fresh session with team info
+        directClient.login("rel-start-user", "TestPass123")
+        val userInfo = directClient.get(ApiRoutes.Auth.ME).body<UserInfo>()
+        val teamId = userInfo.teams.first().teamId
 
-        // Wait for DAG editor
-        waitUntil(timeoutMillis = 10_000L) {
-            onAllNodesWithTag("dag_editor_screen").fetchSemanticsNodes().isNotEmpty()
-        }
+        // Create project with blocks via directClient (avoids DAG editor navigation)
+        val projectId = directClient.createTestProjectWithBlocks(teamId, "Release Source Project")
 
-        // DAG editor is not a top-level screen — sidebar is hidden.
-        // Go back to project list first, then navigate to releases.
-        onNodeWithTag("back_button", useUnmergedTree = true).performClick()
-        waitUntil(timeoutMillis = 10_000L) {
-            onAllNodesWithTag("project_list_screen").fetchSemanticsNodes().isNotEmpty()
-        }
+        // Navigate to releases
         navigateToSection("sidebar_nav_releases", "release_list_screen")
 
         // Click start release
@@ -56,13 +48,14 @@ class ReleaseE2eTest : E2eTestBase() {
             onAllNodesWithTag("start_release_form").fetchSemanticsNodes().isNotEmpty()
         }
 
-        // Select the project
+        // Select the project using its testTag
         onNodeWithTag("project_dropdown").performClick()
         waitForIdle()
         waitUntil(timeoutMillis = 5_000L) {
-            onAllNodesWithText("Release Source Project").fetchSemanticsNodes().isNotEmpty()
+            onAllNodesWithTag("project_option_$projectId", useUnmergedTree = true)
+                .fetchSemanticsNodes().isNotEmpty()
         }
-        onAllNodesWithText("Release Source Project").onFirst().performClick()
+        onNodeWithTag("project_option_$projectId", useUnmergedTree = true).performClick()
         waitForIdle()
 
         // Start the release

@@ -75,6 +75,11 @@ kotlin {
 }
 
 
+// Run AWT in headless mode for UI tests — prevents macOS focus stealing
+tasks.withType<Test> {
+    systemProperty("java.awt.headless", "true")
+}
+
 compose.desktop {
     application {
         mainClass = "com.github.mr3zee.MainKt"
