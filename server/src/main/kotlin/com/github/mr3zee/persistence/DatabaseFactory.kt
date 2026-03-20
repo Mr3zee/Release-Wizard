@@ -30,10 +30,9 @@ fun dataSource(config: DatabaseConfig): DataSource {
 fun initDatabase(ds: DataSource): Database {
     val database = Database.connect(ds)
     transaction(database) {
-        // INFRA-C2: Use createMissingTablesAndColumns instead of create to handle schema drift.
-        // Flyway/Liquibase not needed — project is in development with no production data.
-        @Suppress("DEPRECATION")
-        SchemaUtils.createMissingTablesAndColumns(
+        // Create tables that don't exist. No ALTER of existing columns — avoids FK conflicts
+        // when column types change between versions. Safe because there is no production data.
+        SchemaUtils.create(
             UserTable,
             TeamTable,
             TeamMembershipTable,
