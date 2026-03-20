@@ -12,11 +12,16 @@ import com.github.mr3zee.projects.ProjectsRepository
 import com.github.mr3zee.teams.TeamAccessService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.time.Duration.Companion.seconds
 
 // Rejects consecutive dots (would produce double slashes in Maven path) and leading/trailing dots.
 private val GROUP_ID_REGEX = Regex("^[a-z0-9]([a-z0-9._-]*[a-z0-9])?$")
 private val ARTIFACT_ID_REGEX = Regex("^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$")
 private val PARAMETER_KEY_REGEX = Regex("^[a-zA-Z0-9_.-]+$")
+
+/** MAVEN-M2: Per-project Maven trigger count cap */
+private const val MAX_TRIGGERS_PER_PROJECT = 20
 
 interface MavenTriggerService {
     suspend fun listByProject(projectId: ProjectId, session: UserSession): List<MavenTrigger>
@@ -50,14 +55,21 @@ class DefaultMavenTriggerService(
         session: UserSession,
     ): MavenTrigger {
         checkProjectAccess(projectId, session)
+        // MAVEN-M2: Enforce per-project trigger count cap
+        val currentCount = repository.countByProjectId(projectId)
+        require(currentCount < MAX_TRIGGERS_PER_PROJECT) {
+            "Maximum $MAX_TRIGGERS_PER_PROJECT Maven triggers per project reached"
+        }
         validateRequest(request)
 
-        // Fetch initial known versions to prevent spurious fires for existing versions
-        val initialVersions = fetcher.fetch(request.repoUrl, request.groupId, request.artifactId)
-            ?: throw IllegalArgumentException(
-                "Could not fetch Maven metadata at the given URL. " +
-                    "Verify the repository URL, groupId, and artifactId."
-            )
+        // MAVEN-M5: Tighter timeout for Maven fetch during create to prevent slow requests
+        // from blocking the handler for the full 30s HTTP client timeout
+        val initialVersions = withTimeoutOrNull(5.seconds) {
+            fetcher.fetch(request.repoUrl, request.groupId, request.artifactId)
+        } ?: throw IllegalArgumentException(
+            "Could not fetch Maven metadata at the given URL. " +
+                "Verify the repository URL, groupId, and artifactId."
+        )
 
         return repository.create(
             projectId = projectId,

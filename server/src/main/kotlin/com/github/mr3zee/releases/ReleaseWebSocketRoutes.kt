@@ -19,8 +19,17 @@ import kotlinx.coroutines.launch
 import org.koin.ktor.ext.inject
 import org.slf4j.LoggerFactory
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 
 private val log = LoggerFactory.getLogger("com.github.mr3zee.releases.ReleaseWebSocketRoutes")
+
+// REL-H3: Per-user WebSocket connection counter to prevent memory exhaustion via WS spam
+private val wsConnectionsPerUser = ConcurrentHashMap<String, AtomicInteger>()
+private const val MAX_WS_CONNECTIONS_PER_USER = 50
+
+// REL-H4: Bounded channel capacity to prevent unbounded memory growth from slow consumers
+private const val WS_CHANNEL_CAPACITY = 1024
 
 fun Route.releaseWebSocketRoutes() {
     val service by inject<ReleasesService>()
@@ -67,6 +76,19 @@ fun Route.releaseWebSocketRoutes() {
                 return@webSocket
             }
 
+            // REL-H3: Enforce per-user WebSocket connection limit
+            val userCounter = wsConnectionsPerUser.getOrPut(session.userId) { AtomicInteger(0) }
+            val currentCount = userCounter.incrementAndGet()
+            if (currentCount > MAX_WS_CONNECTIONS_PER_USER) {
+                userCounter.decrementAndGet()
+                log.warn("WebSocket connection limit exceeded for user {} ({} connections)", session.userId, currentCount)
+                close(CloseReason(CloseReason.Codes.TRY_AGAIN_LATER, "Too many WebSocket connections"))
+                return@webSocket
+            }
+
+            // REL-H3: All paths after incrementing the counter must decrement it.
+            // Wrap everything in try/finally to guarantee cleanup on any exit path.
+            try {
             // REL-H2: Access-controlled release retrieval
             val release = try {
                 service.getRelease(releaseId, session)
@@ -89,11 +111,17 @@ fun Route.releaseWebSocketRoutes() {
             // Subscribe to events BEFORE querying snapshot to avoid race condition.
             // Use UNDISPATCHED start to ensure the collector begins immediately,
             // preventing events from being lost between subscription and snapshot.
-            val eventBuffer = Channel<ReleaseEvent>(Channel.UNLIMITED)
+            // REL-H4: Bounded channel prevents unbounded memory growth from slow consumers.
+            // trySend drops newest events if the buffer is full (backpressure for slow clients).
+            val eventBuffer = Channel<ReleaseEvent>(WS_CHANNEL_CAPACITY)
             val collectJob = launch(start = CoroutineStart.UNDISPATCHED) {
                 engine.events
                     .filter { it.releaseId == releaseId }
-                    .collect { eventBuffer.send(it) }
+                    .collect { event ->
+                        if (!eventBuffer.trySend(event).isSuccess) {
+                            log.debug("WebSocket event buffer full for release {}, dropping event", releaseId.value)
+                        }
+                    }
             }
 
             // Determine whether we can do incremental replay or need a full snapshot
@@ -154,6 +182,14 @@ fun Route.releaseWebSocketRoutes() {
             } finally {
                 collectJob.cancel()
                 eventBuffer.close()
+            }
+
+            } finally {
+                // REL-H3: Always decrement connection count and clean up empty entries
+                val remaining = userCounter.decrementAndGet()
+                if (remaining <= 0) {
+                    wsConnectionsPerUser.remove(session.userId)
+                }
             }
         }
     }

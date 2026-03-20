@@ -10,6 +10,7 @@ import com.github.mr3zee.util.requireProjectId
 import com.github.mr3zee.util.requireUuidParam
 import io.ktor.http.*
 import io.ktor.server.application.ApplicationCall
+import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -76,6 +77,8 @@ fun Route.triggerRoutes() {
 fun Route.triggerWebhookRoutes() {
     val service by inject<TriggerService>()
 
+    // MAVEN-M1: Rate limit on unauthenticated webhook endpoint
+    rateLimit(RateLimitName("webhook")) {
     post(ApiRoutes.Triggers.webhook("{triggerId}")) {
         val triggerId = call.parameters["triggerId"]
         if (triggerId == null) {
@@ -105,6 +108,7 @@ fun Route.triggerWebhookRoutes() {
             call.respond(HttpStatusCode.Unauthorized, "Invalid trigger or secret")
         }
     }
+    } // rateLimit("webhook")
 }
 
 private fun ApplicationCall.requireTriggerId(): String {

@@ -39,6 +39,12 @@ class ExposedNotificationRepository(private val db: Database) : NotificationRepo
             ?.toEntity()
     }
 
+    override suspend fun countByProjectId(projectId: ProjectId): Long = dbQuery {
+        NotificationConfigTable.selectAll()
+            .where { NotificationConfigTable.projectId eq UUID.fromString(projectId.value) }
+            .count()
+    }
+
     override suspend fun create(
         projectId: ProjectId,
         userId: String,

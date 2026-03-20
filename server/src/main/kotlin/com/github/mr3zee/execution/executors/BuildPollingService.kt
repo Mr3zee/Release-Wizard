@@ -11,6 +11,7 @@ import kotlinx.coroutines.delay
 import kotlinx.serialization.json.*
 import org.slf4j.LoggerFactory
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeMark
@@ -44,11 +45,17 @@ class BuildPollingService(
         buildId: String,
         intervalSeconds: Int,
         queueTimeout: Duration = QUEUE_TIMEOUT,
+        maxPollDuration: Duration = MAX_POLL_DURATION,
         onUpdate: suspend (state: String, status: String?) -> Unit = { _, _ -> },
     ): Map<String, String> {
         var queuedSince: TimeMark? = null
+        // EXEC-M1: Track total poll duration to prevent indefinite blocking
+        val pollStart = TimeSource.Monotonic.markNow()
 
         while (true) {
+            if (pollStart.elapsedNow() >= maxPollDuration) {
+                throw RuntimeException("TeamCity build $buildId exceeded maximum poll duration of $maxPollDuration")
+            }
             val json = fetchTeamCityBuild(serverUrl, token, buildId) ?: run {
                 delay(intervalSeconds.seconds)
                 continue
@@ -273,6 +280,8 @@ class BuildPollingService(
 
     companion object {
         val QUEUE_TIMEOUT: Duration = 20.minutes
+        /** EXEC-M1: Maximum total poll duration to prevent indefinite blocking on stuck builds */
+        val MAX_POLL_DURATION: Duration = 4.hours
     }
 
     private fun mapGitHubJobStatus(status: String?, conclusion: String?): SubBuildStatus = when (status) {
@@ -299,12 +308,18 @@ class BuildPollingService(
         runId: String,
         intervalSeconds: Int,
         queueTimeout: Duration = QUEUE_TIMEOUT,
+        maxPollDuration: Duration = MAX_POLL_DURATION,
         onUpdate: suspend (status: String, conclusion: String?) -> Unit = { _, _ -> },
     ): Map<String, String> {
         val baseUrl = "https://api.github.com/repos/$owner/$repo"
         var queuedSince: TimeMark? = null
+        // EXEC-M1: Track total poll duration to prevent indefinite blocking
+        val pollStart = TimeSource.Monotonic.markNow()
 
         while (true) {
+            if (pollStart.elapsedNow() >= maxPollDuration) {
+                throw RuntimeException("GitHub Actions run $runId exceeded maximum poll duration of $maxPollDuration")
+            }
             try {
                 val response = httpClient.get("$baseUrl/actions/runs/$runId") {
                     header("Authorization", "Bearer $token")

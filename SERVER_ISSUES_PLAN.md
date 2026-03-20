@@ -183,40 +183,50 @@ Input validation, DAG validation, and DB consistency. All streams independent.
 
 ---
 
-## Phase 4 — Resource Management & DoS Prevention
+## ✅ Phase 4 — Resource Management & DoS Prevention (COMPLETE)
 
-Rate limiting, connection caps, and resource bounds. All streams independent.
+All 16 Phase 4 issues fixed + 6 additional review findings. All 444 tests pass (433 existing + 11 new).
+Reviewed by QA, Backend, Security, and Database experts — all must-fix findings addressed.
 
 ### Stream 4A: Rate Limiting & Caps
 
 **Scope:** `Application.kt`, route files, service files
-**Issues:**
-- REL-H3: Per-user WebSocket connection limit (50)
-- REL-H4: Bounded WS channel capacity (1024, DROP_OLDEST)
-- HOOK-M1: Rate limit on `/webhooks/status`
-- MAVEN-M1: Rate limit on trigger webhook endpoint
-- TEAM-M7: Rate limit on invite/join-request creation
-- SCHED-H4: Per-project schedule count cap
-- MAVEN-M2: Per-project trigger count cap
-- NOTIF-M2: Per-project notification config limit
+**Changes:**
+- REL-H3: Per-user WebSocket connection limit (50) with proper try/finally cleanup and map entry eviction
+- REL-H4: Bounded WS channel capacity (1024) with trySend backpressure
+- HOOK-M1: Per-IP rate limit (30/min) on `/webhooks/status`
+- MAVEN-M1: Per-IP rate limit (30/min) on trigger webhook endpoint
+- TEAM-M7: Per-IP rate limit (10/min) on invite/join-request creation
+- SCHED-H4: Per-project schedule count cap (20)
+- MAVEN-M2: Per-project trigger count cap (20)
+- NOTIF-M2: Per-project notification config limit (20)
 
 ### Stream 4B: Execution Engine Resource Bounds
 
 **Scope:** `ExecutionEngine.kt`, `BuildPollingService.kt`, `TeamCityArtifactService.kt`
-**Issues:**
-- EXEC-H7: Concurrency semaphore for parallel blocks (50)
-- EXEC-M1: Global max poll duration (4 hours)
-- EXEC-M2: Re-throw CancellationException in artifact fetcher
-- MAVEN-M3: `withTimeoutOrNull` around `pollAllTriggers()`
-- MAVEN-M5: Tighter timeout for Maven fetch during create (5s)
+**Changes:**
+- EXEC-H7: Concurrency semaphore (50) around actual block execution (not gate waits) to prevent deadlock
+- EXEC-M1: Global max poll duration (4 hours) for TC and GH polling
+- EXEC-M2: Re-throw CancellationException in artifact fetcher and Maven metadata fetcher
+- MAVEN-M3: `withTimeoutOrNull(4min)` around `pollAllTriggers()`
+- MAVEN-M5: 5s timeout for Maven metadata fetch during trigger creation
 
 ### Stream 4C: HTTP Client & TLS
 
-**Scope:** `AppModule.kt`, `MavenMetadataFetcher.kt`
-**Issues:**
-- EXEC-H6: Configure TLS verification for CIO HttpClient
-- MAVEN-H2: Cap Maven metadata response body at 512 KB
-- INFRA-M1: HikariCP keepaliveTime, idleTimeout, connectionTestQuery
+**Scope:** `AppModule.kt`, `MavenMetadataFetcher.kt`, `DatabaseFactory.kt`
+**Changes:**
+- EXEC-H6: Explicit TLS verification configuration for CIO HttpClient
+- MAVEN-H2: Already addressed in Phase 2 (S7: 512 KB cap)
+- INFRA-M1: HikariCP keepaliveTime (5min), idleTimeout (10min), connectionTestQuery
+
+### Additional Review Fixes
+
+- WS counter leak: Wrapped all post-increment code in try/finally to prevent counter leak on early exit paths
+- Rate limiters: Added per-IP `requestKey` to all rate limiters (were global buckets)
+- Semaphore placement: Moved from runWaveLoop to resolveAndExecute to avoid holding during gate waits
+- NotificationService: Moved access check before cap check and SSRF validation
+- CancellationException: Added re-throw in MavenMetadataFetcher.fetch()
+- WS map cleanup: Entries removed when counter reaches 0
 
 ---
 
@@ -342,7 +352,7 @@ Remaining Medium and Low items. Can be worked as a backlog.
 Phase 1 (Critical)     — 7 parallel streams  — All Critical issues  ✅ COMPLETE
 Phase 2 (Security)     — 4 parallel streams  — Auth, SSRF, AuthZ, Credentials  ✅ COMPLETE
 Phase 3 (Validation)   — 3 parallel streams  — Input, Transactions, Schema  ✅ COMPLETE
-Phase 4 (Resources)    — 3 parallel streams  — Rate limits, Bounds, HTTP/TLS
+Phase 4 (Resources)    — 3 parallel streams  — Rate limits, Bounds, HTTP/TLS  ✅ COMPLETE
 Phase 5 (Correctness)  — 4 parallel streams  — Audit, WebSocket, Webhooks, Executors
 Phase 6 (Polish)       — 7 parallel streams  — All remaining Medium + Low
 ```

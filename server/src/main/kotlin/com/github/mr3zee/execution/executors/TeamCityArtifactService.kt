@@ -5,6 +5,7 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import com.github.mr3zee.AppJson
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.*
 import org.slf4j.LoggerFactory
 import java.nio.file.FileSystems
@@ -69,6 +70,9 @@ class TeamCityArtifactService(private val httpClient: HttpClient) {
                 return
             }
             AppJson.decodeFromString<JsonObject>(response.bodyAsText())
+        } catch (e: CancellationException) {
+            // EXEC-M2: Re-throw CancellationException so release cancellation propagates
+            throw e
         } catch (e: Exception) {
             log.warn("Error fetching artifacts at '{}'", subpath, e)
             return

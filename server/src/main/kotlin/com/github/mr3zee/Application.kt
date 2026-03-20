@@ -145,6 +145,17 @@ fun Application.module() {
     install(RateLimit) {
         register(RateLimitName("login")) {
             rateLimiter(limit = 10, refillPeriod = 60.seconds)
+            requestKey { call -> call.request.local.remoteHost }
+        }
+        // HOOK-M1 & MAVEN-M1: Rate limit on unauthenticated webhook endpoints (per-IP)
+        register(RateLimitName("webhook")) {
+            rateLimiter(limit = 30, refillPeriod = 60.seconds)
+            requestKey { call -> call.request.local.remoteHost }
+        }
+        // TEAM-M7: Rate limit on invite/join-request creation (per-IP)
+        register(RateLimitName("invite")) {
+            rateLimiter(limit = 10, refillPeriod = 60.seconds)
+            requestKey { call -> call.request.local.remoteHost }
         }
     }
 

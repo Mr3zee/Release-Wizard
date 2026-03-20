@@ -15,6 +15,8 @@ data class NotificationConfigEntity(
 interface NotificationRepository {
     suspend fun findByProjectId(projectId: ProjectId): List<NotificationConfigEntity>
     suspend fun findById(id: String): NotificationConfigEntity?
+    /** NOTIF-M2: Count notification configs for a project (used to enforce per-project cap). */
+    suspend fun countByProjectId(projectId: ProjectId): Long
     suspend fun create(
         projectId: ProjectId,
         userId: String,

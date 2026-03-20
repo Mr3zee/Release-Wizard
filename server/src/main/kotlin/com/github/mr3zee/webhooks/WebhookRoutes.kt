@@ -3,6 +3,7 @@ package com.github.mr3zee.webhooks
 import com.github.mr3zee.api.ApiRoutes
 import com.github.mr3zee.api.StatusUpdatePayload
 import io.ktor.http.*
+import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -23,6 +24,8 @@ private val log = LoggerFactory.getLogger("com.github.mr3zee.webhooks.WebhookRou
 fun Route.webhookRoutes() {
     val statusWebhookService by inject<StatusWebhookService>()
 
+    // HOOK-M1: Rate limit on public webhook endpoint to prevent abuse
+    rateLimit(RateLimitName("webhook")) {
     route(ApiRoutes.Webhooks.BASE) {
         post("/status") {
             val authHeader = call.request.header("Authorization")
@@ -81,6 +84,7 @@ fun Route.webhookRoutes() {
             }
         }
     }
+    } // rateLimit("webhook")
 }
 
 private const val MAX_STATUS_PAYLOAD_SIZE = 8 * 1024

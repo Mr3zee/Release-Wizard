@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import kotlin.time.Duration.Companion.seconds
 import org.slf4j.LoggerFactory
@@ -54,6 +55,11 @@ class ExecutionEngine(
 
     // Per-release mutex to prevent concurrent restarts
     private val restartMutexes = ConcurrentHashMap<ReleaseId, Mutex>()
+
+    // EXEC-H7: Global concurrency semaphore for parallel block execution.
+    // Limits the total number of concurrently executing blocks across all releases
+    // to prevent unbounded coroutine/resource consumption.
+    private val blockSemaphore = Semaphore(MAX_CONCURRENT_BLOCKS)
 
     // Pending gate approvals: releaseId -> blockId -> CompletableDeferred
     private val pendingApprovals = ConcurrentHashMap<ReleaseId, ConcurrentHashMap<BlockId, CompletableDeferred<Map<String, String>>>>()
@@ -1033,6 +1039,10 @@ class ExecutionEngine(
     /**
      * Resolve template parameters, load connections, and call the executor.
      */
+    /**
+     * EXEC-H7: Semaphore is acquired here (around actual block execution) rather than
+     * in runWaveLoop, so that blocks waiting for pre/post-gate approval don't hold a permit.
+     */
     private suspend fun resolveAndExecute(
         release: Release,
         block: Block.ActionBlock,
@@ -1088,12 +1098,18 @@ class ExecutionEngine(
         }
 
         val timeoutSec = block.timeoutSeconds
-        return if (timeoutSec != null) {
-            withTimeoutOrNull(timeoutSec.seconds) {
+        // EXEC-H7: Acquire semaphore only around actual execution, not gate waits
+        blockSemaphore.acquire()
+        try {
+            return if (timeoutSec != null) {
+                withTimeoutOrNull(timeoutSec.seconds) {
+                    blockExecutor.run(block, resolvedParams, context, executionScope)
+                } ?: throw RuntimeException("Block '${block.name}' timed out after ${timeoutSec}s")
+            } else {
                 blockExecutor.run(block, resolvedParams, context, executionScope)
-            } ?: throw RuntimeException("Block '${block.name}' timed out after ${timeoutSec}s")
-        } else {
-            blockExecutor.run(block, resolvedParams, context, executionScope)
+            }
+        } finally {
+            blockSemaphore.release()
         }
     }
 
@@ -1203,5 +1219,10 @@ class ExecutionEngine(
             result.getOrPut(edge.toBlockId) { mutableSetOf() }.add(edge.fromBlockId)
         }
         return result
+    }
+
+    companion object {
+        /** EXEC-H7: Maximum concurrent block executions across all releases */
+        const val MAX_CONCURRENT_BLOCKS = 50
     }
 }

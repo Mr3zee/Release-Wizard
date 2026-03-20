@@ -12,6 +12,8 @@ data class MavenTriggerWithVersions(
 interface MavenTriggerRepository {
     suspend fun findByProjectId(projectId: ProjectId): List<MavenTrigger>
     suspend fun findById(id: String): MavenTrigger?
+    /** MAVEN-M2: Count triggers for a project (used to enforce per-project cap). */
+    suspend fun countByProjectId(projectId: ProjectId): Long
     suspend fun findAllEnabled(): List<MavenTriggerWithVersions>
     suspend fun create(
         projectId: ProjectId,

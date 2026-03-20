@@ -49,6 +49,12 @@ class ExposedMavenTriggerRepository(private val db: Database) : MavenTriggerRepo
             ?.toModel()
     }
 
+    override suspend fun countByProjectId(projectId: ProjectId): Long = dbQuery {
+        MavenTriggerTable.selectAll()
+            .where { MavenTriggerTable.projectId eq UUID.fromString(projectId.value) }
+            .count()
+    }
+
     override suspend fun findAllEnabled(): List<MavenTriggerWithVersions> = dbQuery {
         MavenTriggerTable.selectAll()
             .where { MavenTriggerTable.enabled eq true }

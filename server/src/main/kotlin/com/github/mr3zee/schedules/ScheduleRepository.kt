@@ -18,6 +18,8 @@ data class ScheduleEntity(
 interface ScheduleRepository {
     suspend fun findByProjectId(projectId: ProjectId): List<ScheduleEntity>
     suspend fun findById(id: String): ScheduleEntity?
+    /** SCHED-H4: Count schedules for a project (used to enforce per-project cap). */
+    suspend fun countByProjectId(projectId: ProjectId): Long
     suspend fun findDueSchedules(now: Instant): List<ScheduleEntity>
     suspend fun create(
         projectId: ProjectId,

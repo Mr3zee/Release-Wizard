@@ -20,6 +20,9 @@ interface NotificationService {
     suspend fun delete(id: String, session: UserSession): Boolean
 }
 
+/** NOTIF-M2: Per-project notification config limit */
+private const val MAX_NOTIFICATION_CONFIGS_PER_PROJECT = 20
+
 class DefaultNotificationService(
     private val repository: NotificationRepository,
     private val projectsRepository: ProjectsRepository,
@@ -38,14 +41,20 @@ class DefaultNotificationService(
     }
 
     override suspend fun create(request: CreateNotificationConfigRequest, session: UserSession): NotificationConfigResponse {
-        // NOTIF-H1: Validate webhook URL for SSRF before storing
-        validateNotificationConfig(request.config)
-
-        // Verify the caller has access to the project's team (or is admin)
+        // Verify the caller has access to the project's team (or is admin) FIRST
         if (session.role != UserRole.ADMIN) {
             val projectTeamId = projectsRepository.findTeamId(request.projectId)
                 ?: throw NotFoundException("Project not found")
             teamAccessService.checkMembership(TeamId(projectTeamId), session)
+        }
+
+        // NOTIF-H1: Validate webhook URL for SSRF before storing
+        validateNotificationConfig(request.config)
+
+        // NOTIF-M2: Enforce per-project notification config limit
+        val currentCount = repository.countByProjectId(request.projectId)
+        require(currentCount < MAX_NOTIFICATION_CONFIGS_PER_PROJECT) {
+            "Maximum $MAX_NOTIFICATION_CONFIGS_PER_PROJECT notification configs per project reached"
         }
 
         val entity = repository.create(

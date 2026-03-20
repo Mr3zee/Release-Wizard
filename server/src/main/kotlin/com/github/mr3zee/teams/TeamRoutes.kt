@@ -4,6 +4,7 @@ import com.github.mr3zee.api.*
 import com.github.mr3zee.auth.userSession
 import com.github.mr3zee.model.TeamId
 import io.ktor.http.*
+import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -81,12 +82,15 @@ fun Route.teamRoutes() {
 
             // Invites
             route("/invites") {
+                // TEAM-M7: Rate limit on invite creation
+                rateLimit(RateLimitName("invite")) {
                 post {
                     val teamId = call.requireTeamId() ?: return@post
                     val request = call.receive<CreateInviteRequest>()
                     val invite = service.inviteUser(teamId, request, call.userSession())
                     call.respond(HttpStatusCode.Created, invite)
                 }
+                } // rateLimit("invite")
 
                 get {
                     val teamId = call.requireTeamId() ?: return@get
@@ -104,11 +108,14 @@ fun Route.teamRoutes() {
 
             // Join Requests
             route("/join-requests") {
+                // TEAM-M7: Rate limit on join-request creation
+                rateLimit(RateLimitName("invite")) {
                 post {
                     val teamId = call.requireTeamId() ?: return@post
                     val joinRequest = service.submitJoinRequest(teamId, call.userSession())
                     call.respond(HttpStatusCode.Created, joinRequest)
                 }
+                } // rateLimit("invite")
 
                 get {
                     val teamId = call.requireTeamId() ?: return@get

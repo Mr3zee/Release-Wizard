@@ -30,6 +30,8 @@ class DefaultScheduleService(
         const val MAX_SCHEDULE_PARAMETERS = 50
         const val MAX_PARAM_KEY_LENGTH = 255
         const val MAX_PARAM_VALUE_LENGTH = 1000
+        /** SCHED-H4: Per-project schedule count cap to prevent execution engine saturation */
+        const val MAX_SCHEDULES_PER_PROJECT = 20
     }
 
     override suspend fun listByProject(projectId: ProjectId, session: UserSession): List<Schedule> {
@@ -49,6 +51,11 @@ class DefaultScheduleService(
         session: UserSession,
     ): Schedule {
         checkProjectAccess(projectId, session)
+        // SCHED-H4: Enforce per-project schedule count cap
+        val currentCount = repository.countByProjectId(projectId)
+        require(currentCount < MAX_SCHEDULES_PER_PROJECT) {
+            "Maximum $MAX_SCHEDULES_PER_PROJECT schedules per project reached"
+        }
         // SCHED-M8: Cap schedule parameter list size and value lengths
         require(request.parameters.size <= MAX_SCHEDULE_PARAMETERS) { "Maximum $MAX_SCHEDULE_PARAMETERS parameters allowed" }
         request.parameters.forEach { p ->

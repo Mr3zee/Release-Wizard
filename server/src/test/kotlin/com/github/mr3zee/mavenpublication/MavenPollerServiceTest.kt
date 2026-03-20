@@ -206,6 +206,7 @@ class MavenPollerServiceTest {
         override suspend fun updateKnownVersions(id: String, versions: Set<String>, checkedAt: Instant) = Unit
         override suspend fun findByProjectId(projectId: ProjectId) = entries.map { it.trigger }
         override suspend fun findById(id: String) = entries.firstOrNull { it.trigger.id == id }?.trigger
+        override suspend fun countByProjectId(projectId: ProjectId) = entries.count { it.trigger.projectId == projectId }.toLong()
         override suspend fun create(projectId: ProjectId, repoUrl: String, groupId: String, artifactId: String, parameterKey: String, includeSnapshots: Boolean, enabled: Boolean, knownVersions: Set<String>, createdBy: String): MavenTrigger = error("Not expected in poll tests")
         override suspend fun updateEnabled(id: String, enabled: Boolean): MavenTrigger = error("Not expected in poll tests")
         override suspend fun delete(id: String): Boolean = error("Not expected in poll tests")

@@ -30,6 +30,13 @@ fun appModule(
     single { EncryptionService(get()) }
     single {
         HttpClient(CIO) {
+            // EXEC-H6: Explicitly configure TLS verification (CIO uses JVM default truststore).
+            // This ensures certificate validation is active and cannot be accidentally bypassed.
+            engine {
+                https {
+                    trustManager = null // null = use JVM default trust manager (verifies certificates)
+                }
+            }
             // CONN-C1: SSRF protection at HTTP client level — validates every outgoing request
             install(SsrfProtection)
             install(ContentNegotiation) {

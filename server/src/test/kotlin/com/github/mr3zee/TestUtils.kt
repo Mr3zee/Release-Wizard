@@ -141,6 +141,15 @@ fun Application.testModule(
     install(RateLimit) {
         register(RateLimitName("login")) {
             rateLimiter(limit = 10, refillPeriod = 60.seconds)
+            requestKey { call -> call.request.local.remoteHost }
+        }
+        register(RateLimitName("webhook")) {
+            rateLimiter(limit = 30, refillPeriod = 60.seconds)
+            requestKey { call -> call.request.local.remoteHost }
+        }
+        register(RateLimitName("invite")) {
+            rateLimiter(limit = 10, refillPeriod = 60.seconds)
+            requestKey { call -> call.request.local.remoteHost }
         }
     }
 

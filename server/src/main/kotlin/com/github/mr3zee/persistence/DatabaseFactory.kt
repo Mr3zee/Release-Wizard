@@ -18,6 +18,10 @@ fun dataSource(config: DatabaseConfig): DataSource {
         password = config.password
         driverClassName = config.driver
         maximumPoolSize = config.maxPoolSize
+        // INFRA-M1: Prevent stale connections and improve pool health
+        idleTimeout = 600_000          // 10 minutes — close idle connections after this
+        keepaliveTime = 300_000        // 5 minutes — send keepalive to prevent firewall/proxy timeouts
+        connectionTestQuery = "SELECT 1" // lightweight validation query
         validate()
     }
     return HikariDataSource(hikariConfig)

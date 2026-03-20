@@ -5,6 +5,7 @@ import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import kotlinx.coroutines.CancellationException
 import org.slf4j.LoggerFactory
 import org.w3c.dom.NodeList
 import org.xml.sax.InputSource
@@ -54,6 +55,8 @@ class MavenMetadataFetcher(private val httpClient: HttpClient) {
                 return null
             }
             parseVersions(bodyText, url)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             logger.warn("Maven metadata fetch failed for {}: {}", url, e.message)
             null

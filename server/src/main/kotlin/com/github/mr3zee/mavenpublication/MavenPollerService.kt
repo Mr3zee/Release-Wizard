@@ -6,6 +6,7 @@ import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 class MavenPollerService(
     private val repository: MavenTriggerRepository,
@@ -23,7 +24,13 @@ class MavenPollerService(
                 // MAVEN-C1: Fixed-rate ticker — measure from cycle start, not end
                 val cycleStart = Clock.System.now()
                 try {
-                    pollAllTriggers()
+                    // MAVEN-M3: Bound total poll cycle duration to prevent runaway cycles
+                    val completed = withTimeoutOrNull(POLL_TIMEOUT) {
+                        pollAllTriggers()
+                    }
+                    if (completed == null) {
+                        logger.warn("Maven poll cycle timed out after {}", POLL_TIMEOUT)
+                    }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -108,6 +115,8 @@ class MavenPollerService(
 
     companion object {
         private val POLL_INTERVAL = 5.minutes
+        /** MAVEN-M3: Maximum duration for a single poll cycle */
+        private val POLL_TIMEOUT = 4.minutes
         private const val CONCURRENT_FETCH_LIMIT = 10
     }
 }

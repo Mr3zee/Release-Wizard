@@ -42,6 +42,12 @@ class ExposedScheduleRepository(private val db: Database) : ScheduleRepository {
             ?.toEntity()
     }
 
+    override suspend fun countByProjectId(projectId: ProjectId): Long = dbQuery {
+        ScheduleTable.selectAll()
+            .where { ScheduleTable.projectId eq UUID.fromString(projectId.value) }
+            .count()
+    }
+
     override suspend fun findDueSchedules(now: Instant): List<ScheduleEntity> = dbQuery {
         ScheduleTable.selectAll()
             .where {
