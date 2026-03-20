@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 512 512">
+  <defs>
+    <mask id="m1">
+      <rect x="31" y="281" width="120" height="120" rx="22" fill="white"/>
+      <rect x="45" y="295" width="92" height="92" rx="10" fill="black"/>
+    </mask>
+    <mask id="m2">
+      <rect x="196" y="196" width="120" height="120" rx="22" fill="white"/>
+      <rect x="210" y="210" width="92" height="92" rx="10" fill="black"/>
+    </mask>
+  </defs>
+
+  <rect width="512" height="512" fill="#252363"/>
+
+  <rect x="31" y="281" width="120" height="120" rx="22" fill="#FFFFFF" mask="url(#m1)"/>
+  <rect x="196" y="196" width="120" height="120" rx="22" fill="#FFFFFF" mask="url(#m2)"/>
+  <rect x="361" y="111" width="120" height="120" rx="22" fill="#FFFFFF"/>
+  <path d="M446,128 Q449,143 464,146 Q449,149 446,164 Q443,149 428,146 Q443,143 446,128Z" fill="#252363"/>
+
+  <path d="M151,311 C168,311 179,226 196,226"
+        stroke="#5DDBC6" stroke-width="10" fill="none" stroke-linecap="butt"/>
+  <path d="M316,226 C333,226 344,141 361,141"
+        stroke="#5DDBC6" stroke-width="10" fill="none" stroke-linecap="butt"/>
+</svg>
