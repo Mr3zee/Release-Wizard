@@ -119,7 +119,7 @@ class ProjectAutomationScreenTest {
     /** Client where schedule creation fails (400). */
     private fun errorOnCreateScheduleClient() = multiRouteClient(listOf(
         "/projects/p1/schedules" to json(emptySchedulesJson, method = HttpMethod.Get),
-        "/projects/p1/schedules" to json("""{"error":"Invalid cron expression"}""", status = HttpStatusCode.BadRequest, method = HttpMethod.Post),
+        "/projects/p1/schedules" to json("""{"error":"Invalid cron expression","code":"VALIDATION_ERROR"}""", status = HttpStatusCode.BadRequest, method = HttpMethod.Post),
         "/projects/p1/triggers" to json(emptyTriggersJson),
         "/projects/p1/maven-triggers" to json(emptyTriggersJson),
     ))
@@ -128,7 +128,7 @@ class ProjectAutomationScreenTest {
     private fun errorOnCreateWebhookClient() = multiRouteClient(listOf(
         "/projects/p1/schedules" to json(emptySchedulesJson),
         "/projects/p1/triggers" to json(emptyTriggersJson, method = HttpMethod.Get),
-        "/projects/p1/triggers" to json("""{"error":"Webhook limit reached"}""", status = HttpStatusCode.BadRequest, method = HttpMethod.Post),
+        "/projects/p1/triggers" to json("""{"error":"Webhook limit reached","code":"LIMIT_EXCEEDED"}""", status = HttpStatusCode.BadRequest, method = HttpMethod.Post),
         "/projects/p1/maven-triggers" to json(emptyTriggersJson),
     ))
 
@@ -137,7 +137,7 @@ class ProjectAutomationScreenTest {
         "/projects/p1/schedules" to json(emptySchedulesJson),
         "/projects/p1/triggers" to json(emptyTriggersJson),
         "/projects/p1/maven-triggers" to json(emptyTriggersJson, method = HttpMethod.Get),
-        "/projects/p1/maven-triggers" to json("""{"error":"Duplicate trigger"}""", status = HttpStatusCode.BadRequest, method = HttpMethod.Post),
+        "/projects/p1/maven-triggers" to json("""{"error":"Duplicate trigger","code":"DUPLICATE"}""", status = HttpStatusCode.BadRequest, method = HttpMethod.Post),
     ))
 
     /** Client for webhook creation that returns a secret. */
@@ -465,14 +465,14 @@ class ProjectAutomationScreenTest {
             onAllNodesWithTag("schedule_preset_selector", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
 
-        // Click the preset selector to open the dropdown
-        onNodeWithTag("schedule_preset_selector", useUnmergedTree = true).performClick()
+        // Click the preset selector overlay to open the dropdown
+        onNodeWithTag("schedule_preset_selector_click").performClick()
 
-        // Select "Daily" preset
+        // Select "Every day at 9 AM" preset
         waitUntil(timeoutMillis = 3000L) {
-            onAllNodesWithText("Daily", substring = true).fetchSemanticsNodes().isNotEmpty()
+            onAllNodesWithText("Every day", substring = true).fetchSemanticsNodes().isNotEmpty()
         }
-        onNodeWithText("Daily", substring = true).performClick()
+        onNodeWithText("Every day", substring = true).performClick()
 
         // Cron input should now contain the daily cron expression and button should be enabled
         onNodeWithTag("schedule_create_button", useUnmergedTree = true).assertIsEnabled()

@@ -1394,7 +1394,38 @@ class TeamScreensTest {
     @Test
     fun `manage save button disabled after successful save`() = runComposeUiTest {
         val updateCalled = AtomicBoolean(false)
-        val client = teamManageEngineClient(onUpdateTeamCalled = { updateCalled.set(true) })
+        // After update, the GET team detail returns the updated description so hasEditChanges becomes false
+        val updatedDetailJson = AtomicReference(teamDetailJsonForManage)
+        val client = HttpClient(MockEngine { request ->
+            val path = request.url.encodedPath
+            val method = request.method
+            val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            when {
+                method == HttpMethod.Put && path == "/api/v1/teams/t1" -> {
+                    updateCalled.set(true)
+                    // After a successful update, subsequent GETs return updated description
+                    updatedDetailJson.set("""{"team":{"id":"t1","name":"Alpha Team","description":"First team updated","createdAt":0},"members":[
+                        {"teamId":"t1","userId":"u1","username":"alice","role":"TEAM_LEAD","joinedAt":0},
+                        {"teamId":"t1","userId":"u2","username":"bob","role":"COLLABORATOR","joinedAt":0}
+                    ]}""")
+                    respond("""{"team":{"id":"t1","name":"Alpha Team","description":"First team updated","createdAt":0},"memberCount":2}""",
+                        status = HttpStatusCode.OK, headers = jsonHeaders)
+                }
+                method == HttpMethod.Get && path == "/api/v1/teams/t1" ->
+                    respond(updatedDetailJson.get(), status = HttpStatusCode.OK, headers = jsonHeaders)
+                method == HttpMethod.Get && path == "/api/v1/teams/t1/members" ->
+                    respond(membersJsonForManage, status = HttpStatusCode.OK, headers = jsonHeaders)
+                method == HttpMethod.Get && path == "/api/v1/teams/t1/invites" ->
+                    respond(invitesJsonForManage, status = HttpStatusCode.OK, headers = jsonHeaders)
+                method == HttpMethod.Get && path == "/api/v1/teams/t1/join-requests" ->
+                    respond(joinRequestsJsonForManage, status = HttpStatusCode.OK, headers = jsonHeaders)
+                else -> respond("{}", status = HttpStatusCode.OK, headers = jsonHeaders)
+            }
+        }) {
+            install(ContentNegotiation) { json(AppJson) }
+            install(HttpCookies)
+            expectSuccess = true
+        }
         val vm = TeamManageViewModel(TeamId("t1"), TeamApiClient(client))
         setContent { MaterialTheme { TeamManageScreen(viewModel = vm, onBack = {}) } }
 
@@ -1692,8 +1723,10 @@ class TeamScreensTest {
         val vm = TeamManageViewModel(TeamId("t1"), TeamApiClient(teamManageEngineClient()))
         setContent { MaterialTheme { TeamManageScreen(viewModel = vm, onBack = {}) } }
 
-        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("delete_team_button").fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithTag("delete_team_button").performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("delete_team_button", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        // Scroll to make the danger zone visible, then click
+        onNodeWithTag("delete_team_button", useUnmergedTree = true).performScrollTo()
+        onNodeWithTag("delete_team_button", useUnmergedTree = true).performClick()
 
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("delete_team_confirm").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("delete_team_confirm").assertExists()
@@ -1711,9 +1744,11 @@ class TeamScreensTest {
             }
         }
 
-        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("delete_team_button").fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithTag("delete_team_button").performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("delete_team_button", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("delete_team_button", useUnmergedTree = true).performScrollTo()
+        onNodeWithTag("delete_team_button", useUnmergedTree = true).performClick()
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("delete_team_confirm").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("delete_team_confirm_confirm", useUnmergedTree = true).performScrollTo()
         waitUntil(timeoutMillis = 3000L) {
             onAllNodesWithTag("delete_team_confirm_confirm").fetchSemanticsNodes().firstOrNull()
                 ?.config?.getOrElseNullable(SemanticsProperties.Disabled) { null } == null
@@ -1731,9 +1766,11 @@ class TeamScreensTest {
         val vm = TeamManageViewModel(TeamId("t1"), TeamApiClient(teamManageEngineClient()))
         setContent { MaterialTheme { TeamManageScreen(viewModel = vm, onBack = {}) } }
 
-        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("delete_team_button").fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithTag("delete_team_button").performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("delete_team_button", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("delete_team_button", useUnmergedTree = true).performScrollTo()
+        onNodeWithTag("delete_team_button", useUnmergedTree = true).performClick()
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("delete_team_confirm").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("delete_team_confirm_cancel", useUnmergedTree = true).performScrollTo()
         onNodeWithTag("delete_team_confirm_cancel").performClick()
 
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("delete_team_confirm").fetchSemanticsNodes().isEmpty() }

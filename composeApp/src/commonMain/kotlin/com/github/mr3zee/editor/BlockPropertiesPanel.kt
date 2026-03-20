@@ -771,6 +771,7 @@ private fun ParameterRow(
                 enabled = enabled,
                 contentPadding = PaddingValues(Spacing.xs),
                 contentColor = MaterialTheme.colorScheme.error,
+                modifier = Modifier.testTag("remove_parameter_button"),
             ) {
                 Text(packStringResource(Res.string.editor_prop_remove))
             }

@@ -17,6 +17,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.foundation.focusable
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -129,6 +132,9 @@ fun DagEditorScreen(
             hasDialogOpen = isConfirmationVisible,
         )
     }
+    val editorFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { editorFocusRequester.requestFocus() }
+
     ProvideShortcutActions(shortcutActions) {
 
     Scaffold(
@@ -188,6 +194,8 @@ fun DagEditorScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = Modifier
             .testTag("dag_editor_screen")
+            .focusRequester(editorFocusRequester)
+            .focusable()
             .onKeyEvent { event ->
                 if (event.type == KeyEventType.KeyDown) {
                     // Suppress destructive keys while a confirmation banner is showing

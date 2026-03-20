@@ -570,6 +570,7 @@ private fun CreateScheduleInlineForm(
             Box(
                 modifier = Modifier
                     .matchParentSize()
+                    .testTag("schedule_preset_selector_click")
                     .clickable { presetsExpanded = !presetsExpanded },
             )
             DropdownMenu(
