@@ -212,7 +212,7 @@ fun App() {
 
                 when {
                     currentScreen is Screen.ResetPassword -> {
-                        val token = (currentScreen as Screen.ResetPassword).token
+                        val token = currentScreen.token
                         val resetViewModel = remember(token) { ResetPasswordViewModel(token, authApiClient) }
                         ResetPasswordScreen(
                             viewModel = resetViewModel,

@@ -171,6 +171,10 @@ fun Application.testModule(
             rateLimiter(limit = 200, refillPeriod = 60.seconds)
             requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.request.local.remoteHost }
         }
+        register(RateLimitName("password-reset")) {
+            rateLimiter(limit = 5, refillPeriod = 60.seconds)
+            requestKey { call -> call.request.local.remoteHost }
+        }
     }
 
     install(CorrelationId)

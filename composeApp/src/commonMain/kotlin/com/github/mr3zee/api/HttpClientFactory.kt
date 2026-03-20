@@ -33,7 +33,7 @@ fun createHttpClient(): HttpClient {
             handleResponseExceptionWithRequest { cause, request ->
                 if (cause is ClientRequestException && cause.response.status.value == 401) {
                     // Don't emit session-expired for unauthenticated-by-design endpoints
-                    val authExcludedPaths = setOf("/auth/login", "/auth/me", "/auth/register")
+                    val authExcludedPaths = setOf("/auth/login", "/auth/me", "/auth/register", "/auth/password-reset", "/auth/password-reset/validate")
                     val isExcluded = authExcludedPaths.any { request.url.encodedPath.endsWith(it) }
                     if (!isExcluded) {
                         AuthEventBus.emitSessionExpired()

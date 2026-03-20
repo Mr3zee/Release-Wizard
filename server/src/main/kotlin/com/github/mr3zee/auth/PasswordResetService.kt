@@ -5,7 +5,7 @@ import com.github.mr3zee.persistence.PasswordResetTokenTable
 import com.github.mr3zee.persistence.UserTable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 import org.slf4j.LoggerFactory

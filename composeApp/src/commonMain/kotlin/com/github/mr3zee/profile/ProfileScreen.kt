@@ -70,7 +70,7 @@ import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.displayName
 import com.github.mr3zee.util.formatTimestamp
 import com.github.mr3zee.util.resolve
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 import releasewizard.composeapp.generated.resources.*
 
 sealed class DeleteState {
@@ -139,6 +139,33 @@ fun ProfileScreen(
             duration = SnackbarDuration.Short,
         )
         viewModel.dismissSuccessMessage()
+    }
+
+    // Close forms on success
+    val usernameChangeSuccess by viewModel.usernameChangeSuccess.collectAsState()
+    val passwordChangeSuccess by viewModel.passwordChangeSuccess.collectAsState()
+
+    LaunchedEffect(usernameChangeSuccess) {
+        if (usernameChangeSuccess) {
+            showChangeUsername = false
+            newUsername = ""
+            usernamePassword = ""
+            showUsernamePassword = false
+            viewModel.consumeUsernameChangeSuccess()
+        }
+    }
+
+    LaunchedEffect(passwordChangeSuccess) {
+        if (passwordChangeSuccess) {
+            showChangePassword = false
+            currentPassword = ""
+            newPassword = ""
+            confirmNewPassword = ""
+            showCurrentPassword = false
+            showNewPassword = false
+            showConfirmNewPassword = false
+            viewModel.consumePasswordChangeSuccess()
+        }
     }
 
     val isDialogOpen = showChangeUsername || showChangePassword || deleteState != DeleteState.Idle
@@ -295,9 +322,6 @@ fun ProfileScreen(
                         isSubmitting = isLoading,
                         onSubmit = {
                             viewModel.changeUsername(newUsername.trim(), usernamePassword)
-                            showChangeUsername = false
-                            newUsername = ""
-                            usernamePassword = ""
                         },
                         onDismiss = {
                             showChangeUsername = false
@@ -352,10 +376,6 @@ fun ProfileScreen(
                         isSubmitting = isLoading,
                         onSubmit = {
                             viewModel.changePassword(currentPassword, newPassword)
-                            showChangePassword = false
-                            currentPassword = ""
-                            newPassword = ""
-                            confirmNewPassword = ""
                         },
                         onDismiss = {
                             showChangePassword = false
