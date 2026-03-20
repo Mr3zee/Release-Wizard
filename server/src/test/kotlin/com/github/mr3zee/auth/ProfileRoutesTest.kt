@@ -269,7 +269,7 @@ class ProfileRoutesTest {
             contentType(ContentType.Application.Json)
             setBody(DeleteAccountRequest(confirmUsername = "admin", currentPassword = "adminpass"))
         }
-        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertEquals(HttpStatusCode.Conflict, response.status)
         val error = response.body<ErrorResponse>()
         assertEquals("LAST_ADMIN", error.code)
     }
@@ -295,7 +295,7 @@ class ProfileRoutesTest {
             contentType(ContentType.Application.Json)
             setBody(DeleteAccountRequest(confirmUsername = "teamlead", currentPassword = "teamleadpass"))
         }
-        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertEquals(HttpStatusCode.Conflict, response.status)
         val error = response.body<ErrorResponse>()
         assertEquals("LAST_TEAM_LEAD", error.code)
     }

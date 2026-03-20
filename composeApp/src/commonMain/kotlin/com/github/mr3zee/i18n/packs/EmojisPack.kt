@@ -538,6 +538,7 @@ object EmojisPack {
             "profile_delete_confirm_username" to "\u270d\ufe0f\ud83d\udc64\u2753",
             "profile_username_changed" to "\u2705\ud83d\udc64\u270f\ufe0f",
             "profile_password_changed" to "\u2705\ud83d\udd11\ud83d\udd04",
+            "profile_passwords_mismatch" to "\u274c\ud83d\udd11\u2260\ud83d\udd11",
             "profile_teams_section" to "\ud83d\udc65",
             "profile_no_teams" to "\ud83d\udc64\ud83d\udeab\ud83d\udc65",
             "profile_submit" to "\ud83d\udce8",

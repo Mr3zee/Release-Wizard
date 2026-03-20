@@ -540,6 +540,7 @@ object GenZPack {
             "profile_delete_confirm_username" to "Type your handle to confirm bestie",
             "profile_username_changed" to "Rebrand successful bestie",
             "profile_password_changed" to "Secret code updated no cap",
+            "profile_passwords_mismatch" to "Those don't match bestie try again",
             "profile_teams_section" to "Your Squads",
             "profile_no_teams" to "Not in any squads yet bestie",
             "profile_submit" to "Send It",

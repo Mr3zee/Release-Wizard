@@ -131,7 +131,7 @@ fun ProfileScreen(
         viewModel.dismissError()
     }
 
-    val resolvedSuccess = successMessage
+    val resolvedSuccess = successMessage?.resolve()
     LaunchedEffect(successMessage) {
         val msg = resolvedSuccess ?: return@LaunchedEffect
         snackbarHostState.showSnackbar(
@@ -485,6 +485,7 @@ fun ProfileScreen(
                         onSubmit = {
                             deleteState = DeleteState.Deleting
                             viewModel.deleteAccount(deleteUsername.trim(), deletePassword) {
+                                deleteState = DeleteState.Idle
                                 onAccountDeleted()
                             }
                         },

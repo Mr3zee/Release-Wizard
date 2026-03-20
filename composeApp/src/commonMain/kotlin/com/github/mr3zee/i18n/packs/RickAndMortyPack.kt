@@ -540,6 +540,7 @@ object RickAndMortyPack {
             "profile_delete_confirm_username" to "Type your name to confirm, Morty",
             "profile_username_changed" to "Identity changed, *burp* Morty",
             "profile_password_changed" to "Password changed, *burp*",
+            "profile_passwords_mismatch" to "Those passwords don't match, Morty!",
             "profile_teams_section" to "Your Dimensions",
             "profile_no_teams" to "Not in any dimension yet, oh geez",
             "profile_submit" to "Do It, *burp*",

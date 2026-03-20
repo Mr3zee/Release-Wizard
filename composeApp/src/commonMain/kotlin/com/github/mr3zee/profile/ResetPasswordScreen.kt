@@ -58,7 +58,8 @@ fun ResetPasswordScreen(
     val error by viewModel.error.collectAsState()
     val validationError by viewModel.validationError.collectAsState()
     val resolvedError = error?.resolve()
-    val displayError = validationError ?: resolvedError
+    val resolvedValidationError = validationError?.resolve()
+    val displayError = resolvedValidationError ?: resolvedError
 
     var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }

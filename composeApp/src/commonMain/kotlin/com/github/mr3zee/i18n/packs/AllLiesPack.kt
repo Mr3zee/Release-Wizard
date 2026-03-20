@@ -540,6 +540,7 @@ object AllLiesPack {
             "profile_delete_confirm_username" to "Type someone else's username",
             "profile_username_changed" to "Username stayed the same",
             "profile_password_changed" to "Password remained unchanged",
+            "profile_passwords_mismatch" to "Passwords definitely match",
             "profile_teams_section" to "Empty Teams",
             "profile_no_teams" to "Member of every team",
             "profile_submit" to "Do Nothing",

@@ -542,6 +542,7 @@ object HelldiversPack {
             "profile_delete_confirm_username" to "Type your callsign to confirm, Citizen",
             "profile_username_changed" to "Callsign updated, Citizen",
             "profile_password_changed" to "Access code rotated, Citizen",
+            "profile_passwords_mismatch" to "Access codes do not match, Citizen",
             "profile_teams_section" to "Assigned Platoons",
             "profile_no_teams" to "Not assigned to any platoon, Citizen",
             "profile_submit" to "Execute Order",

@@ -543,6 +543,7 @@ object RickRollPack {
             "profile_delete_confirm_username" to "Type your name \u2014 you know the rules",
             "profile_username_changed" to "Username changed \u2014 never gonna give it up",
             "profile_password_changed" to "Password changed \u2014 a full commitment",
+            "profile_passwords_mismatch" to "Those passwords let each other down",
             "profile_teams_section" to "Never Gonna Desert These Teams",
             "profile_no_teams" to "No teams \u2014 you've been let down",
             "profile_submit" to "Full Commitment",

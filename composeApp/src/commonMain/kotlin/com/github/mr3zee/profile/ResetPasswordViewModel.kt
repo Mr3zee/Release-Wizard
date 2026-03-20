@@ -30,8 +30,8 @@ class ResetPasswordViewModel(
     val error: StateFlow<UiMessage?> = _error
 
     /** Client-side validation error (passwords don't match) — separate from server errors. */
-    private val _validationError = MutableStateFlow<String?>(null)
-    val validationError: StateFlow<String?> = _validationError
+    private val _validationError = MutableStateFlow<UiMessage?>(null)
+    val validationError: StateFlow<UiMessage?> = _validationError
 
     init {
         validateToken()
@@ -53,7 +53,7 @@ class ResetPasswordViewModel(
 
     fun resetPassword(newPassword: String, confirmPassword: String) {
         if (newPassword != confirmPassword) {
-            _validationError.value = "Passwords do not match"
+            _validationError.value = UiMessage.PasswordsMismatch
             return
         }
         _validationError.value = null
