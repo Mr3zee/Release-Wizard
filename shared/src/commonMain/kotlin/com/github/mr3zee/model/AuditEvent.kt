@@ -62,6 +62,9 @@ enum class AuditAction {
     // Locks
     LOCK_FORCE_RELEASED,
 
+    // Admin
+    ADMIN_ACCESS,
+
     // Auth
     USER_LOGIN,
     USER_REGISTER,

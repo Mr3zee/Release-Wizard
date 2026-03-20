@@ -182,6 +182,13 @@ class DefaultReleasesService(
 
         executionEngine.startExecution(release)
 
+        // SCHED-M6: Audit scheduled release starts with system actor attribution
+        auditService.logSystem(
+            TeamId(projectTeamId), "scheduler",
+            AuditAction.RELEASE_STARTED, AuditTargetType.RELEASE,
+            release.id.value, "Scheduled release for project '${project.name}'"
+        )
+
         return release.copy(tags = tags)
     }
 
@@ -197,6 +204,10 @@ class DefaultReleasesService(
 
         val releaseTeamId = repository.findTeamId(id)
             ?: throw NotFoundException("Release not found")
+
+        // REL-M5: Re-validate connection team consistency on rerun
+        // since connections may have been deleted or moved since the original run
+        validateConnectionTeamConsistency(original.dagSnapshot, releaseTeamId)
 
         val release = repository.create(
             projectTemplateId = original.projectTemplateId,

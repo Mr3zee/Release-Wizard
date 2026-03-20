@@ -200,7 +200,7 @@ class StatusWebhookServiceTest {
     }
 
     @Test
-    fun `processStatusUpdate returns NotFound for non-RUNNING block`() = runBlocking<Unit> {
+    fun `processStatusUpdate returns BlockNotRunning for non-RUNNING block`() = runBlocking<Unit> {
         val releaseId = ReleaseId("r1")
         val blockId = BlockId("a")
 
@@ -229,7 +229,8 @@ class StatusWebhookServiceTest {
         val token = service.createToken(releaseId, blockId)
         val result = service.processStatusUpdate(token, StatusUpdatePayload(status = "Building"))
 
-        assertIs<StatusWebhookResult.NotFound>(result)
+        // HOOK-H2: Non-RUNNING blocks now return BlockNotRunning instead of NotFound
+        assertIs<StatusWebhookResult.BlockNotRunning>(result)
     }
 
     @Test

@@ -94,6 +94,11 @@ class DefaultProjectsService(
             defaultTags = request.defaultTags,
         )
         if (updated != null) {
+            // PROJ-M3: Audit project updates
+            val teamId = repository.findTeamId(id)
+            if (teamId != null) {
+                auditService.log(TeamId(teamId), session, AuditAction.PROJECT_UPDATED, AuditTargetType.PROJECT, id.value, "Updated project '${updated.name}'")
+            }
             log.info("Project updated: {}", id.value)
         }
         return updated

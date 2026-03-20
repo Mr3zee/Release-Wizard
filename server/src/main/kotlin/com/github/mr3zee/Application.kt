@@ -34,10 +34,12 @@ import com.github.mr3zee.tags.tagRoutes
 import com.github.mr3zee.tags.tagsModule
 import com.github.mr3zee.teams.myInviteRoutes
 import com.github.mr3zee.teams.teamRoutes
+import com.github.mr3zee.audit.auditModule
 import com.github.mr3zee.teams.teamsModule
 import com.github.mr3zee.triggers.triggerRoutes
 import com.github.mr3zee.triggers.triggerWebhookRoutes
 import com.github.mr3zee.triggers.triggersModule
+import com.github.mr3zee.webhooks.StatusWebhookService
 import com.github.mr3zee.webhooks.webhookRoutes
 import com.github.mr3zee.webhooks.webhooksModule
 import io.ktor.http.*
@@ -62,6 +64,7 @@ import io.ktor.util.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.serialization.SerializationException
@@ -87,6 +90,7 @@ fun Application.module() {
         slf4jLogger()
         modules(
             appModule(dbConfig, encryptionConfig, authConfig, webhookConfig, passwordPolicyConfig),
+            auditModule,
             authModule,
             projectsModule,
             projectLockModule,
@@ -328,6 +332,31 @@ fun Application.module() {
             val mavenPollerService = koin.getOrNull<MavenPollerService>()
             if (mavenPollerService != null && scope != null) {
                 mavenPollerService.start(scope)
+            }
+
+            // HOOK-M7: Start periodic webhook token cleanup (runs every hour)
+            val webhookService = koin.getOrNull<StatusWebhookService>()
+            if (webhookService != null && scope != null) {
+                scope.launch {
+                    // Run cleanup immediately on startup to clear expired tokens from crash/restart
+                    try {
+                        webhookService.cleanupExpiredTokens()
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        environment.log.error("Initial webhook token cleanup failed", e)
+                    }
+                    while (true) {
+                        delay(StatusWebhookService.CLEANUP_INTERVAL)
+                        try {
+                            webhookService.cleanupExpiredTokens()
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            environment.log.error("Webhook token cleanup failed", e)
+                        }
+                    }
+                }
             }
         } catch (e: Exception) {
             environment.log.error("Application startup failed", e)

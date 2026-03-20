@@ -77,6 +77,11 @@ fun Route.webhookRoutes() {
                     log.warn("Status webhook rejected: token {} not found", maskedToken)
                     call.respond(HttpStatusCode.NotFound, "Not found")
                 }
+                StatusWebhookResult.BlockNotRunning -> {
+                    // HOOK-H2: Distinct response for non-RUNNING blocks (410 Gone)
+                    log.warn("Status webhook rejected: block not running for token {}", maskedToken)
+                    call.respond(HttpStatusCode.Gone, "Block is not running")
+                }
                 is StatusWebhookResult.BadRequest -> {
                     log.warn("Status webhook bad request: {}", result.message)
                     call.respond(HttpStatusCode.BadRequest, result.message)

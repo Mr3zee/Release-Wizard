@@ -25,6 +25,12 @@ interface StatusWebhookTokenRepository {
     suspend fun findByToken(token: UUID): StatusWebhookToken?
     /** HOOK-M5: Atomically find token, validate active + TTL, deactivate if expired — single transaction */
     suspend fun findActiveToken(token: UUID, ttl: kotlin.time.Duration): StatusWebhookToken?
+    /**
+     * HOOK-H1: Atomically find active token within TTL AND deactivate it in the same transaction.
+     * Prevents replay attacks — the token can only be used once.
+     * Returns the token record (with active=false) if it was valid, null if not found/expired/already used.
+     */
+    suspend fun findAndDeactivateToken(token: UUID, ttl: kotlin.time.Duration): StatusWebhookToken?
     suspend fun deactivate(releaseId: ReleaseId, blockId: BlockId)
     suspend fun deactivateExpiredBefore(cutoff: Instant): Int
     suspend fun deleteInactiveBefore(cutoff: Instant): Int
@@ -102,6 +108,46 @@ class ExposedStatusWebhookTokenRepository(
             releaseId = ReleaseId(row[StatusWebhookTokenTable.releaseId].value.toString()),
             blockId = BlockId(row[StatusWebhookTokenTable.blockId]),
             active = true,
+            createdAt = createdAt,
+        )
+    }
+
+    /**
+     * HOOK-H1: Atomically find + validate + deactivate in a single transaction.
+     * Uses FOR UPDATE to prevent concurrent use of the same token.
+     */
+    override suspend fun findAndDeactivateToken(token: UUID, ttl: kotlin.time.Duration): StatusWebhookToken? = dbQuery {
+        val row = StatusWebhookTokenTable.selectAll()
+            .where { StatusWebhookTokenTable.id eq token }
+            .forUpdate()
+            .singleOrNull() ?: return@dbQuery null
+
+        if (!row[StatusWebhookTokenTable.active]) return@dbQuery null
+
+        val createdAt = row[StatusWebhookTokenTable.createdAt]
+        val age = Clock.System.now() - createdAt
+        if (age > ttl) {
+            // Deactivate expired token
+            StatusWebhookTokenTable.update({
+                (StatusWebhookTokenTable.id eq token) and (StatusWebhookTokenTable.active eq true)
+            }) {
+                it[StatusWebhookTokenTable.active] = false
+            }
+            return@dbQuery null
+        }
+
+        // Deactivate the token in the same transaction — single-use guarantee
+        StatusWebhookTokenTable.update({
+            (StatusWebhookTokenTable.id eq token) and (StatusWebhookTokenTable.active eq true)
+        }) {
+            it[StatusWebhookTokenTable.active] = false
+        }
+
+        StatusWebhookToken(
+            token = row[StatusWebhookTokenTable.id].value,
+            releaseId = ReleaseId(row[StatusWebhookTokenTable.releaseId].value.toString()),
+            blockId = BlockId(row[StatusWebhookTokenTable.blockId]),
+            active = false, // already deactivated
             createdAt = createdAt,
         )
     }

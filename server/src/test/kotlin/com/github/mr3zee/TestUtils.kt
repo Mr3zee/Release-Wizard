@@ -3,6 +3,7 @@ package com.github.mr3zee
 import com.github.mr3zee.api.*
 import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.auth.UserSession
+import com.github.mr3zee.audit.auditModule
 import com.github.mr3zee.auth.authModule
 import com.github.mr3zee.connections.connectionsModule
 import com.github.mr3zee.plugins.CorrelationId
@@ -113,6 +114,7 @@ fun Application.testModule(
         allowOverride(true)
         modules(
             appModule(dbConfig, testEncryptionConfig(), authConfig, testWebhookConfig(), passwordPolicyConfig),
+            auditModule,
             authModule,
             projectsModule,
             projectLockModule,

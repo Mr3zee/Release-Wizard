@@ -20,7 +20,10 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.slf4j.LoggerFactory
+import java.net.URLEncoder
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Instant
 
 /**
  * Triggers a GitHub Actions workflow and polls for completion.
@@ -82,6 +85,9 @@ class GitHubActionExecutor(
         val encodedWorkflow = encodePathSegment(workflowFile)
         val baseUrl = "https://api.github.com/repos/${encodePathSegment(config.owner)}/${encodePathSegment(config.repo)}"
 
+        // EXEC-H1: Capture timestamp BEFORE dispatch so we don't miss the run due to network latency
+        val dispatchedAt = Clock.System.now()
+
         // Trigger workflow dispatch (returns 204 No Content)
         val dispatchResponse = httpClient.post("$baseUrl/actions/workflows/$encodedWorkflow/dispatches") {
             header("Authorization", "Bearer ${config.token}")
@@ -96,8 +102,8 @@ class GitHubActionExecutor(
             throw RuntimeException("GitHub workflow dispatch failed (HTTP ${dispatchResponse.status.value})")
         }
 
-        // Discover the run ID by polling the runs list
-        val runId = discoverRunId(baseUrl, encodedWorkflow, config.token)
+        // EXEC-H1: Discover run ID with timestamp + ref filter to avoid picking the wrong run
+        val runId = discoverRunId(baseUrl, encodedWorkflow, config.token, ref, dispatchedAt)
             ?: throw RuntimeException("Could not discover GitHub Actions run ID after dispatch")
 
         // Persist run ID before polling so recovery can resume
@@ -138,15 +144,29 @@ class GitHubActionExecutor(
     /**
      * Poll the workflow runs list to discover the run ID triggered by our dispatch.
      * GitHub's dispatch API returns 204 with no body, so we need to find the run.
+     *
+     * EXEC-H1: Uses timestamp + ref filter to avoid picking the wrong run
+     * when concurrent dispatches target the same workflow.
      */
-    private suspend fun discoverRunId(baseUrl: String, workflowFile: String, token: String): String? {
+    private suspend fun discoverRunId(
+        baseUrl: String,
+        workflowFile: String,
+        token: String,
+        ref: String,
+        dispatchedAt: Instant,
+    ): String? {
+        // GitHub API accepts ISO 8601 dates for the created filter
+        val createdFilter = dispatchedAt.toString()
+        val encodedRef = URLEncoder.encode(ref, "UTF-8")
         repeat(RUN_DISCOVERY_RETRIES) { attempt ->
             if (attempt > 0) {
                 delay(RUN_DISCOVERY_DELAY_MS.milliseconds)
             }
 
             try {
-                val response = httpClient.get("$baseUrl/actions/workflows/$workflowFile/runs?per_page=1") {
+                val response = httpClient.get(
+                    "$baseUrl/actions/workflows/$workflowFile/runs?per_page=5&branch=$encodedRef&created=>=$createdFilter"
+                ) {
                     header("Authorization", "Bearer $token")
                     header("Accept", "application/vnd.github+json")
                 }
@@ -155,7 +175,12 @@ class GitHubActionExecutor(
                     val body = response.body<JsonObject>()
                     val runs = body["workflow_runs"] as? JsonArray
                     if (!runs.isNullOrEmpty()) {
-                        return runs[0].jsonObject["id"]?.jsonPrimitive?.content
+                        // Pick the most recent run matching our ref
+                        val matchingRun = runs.firstOrNull { run ->
+                            val runRef = run.jsonObject["head_branch"]?.jsonPrimitive?.content
+                            runRef == ref
+                        } ?: runs[0]
+                        return matchingRun.jsonObject["id"]?.jsonPrimitive?.content
                     }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {

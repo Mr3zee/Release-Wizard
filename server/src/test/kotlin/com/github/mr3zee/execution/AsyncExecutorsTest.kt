@@ -443,9 +443,9 @@ class AsyncExecutorsTest {
             when {
                 url.contains("/dispatches") ->
                     respond("", HttpStatusCode.NoContent)
-                url.contains("/runs?per_page=1") ->
+                url.contains("/runs?per_page=") ->
                     respond(
-                        """{"workflow_runs":[{"id":789,"html_url":"https://github.com/o/r/actions/runs/789"}]}""",
+                        """{"workflow_runs":[{"id":789,"head_branch":"main","html_url":"https://github.com/o/r/actions/runs/789"}]}""",
                         HttpStatusCode.OK,
                         headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
                     )

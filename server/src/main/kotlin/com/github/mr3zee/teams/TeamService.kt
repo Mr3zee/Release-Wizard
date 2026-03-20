@@ -65,8 +65,14 @@ class DefaultTeamService(
     override suspend fun getTeamDetail(teamId: TeamId, session: UserSession): TeamDetailResponse {
         val team = teamRepository.findById(teamId)
             ?: throw NotFoundException("Team not found")
-        val isMember = session.role == UserRole.ADMIN || teamAccessService.isMember(teamId, session.userId)
-        val members = if (isMember) teamRepository.findMembers(teamId) else emptyList()
+        val isAdmin = session.role == UserRole.ADMIN
+        val isActualMember = teamAccessService.isMember(teamId, session.userId)
+        val canAccess = isAdmin || isActualMember
+        // TEAM-M5: Audit when admin reads team data they're not a member of
+        if (isAdmin && !isActualMember) {
+            auditService.log(teamId, session, AuditAction.ADMIN_ACCESS, AuditTargetType.TEAM, teamId.value, "Admin viewed team details")
+        }
+        val members = if (canAccess) teamRepository.findMembers(teamId) else emptyList()
         return TeamDetailResponse(team = team, members = members)
     }
 

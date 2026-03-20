@@ -590,6 +590,20 @@ class InMemoryStatusWebhookTokenRepository : StatusWebhookTokenRepository {
         return record
     }
 
+    override suspend fun findAndDeactivateToken(token: UUID, ttl: kotlin.time.Duration): StatusWebhookToken? {
+        val record = tokens.find { it.token == token } ?: return null
+        if (!record.active) return null
+        val age = Clock.System.now() - record.createdAt
+        val idx = tokens.indexOf(record)
+        if (age > ttl) {
+            if (idx >= 0) tokens[idx] = tokens[idx].copy(active = false)
+            return null
+        }
+        // Atomically deactivate and return
+        if (idx >= 0) tokens[idx] = tokens[idx].copy(active = false)
+        return tokens[idx]
+    }
+
     override suspend fun deleteInactiveBefore(cutoff: Instant): Int {
         val before = tokens.size
         tokens.removeAll { !it.active && it.createdAt < cutoff }

@@ -1,11 +1,9 @@
 package com.github.mr3zee.schedules
 
 import com.github.mr3zee.NotFoundException
+import com.github.mr3zee.audit.AuditService
 import com.github.mr3zee.auth.UserSession
-import com.github.mr3zee.model.ProjectId
-import com.github.mr3zee.model.Schedule
-import com.github.mr3zee.model.TeamId
-import com.github.mr3zee.model.UserRole
+import com.github.mr3zee.model.*
 import com.github.mr3zee.projects.ProjectsRepository
 import com.github.mr3zee.teams.TeamAccessService
 import org.slf4j.LoggerFactory
@@ -22,6 +20,7 @@ class DefaultScheduleService(
     private val repository: ScheduleRepository,
     private val projectsRepository: ProjectsRepository,
     private val teamAccessService: TeamAccessService,
+    private val auditService: AuditService,
 ) : ScheduleService {
     private val log = LoggerFactory.getLogger(DefaultScheduleService::class.java)
 
@@ -35,13 +34,13 @@ class DefaultScheduleService(
     }
 
     override suspend fun listByProject(projectId: ProjectId, session: UserSession): List<Schedule> {
-        checkProjectAccess(projectId, session)
+        resolveProjectTeamId(projectId, session)
         return repository.findByProjectId(projectId).map { it.toModel() }
     }
 
     override suspend fun getById(id: String, session: UserSession): Schedule? {
         val entity = repository.findById(id) ?: return null
-        checkProjectAccess(entity.projectId, session)
+        resolveProjectTeamId(entity.projectId, session)
         return entity.toModel()
     }
 
@@ -50,7 +49,7 @@ class DefaultScheduleService(
         request: com.github.mr3zee.api.CreateScheduleRequest,
         session: UserSession,
     ): Schedule {
-        checkProjectAccess(projectId, session)
+        val teamId = resolveProjectTeamId(projectId, session)
         // SCHED-H4: Enforce per-project schedule count cap
         val currentCount = repository.countByProjectId(projectId)
         require(currentCount < MAX_SCHEDULES_PER_PROJECT) {
@@ -80,40 +79,48 @@ class DefaultScheduleService(
             nextRunAt = nextRunAt,
         )
         log.info("Schedule created: {} for project {} (cron='{}')", entity.id, projectId.value, request.cronExpression)
+        // SCHED-M5: Audit schedule creation
+        auditService.log(TeamId(teamId), session, AuditAction.SCHEDULE_CREATED, AuditTargetType.SCHEDULE, entity.id, "Created schedule with cron '${request.cronExpression}' for project ${projectId.value}")
         return entity.toModel()
     }
 
     override suspend fun toggle(id: String, enabled: Boolean, session: UserSession): Schedule? {
         val entity = repository.findById(id) ?: return null
-        checkAccess(entity, session)
+        val teamId = resolveProjectTeamId(entity.projectId, session)
 
         val nextRunAt = if (enabled) CronUtils.computeNextRun(entity.cronExpression) else entity.nextRunAt
         val updated = repository.update(id, enabled = enabled, nextRunAt = nextRunAt, lastRunAt = null)
         if (updated != null) {
             log.info("Schedule {} toggled to enabled={}", id, enabled)
+            // SCHED-M5: Audit schedule toggle
+            auditService.log(TeamId(teamId), session, AuditAction.SCHEDULE_UPDATED, AuditTargetType.SCHEDULE, id, "Toggled schedule to enabled=$enabled")
         }
         return updated?.toModel()
     }
 
     override suspend fun delete(id: String, session: UserSession): Boolean {
         val entity = repository.findById(id) ?: return false
-        checkAccess(entity, session)
+        val teamId = resolveProjectTeamId(entity.projectId, session)
         val deleted = repository.delete(id)
         if (deleted) {
             log.info("Schedule deleted: {}", id)
+            // SCHED-M5: Audit schedule deletion
+            auditService.log(TeamId(teamId), session, AuditAction.SCHEDULE_DELETED, AuditTargetType.SCHEDULE, id, "Deleted schedule for project ${entity.projectId.value}")
         }
         return deleted
     }
 
-    private suspend fun checkAccess(entity: ScheduleEntity, session: UserSession) {
-        checkProjectAccess(entity.projectId, session)
-    }
-
-    private suspend fun checkProjectAccess(projectId: ProjectId, session: UserSession) {
-        if (session.role == UserRole.ADMIN) return
+    /**
+     * Resolves the team ID for a project, performs access check, and returns the team ID.
+     * Combines access check + team ID resolution in a single DB lookup.
+     */
+    private suspend fun resolveProjectTeamId(projectId: ProjectId, session: UserSession): String {
         val projectTeamId = projectsRepository.findTeamId(projectId)
             ?: throw NotFoundException("Project not found")
-        teamAccessService.checkMembership(TeamId(projectTeamId), session)
+        if (session.role != UserRole.ADMIN) {
+            teamAccessService.checkMembership(TeamId(projectTeamId), session)
+        }
+        return projectTeamId
     }
 
 }

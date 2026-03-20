@@ -189,9 +189,9 @@ class StopResumeTest {
             val finalRelease = releasesRepo.findById(release.id) ?: fail("Release must exist")
             assertEquals(ReleaseStatus.STOPPED, finalRelease.status)
 
-            // WAITING block unchanged — it never ran
+            // REL-M2: WAITING blocks are now also stopped to prevent double-resume on resume
             val exec = releasesRepo.findBlockExecution(release.id, BlockId("a")) ?: fail("Block exec must exist")
-            assertEquals(BlockStatus.WAITING, exec.status)
+            assertEquals(BlockStatus.STOPPED, exec.status)
         }
     }
 
@@ -251,9 +251,10 @@ class StopResumeTest {
             assertTrue(first, "First stop must return true")
             assertEquals(ReleaseStatus.STOPPED, releasesRepo.findById(release.id)?.status)
 
-            // Second stop on an already-stopped release — no active job, returns true (idempotent)
+            // REL-M1: Second stop on an already-stopped release returns false
+            // because the engine now validates status inside the mutex
             val second = engine.stopRelease(release.id)
-            assertTrue(second, "Second stop returns true (idempotent)")
+            assertFalse(second, "Second stop returns false (release is already STOPPED)")
 
             // State must remain consistent — still STOPPED, not flipped to something else
             val finalRelease = releasesRepo.findById(release.id) ?: fail("Release must exist")

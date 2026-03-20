@@ -156,7 +156,7 @@ class StatusWebhookRouteTest {
     }
 
     @Test
-    fun `POST status to non-RUNNING block returns 404`() = runTest {
+    fun `POST status to non-RUNNING block returns 410 Gone`() = runTest {
         val (token) = createBlockWithToken(status = BlockStatus.SUCCEEDED)
 
         val response = client.post(ApiRoutes.Webhooks.STATUS) {
@@ -164,7 +164,8 @@ class StatusWebhookRouteTest {
             contentType(ContentType.Application.Json)
             setBody("""{"status":"Building"}""")
         }
-        assertEquals(HttpStatusCode.NotFound, response.status)
+        // HOOK-H2: Non-RUNNING blocks return 410 Gone instead of 404
+        assertEquals(HttpStatusCode.Gone, response.status)
     }
 
     @Test
@@ -180,21 +181,25 @@ class StatusWebhookRouteTest {
     }
 
     @Test
-    fun `POST status overwrites previous status`() = runTest {
-        val (token, releaseId, blockId) = createBlockWithToken()
+    fun `POST status overwrites previous status with new token`() = runTest {
+        val (token1, releaseId, blockId) = createBlockWithToken()
 
-        client.post(ApiRoutes.Webhooks.STATUS) {
-            header("Authorization", "Bearer $token")
+        val response1 = client.post(ApiRoutes.Webhooks.STATUS) {
+            header("Authorization", "Bearer $token1")
             contentType(ContentType.Application.Json)
             setBody("""{"status":"Step 1"}""")
         }
+        assertEquals(HttpStatusCode.OK, response1.status)
 
-        val response = client.post(ApiRoutes.Webhooks.STATUS) {
-            header("Authorization", "Bearer $token")
+        // HOOK-H1: Token is deactivated after first successful use, create a new one
+        val token2 = service.createToken(releaseId, blockId)
+
+        val response2 = client.post(ApiRoutes.Webhooks.STATUS) {
+            header("Authorization", "Bearer $token2")
             contentType(ContentType.Application.Json)
             setBody("""{"status":"Step 2","description":"Testing phase"}""")
         }
-        assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(HttpStatusCode.OK, response2.status)
 
         val execution = repo.findBlockExecution(releaseId, blockId)
         assertNotNull(execution)

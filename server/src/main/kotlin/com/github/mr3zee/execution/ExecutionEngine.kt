@@ -311,7 +311,8 @@ class ExecutionEngine(
             }
             BlockStatus.RUNNING -> {
                 // Was running when server died -- call resume(), then check for post-gate
-                resumeAction(release, block, statusMap, outputsMap)
+                // EXEC-H4: Pass persisted startedAt to preserve duration metrics
+                resumeAction(release, block, statusMap, outputsMap, persistedExec?.startedAt)
             }
             BlockStatus.WAITING_FOR_INPUT -> {
                 val startTime = persistedExec.startedAt ?: Clock.System.now()
@@ -367,8 +368,11 @@ class ExecutionEngine(
         block: Block.ActionBlock,
         statusMap: MutableMap<BlockId, BlockStatus>,
         outputsMap: MutableMap<BlockId, Map<String, String>>,
+        persistedStartedAt: Instant? = null,
     ) {
-        runBlockWithPostGate(release, block, Clock.System.now(), statusMap, outputsMap, BlockExecutor::resume)
+        // EXEC-H4: Use persisted startedAt to preserve duration metrics after recovery
+        val startTime = persistedStartedAt ?: Clock.System.now()
+        runBlockWithPostGate(release, block, startTime, statusMap, outputsMap, BlockExecutor::resume)
     }
 
     /**
@@ -466,6 +470,8 @@ class ExecutionEngine(
         val mutex = restartMutexes.getOrPut(releaseId) { Mutex() }
         return mutex.withLock {
             val release = repository.findById(releaseId) ?: return@withLock false
+            // REL-M1: Validate status inside engine (protected by mutex) to prevent TOCTOU
+            if (release.status != ReleaseStatus.RUNNING) return@withLock false
 
             try {
                 // Cancel the release-level coroutine job
@@ -479,17 +485,11 @@ class ExecutionEngine(
                 stoppingReleases.remove(releaseId)
             }
 
-            // Clean up stale in-memory state
-            activeJobs.remove(releaseId)
-            pendingApprovals.remove(releaseId)
-            completionEmitted.remove(releaseId)
-            replayBuffers.remove(releaseId)
-            sequenceCounters.remove(releaseId)
-
-            // Find all RUNNING/WAITING_FOR_INPUT blocks to stop
+            // Find all RUNNING/WAITING_FOR_INPUT/WAITING blocks to stop
             val executions = repository.findBlockExecutions(releaseId)
+            // REL-M2: Include WAITING blocks in batch stop to prevent double-resume on resume
             val blocksToStop = executions.filter {
-                it.status == BlockStatus.RUNNING || it.status == BlockStatus.WAITING_FOR_INPUT
+                it.status == BlockStatus.RUNNING || it.status == BlockStatus.WAITING_FOR_INPUT || it.status == BlockStatus.WAITING
             }
 
             // Cancel external builds for running blocks (best-effort)
@@ -507,7 +507,8 @@ class ExecutionEngine(
                 repository.updateStatus(releaseId, ReleaseStatus.STOPPED)
             }
 
-            // Emit WebSocket events for each stopped block + release status change
+            // EXEC-H3: Emit WebSocket events BEFORE clearing replay buffers
+            // so reconnecting subscribers see the stop events in the replay buffer.
             val updatedExecutions = repository.findBlockExecutions(releaseId)
             for (exec in updatedExecutions) {
                 if (exec.status == BlockStatus.STOPPED && blocksToStop.any { it.blockId == exec.blockId }) {
@@ -515,6 +516,13 @@ class ExecutionEngine(
                 }
             }
             emitEvent(ReleaseEvent.ReleaseStatusChanged(releaseId, ReleaseStatus.STOPPED))
+
+            // Clean up stale in-memory state AFTER emitting events
+            activeJobs.remove(releaseId)
+            pendingApprovals.remove(releaseId)
+            completionEmitted.remove(releaseId)
+            replayBuffers.remove(releaseId)
+            sequenceCounters.remove(releaseId)
 
             log.info("Release {} stopped ({} blocks stopped)", releaseId.value, blocksToStop.size)
             true
@@ -980,6 +988,8 @@ class ExecutionEngine(
         // Channel signaled whenever any block reaches a terminal state
         val blockCompleted = Channel<Unit>(Channel.UNLIMITED)
         val inFlightCount = AtomicInteger(0)
+        // EXEC-M4: Pre-build lookup map to avoid O(n) scan per block in each wave
+        val blockById = graph.blocks.associateBy { it.id }
 
         fun launchReadyBlocks(): Int {
             val ready = remaining.filter { blockId ->
@@ -989,7 +999,7 @@ class ExecutionEngine(
             for (blockId in ready) {
                 remaining.remove(blockId)
                 inFlightCount.incrementAndGet()
-                val block = graph.blocks.find { it.id == blockId }
+                val block = blockById[blockId]
                     ?: error("Block $blockId not found in DAG despite being in topological sort")
                 scope.launch {
                     try {
@@ -1062,10 +1072,12 @@ class ExecutionEngine(
             connections[connId] = connection.config
         }
 
+        // EXEC-M3: Pass an immutable snapshot so executors see a consistent view
+        // and can't accidentally mutate the shared map
         val context = ExecutionContext(
             releaseId = release.id,
             parameters = release.parameters,
-            blockOutputs = outputsMap,
+            blockOutputs = outputsMap.toMap(),
             connections = connections,
         )
 
