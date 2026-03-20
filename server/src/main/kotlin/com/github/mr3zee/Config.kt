@@ -21,10 +21,10 @@ data class AuthConfig(
 )
 
 data class PasswordPolicyConfig(
-    val minLength: Int = 12,
+    val minLength: Int = 16,
     val requireUppercase: Boolean = true,
     val requireDigit: Boolean = true,
-    val requireSpecial: Boolean = false,
+    val requireSpecial: Boolean = true,
 )
 
 data class EncryptionConfig(
@@ -84,10 +84,10 @@ fun ApplicationConfig.authConfig(): AuthConfig {
 
 fun ApplicationConfig.passwordPolicyConfig(): PasswordPolicyConfig {
     return PasswordPolicyConfig(
-        minLength = propertyOrNull("app.auth.password.minLength")?.getString()?.toIntOrNull() ?: 12,
+        minLength = propertyOrNull("app.auth.password.minLength")?.getString()?.toIntOrNull() ?: 16,
         requireUppercase = propertyOrNull("app.auth.password.requireUppercase")?.getString()?.toBooleanStrictOrNull() ?: true,
         requireDigit = propertyOrNull("app.auth.password.requireDigit")?.getString()?.toBooleanStrictOrNull() ?: true,
-        requireSpecial = propertyOrNull("app.auth.password.requireSpecial")?.getString()?.toBooleanStrictOrNull() ?: false,
+        requireSpecial = propertyOrNull("app.auth.password.requireSpecial")?.getString()?.toBooleanStrictOrNull() ?: true,
     )
 }
 

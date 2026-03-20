@@ -58,7 +58,7 @@
     <string name="auth_toggle_to_register">Don\u0027t have an account? Create account</string>
     <string name="auth_confirm_password">Confirm Password</string>
     <string name="auth_password_mismatch">Passwords do not match</string>
-    <string name="auth_password_requirements">At least 12 characters, including an uppercase letter and a number</string>
+    <string name="auth_password_requirements">At least 16 characters, including an uppercase letter, a number, and a special character</string>
     <string name="auth_sign_out">Sign Out</string>
     <string name="auth_username_hint">Up to 64 characters</string>
 

@@ -100,4 +100,9 @@ class AuthApiClient(private val client: HttpClient) {
         val body: UserListResponse = response.body()
         return body.users
     }
+
+    suspend fun getPasswordPolicy(): PasswordPolicyResponse {
+        val response = client.get(serverUrl(ApiRoutes.Auth.PASSWORD_POLICY))
+        return response.body()
+    }
 }

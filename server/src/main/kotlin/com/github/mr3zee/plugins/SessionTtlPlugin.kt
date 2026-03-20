@@ -65,16 +65,16 @@ val SessionTtl = createApplicationPlugin(name = "SessionTtl") {
             ClientType.DESKTOP -> desktopAbsoluteLifetimeMillis
         }
 
-        // Check absolute session lifetime
-        if (nowMillis - session.createdAt > absoluteLifetimeMillis) {
-            log.debug("Session absolute lifetime exceeded for user '{}' (age {}ms > max {}ms)", session.username, nowMillis - session.createdAt, absoluteLifetimeMillis)
+        // Check absolute session lifetime (>= so that TTL=0 means "expire immediately")
+        if (nowMillis - session.createdAt >= absoluteLifetimeMillis) {
+            log.debug("Session absolute lifetime exceeded for user '{}' (age {}ms >= max {}ms)", session.username, nowMillis - session.createdAt, absoluteLifetimeMillis)
             call.sessions.clear<UserSession>()
             return@onCall
         }
 
-        if (nowMillis - session.lastAccessedAt > ttlMillis) {
+        if (nowMillis - session.lastAccessedAt >= ttlMillis) {
             // Session expired — clear it; the auth challenge will emit 401
-            log.debug("Session expired for user '{}' (idle {}ms > ttl {}ms)", session.username, nowMillis - session.lastAccessedAt, ttlMillis)
+            log.debug("Session expired for user '{}' (idle {}ms >= ttl {}ms)", session.username, nowMillis - session.lastAccessedAt, ttlMillis)
             call.sessions.clear<UserSession>()
             return@onCall
         }

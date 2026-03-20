@@ -64,7 +64,7 @@ object RickAndMortyPack {
             "auth_create_account_button" to "Create Interdimensional Account",
             "auth_password" to "Password (make it *burp* good)",
             "auth_password_mismatch" to "Passwords don't match, Morty. It's not *burp* hard.",
-            "auth_password_requirements" to "At least 12 characters, Morty. Even *burp* you could do this.",
+            "auth_password_requirements" to "At least 16 characters, Morty, with an uppercase letter, a number, and a special character. Even *burp* you could do this.",
             "auth_sign_in_button" to "Get Schwifty (Sign In)",
             "auth_sign_in_continue" to "Sign in to your *burp* account, Morty, come on",
             "auth_sign_out" to "Peace out, losers",

@@ -612,6 +612,29 @@ class ProfileRoutesTest {
         assertEquals(HttpStatusCode.Unauthorized, response.status)
     }
 
+    // ── Password Policy Endpoint ────────────────────────────────────────
+
+    @Test
+    fun `password policy returns expected shape from test config`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+
+        val response = client.get(ApiRoutes.Auth.PASSWORD_POLICY)
+        assertEquals(HttpStatusCode.OK, response.status)
+        val policy = response.body<PasswordPolicyResponse>()
+        // testPasswordPolicyConfig() uses minLength=8, all requirements false
+        assertEquals(8, policy.minLength)
+        assertEquals(128, policy.maxLength)
+        assertEquals(false, policy.requireUppercase)
+        assertEquals(false, policy.requireDigit)
+        assertEquals(false, policy.requireSpecial)
+
+        // Verify Cache-Control header
+        val cacheControl = response.headers[io.ktor.http.HttpHeaders.CacheControl]
+        assertNotNull(cacheControl, "Expected Cache-Control header")
+        assertTrue(cacheControl.contains("max-age=3600"), "Expected max-age=3600 in Cache-Control header")
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────
 
     /**

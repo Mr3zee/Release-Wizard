@@ -101,3 +101,12 @@ data class ValidateResetTokenRequest(
 ) {
     override fun toString() = "ValidateResetTokenRequest(token=****)"
 }
+
+@Serializable
+data class PasswordPolicyResponse(
+    val minLength: Int,
+    val maxLength: Int,
+    val requireUppercase: Boolean,
+    val requireDigit: Boolean,
+    val requireSpecial: Boolean,
+)

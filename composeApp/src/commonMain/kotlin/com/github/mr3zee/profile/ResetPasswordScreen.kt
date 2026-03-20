@@ -1,5 +1,6 @@
 package com.github.mr3zee.profile
 
+import com.github.mr3zee.LocalPasswordPolicyHint
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,6 +52,7 @@ fun ResetPasswordScreen(
     viewModel: ResetPasswordViewModel,
     onGoToLogin: () -> Unit,
 ) {
+    val passwordPolicyHint = LocalPasswordPolicyHint.current
     val isValidating by viewModel.isValidating.collectAsState()
     val isTokenValid by viewModel.isTokenValid.collectAsState()
     val isSubmitting by viewModel.isSubmitting.collectAsState()
@@ -178,7 +180,7 @@ fun ResetPasswordScreen(
                             singleLine = true,
                             visualTransformation = if (showNewPassword) VisualTransformation.None else PasswordVisualTransformation(),
                             supportingText = {
-                                Text(packStringResource(Res.string.auth_password_requirements))
+                                Text(passwordPolicyHint ?: packStringResource(Res.string.auth_password_requirements))
                             },
                             trailingIcon = {
                                 RwTooltip(

@@ -38,6 +38,7 @@ object ApiRoutes {
         const val GENERATE_PASSWORD_RESET = "$API_V1/auth/password-reset/generate"
         const val RESET_PASSWORD = "$API_V1/auth/password-reset"
         const val VALIDATE_RESET_TOKEN = "$API_V1/auth/password-reset/validate"
+        const val PASSWORD_POLICY = "$API_V1/auth/password-policy"
         fun userRole(id: String) = "$USERS/$id/role"
 
         object MyInvites {
