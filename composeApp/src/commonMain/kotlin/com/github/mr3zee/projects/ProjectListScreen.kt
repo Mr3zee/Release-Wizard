@@ -179,8 +179,8 @@ fun ProjectListScreen(
             CreateProjectInlineForm(
                 visible = showCreateDialog,
                 onDismiss = { showCreateDialog = false },
-                onCreate = { name ->
-                    viewModel.createProject(name) { projectId ->
+                onCreate = { name, description ->
+                    viewModel.createProject(name, description) { projectId ->
                         onEditProject(projectId)
                     }
                     showCreateDialog = false
@@ -372,27 +372,31 @@ private fun ProjectListItem(
 private fun CreateProjectInlineForm(
     visible: Boolean,
     onDismiss: () -> Unit,
-    onCreate: (String) -> Unit,
+    onCreate: (name: String, description: String) -> Unit,
 ) {
     var name by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
 
     // Reset form state when it becomes visible
     LaunchedEffect(visible) {
-        if (visible) name = ""
+        if (visible) {
+            name = ""
+            description = ""
+        }
     }
 
     RwInlineForm(
         visible = visible,
         title = packStringResource(Res.string.projects_new_project),
         onDismiss = onDismiss,
-        onSubmit = { if (name.isNotBlank()) onCreate(name) },
+        onSubmit = { if (name.isNotBlank()) onCreate(name, description) },
         testTag = "create_project_form",
         modifier = Modifier
             .widthIn(max = 1200.dp)
             .padding(horizontal = Spacing.lg, vertical = Spacing.xs),
         actions = {
             RwButton(
-                onClick = { onCreate(name) },
+                onClick = { onCreate(name, description) },
                 variant = RwButtonVariant.Primary,
                 enabled = name.isNotBlank(),
                 modifier = Modifier.testTag("create_project_confirm"),
@@ -410,6 +414,18 @@ private fun CreateProjectInlineForm(
             modifier = Modifier
                 .fillMaxWidth()
                 .testTag("project_name_input"),
+        )
+        Spacer(Modifier.height(Spacing.sm))
+        RwTextField(
+            value = description,
+            onValueChange = { description = it },
+            label = packStringResource(Res.string.projects_project_description),
+            placeholder = packStringResource(Res.string.projects_project_description_placeholder),
+            singleLine = false,
+            maxLines = 3,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("project_description_input"),
         )
     }
 }

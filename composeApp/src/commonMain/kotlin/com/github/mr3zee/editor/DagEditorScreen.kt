@@ -492,7 +492,10 @@ fun DagEditorScreen(
                         onUpdateTimeout = { id, timeout -> viewModel.updateBlockTimeout(id, timeout) },
                         onUpdatePreGate = { id, gate -> viewModel.updateBlockPreGate(id, gate) },
                         onUpdatePostGate = { id, gate -> viewModel.updateBlockPostGate(id, gate) },
+                        onUpdateDescription = { id, desc -> viewModel.updateBlockDescription(id, desc) },
                         onUpdateInjectWebhookUrl = { id, inject -> viewModel.updateBlockInjectWebhookUrl(id, inject) },
+                        projectDescription = project?.description ?: "",
+                        onUpdateProjectDescription = { viewModel.updateProjectDescription(it) },
                         enabled = !isReadOnly,
                     )
                 }
@@ -663,4 +666,5 @@ private fun formatValidationError(error: ValidationError): String = when (error)
     is ValidationError.TooManyParameters -> packStringResource(Res.string.editor_validation_too_many_parameters, error.max)
     is ValidationError.ParameterKeyTooLong -> packStringResource(Res.string.editor_validation_parameter_key_too_long, error.max)
     is ValidationError.ParameterValueTooLong -> packStringResource(Res.string.editor_validation_parameter_value_too_long, error.max)
+    is ValidationError.BlockDescriptionTooLong -> packStringResource(Res.string.editor_validation_block_description_too_long, error.length, error.max)
 }

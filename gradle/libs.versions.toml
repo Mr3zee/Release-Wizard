@@ -22,6 +22,7 @@ logback = "1.5.24"
 material3 = "1.10.0-alpha05"
 postgresql = "42.7.5"
 testcontainers = "1.20.4"
+multiplatformMarkdown = "0.39.2"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -81,6 +82,10 @@ testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.
 cronUtils = { module = "com.cronutils:cron-utils", version.ref = "cronUtils" }
 snakeyaml = { module = "org.yaml:snakeyaml", version.ref = "snakeyaml" }
 argon2 = { module = "de.mkammerer:argon2-jvm", version.ref = "argon2" }
+
+# Markdown
+markdown-renderer = { module = "com.mikepenz:multiplatform-markdown-renderer", version.ref = "multiplatformMarkdown" }
+markdown-renderer-m3 = { module = "com.mikepenz:multiplatform-markdown-renderer-m3", version.ref = "multiplatformMarkdown" }
 
 # Koin
 koin-ktor = { module = "io.insert-koin:koin-ktor", version.ref = "koin" }

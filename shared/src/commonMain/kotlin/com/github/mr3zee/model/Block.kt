@@ -12,12 +12,14 @@ import kotlinx.serialization.json.JsonClassDiscriminator
 sealed class Block {
     abstract val id: BlockId
     abstract val name: String
+    abstract val description: String
 
     @Serializable
     @SerialName("container")
     data class ContainerBlock(
         override val id: BlockId,
         override val name: String,
+        override val description: String = "",
         val children: DagGraph = DagGraph(),
     ) : Block()
 
@@ -26,6 +28,7 @@ sealed class Block {
     data class ActionBlock(
         override val id: BlockId,
         override val name: String,
+        override val description: String = "",
         val type: BlockType,
         val parameters: List<Parameter> = emptyList(),
         val outputs: List<String> = emptyList(),

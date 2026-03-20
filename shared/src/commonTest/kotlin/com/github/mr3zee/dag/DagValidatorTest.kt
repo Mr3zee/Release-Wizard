@@ -309,4 +309,75 @@ class DagValidatorTest {
         val errors = DagValidator.validate(graph)
         assertTrue(errors.none { it is ValidationError.NestingTooDeep })
     }
+
+    @Test
+    fun `detects block description too long`() {
+        val longDescription = "x".repeat(DagValidator.MAX_BLOCK_DESCRIPTION_LENGTH + 1)
+        val block = Block.ActionBlock(
+            id = BlockId("a"),
+            name = "a",
+            description = longDescription,
+            type = BlockType.TEAMCITY_BUILD,
+        )
+        val graph = DagGraph(blocks = listOf(block))
+        val errors = DagValidator.validate(graph)
+        assertTrue(errors.any { it is ValidationError.BlockDescriptionTooLong })
+        val err = errors.filterIsInstance<ValidationError.BlockDescriptionTooLong>().first()
+        assertEquals(BlockId("a"), err.blockId)
+        assertEquals(DagValidator.MAX_BLOCK_DESCRIPTION_LENGTH + 1, err.length)
+        assertEquals(DagValidator.MAX_BLOCK_DESCRIPTION_LENGTH, err.max)
+    }
+
+    @Test
+    fun `block description at max length is valid`() {
+        val description = "x".repeat(DagValidator.MAX_BLOCK_DESCRIPTION_LENGTH)
+        val block = Block.ActionBlock(
+            id = BlockId("a"),
+            name = "a",
+            description = description,
+            type = BlockType.TEAMCITY_BUILD,
+        )
+        val graph = DagGraph(blocks = listOf(block))
+        val errors = DagValidator.validate(graph)
+        assertTrue(errors.none { it is ValidationError.BlockDescriptionTooLong })
+    }
+
+    @Test
+    fun `detects container block description too long`() {
+        val longDescription = "x".repeat(DagValidator.MAX_BLOCK_DESCRIPTION_LENGTH + 1)
+        val container = Block.ContainerBlock(
+            id = BlockId("c1"),
+            name = "Group",
+            description = longDescription,
+            children = DagGraph(),
+        )
+        val graph = DagGraph(blocks = listOf(container))
+        val errors = DagValidator.validate(graph)
+        assertTrue(errors.any { it is ValidationError.BlockDescriptionTooLong })
+        val err = errors.filterIsInstance<ValidationError.BlockDescriptionTooLong>().first()
+        assertEquals(BlockId("c1"), err.blockId)
+        assertEquals(DagValidator.MAX_BLOCK_DESCRIPTION_LENGTH + 1, err.length)
+        assertEquals(DagValidator.MAX_BLOCK_DESCRIPTION_LENGTH, err.max)
+    }
+
+    @Test
+    fun `detects block description too long in nested container`() {
+        val longDescription = "x".repeat(DagValidator.MAX_BLOCK_DESCRIPTION_LENGTH + 1)
+        val nestedBlock = Block.ActionBlock(
+            id = BlockId("nested"),
+            name = "nested",
+            description = longDescription,
+            type = BlockType.TEAMCITY_BUILD,
+        )
+        val container = Block.ContainerBlock(
+            id = BlockId("c1"),
+            name = "Group",
+            children = DagGraph(blocks = listOf(nestedBlock)),
+        )
+        val graph = DagGraph(blocks = listOf(container))
+        val errors = DagValidator.validate(graph)
+        assertTrue(errors.any { it is ValidationError.BlockDescriptionTooLong })
+        val err = errors.filterIsInstance<ValidationError.BlockDescriptionTooLong>().first()
+        assertEquals(BlockId("nested"), err.blockId)
+    }
 }

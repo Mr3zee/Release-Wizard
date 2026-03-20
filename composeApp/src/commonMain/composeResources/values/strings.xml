@@ -77,6 +77,8 @@
     <string name="projects_new_project">New Project</string>
     <string name="projects_project_name">Project name</string>
     <string name="projects_project_name_placeholder">e.g. My Library v2.0</string>
+    <string name="projects_project_description">Description</string>
+    <string name="projects_project_description_placeholder">Optional project description (Markdown supported)</string>
     <string name="projects_delete_confirmation">Are you sure you want to delete \"%1$s\"? This will permanently remove the project and all its pipeline configuration.</string>
     <string name="projects_switch_team_title">Switch Team</string>
     <string name="projects_no_team">No Team</string>
@@ -166,6 +168,12 @@
     <string name="editor_prop_title">Properties</string>
     <string name="editor_prop_empty_hint">Select a block to edit its properties</string>
     <string name="editor_prop_name">Name</string>
+    <string name="editor_prop_description">Description</string>
+    <string name="editor_prop_description_placeholder">Add a description (Markdown supported)</string>
+    <string name="editor_prop_add_description">Add description</string>
+    <string name="editor_markdown_edit">Edit</string>
+    <string name="editor_markdown_preview">Preview</string>
+    <string name="editor_project_description_header">Project Description</string>
     <string name="editor_prop_type">Type</string>
     <string name="editor_prop_container_type">Container block</string>
     <string name="editor_inject_webhook_label">Enable build status reporting</string>
@@ -235,6 +243,7 @@
     <string name="editor_validation_too_many_parameters">Too many parameters on block (max %1$d)</string>
     <string name="editor_validation_parameter_key_too_long">Parameter key too long (max %1$d)</string>
     <string name="editor_validation_parameter_value_too_long">Parameter value too long (max %1$d)</string>
+    <string name="editor_validation_block_description_too_long">Block description too long: %1$d / %2$d</string>
     <string name="editor_empty_canvas_hint">Drag from an output port to an input port to connect blocks</string>
     <string name="editor_empty_canvas_no_blocks">Add blocks from the toolbar to get started</string>
     <string name="editor_zoom_fit">Reset view</string>

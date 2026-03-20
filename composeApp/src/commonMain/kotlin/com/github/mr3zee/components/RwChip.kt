@@ -32,6 +32,7 @@ fun RwChip(
     label: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    role: Role = Role.Checkbox,
 ) {
     val colors = LocalAppColors.current
     val interactionSource = remember { MutableInteractionSource() }
@@ -64,7 +65,7 @@ fun RwChip(
                     interactionSource = interactionSource,
                     indication = null,
                     enabled = enabled,
-                    role = Role.Checkbox,
+                    role = role,
                     onClick = onClick,
                 )
                 .padding(horizontal = 12.dp, vertical = 6.dp),

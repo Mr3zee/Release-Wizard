@@ -21,6 +21,7 @@ import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwCheckbox
 import com.github.mr3zee.components.RwIconButton
+import com.github.mr3zee.components.RwMarkdownField
 import com.github.mr3zee.components.RwTextField
 import com.github.mr3zee.components.RwTooltip
 import com.github.mr3zee.model.*
@@ -51,7 +52,10 @@ fun BlockPropertiesPanel(
     onUpdateTimeout: (BlockId, Long?) -> Unit,
     onUpdatePreGate: (BlockId, Gate?) -> Unit,
     onUpdatePostGate: (BlockId, Gate?) -> Unit,
+    onUpdateDescription: (BlockId, String) -> Unit = { _, _ -> },
     onUpdateInjectWebhookUrl: (BlockId, Boolean) -> Unit = { _, _ -> },
+    projectDescription: String = "",
+    onUpdateProjectDescription: (String) -> Unit = {},
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
@@ -69,6 +73,25 @@ fun BlockPropertiesPanel(
         )
 
         if (block == null) {
+            // Project description editor when no block is selected
+            Text(
+                packStringResource(Res.string.editor_project_description_header),
+                style = AppTypography.label,
+            )
+            Spacer(Modifier.height(Spacing.xs))
+            var projDesc by remember(projectDescription) { mutableStateOf(projectDescription) }
+            RwMarkdownField(
+                value = projDesc,
+                onValueChange = {
+                    projDesc = it
+                    onUpdateProjectDescription(it)
+                },
+                placeholder = packStringResource(Res.string.projects_project_description_placeholder),
+                enabled = enabled,
+                modifier = Modifier.fillMaxWidth().testTag("project_description_field"),
+                testTag = "project_description_field",
+            )
+            Spacer(Modifier.height(Spacing.md))
             Text(
                 packStringResource(Res.string.editor_prop_empty_hint),
                 style = AppTypography.bodySmall,
@@ -130,6 +153,74 @@ fun BlockPropertiesPanel(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+        }
+
+        // Description — collapsible section after type-specific config
+        Spacer(Modifier.height(Spacing.md))
+        BlockDescriptionSection(
+            block = block,
+            enabled = enabled,
+            onUpdateDescription = onUpdateDescription,
+        )
+    }
+}
+
+@Composable
+private fun BlockDescriptionSection(
+    block: Block,
+    enabled: Boolean,
+    onUpdateDescription: (BlockId, String) -> Unit,
+) {
+    var descExpanded by remember(block.id) { mutableStateOf(block.description.isNotBlank()) }
+    var description by remember(block.id) { mutableStateOf(block.description) }
+    if (description != block.description) description = block.description
+
+    if (!descExpanded) {
+        RwButton(
+            onClick = { descExpanded = true },
+            variant = RwButtonVariant.Ghost,
+            enabled = enabled,
+            modifier = Modifier.fillMaxWidth().testTag("add_description_button"),
+        ) {
+            Text(
+                if (block.description.isNotBlank()) block.description.lineSequence().first()
+                else packStringResource(Res.string.editor_prop_add_description),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    } else {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(packStringResource(Res.string.editor_prop_description), style = AppTypography.label)
+            RwButton(
+                onClick = { descExpanded = false },
+                variant = RwButtonVariant.Ghost,
+                contentPadding = PaddingValues(Spacing.xs),
+                modifier = Modifier.testTag("collapse_description_button"),
+            ) {
+                Icon(
+                    Icons.Default.KeyboardArrowDown,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+        }
+        key(block.id) {
+            RwMarkdownField(
+                value = description,
+                onValueChange = {
+                    description = it
+                    onUpdateDescription(block.id, it)
+                },
+                placeholder = packStringResource(Res.string.editor_prop_description_placeholder),
+                enabled = enabled,
+                modifier = Modifier.fillMaxWidth().testTag("block_description_field"),
+                testTag = "block_description_field",
+            )
         }
     }
 }
