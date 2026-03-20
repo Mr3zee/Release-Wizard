@@ -40,3 +40,27 @@ data class MockRoute(
 
 fun json(body: String, status: HttpStatusCode = HttpStatusCode.OK, method: HttpMethod? = null) =
     MockRoute(body, status, method)
+
+/**
+ * Overload that accepts a list of pairs to support multiple routes on the same path
+ * with different HTTP methods (e.g., GET and PUT on "/projects/p1").
+ * Using mapOf() with duplicate keys silently drops earlier entries.
+ */
+fun mockHttpClient(routes: List<Pair<String, MockRoute>>): HttpClient {
+    return HttpClient(MockEngine { request ->
+        val path = request.url.encodedPath
+        val method = request.method
+        val route = routes.firstOrNull { (key, r) ->
+            path == "/api/v1$key" && (r.method == null || r.method == method)
+        }?.second
+        respond(
+            content = route?.body ?: "{}",
+            status = route?.status ?: HttpStatusCode.OK,
+            headers = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+        )
+    }) {
+        install(ContentNegotiation) { json(AppJson) }
+        install(HttpCookies)
+        expectSuccess = true
+    }
+}

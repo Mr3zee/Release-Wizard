@@ -1,7 +1,9 @@
 package com.github.mr3zee
 
-import com.github.mr3zee.model.TeamId
+import com.github.mr3zee.model.ConnectionId
 import com.github.mr3zee.model.ProjectId
+import com.github.mr3zee.model.ReleaseId
+import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.navigation.NavSection
 import com.github.mr3zee.navigation.NavigationController
 import com.github.mr3zee.navigation.Screen
@@ -152,5 +154,206 @@ class NavigationControllerTest {
         nav.resetTo(Screen.ConnectionList)
         assertEquals(listOf(Screen.ConnectionList), nav.backStack)
         assertEquals(Screen.ConnectionList, nav.currentScreen)
+    }
+
+    // --- navigateFromExternal deep parent reconstruction ---
+
+    @Test
+    fun `navigateFromExternal with TeamManage reconstructs full parent chain`() {
+        val nav = NavigationController()
+        val teamManage = Screen.TeamManage(TeamId("t1"))
+        nav.navigateFromExternal(teamManage)
+        assertEquals(
+            listOf(Screen.ProjectList, Screen.TeamList, Screen.TeamDetail(TeamId("t1")), teamManage),
+            nav.backStack,
+        )
+    }
+
+    @Test
+    fun `navigateFromExternal with AuditLog reconstructs full parent chain`() {
+        val nav = NavigationController()
+        val auditLog = Screen.AuditLog(TeamId("t1"))
+        nav.navigateFromExternal(auditLog)
+        assertEquals(
+            listOf(Screen.ProjectList, Screen.TeamList, Screen.TeamDetail(TeamId("t1")), auditLog),
+            nav.backStack,
+        )
+    }
+
+    @Test
+    fun `navigateFromExternal with ReleaseView reconstructs ReleaseList parent`() {
+        val nav = NavigationController()
+        val releaseView = Screen.ReleaseView(ReleaseId("r1"))
+        nav.navigateFromExternal(releaseView)
+        assertEquals(
+            listOf(Screen.ProjectList, Screen.ReleaseList, releaseView),
+            nav.backStack,
+        )
+    }
+
+    @Test
+    fun `navigateFromExternal with ConnectionForm reconstructs ConnectionList parent`() {
+        val nav = NavigationController()
+        val form = Screen.ConnectionForm(ConnectionId("c1"))
+        nav.navigateFromExternal(form)
+        assertEquals(
+            listOf(Screen.ProjectList, Screen.ConnectionList, form),
+            nav.backStack,
+        )
+    }
+
+    @Test
+    fun `navigateFromExternal with ProjectAutomation reconstructs ProjectEditor parent`() {
+        val nav = NavigationController()
+        val auto = Screen.ProjectAutomation(ProjectId("p1"))
+        nav.navigateFromExternal(auto)
+        assertEquals(
+            listOf(Screen.ProjectList, Screen.ProjectEditor(ProjectId("p1")), auto),
+            nav.backStack,
+        )
+    }
+
+    @Test
+    fun `navigateFromExternal with MyInvites reconstructs TeamList parent`() {
+        val nav = NavigationController()
+        nav.navigateFromExternal(Screen.MyInvites)
+        assertEquals(
+            listOf(Screen.ProjectList, Screen.TeamList, Screen.MyInvites),
+            nav.backStack,
+        )
+    }
+
+    @Test
+    fun `navigateFromExternal with ConnectionList sets correct stack`() {
+        val nav = NavigationController()
+        nav.navigateFromExternal(Screen.ConnectionList)
+        assertEquals(
+            listOf(Screen.ProjectList, Screen.ConnectionList),
+            nav.backStack,
+        )
+        assertTrue(nav.suppressUrlSync)
+    }
+
+    @Test
+    fun `navigateFromExternal clears previous deep stack`() {
+        val nav = NavigationController()
+        // Build a deep stack
+        nav.navigate(Screen.ReleaseList)
+        nav.navigate(Screen.ConnectionList)
+        nav.navigate(Screen.TeamList)
+        nav.navigate(Screen.TeamDetail(TeamId("t1")))
+        assertEquals(5, nav.backStack.size)
+
+        // navigateFromExternal should completely replace the stack
+        nav.navigateFromExternal(Screen.ReleaseList)
+        assertEquals(listOf(Screen.ProjectList, Screen.ReleaseList), nav.backStack)
+    }
+
+    // --- QA-CROSS-12: URL-sync for navigation ---
+
+    @Test
+    fun `suppressUrlSync starts false`() {
+        val nav = NavigationController()
+        assertFalse(nav.suppressUrlSync)
+    }
+
+    @Test
+    fun `suppressUrlSync is set to true after navigateFromExternal`() {
+        val nav = NavigationController()
+        nav.navigateFromExternal(Screen.ConnectionList)
+        assertTrue(nav.suppressUrlSync)
+    }
+
+    @Test
+    fun `suppressUrlSync can be cleared after observation`() {
+        val nav = NavigationController()
+        nav.navigateFromExternal(Screen.ConnectionList)
+        assertTrue(nav.suppressUrlSync)
+
+        // Simulate what App.kt snapshotFlow collector does
+        nav.suppressUrlSync = false
+        assertFalse(nav.suppressUrlSync)
+    }
+
+    @Test
+    fun `regular navigate does not set suppressUrlSync`() {
+        val nav = NavigationController()
+        nav.navigate(Screen.ReleaseList)
+        assertFalse(nav.suppressUrlSync)
+    }
+
+    @Test
+    fun `regular navigateToSection does not set suppressUrlSync`() {
+        val nav = NavigationController()
+        nav.navigateToSection(NavSection.TEAMS)
+        assertFalse(nav.suppressUrlSync)
+    }
+
+    @Test
+    fun `resetTo does not set suppressUrlSync`() {
+        val nav = NavigationController()
+        nav.navigate(Screen.ReleaseList)
+        nav.resetTo(Screen.ProjectList)
+        assertFalse(nav.suppressUrlSync)
+    }
+
+    @Test
+    fun `goBack does not set suppressUrlSync`() {
+        val nav = NavigationController()
+        nav.navigate(Screen.ReleaseList)
+        nav.goBack()
+        assertFalse(nav.suppressUrlSync)
+    }
+
+    // --- Edge cases ---
+
+    @Test
+    fun `multiple goBack calls stop at root`() {
+        val nav = NavigationController()
+        nav.navigate(Screen.ReleaseList)
+        nav.navigate(Screen.ConnectionList)
+        assertTrue(nav.goBack())
+        assertTrue(nav.goBack())
+        assertFalse(nav.goBack()) // Already at root
+        assertEquals(listOf(Screen.ProjectList), nav.backStack)
+    }
+
+    @Test
+    fun `navigate to different screens builds correct stack`() {
+        val nav = NavigationController()
+        nav.navigate(Screen.ReleaseList)
+        nav.navigate(Screen.ConnectionList)
+        nav.navigate(Screen.TeamList)
+        assertEquals(
+            listOf(Screen.ProjectList, Screen.ReleaseList, Screen.ConnectionList, Screen.TeamList),
+            nav.backStack,
+        )
+        assertEquals(Screen.TeamList, nav.currentScreen)
+    }
+
+    @Test
+    fun `navigateToSection after navigateFromExternal resets suppressUrlSync state`() {
+        val nav = NavigationController()
+        nav.navigateFromExternal(Screen.ReleaseList)
+        assertTrue(nav.suppressUrlSync)
+
+        // Clear suppressUrlSync as the App.kt collector would
+        nav.suppressUrlSync = false
+
+        // Now navigateToSection should NOT set suppressUrlSync
+        nav.navigateToSection(NavSection.CONNECTIONS)
+        assertFalse(nav.suppressUrlSync)
+    }
+
+    @Test
+    fun `currentScreen reflects last item in back stack`() {
+        val nav = NavigationController()
+        assertEquals(Screen.ProjectList, nav.currentScreen)
+        nav.navigate(Screen.TeamList)
+        assertEquals(Screen.TeamList, nav.currentScreen)
+        nav.navigate(Screen.TeamDetail(TeamId("t1")))
+        assertEquals(Screen.TeamDetail(TeamId("t1")), nav.currentScreen)
+        nav.goBack()
+        assertEquals(Screen.TeamList, nav.currentScreen)
     }
 }
