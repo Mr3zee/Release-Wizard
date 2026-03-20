@@ -1,8 +1,12 @@
 package com.github.mr3zee.e2e.teams
 
 import androidx.compose.ui.test.*
+import com.github.mr3zee.api.ApiRoutes
+import com.github.mr3zee.api.RegisterRequest
+import com.github.mr3zee.api.UserInfo
 import com.github.mr3zee.e2e.E2eTestBase
 import com.github.mr3zee.login
+import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import kotlin.test.Test
@@ -38,7 +42,6 @@ class TeamCreateE2eTest : E2eTestBase() {
 @OptIn(ExperimentalTestApi::class)
 class TeamDetailE2eTest : E2eTestBase() {
 
-    @org.junit.Ignore("Team list text search after navigation needs investigation — team appears but text node not found in semantic tree")
     @Test
     fun `view team detail and audit log`() = runComposeUiTest {
         directClient.login("detail-user", "TestPass123")
@@ -46,12 +49,16 @@ class TeamDetailE2eTest : E2eTestBase() {
         loginAndCreateTeamViaUi("detail-user", "TestPass123", "Detail Team")
         navigateToSection("sidebar_nav_teams", "team_list_screen")
 
-        // Wait for team to appear in list — the team was just created so the list
-        // needs to load from the server. Use longer timeout.
-        waitUntil(timeoutMillis = 15_000L) {
-            onAllNodes(hasText("Detail Team"), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        // Get team ID from server to click the correct team item by testTag
+        // (text-based click doesn't propagate through merged semantic tree)
+        directClient.login("detail-user", "TestPass123")
+        val userInfo = directClient.get(ApiRoutes.Auth.ME).body<UserInfo>()
+        val teamId = userInfo.teams.first().teamId.value
+
+        waitUntil(timeoutMillis = 10_000L) {
+            onAllNodesWithTag("team_item_$teamId", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
-        onAllNodes(hasText("Detail Team"), useUnmergedTree = true).onFirst().performClick()
+        onNodeWithTag("team_item_$teamId", useUnmergedTree = true).performClick()
 
         waitUntil(timeoutMillis = 10_000L) {
             onAllNodesWithTag("team_detail_screen").fetchSemanticsNodes().isNotEmpty()
@@ -71,22 +78,28 @@ class TeamDetailE2eTest : E2eTestBase() {
 @OptIn(ExperimentalTestApi::class)
 class TeamInviteE2eTest : E2eTestBase() {
 
-    @org.junit.Ignore("loginViaUi timeout after directClient multi-user setup — needs investigation")
     @Test
     fun `invite user to team via manage screen`() = runComposeUiTest {
         directClient.login("invite-leader", "TestPass123")
-        // Register the invite target (login() calls register internally)
-        directClient.login("invite-target", "TestPass123")
-        // Re-login as the leader (to reset session)
-        directClient.login("invite-leader", "TestPass123")
+
+        // Register the invite target (without logging in as them)
+        directClient.post(ApiRoutes.Auth.REGISTER) {
+            contentType(ContentType.Application.Json)
+            setBody(RegisterRequest(username = "invite-target", password = "TestPass123"))
+        }
 
         loginAndCreateTeamViaUi("invite-leader", "TestPass123", "Invite Team")
         navigateToSection("sidebar_nav_teams", "team_list_screen")
 
+        // Re-login directClient to get fresh session with updated teams
+        directClient.login("invite-leader", "TestPass123")
+        val userInfo = directClient.get(ApiRoutes.Auth.ME).body<UserInfo>()
+        val teamId = userInfo.teams.first().teamId.value
+
         waitUntil(timeoutMillis = 10_000L) {
-            onAllNodesWithText("Invite Team").fetchSemanticsNodes().isNotEmpty()
+            onAllNodesWithTag("team_item_$teamId", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
-        onNodeWithText("Invite Team").performClick()
+        onNodeWithTag("team_item_$teamId", useUnmergedTree = true).performClick()
 
         waitUntil(timeoutMillis = 10_000L) {
             onAllNodesWithTag("team_detail_screen").fetchSemanticsNodes().isNotEmpty()
@@ -97,9 +110,13 @@ class TeamInviteE2eTest : E2eTestBase() {
             onAllNodesWithTag("team_manage_screen").fetchSemanticsNodes().isNotEmpty()
         }
 
+        // Wait for invite button to appear (members section loads asynchronously)
+        waitUntil(timeoutMillis = 10_000L) {
+            onAllNodesWithTag("invite_user_button", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
         onNodeWithTag("invite_user_button", useUnmergedTree = true).performClick()
         waitForIdle()
-        waitUntil(timeoutMillis = 5_000L) {
+        waitUntil(timeoutMillis = 10_000L) {
             onAllNodesWithTag("invite_user_id_input").fetchSemanticsNodes().isNotEmpty()
         }
         onNodeWithTag("invite_user_id_input").performTextInput("invite-target")
@@ -108,7 +125,7 @@ class TeamInviteE2eTest : E2eTestBase() {
 
         // Verify invite was sent (the invited username should appear in pending invites)
         waitUntil(timeoutMillis = 10_000L) {
-            onAllNodesWithText("invite-target").fetchSemanticsNodes().isNotEmpty()
+            onAllNodesWithText("invite-target", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
     }
 }

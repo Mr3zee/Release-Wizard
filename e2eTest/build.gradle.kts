@@ -45,6 +45,8 @@ tasks.test {
     useJUnit()
     // Disable Ktor's shutdown hook — tests manage server lifecycle
     systemProperty("io.ktor.server.engine.ShutdownHook", "false")
+    // Run AWT in headless mode — prevents macOS focus stealing (no visible window)
+    systemProperty("java.awt.headless", "true")
     // Fork per test class — PlatformUrl.jvm.kt uses `lazy val` cached per JVM
     forkEvery = 1
 }
