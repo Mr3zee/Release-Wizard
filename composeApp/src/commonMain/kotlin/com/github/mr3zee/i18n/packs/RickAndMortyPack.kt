@@ -224,6 +224,7 @@ object RickAndMortyPack {
             "editor_lock_unknown_user" to "some random *burp* Morty",
             "editor_markdown_edit" to "Edit",
             "editor_markdown_preview" to "Portal Preview",
+            "editor_markdown_images_not_supported" to "Images don't exist in this dimension, Morty",
             "editor_project_description_header" to "Dimension C-137 Project Notes",
             "editor_prop_add_description" to "Add description, Morty",
             "editor_prop_add_parameter" to "+ Add Parameter, *burp* Morty",

@@ -224,6 +224,7 @@ object AllLiesPack {
             "editor_lock_unknown_user" to "nobody at all",
             "editor_markdown_edit" to "Obfuscate",
             "editor_markdown_preview" to "Mislead",
+            "editor_markdown_images_not_supported" to "Images are fully supported (they are not)",
             "editor_project_description_header" to "Pointless Project Summary",
             "editor_prop_add_description" to "Add unnecessary text",
             "editor_prop_add_parameter" to "- Remove Parameter",

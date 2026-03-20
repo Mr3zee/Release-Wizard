@@ -227,6 +227,7 @@ object RickRollPack {
             "editor_lock_unknown_user" to "a mysterious stranger to love",
             "editor_markdown_edit" to "Edit",
             "editor_markdown_preview" to "Preview",
+            "editor_markdown_images_not_supported" to "Never gonna show you pics",
             "editor_project_description_header" to "Never Gonna Project Description",
             "editor_prop_add_description" to "Never gonna add description",
             "editor_prop_add_parameter" to "+ Never Gonna Make You Cry (Add Parameter)",
