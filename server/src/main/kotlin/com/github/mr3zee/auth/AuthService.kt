@@ -65,7 +65,19 @@ interface AuthService {
      * Used by password reset flow where the route needs to pre-hash before passing to service.
      */
     suspend fun hashPassword(password: String): String
+
+    /**
+     * Lightweight query for session refresh: returns role, username, and passwordChangedAt
+     * without constructing a full User object. Returns null if user not found (deleted).
+     */
+    suspend fun getSessionRefreshInfo(id: UserId): SessionRefreshInfo?
 }
+
+data class SessionRefreshInfo(
+    val role: UserRole,
+    val username: String,
+    val passwordChangedAtMillis: Long?,
+)
 
 class DatabaseAuthService(private val db: Database) : AuthService {
     private val log = LoggerFactory.getLogger(DatabaseAuthService::class.java)
@@ -343,8 +355,12 @@ class DatabaseAuthService(private val db: Database) : AuthService {
 
         return withContext(Dispatchers.IO) {
             suspendTransaction(db, transactionIsolation = Connection.TRANSACTION_SERIALIZABLE) {
-                // Check last admin constraint
-                val isAdmin = userRow[UserTable.role] == UserRole.ADMIN
+                // Re-read role inside transaction to avoid TOCTOU race
+                val currentRow = UserTable.selectAll()
+                    .where { UserTable.id eq UUID.fromString(userId.value) }
+                    .singleOrNull()
+                    ?: return@suspendTransaction Result.success(false)
+                val isAdmin = currentRow[UserTable.role] == UserRole.ADMIN
                 if (isAdmin) {
                     val adminCount = UserTable.selectAll()
                         .where { UserTable.role eq UserRole.ADMIN }
@@ -361,7 +377,7 @@ class DatabaseAuthService(private val db: Database) : AuthService {
                 val userTeamLeaderships = TeamMembershipTable.selectAll()
                     .where {
                         (TeamMembershipTable.userId eq uuid) and
-                            (TeamMembershipTable.role eq TeamRole.LEAD)
+                            (TeamMembershipTable.role eq TeamRole.TEAM_LEAD)
                     }
                     .map { it[TeamMembershipTable.teamId].value }
 
@@ -369,7 +385,7 @@ class DatabaseAuthService(private val db: Database) : AuthService {
                     val leadCount = TeamMembershipTable.selectAll()
                         .where {
                             (TeamMembershipTable.teamId eq teamId) and
-                                (TeamMembershipTable.role eq TeamRole.LEAD)
+                                (TeamMembershipTable.role eq TeamRole.TEAM_LEAD)
                         }
                         .count()
                     if (leadCount <= 1) {
@@ -394,4 +410,17 @@ class DatabaseAuthService(private val db: Database) : AuthService {
         withContext(Dispatchers.IO) {
             argon2.hash(ARGON2_ITERATIONS, ARGON2_MEMORY_KB, ARGON2_PARALLELISM, password.toCharArray())
         }
+
+    override suspend fun getSessionRefreshInfo(id: UserId): SessionRefreshInfo? = dbQuery {
+        UserTable.selectAll()
+            .where { UserTable.id eq UUID.fromString(id.value) }
+            .singleOrNull()
+            ?.let { row ->
+                SessionRefreshInfo(
+                    role = row[UserTable.role],
+                    username = row[UserTable.username],
+                    passwordChangedAtMillis = row[UserTable.passwordChangedAt]?.toEpochMilliseconds(),
+                )
+            }
+    }
 }

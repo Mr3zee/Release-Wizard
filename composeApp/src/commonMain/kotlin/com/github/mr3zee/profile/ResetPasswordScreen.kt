@@ -43,6 +43,7 @@ import com.github.mr3zee.components.RwTooltip
 import com.github.mr3zee.i18n.packStringResource
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.Spacing
+import com.github.mr3zee.util.resolve
 import releasewizard.composeapp.generated.resources.*
 
 @Composable
@@ -55,6 +56,9 @@ fun ResetPasswordScreen(
     val isSubmitting by viewModel.isSubmitting.collectAsState()
     val isComplete by viewModel.isComplete.collectAsState()
     val error by viewModel.error.collectAsState()
+    val validationError by viewModel.validationError.collectAsState()
+    val resolvedError = error?.resolve()
+    val displayError = validationError ?: resolvedError
 
     var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
@@ -237,9 +241,9 @@ fun ResetPasswordScreen(
                             modifier = Modifier.fillMaxWidth(),
                         )
 
-                        if (error != null) {
+                        if (displayError != null) {
                             Text(
-                                text = error ?: "",
+                                text = displayError,
                                 color = MaterialTheme.colorScheme.error,
                                 style = AppTypography.bodySmall,
                                 textAlign = TextAlign.Start,
@@ -250,8 +254,6 @@ fun ResetPasswordScreen(
                         RwButton(
                             onClick = {
                                 viewModel.resetPassword(newPassword, confirmPassword)
-                                newPassword = ""
-                                confirmPassword = ""
                             },
                             variant = RwButtonVariant.Primary,
                             enabled = canSubmit,

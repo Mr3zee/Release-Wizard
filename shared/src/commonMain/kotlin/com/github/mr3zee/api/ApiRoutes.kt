@@ -34,7 +34,7 @@ object ApiRoutes {
         const val USERS = "$API_V1/auth/users"
         const val CHANGE_USERNAME = "$API_V1/auth/me/username"
         const val CHANGE_PASSWORD = "$API_V1/auth/me/password"
-        const val DELETE_ACCOUNT = "$API_V1/auth/me"
+        const val DELETE_ACCOUNT = ME // DELETE method on same path as GET /me
         const val GENERATE_PASSWORD_RESET = "$API_V1/auth/password-reset/generate"
         const val RESET_PASSWORD = "$API_V1/auth/password-reset"
         const val VALIDATE_RESET_TOKEN = "$API_V1/auth/password-reset/validate"

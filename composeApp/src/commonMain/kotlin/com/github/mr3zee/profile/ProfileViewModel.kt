@@ -26,6 +26,12 @@ class ProfileViewModel(
     private val _successMessage = MutableStateFlow<String?>(null)
     val successMessage: StateFlow<String?> = _successMessage
 
+    private val _usernameChangeSuccess = MutableStateFlow(false)
+    val usernameChangeSuccess: StateFlow<Boolean> = _usernameChangeSuccess
+
+    private val _passwordChangeSuccess = MutableStateFlow(false)
+    val passwordChangeSuccess: StateFlow<Boolean> = _passwordChangeSuccess
+
     /** Callback set from App.kt to propagate username changes to AuthViewModel. */
     var onUsernameChanged: ((UserInfo) -> Unit)? = null
 
@@ -56,6 +62,7 @@ class ProfileViewModel(
                 val updatedInfo = authApiClient.changeUsername(newUsername, currentPassword)
                 _userInfo.value = updatedInfo
                 _successMessage.value = "Username updated successfully"
+                _usernameChangeSuccess.value = true
                 onUsernameChanged?.invoke(updatedInfo)
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
@@ -72,6 +79,7 @@ class ProfileViewModel(
             try {
                 authApiClient.changePassword(currentPassword, newPassword)
                 _successMessage.value = "Password updated successfully"
+                _passwordChangeSuccess.value = true
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -101,5 +109,13 @@ class ProfileViewModel(
 
     fun dismissSuccessMessage() {
         _successMessage.value = null
+    }
+
+    fun consumeUsernameChangeSuccess() {
+        _usernameChangeSuccess.value = false
+    }
+
+    fun consumePasswordChangeSuccess() {
+        _passwordChangeSuccess.value = false
     }
 }

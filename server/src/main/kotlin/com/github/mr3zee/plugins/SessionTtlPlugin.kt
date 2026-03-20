@@ -80,10 +80,30 @@ val SessionTtl = createApplicationPlugin(name = "SessionTtl") {
 
         // Refresh session if within refresh threshold window
         if (nowMillis - session.lastAccessedAt > refreshThresholdMillis) {
-            // Re-validate role from DB to pick up admin demotions / promotions
-            val currentUser = authService.getUserById(UserId(session.userId))
-            val updatedRole = currentUser?.role ?: session.role
-            call.sessions.set(session.copy(lastAccessedAt = nowMillis, role = updatedRole))
+            // Re-validate role, username, and password-change status from DB
+            val refreshInfo = authService.getSessionRefreshInfo(UserId(session.userId))
+            if (refreshInfo == null) {
+                // User deleted — clear session
+                log.debug("User '{}' no longer exists, clearing session", session.username)
+                call.sessions.clear<UserSession>()
+                return@onCall
+            }
+
+            // Invalidate sessions created before the last password change
+            val pwChangedAt = refreshInfo.passwordChangedAtMillis
+            if (pwChangedAt != null && session.createdAt < pwChangedAt) {
+                log.debug("Session for '{}' predates password change, clearing", session.username)
+                call.sessions.clear<UserSession>()
+                return@onCall
+            }
+
+            call.sessions.set(
+                session.copy(
+                    lastAccessedAt = nowMillis,
+                    role = refreshInfo.role,
+                    username = refreshInfo.username,
+                )
+            )
         }
     }
 
