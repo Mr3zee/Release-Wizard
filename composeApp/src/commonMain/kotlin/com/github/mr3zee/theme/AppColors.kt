@@ -4,6 +4,9 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 data class AppColors(
+    // ── Theme variant ─────────────────────────────────────────────
+    val isDark: Boolean,
+
     // ── Chrome (UI shell) ──────────────────────────────────────────
     val chromeBackground: Color,
     val chromeSurface: Color,
@@ -112,6 +115,7 @@ data class AppColors(
 )
 
 val LightAppColors = AppColors(
+    isDark = false,
     // Chrome
     chromeBackground = Color(0xFFF5F6F8),
     chromeSurface = Color(0xFFFFFFFF),
@@ -210,6 +214,7 @@ val LightAppColors = AppColors(
 )
 
 val DarkAppColors = AppColors(
+    isDark = true,
     // Chrome
     chromeBackground = Color(0xFF121218),
     chromeSurface = Color(0xFF1E2230),

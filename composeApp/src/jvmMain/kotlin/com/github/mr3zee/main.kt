@@ -1,5 +1,7 @@
 package com.github.mr3zee
 
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.ui.unit.DpSize
@@ -11,6 +13,7 @@ import androidx.compose.ui.window.rememberWindowState
 import io.github.forketyfork.composeuittest.ComposeUiTestServer
 import io.github.forketyfork.composeuittest.ComposeUiTestServerConfig
 import java.awt.Dimension
+import javax.imageio.ImageIO
 
 @OptIn(ExperimentalTestApi::class)
 fun main() {
@@ -27,10 +30,14 @@ fun main() {
                 size = DpSize(1728.dp, 1117.dp),
                 position = WindowPosition.PlatformDefault,
             )
+            val appIcon = Thread.currentThread().contextClassLoader
+                .getResourceAsStream("icon.png")
+                ?.let { BitmapPainter(ImageIO.read(it).toComposeImageBitmap()) }
             Window(
                 onCloseRequest = ::exitApplication,
                 title = "Release Wizard",
                 state = state,
+                icon = appIcon,
             ) {
                 window.minimumSize = Dimension(1200, 800)
                 App()

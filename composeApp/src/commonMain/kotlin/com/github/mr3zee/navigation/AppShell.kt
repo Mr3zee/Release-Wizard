@@ -54,6 +54,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.github.mr3zee.components.AppLogo
 import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwTooltip
 import com.github.mr3zee.components.SidebarNavItem
@@ -123,6 +124,8 @@ fun AppShell(
                                 .padding(horizontal = Spacing.md, vertical = Spacing.md),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
+                            AppLogo(modifier = Modifier.size(24.dp))
+                            Spacer(Modifier.width(Spacing.sm))
                             Text(
                                 text = packStringResource(Res.string.sidebar_app_name),
                                 style = AppTypography.heading,
@@ -132,18 +135,14 @@ fun AppShell(
                             )
                         }
                     } else {
-                        // Collapsed: just a small icon area
+                        // Collapsed: logo icon
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(48.dp),
+                                .padding(vertical = Spacing.md),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text(
-                                text = packStringResource(Res.string.sidebar_app_abbreviation),
-                                style = AppTypography.label.copy(fontWeight = FontWeight.Bold),
-                                color = colors.chromeTextPrimary,
-                            )
+                            AppLogo(modifier = Modifier.size(24.dp))
                         }
                     }
 

@@ -83,6 +83,16 @@ compose.desktop {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "com.github.mr3zee"
             packageVersion = "1.0.0"
+
+            macOS {
+                iconFile.set(project.file("../icons/logo-dark-bg/logo-dark-bg.icns"))
+            }
+            windows {
+                iconFile.set(project.file("../icons/logo-dark-bg/logo-dark-bg.ico"))
+            }
+            linux {
+                iconFile.set(project.file("../icons/logo-dark-bg/logo-dark-bg_256x256.png"))
+            }
         }
     }
 }

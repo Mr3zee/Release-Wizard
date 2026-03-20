@@ -27,6 +27,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.github.mr3zee.components.AppLogo
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwCard
@@ -97,6 +98,7 @@ fun LoginScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(Spacing.lg),
             ) {
+                AppLogo(modifier = Modifier.size(72.dp))
                 Text(
                     text = packStringResource(Res.string.auth_app_title),
                     style = AppTypography.display,

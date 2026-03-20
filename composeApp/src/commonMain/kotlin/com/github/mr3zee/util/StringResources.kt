@@ -148,6 +148,7 @@ fun AuditAction.displayName(): String = packStringResource(
         AuditAction.LOCK_FORCE_RELEASED -> Res.string.audit_action_lock_force_released
         AuditAction.USER_LOGIN -> Res.string.audit_action_user_login
         AuditAction.USER_REGISTER -> Res.string.audit_action_user_register
+        AuditAction.ADMIN_ACCESS -> Res.string.audit_action_admin_access
     }
 )
 
