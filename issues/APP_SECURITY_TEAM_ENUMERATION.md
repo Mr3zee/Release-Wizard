@@ -21,3 +21,7 @@ An authenticated user can discover every team, their descriptions (which may con
 ### Recommendation
 
 If team discovery is intentional (for join requests), document this as a deliberate design decision. If teams should be private, add a visibility model (public vs. private teams). Consider limiting exposed metadata for non-members.
+
+### Feedback
+
+This is a deliberate design decision. Don't change

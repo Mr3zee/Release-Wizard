@@ -58,7 +58,6 @@ Conducted by running a dedicated security expert per screen (13 screens), then c
 
 | # | Issue | File |
 |---|-------|------|
-| 17 | Team enumeration — all teams visible to any authenticated user | [APP_SECURITY_TEAM_ENUMERATION](issues/APP_SECURITY_TEAM_ENUMERATION.md) |
 | 18 | Client-side auth guards bypassable — manage screen, delete/archive buttons | [APP_SECURITY_CLIENT_SIDE_AUTH_GUARDS](issues/APP_SECURITY_CLIENT_SIDE_AUTH_GUARDS.md) |
 | 19 | Self role modification via API — leads can demote/remove themselves | [APP_SECURITY_SELF_ROLE_MODIFICATION](issues/APP_SECURITY_SELF_ROLE_MODIFICATION.md) |
 
