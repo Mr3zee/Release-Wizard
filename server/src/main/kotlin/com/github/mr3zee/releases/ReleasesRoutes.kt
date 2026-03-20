@@ -6,6 +6,7 @@ import com.github.mr3zee.auth.userSession
 import com.github.mr3zee.model.BlockId
 import com.github.mr3zee.model.ReleaseId
 import com.github.mr3zee.model.TeamId
+import com.github.mr3zee.tags.TagValidation
 import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -40,6 +41,19 @@ fun Route.releaseRoutes() {
 
         post {
             val request = call.receive<CreateReleaseRequest>()
+            // REL-M7: Size bounds on parameters and tags
+            require(request.parameters.size <= MAX_PARAMETERS) { "Maximum $MAX_PARAMETERS parameters allowed" }
+            request.parameters.forEach { p ->
+                require(p.key.length <= MAX_PARAM_KEY_LENGTH) { "Parameter key must not exceed $MAX_PARAM_KEY_LENGTH characters" }
+                require(p.value.length <= MAX_PARAM_VALUE_LENGTH) { "Parameter value must not exceed $MAX_PARAM_VALUE_LENGTH characters" }
+            }
+            require(request.tags.size <= TagValidation.MAX_TAGS_PER_RELEASE) { "Maximum ${TagValidation.MAX_TAGS_PER_RELEASE} tags allowed" }
+            request.tags.forEach { tag ->
+                val normalized = tag.trim().lowercase()
+                if (normalized.isNotBlank()) {
+                    TagValidation.validateTagName(normalized)
+                }
+            }
             val session = call.userSession()
             val release = service.startRelease(request, session)
             log.info("Release created: {} for project {}", release.id.value, request.projectTemplateId.value)
@@ -179,6 +193,12 @@ fun Route.releaseRoutes() {
                     val releaseId = call.requireReleaseId()
                     val blockId = call.requireBlockId()
                     val request = call.receive<ApproveBlockRequest>()
+                    // REL-M7: Size bounds on approval input
+                    require(request.input.size <= MAX_APPROVAL_INPUTS) { "Maximum $MAX_APPROVAL_INPUTS approval input entries allowed" }
+                    request.input.forEach { (k, v) ->
+                        require(k.length <= MAX_PARAM_KEY_LENGTH) { "Approval input key must not exceed $MAX_PARAM_KEY_LENGTH characters" }
+                        require(v.length <= MAX_PARAM_VALUE_LENGTH) { "Approval input value must not exceed $MAX_PARAM_VALUE_LENGTH characters" }
+                    }
                     val approved = service.approveBlock(releaseId, blockId, request, call.userSession())
                     if (!approved) {
                         log.warn("Cannot approve block {} in release {}", blockId.value, releaseId.value)
@@ -202,6 +222,12 @@ private fun io.ktor.server.application.ApplicationCall.requireReleaseId(): Relea
     }
     return ReleaseId(raw)
 }
+
+// REL-M7: Validation constants
+private const val MAX_PARAMETERS = 50
+private const val MAX_PARAM_KEY_LENGTH = 255
+private const val MAX_PARAM_VALUE_LENGTH = 1000
+private const val MAX_APPROVAL_INPUTS = 20
 
 private val BLOCK_ID_PATTERN = Regex("^[a-zA-Z0-9_.-]+$")
 

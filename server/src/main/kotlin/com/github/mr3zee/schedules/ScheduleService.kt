@@ -25,6 +25,13 @@ class DefaultScheduleService(
 ) : ScheduleService {
     private val log = LoggerFactory.getLogger(DefaultScheduleService::class.java)
 
+    companion object {
+        /** SCHED-M8: Parameter validation constants */
+        const val MAX_SCHEDULE_PARAMETERS = 50
+        const val MAX_PARAM_KEY_LENGTH = 255
+        const val MAX_PARAM_VALUE_LENGTH = 1000
+    }
+
     override suspend fun listByProject(projectId: ProjectId, session: UserSession): List<Schedule> {
         checkProjectAccess(projectId, session)
         return repository.findByProjectId(projectId).map { it.toModel() }
@@ -42,6 +49,12 @@ class DefaultScheduleService(
         session: UserSession,
     ): Schedule {
         checkProjectAccess(projectId, session)
+        // SCHED-M8: Cap schedule parameter list size and value lengths
+        require(request.parameters.size <= MAX_SCHEDULE_PARAMETERS) { "Maximum $MAX_SCHEDULE_PARAMETERS parameters allowed" }
+        request.parameters.forEach { p ->
+            require(p.key.length <= MAX_PARAM_KEY_LENGTH) { "Parameter key must not exceed $MAX_PARAM_KEY_LENGTH characters" }
+            require(p.value.length <= MAX_PARAM_VALUE_LENGTH) { "Parameter value must not exceed $MAX_PARAM_VALUE_LENGTH characters" }
+        }
         // Validate cron expression
         val cron = CronUtils.parser.parse(request.cronExpression)
         cron.validate()

@@ -48,11 +48,7 @@ fun Route.connectionRoutes() {
 
         post {
             val request = call.receive<CreateConnectionRequest>()
-            if (request.name.isBlank()) {
-                log.warn("Connection creation rejected: blank name")
-                call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Connection name must not be blank", code = "VALIDATION_ERROR"))
-                return@post
-            }
+            // CONN-M3: Blank-name validation moved to service layer
             val connection = service.createConnection(request, call.userSession())
             log.info("Connection created: {} (type={})", connection.id.value, connection.config::class.simpleName)
             call.respond(HttpStatusCode.Created, ConnectionResponse(connection, webhookUrl(connection, webhookConfig)))
@@ -82,14 +78,10 @@ fun Route.connectionRoutes() {
 
             delete {
                 val id = call.requireConnectionId() ?: return@delete
-                val deleted = service.deleteConnection(id, call.userSession())
-                if (deleted) {
-                    log.info("Connection deleted: {}", id.value)
-                    call.respond(HttpStatusCode.NoContent)
-                } else {
-                    log.warn("Connection delete failed: {} not found", id.value)
-                    call.respond(HttpStatusCode.NotFound, ErrorResponse(error = "Connection not found", code = "NOT_FOUND"))
-                }
+                // CONN-H6: deleteConnection now throws NotFoundException if not found
+                service.deleteConnection(id, call.userSession())
+                log.info("Connection deleted: {}", id.value)
+                call.respond(HttpStatusCode.NoContent)
             }
 
             post("/test") {

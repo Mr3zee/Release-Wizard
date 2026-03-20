@@ -67,6 +67,8 @@ class DefaultConnectionsService(
     }
 
     override suspend fun createConnection(request: CreateConnectionRequest, session: UserSession): Connection {
+        // CONN-M3: Blank-name validation in service layer (not just route)
+        require(request.name.isNotBlank()) { "Connection name must not be blank" }
         teamAccessService.checkMembership(request.teamId, session)
         val connection = repository.create(
             name = request.name,
@@ -83,6 +85,8 @@ class DefaultConnectionsService(
     }
 
     override suspend fun updateConnection(id: ConnectionId, request: UpdateConnectionRequest, session: UserSession): Connection? {
+        // CONN-M3: Blank-name validation on update path
+        request.name?.let { require(it.isNotBlank()) { "Connection name must not be blank" } }
         checkAccess(id, session)
         // CONN-H4: Fetch teamId before update to avoid TOCTOU if connection is deleted concurrently
         val teamId = repository.findTeamId(id)
@@ -103,17 +107,15 @@ class DefaultConnectionsService(
 
     override suspend fun deleteConnection(id: ConnectionId, session: UserSession): Boolean {
         checkAccessTeamLead(id, session)
-        val teamId = repository.findTeamId(id)
+        // CONN-H6: Atomic findTeamId + delete in single transaction to prevent TOCTOU
+        val teamId = repository.deleteReturningTeamId(id)
             ?: throw NotFoundException("Connection not found")
-        val deleted = repository.delete(id)
-        if (deleted) {
-            auditService.log(
-                TeamId(teamId), session,
-                AuditAction.CONNECTION_DELETED, AuditTargetType.CONNECTION,
-                id.value, "Deleted connection"
-            )
-        }
-        return deleted
+        auditService.log(
+            TeamId(teamId), session,
+            AuditAction.CONNECTION_DELETED, AuditTargetType.CONNECTION,
+            id.value, "Deleted connection"
+        )
+        return true
     }
 
     override suspend fun testConnection(id: ConnectionId, session: UserSession): ConnectionTestResult? {

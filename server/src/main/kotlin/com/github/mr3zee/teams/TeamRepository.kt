@@ -12,6 +12,8 @@ import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 import java.sql.SQLIntegrityConstraintViolationException
 import java.util.UUID
 import kotlin.time.Clock
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
 
 interface TeamRepository {
     suspend fun create(name: String, description: String): Team
@@ -86,6 +88,11 @@ interface TeamRepository {
 }
 
 class ExposedTeamRepository(private val db: Database) : TeamRepository {
+
+    companion object {
+        /** TEAM-H5: Invite expiry duration (7 days) */
+        val INVITE_EXPIRY_DURATION: Duration = 7.days
+    }
 
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
         withContext(Dispatchers.IO) { suspendTransaction(db) { block() } }
@@ -405,6 +412,16 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
             throw IllegalArgumentException("Invite is not pending")
         }
 
+        // TEAM-H5: Check invite expiry
+        val expiresAt = invite[TeamInviteTable.expiresAt]
+        if (expiresAt != null && Clock.System.now() > expiresAt) {
+            // Auto-expire the invite
+            TeamInviteTable.update({ TeamInviteTable.id eq inviteUuid }) {
+                it[TeamInviteTable.status] = InviteStatus.CANCELLED
+            }
+            throw IllegalArgumentException("Invite has expired")
+        }
+
         val teamUuid = invite[TeamInviteTable.teamId].value
 
         // Check not already a member (within same transaction)
@@ -518,6 +535,8 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
     override suspend fun createInvite(teamId: TeamId, invitedUserId: String, invitedByUserId: String): TeamInvite = dbQuery {
         val now = Clock.System.now()
         val id = UUID.randomUUID()
+        // TEAM-H5: Set invite expiry (7 days)
+        val expiry = now + INVITE_EXPIRY_DURATION
         TeamInviteTable.insert {
             it[TeamInviteTable.id] = id
             it[TeamInviteTable.teamId] = UUID.fromString(teamId.value)
@@ -525,6 +544,7 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
             it[TeamInviteTable.invitedByUserId] = UUID.fromString(invitedByUserId)
             it[TeamInviteTable.status] = InviteStatus.PENDING
             it[TeamInviteTable.createdAt] = now
+            it[TeamInviteTable.expiresAt] = expiry
         }
         val usernameMap = batchLookupUsernames(setOf(invitedUserId, invitedByUserId))
         val teamNameMap = batchLookupTeamNames(setOf(teamId.value))
@@ -569,11 +589,14 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
     }
 
     override suspend fun findExistingPendingInvite(teamId: TeamId, userId: String): TeamInvite? = dbQuery {
+        val now = Clock.System.now()
         val row = TeamInviteTable.selectAll()
             .where {
                 (TeamInviteTable.teamId eq UUID.fromString(teamId.value)) and
                     (TeamInviteTable.invitedUserId eq UUID.fromString(userId)) and
-                    (TeamInviteTable.status eq InviteStatus.PENDING)
+                    (TeamInviteTable.status eq InviteStatus.PENDING) and
+                    // TEAM-H5: Exclude expired invites
+                    ((TeamInviteTable.expiresAt.isNull()) or (TeamInviteTable.expiresAt greater now))
             }
             .singleOrNull() ?: return@dbQuery null
         mapInviteRows(listOf(row)).firstOrNull()

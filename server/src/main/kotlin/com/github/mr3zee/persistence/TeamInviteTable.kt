@@ -11,9 +11,12 @@ object TeamInviteTable : UUIDTable("team_invites") {
     val invitedByUserId = reference("invited_by_user_id", UserTable, onDelete = ReferenceOption.CASCADE)
     val status = enumerationByName<InviteStatus>("status", 32)
     val createdAt = timestamp("created_at")
+    /** TEAM-H5: Invite expiry — PENDING invites older than this are invalid */
+    val expiresAt = timestamp("expires_at").nullable()
 
     init {
         index(false, invitedUserId)
-        uniqueIndex("uq_team_invite_team_user_status", teamId, invitedUserId, status)
+        // TEAM-H2: The old uniqueIndex(teamId, invitedUserId, status) over-constrained
+        // historical records. Pending uniqueness is enforced by a partial index in DatabaseFactory.
     }
 }

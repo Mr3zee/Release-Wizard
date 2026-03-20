@@ -198,4 +198,17 @@ class ExposedConnectionsRepository(
         }
         deleted > 0
     }
+
+    /** CONN-H6: Atomically fetch teamId and delete in a single transaction to prevent TOCTOU */
+    override suspend fun deleteReturningTeamId(id: ConnectionId): String? = dbQuery {
+        val uuid = UUID.fromString(id.value)
+        val teamId = ConnectionTable.select(ConnectionTable.teamId)
+            .where { ConnectionTable.id eq uuid }
+            .forUpdate()
+            .singleOrNull()
+            ?.get(ConnectionTable.teamId)?.value?.toString()
+            ?: return@dbQuery null
+        ConnectionTable.deleteWhere { ConnectionTable.id eq uuid }
+        teamId
+    }
 }

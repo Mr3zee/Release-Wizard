@@ -43,4 +43,6 @@ interface ConnectionsRepository {
     suspend fun create(name: String, type: ConnectionType, config: ConnectionConfig, teamId: String): Connection
     suspend fun update(id: ConnectionId, name: String?, config: ConnectionConfig?): Connection?
     suspend fun delete(id: ConnectionId): Boolean
+    /** CONN-H6: Atomically fetch teamId and delete in a single transaction */
+    suspend fun deleteReturningTeamId(id: ConnectionId): String?
 }

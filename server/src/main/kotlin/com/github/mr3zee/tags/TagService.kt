@@ -15,6 +15,18 @@ interface TagService {
     suspend fun deleteTag(name: String, teamId: String? = null, session: UserSession? = null): Long
 }
 
+/** TAG-H4: Shared tag validation constants — single source of truth */
+object TagValidation {
+    const val MAX_TAG_LENGTH = 100
+    const val MAX_TAGS_PER_RELEASE = 20
+    val TAG_PATTERN = Regex("^[a-z0-9_.\\-]+$")
+
+    fun validateTagName(tag: String) {
+        require(tag.length <= MAX_TAG_LENGTH) { "Tag name must not exceed $MAX_TAG_LENGTH characters" }
+        require(TAG_PATTERN.matches(tag)) { "Tag name '$tag' contains invalid characters (allowed: a-z, 0-9, dot, hyphen, underscore)" }
+    }
+}
+
 class DefaultTagService(
     private val repository: TagRepository,
     private val auditService: AuditService,
@@ -35,16 +47,21 @@ class DefaultTagService(
 
     override suspend fun renameTag(oldName: String, newName: String, teamId: String?, session: UserSession?): Long {
         require(newName.isNotBlank()) { "New tag name must not be blank" }
-        val count = repository.renameTag(oldName, newName, teamId)
-        log.info("Tag renamed: '{}' -> '{}' ({} updated, team={})", oldName, newName, count, teamId ?: "all")
+        // TAG-H4: Validate both old and new tag names after normalization
+        val normalizedOld = oldName.trim().lowercase()
+        val normalizedNew = newName.trim().lowercase()
+        TagValidation.validateTagName(normalizedOld)
+        TagValidation.validateTagName(normalizedNew)
+        val count = repository.renameTag(normalizedOld, normalizedNew, teamId)
+        log.info("Tag renamed: '{}' -> '{}' ({} updated, team={})", normalizedOld, normalizedNew, count, teamId ?: "all")
         if (session != null && count > 0) {
             auditService.log(
                 teamId?.let { TeamId(it) },
                 session,
                 AuditAction.TAG_RENAMED,
                 AuditTargetType.TAG,
-                oldName,
-                "Renamed tag '$oldName' -> '$newName' ($count releases updated)",
+                normalizedOld,
+                "Renamed tag '$normalizedOld' -> '$normalizedNew' ($count releases updated)",
             )
         }
         return count

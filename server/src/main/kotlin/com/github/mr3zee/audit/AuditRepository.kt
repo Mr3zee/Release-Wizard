@@ -8,6 +8,7 @@ import kotlinx.coroutines.withContext
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
+import java.sql.Connection
 import java.util.UUID
 import kotlin.time.Clock
 
@@ -20,6 +21,9 @@ class ExposedAuditRepository(private val db: Database) : AuditRepository {
 
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
         withContext(Dispatchers.IO) { suspendTransaction(db) { block() } }
+
+    private suspend fun <T> dbQuery(transactionIsolation: Int, block: suspend () -> T): T =
+        withContext(Dispatchers.IO) { suspendTransaction(db, transactionIsolation = transactionIsolation) { block() } }
 
     override suspend fun insert(event: AuditEvent): Unit = dbQuery {
         AuditEventTable.insert {
@@ -35,7 +39,8 @@ class ExposedAuditRepository(private val db: Database) : AuditRepository {
         }
     }
 
-    override suspend fun findByTeam(teamId: TeamId, offset: Int, limit: Int): Pair<List<AuditEvent>, Long> = dbQuery {
+    // TAG-M2: REPEATABLE_READ ensures count + data queries see consistent snapshot
+    override suspend fun findByTeam(teamId: TeamId, offset: Int, limit: Int): Pair<List<AuditEvent>, Long> = dbQuery(Connection.TRANSACTION_REPEATABLE_READ) {
         val teamUuid = UUID.fromString(teamId.value)
         val totalCount = AuditEventTable.selectAll()
             .where { AuditEventTable.teamId eq teamUuid }

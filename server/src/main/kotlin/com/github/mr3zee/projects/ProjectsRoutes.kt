@@ -30,11 +30,7 @@ fun Route.projectRoutes() {
 
         post {
             val request = call.receive<CreateProjectRequest>()
-            if (request.name.isBlank()) {
-                log.warn("Project creation rejected: blank name")
-                call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Project name must not be blank", code = "VALIDATION_ERROR"))
-                return@post
-            }
+            // PROJ-H4: Blank-name validation moved to service layer
             val project = service.createProject(request, call.userSession())
             log.info("Project created: {} (name='{}')", project.id.value, project.name)
             call.respond(HttpStatusCode.Created, ProjectResponse(project))

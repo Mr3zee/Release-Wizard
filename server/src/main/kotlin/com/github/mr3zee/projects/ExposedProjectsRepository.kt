@@ -11,6 +11,7 @@ import kotlinx.coroutines.withContext
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
+import java.sql.Connection
 import java.util.UUID
 import kotlin.time.Clock
 
@@ -18,6 +19,9 @@ class ExposedProjectsRepository(private val db: Database) : ProjectsRepository {
 
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
         withContext(Dispatchers.IO) { suspendTransaction(db) { block() } }
+
+    private suspend fun <T> dbQuery(transactionIsolation: Int, block: suspend () -> T): T =
+        withContext(Dispatchers.IO) { suspendTransaction(db, transactionIsolation = transactionIsolation) { block() } }
 
     private fun ResultRow.toProjectTemplate(): ProjectTemplate {
         return ProjectTemplate(
@@ -77,13 +81,14 @@ class ExposedProjectsRepository(private val db: Database) : ProjectsRepository {
         query.count()
     }
 
+    // PROJ-H3: REPEATABLE_READ ensures count + data queries see consistent snapshot
     override suspend fun findAllWithCount(
         teamId: String?,
         teamIds: List<String>?,
         offset: Int,
         limit: Int,
         search: String?,
-    ): Pair<List<ProjectTemplate>, Long> = dbQuery {
+    ): Pair<List<ProjectTemplate>, Long> = dbQuery(Connection.TRANSACTION_REPEATABLE_READ) {
         val conditions = buildProjectConditions(teamId, teamIds, search)
 
         val countQuery = ProjectTemplateTable.selectAll()

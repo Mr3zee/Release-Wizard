@@ -6,7 +6,10 @@ import com.zaxxer.hikari.HikariDataSource
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.SchemaUtils
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.slf4j.LoggerFactory
 import javax.sql.DataSource
+
+private val log = LoggerFactory.getLogger("com.github.mr3zee.persistence.DatabaseFactory")
 
 fun dataSource(config: DatabaseConfig): DataSource {
     val hikariConfig = HikariConfig().apply {
@@ -23,7 +26,10 @@ fun dataSource(config: DatabaseConfig): DataSource {
 fun initDatabase(ds: DataSource): Database {
     val database = Database.connect(ds)
     transaction(database) {
-        SchemaUtils.create(
+        // INFRA-C2: Use createMissingTablesAndColumns instead of create to handle schema drift.
+        // Flyway/Liquibase not needed — project is in development with no production data.
+        @Suppress("DEPRECATION")
+        SchemaUtils.createMissingTablesAndColumns(
             UserTable,
             TeamTable,
             TeamMembershipTable,
@@ -34,7 +40,6 @@ fun initDatabase(ds: DataSource): Database {
             ConnectionTable,
             ReleaseTable,
             BlockExecutionTable,
-            // PendingWebhookTable removed — orphaned table, drop manually if needed
             NotificationConfigTable,
             ScheduleTable,
             TriggerTable,
@@ -44,5 +49,44 @@ fun initDatabase(ds: DataSource): Database {
             StatusWebhookTokenTable,
         )
     }
+    // TEAM-H2, TEAM-H3, HOOK-M4: Create partial unique indexes (PostgreSQL only, graceful skip on H2)
+    createPartialIndexes(ds)
     return database
+}
+
+/**
+ * Creates partial unique indexes for defense-in-depth.
+ * These ensure only one PENDING invite/request per (team, user) and only one active webhook token per (release, block).
+ * PostgreSQL supports partial indexes; H2 does not — failures are logged and ignored.
+ */
+private fun createPartialIndexes(ds: DataSource) {
+    val partialIndexes = listOf(
+        // TEAM-H2: Only one PENDING invite per (team, user)
+        """CREATE UNIQUE INDEX IF NOT EXISTS uq_invite_pending_team_user
+           ON team_invites (team_id, invited_user_id)
+           WHERE status = 'PENDING'""",
+        // TEAM-H3: Only one PENDING join request per (team, user)
+        """CREATE UNIQUE INDEX IF NOT EXISTS uq_join_request_pending_team_user
+           ON join_requests (team_id, user_id)
+           WHERE status = 'PENDING'""",
+        // HOOK-M4: Only one active webhook token per (release, block)
+        """CREATE UNIQUE INDEX IF NOT EXISTS uq_swt_active_release_block
+           ON status_webhook_tokens (release_id, block_id)
+           WHERE active = true""",
+    )
+    ds.connection.use { conn ->
+        // Ensure DDL commits immediately regardless of pool autoCommit setting
+        conn.autoCommit = true
+        for (sql in partialIndexes) {
+            try {
+                conn.createStatement().use { stmt ->
+                    stmt.execute(sql.trimIndent())
+                }
+            } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+                // H2 and some other DBs don't support partial indexes — this is fine,
+                // application-level checks already prevent duplicates
+                log.warn("Partial index creation skipped (unsupported by DB): {}", e.message)
+            }
+        }
+    }
 }

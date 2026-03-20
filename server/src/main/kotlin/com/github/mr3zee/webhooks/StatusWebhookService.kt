@@ -32,20 +32,9 @@ class StatusWebhookService(
     }
 
     suspend fun processStatusUpdate(token: UUID, payload: StatusUpdatePayload): StatusWebhookResult {
-        val tokenRecord = tokenRepository.findByToken(token)
+        // HOOK-M5: Atomic find + validate + deactivate-if-expired in single transaction
+        val tokenRecord = tokenRepository.findActiveToken(token, TOKEN_TTL)
             ?: return StatusWebhookResult.NotFound
-
-        if (!tokenRecord.active) {
-            return StatusWebhookResult.NotFound
-        }
-
-        // Check 24h absolute TTL
-        val age = Clock.System.now() - tokenRecord.createdAt
-        if (age > TOKEN_TTL) {
-            log.info("Status webhook token {} expired (age={})", token, age)
-            tokenRepository.deactivate(tokenRecord.releaseId, tokenRecord.blockId)
-            return StatusWebhookResult.NotFound
-        }
 
         val status = payload.status.trim()
         if (status.isEmpty()) {

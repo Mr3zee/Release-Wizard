@@ -830,4 +830,5 @@ class FakeConnectionsRepository : ConnectionsRepository {
         throw UnsupportedOperationException()
     override suspend fun update(id: ConnectionId, name: String?, config: ConnectionConfig?) = null
     override suspend fun delete(id: ConnectionId) = false
+    override suspend fun deleteReturningTeamId(id: ConnectionId): String? = null
 }

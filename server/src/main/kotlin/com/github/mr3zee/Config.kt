@@ -79,9 +79,15 @@ fun ApplicationConfig.passwordPolicyConfig(): PasswordPolicyConfig {
 fun ApplicationConfig.encryptionConfig(): EncryptionConfig {
     val key = property("app.encryption.key").getString()
 
-    require(key.length >= 32) {
-        "app.encryption.key must be at least 32 characters (Base64-encoded 256-bit key). " +
-            "Set ENCRYPTION_KEY env var."
+    // CONN-H1: Decode Base64 at config load time and validate decoded key is exactly 32 bytes (256-bit AES)
+    val keyBytes = try {
+        java.util.Base64.getDecoder().decode(key)
+    } catch (_: IllegalArgumentException) {
+        error("app.encryption.key must be a valid Base64-encoded string. Set ENCRYPTION_KEY env var.")
+    }
+    require(keyBytes.size == 32) {
+        "app.encryption.key must decode to exactly 32 bytes (256-bit AES key). " +
+            "Got ${keyBytes.size} bytes. Set ENCRYPTION_KEY env var."
     }
 
     return EncryptionConfig(key = key)

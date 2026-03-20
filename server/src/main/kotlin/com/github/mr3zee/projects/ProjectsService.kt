@@ -3,6 +3,7 @@ package com.github.mr3zee.projects
 import com.github.mr3zee.api.CreateProjectRequest
 import com.github.mr3zee.api.UpdateProjectRequest
 import com.github.mr3zee.audit.AuditService
+import com.github.mr3zee.dag.DagValidator
 import com.github.mr3zee.NotFoundException
 import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.connections.ConnectionsRepository
@@ -51,7 +52,11 @@ class DefaultProjectsService(
     }
 
     override suspend fun createProject(request: CreateProjectRequest, session: UserSession): ProjectTemplate {
+        // PROJ-H4: Blank-name validation in service layer (not just route)
+        require(request.name.isNotBlank()) { "Project name must not be blank" }
         teamAccessService.checkMembership(request.teamId, session)
+        // PROJ-H2: Validate DAG structure on create
+        validateDagGraph(request.dagGraph)
         validateConnectionTeamConsistency(request.dagGraph, request.teamId.value)
         val project = repository.create(
             name = request.name,
@@ -67,7 +72,17 @@ class DefaultProjectsService(
     }
 
     override suspend fun updateProject(id: ProjectId, request: UpdateProjectRequest, session: UserSession): ProjectTemplate? {
+        // PROJ-H4: Blank-name validation in service layer
+        request.name?.let { require(it.isNotBlank()) { "Project name must not be blank" } }
         checkAccess(id, session)
+        // PROJ-H2: Validate DAG structure on update
+        val dagGraph = request.dagGraph
+        if (dagGraph != null) {
+            validateDagGraph(dagGraph)
+            // PROJ-H1: Validate connection team consistency on update (not just create)
+            val teamId = repository.findTeamId(id) ?: throw NotFoundException("Project not found")
+            validateConnectionTeamConsistency(dagGraph, teamId)
+        }
         // PROJ-C1: Lock check + update in a single transaction to prevent TOCTOU race
         val updated = repository.updateWithLockCheck(
             id = id,
@@ -110,6 +125,24 @@ class DefaultProjectsService(
         if (session.role == UserRole.ADMIN) return
         val teamId = repository.findTeamId(id) ?: throw NotFoundException("Resource not found")
         teamAccessService.checkTeamLead(TeamId(teamId), session)
+    }
+
+    /**
+     * PROJ-H2: Validates DAG structure — duplicate IDs, self-loops, invalid edges, cycles.
+     */
+    private fun validateDagGraph(dagGraph: DagGraph) {
+        val errors = DagValidator.validate(dagGraph)
+        if (errors.isNotEmpty()) {
+            val messages = errors.joinToString("; ") { error ->
+                when (error) {
+                    is com.github.mr3zee.dag.ValidationError.DuplicateBlockId -> "Duplicate block ID: ${error.blockId.value}"
+                    is com.github.mr3zee.dag.ValidationError.SelfLoop -> "Self-loop on block: ${error.edge.fromBlockId.value}"
+                    is com.github.mr3zee.dag.ValidationError.InvalidEdgeReference -> "Invalid edge reference: ${error.missingBlockId.value}"
+                    is com.github.mr3zee.dag.ValidationError.CycleDetected -> "Cycle detected involving: ${error.involvedBlockIds.joinToString { it.value }}"
+                }
+            }
+            throw IllegalArgumentException("Invalid DAG: $messages")
+        }
     }
 
     /**
