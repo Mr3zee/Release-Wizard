@@ -17,6 +17,7 @@ import org.koin.ktor.ext.inject
 import org.slf4j.LoggerFactory
 import java.security.SecureRandom
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.hours
 
 private val log = LoggerFactory.getLogger("com.github.mr3zee.auth.AuthRoutes")
 
@@ -25,6 +26,7 @@ fun Route.authRoutes() {
     val passwordValidator by inject<PasswordValidator>()
     val accountLockout by inject<AccountLockoutService>()
     val teamRepository by inject<TeamRepository>()
+    val passwordResetService by inject<PasswordResetService>()
 
     rateLimit(RateLimitName("login")) {
         post(ApiRoutes.Auth.LOGIN) {
@@ -129,16 +131,209 @@ fun Route.authRoutes() {
     authenticate("session-auth") {
         get(ApiRoutes.Auth.ME) {
             val session = call.userSession()
+            // Fetch full user from DB to include createdAt
+            val user = authService.getUserById(UserId(session.userId))
             val userTeams = teamRepository.getUserTeams(session.userId)
             val teamInfos = userTeams.map { (team, role) ->
                 UserTeamInfo(teamId = team.id, teamName = team.name, role = role)
             }
-            call.respond(UserInfo(username = session.username, id = session.userId, role = session.role, teams = teamInfos))
+            call.respond(
+                UserInfo(
+                    username = session.username,
+                    id = session.userId,
+                    role = session.role,
+                    teams = teamInfos,
+                    createdAt = user?.createdAt,
+                )
+            )
         }
 
         post(ApiRoutes.Auth.LOGOUT) {
             call.sessions.clear<UserSession>()
             call.respond(HttpStatusCode.OK)
+        }
+
+        put(ApiRoutes.Auth.CHANGE_USERNAME) {
+            val session = call.userSession()
+            val request = call.receive<ChangeUsernameRequest>()
+
+            // Validate username format (same rules as register)
+            if (request.newUsername.isBlank()) {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse(error = "Username must not be blank", code = "VALIDATION_ERROR"),
+                )
+                return@put
+            }
+            if (request.newUsername.length > 64) {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse(error = "Username must not exceed 64 characters", code = "VALIDATION_ERROR"),
+                )
+                return@put
+            }
+
+            val result = authService.changeUsername(
+                UserId(session.userId),
+                request.newUsername,
+                request.currentPassword,
+            )
+            result.fold(
+                onSuccess = { updatedUser ->
+                    // Update the session with the new username
+                    call.sessions.set(session.copy(username = updatedUser.username))
+                    log.info("User '{}' changed username to '{}'", session.userId, updatedUser.username)
+                    val userTeams = teamRepository.getUserTeams(session.userId)
+                    val teamInfos = userTeams.map { (team, role) ->
+                        UserTeamInfo(teamId = team.id, teamName = team.name, role = role)
+                    }
+                    call.respond(
+                        UserInfo(
+                            username = updatedUser.username,
+                            id = updatedUser.id.value,
+                            role = updatedUser.role,
+                            teams = teamInfos,
+                            createdAt = updatedUser.createdAt,
+                        )
+                    )
+                },
+                onFailure = { error ->
+                    val message = error.message ?: "Username change failed"
+                    when {
+                        message == "INVALID_PASSWORD" -> {
+                            call.respond(
+                                HttpStatusCode.BadRequest,
+                                ErrorResponse(error = "Invalid password", code = "INVALID_PASSWORD"),
+                            )
+                        }
+                        message == "USERNAME_TAKEN" -> {
+                            call.respond(
+                                HttpStatusCode.BadRequest,
+                                ErrorResponse(error = "Username already taken", code = "USERNAME_TAKEN"),
+                            )
+                        }
+                        message.startsWith("VALIDATION_ERROR:") -> {
+                            call.respond(
+                                HttpStatusCode.BadRequest,
+                                ErrorResponse(
+                                    error = message.removePrefix("VALIDATION_ERROR:"),
+                                    code = "VALIDATION_ERROR",
+                                ),
+                            )
+                        }
+                        else -> {
+                            call.respond(
+                                HttpStatusCode.BadRequest,
+                                ErrorResponse(error = message, code = "BAD_REQUEST"),
+                            )
+                        }
+                    }
+                },
+            )
+        }
+
+        put(ApiRoutes.Auth.CHANGE_PASSWORD) {
+            val session = call.userSession()
+            val request = call.receive<ChangePasswordRequest>()
+
+            // Validate new password
+            val passwordErrors = passwordValidator.validate(request.newPassword)
+            if (passwordErrors.isNotEmpty()) {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse(error = passwordErrors.joinToString("; "), code = "VALIDATION_ERROR"),
+                )
+                return@put
+            }
+
+            val result = authService.changePassword(
+                UserId(session.userId),
+                request.currentPassword,
+                request.newPassword,
+            )
+            result.fold(
+                onSuccess = {
+                    log.info("User '{}' changed password", session.userId)
+                    call.respond(HttpStatusCode.OK)
+                },
+                onFailure = { error ->
+                    val message = error.message ?: "Password change failed"
+                    if (message == "INVALID_PASSWORD") {
+                        call.respond(
+                            HttpStatusCode.BadRequest,
+                            ErrorResponse(error = "Invalid current password", code = "INVALID_PASSWORD"),
+                        )
+                    } else {
+                        call.respond(
+                            HttpStatusCode.BadRequest,
+                            ErrorResponse(error = message, code = "BAD_REQUEST"),
+                        )
+                    }
+                },
+            )
+        }
+
+        delete(ApiRoutes.Auth.DELETE_ACCOUNT) {
+            val session = call.userSession()
+            val request = call.receive<DeleteAccountRequest>()
+
+            val result = authService.deleteAccountSafe(
+                UserId(session.userId),
+                request.confirmUsername,
+                request.currentPassword,
+            )
+            result.fold(
+                onSuccess = {
+                    log.info("User '{}' deleted their account", session.userId)
+                    call.sessions.clear<UserSession>()
+                    call.respond(HttpStatusCode.OK)
+                },
+                onFailure = { error ->
+                    val message = error.message ?: "Account deletion failed"
+                    val code = when (message) {
+                        "LAST_ADMIN" -> "LAST_ADMIN"
+                        "LAST_TEAM_LEAD" -> "LAST_TEAM_LEAD"
+                        "INVALID_PASSWORD" -> "INVALID_PASSWORD"
+                        "USERNAME_MISMATCH" -> "USERNAME_MISMATCH"
+                        else -> "BAD_REQUEST"
+                    }
+                    val humanMessage = when (message) {
+                        "LAST_ADMIN" -> "Cannot delete the last admin account"
+                        "LAST_TEAM_LEAD" -> "Cannot delete account: you are the last lead in one or more teams"
+                        "INVALID_PASSWORD" -> "Invalid password"
+                        "USERNAME_MISMATCH" -> "Username confirmation does not match"
+                        else -> message
+                    }
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        ErrorResponse(error = humanMessage, code = code),
+                    )
+                },
+            )
+        }
+
+        // Admin-only: generate password reset token
+        post(ApiRoutes.Auth.GENERATE_PASSWORD_RESET) {
+            val session = call.userSession()
+            requireAdmin(call, session) ?: return@post
+            val request = call.receive<GeneratePasswordResetRequest>()
+
+            val result = passwordResetService.generateToken(
+                UserId(request.userId),
+                UserId(session.userId),
+            )
+            result.fold(
+                onSuccess = { rawToken ->
+                    val expiresAt = Clock.System.now().plus(24.hours).toEpochMilliseconds()
+                    call.respond(PasswordResetLinkResponse(token = rawToken, expiresAt = expiresAt))
+                },
+                onFailure = { error ->
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        ErrorResponse(error = error.message ?: "Token generation failed", code = "BAD_REQUEST"),
+                    )
+                },
+            )
         }
 
         // AUTH-H2: Use userSession() + role check instead of requireAdminSession
@@ -181,6 +376,56 @@ fun Route.authRoutes() {
                 onFailure = {
                     log.warn("Role update rejected for user {}: cannot demote last admin", userId)
                     call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Cannot demote the last admin", code = "LAST_ADMIN"))
+                },
+            )
+        }
+    }
+
+    // Unauthenticated password reset endpoints with dedicated rate limiter
+    rateLimit(RateLimitName("password-reset")) {
+        post(ApiRoutes.Auth.VALIDATE_RESET_TOKEN) {
+            val request = call.receive<ValidateResetTokenRequest>()
+            val userId = passwordResetService.validateToken(request.token)
+            if (userId != null) {
+                call.respond(HttpStatusCode.OK, mapOf("valid" to true))
+            } else {
+                call.respond(
+                    HttpStatusCode.NotFound,
+                    ErrorResponse(error = "Invalid or expired token", code = "INVALID_TOKEN"),
+                )
+            }
+        }
+
+        post(ApiRoutes.Auth.RESET_PASSWORD) {
+            val request = call.receive<ResetPasswordRequest>()
+
+            // Validate the new password
+            val passwordErrors = passwordValidator.validate(request.newPassword)
+            if (passwordErrors.isNotEmpty()) {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse(error = passwordErrors.joinToString("; "), code = "VALIDATION_ERROR"),
+                )
+                return@post
+            }
+
+            // Hash the new password before consuming the token
+            val newPasswordHash = authService.hashPassword(request.newPassword)
+
+            val result = passwordResetService.consumeToken(request.token, newPasswordHash)
+            result.fold(
+                onSuccess = { userId ->
+                    log.info("Password reset completed for user '{}'", userId.value)
+                    call.respond(HttpStatusCode.OK)
+                },
+                onFailure = { error ->
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        ErrorResponse(
+                            error = error.message ?: "Password reset failed",
+                            code = "INVALID_TOKEN",
+                        ),
+                    )
                 },
             )
         }

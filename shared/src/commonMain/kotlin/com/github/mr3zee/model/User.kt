@@ -12,4 +12,5 @@ data class User(
     val id: UserId,
     val username: String,
     val role: UserRole,
+    val createdAt: Long? = null,
 )
