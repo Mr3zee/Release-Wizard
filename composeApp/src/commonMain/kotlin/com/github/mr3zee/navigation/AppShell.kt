@@ -56,6 +56,8 @@ import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.AppLogo
 import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwTooltip
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.outlined.AccountCircle
 import com.github.mr3zee.components.SidebarNavItem
 import com.github.mr3zee.i18n.packStringResource
 import com.github.mr3zee.theme.AppTypography
@@ -75,6 +77,8 @@ fun AppShell(
     onSectionClick: (NavSection) -> Unit,
     teamSwitcher: @Composable (collapsed: Boolean) -> Unit,
     settingsContent: @Composable (collapsed: Boolean) -> Unit,
+    username: String? = null,
+    onProfileClick: () -> Unit = {},
     onSignOut: () -> Unit,
     content: @Composable () -> Unit,
 ) {
@@ -197,6 +201,19 @@ fun AppShell(
                     }
 
                     Spacer(Modifier.weight(1f))
+
+                    // ── Profile ──────────────────────────────────
+                    HorizontalDivider(color = colors.chromeBorder)
+                    SidebarNavItem(
+                        icon = Icons.Outlined.AccountCircle,
+                        activeIcon = Icons.Filled.AccountCircle,
+                        label = username ?: "",
+                        isActive = false,
+                        isCollapsed = collapsed,
+                        onClick = { if (username != null) onProfileClick() },
+                        testTag = "sidebar_profile",
+                        modifier = Modifier.padding(horizontal = Spacing.xs),
+                    )
 
                     HorizontalDivider(color = colors.chromeBorder)
 

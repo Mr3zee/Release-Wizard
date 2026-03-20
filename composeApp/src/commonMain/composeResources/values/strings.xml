@@ -591,6 +591,52 @@
     <string name="common_sort_newest">Recently updated</string>
     <string name="common_sort_oldest">Least recently updated</string>
 
+    <!-- ==================== Profile ==================== -->
+    <string name="profile_title">Profile</string>
+    <string name="profile_role_admin">Admin</string>
+    <string name="profile_role_user">User</string>
+    <string name="profile_member_since">Member since %1$s</string>
+    <string name="profile_team_role_separator"> \u2022 </string>
+    <string name="profile_change_username">Change Username</string>
+    <string name="profile_change_username_title">Change Username</string>
+    <string name="profile_new_username">New Username</string>
+    <string name="profile_current_password">Current Password</string>
+    <string name="profile_change_password">Change Password</string>
+    <string name="profile_change_password_title">Change Password</string>
+    <string name="profile_new_password">New Password</string>
+    <string name="profile_confirm_new_password">Confirm New Password</string>
+    <string name="profile_password_mismatch">Passwords do not match</string>
+    <string name="profile_admin_tools">Admin Tools</string>
+    <string name="profile_manage_users">Manage Users</string>
+    <string name="profile_delete_account">Delete Account</string>
+    <string name="profile_delete_warning">This will permanently delete your account and all associated data. This action cannot be undone.</string>
+    <string name="profile_delete_confirm_username">Type your username to confirm</string>
+    <string name="profile_username_changed">Username updated successfully</string>
+    <string name="profile_password_changed">Password updated successfully</string>
+    <string name="profile_teams_section">Teams</string>
+    <string name="profile_no_teams">Not a member of any teams</string>
+    <string name="profile_submit">Submit</string>
+
+    <!-- ==================== Reset Password ==================== -->
+    <string name="reset_password_title">Reset Password</string>
+    <string name="reset_password_validating">Validating reset link\u2026</string>
+    <string name="reset_password_invalid">This reset link is invalid or has expired.</string>
+    <string name="reset_password_new_password">New Password</string>
+    <string name="reset_password_confirm_password">Confirm New Password</string>
+    <string name="reset_password_submit">Set New Password</string>
+    <string name="reset_password_success">Password updated successfully. You can now sign in with your new password.</string>
+    <string name="reset_password_go_to_login">Go to Sign In</string>
+    <string name="reset_password_mismatch">Passwords do not match</string>
+
+    <!-- ==================== Admin: User Management ==================== -->
+    <string name="admin_users_title">User Management</string>
+    <string name="admin_users_empty">No users found</string>
+    <string name="admin_users_empty_hint">Users will appear here once they register.</string>
+    <string name="admin_users_generate_reset_link">Generate Reset Link</string>
+    <string name="admin_users_copy_link">Copy</string>
+    <string name="admin_users_copied">Copied to clipboard</string>
+    <string name="admin_users_reset_link_label">Reset link:</string>
+
     <!-- ==================== Loading Accessibility ==================== -->
     <string name="loading_projects">Loading projects</string>
     <string name="loading_releases">Loading releases</string>

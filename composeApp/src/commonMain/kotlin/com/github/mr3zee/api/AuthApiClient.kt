@@ -1,6 +1,7 @@
 package com.github.mr3zee.api
 
 import com.github.mr3zee.model.ClientType
+import com.github.mr3zee.model.User
 import com.github.mr3zee.util.RuntimeContext
 import com.github.mr3zee.util.currentRuntimeContext
 import io.ktor.client.*
@@ -92,5 +93,11 @@ class AuthApiClient(private val client: HttpClient) {
             contentType(ContentType.Application.Json)
             setBody(ResetPasswordRequest(token = token, newPassword = newPassword))
         }
+    }
+
+    suspend fun getUsers(): List<User> {
+        val response = client.get(serverUrl(ApiRoutes.Auth.USERS))
+        val body: UserListResponse = response.body()
+        return body.users
     }
 }
