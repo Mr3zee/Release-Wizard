@@ -9,7 +9,9 @@ ktor:
 # All values below can be overridden via system properties (e.g., -Dapp.database.url=...)
 # or environment variables at deployment time.
 # Env var mapping: PORT, HOST, DB_URL, DB_USER, DB_PASSWORD, AUTH_SESSION_SIGN_KEY, ENCRYPTION_KEY,
-#                  WEBHOOK_BASE_URL, APP_VERSION, DB_MAX_POOL_SIZE, CORS_ALLOWED_ORIGINS
+#                  WEBHOOK_BASE_URL, APP_VERSION, DB_MAX_POOL_SIZE, CORS_ALLOWED_ORIGINS,
+#                  BROWSER_SESSION_TTL_SECONDS, DESKTOP_SESSION_TTL_SECONDS,
+#                  BROWSER_ABSOLUTE_LIFETIME_SECONDS, DESKTOP_ABSOLUTE_LIFETIME_SECONDS
 app:
   version: "$APP_VERSION:dev"
   database:
@@ -21,8 +23,11 @@ app:
   auth:
     sessionSignKey: "$AUTH_SESSION_SIGN_KEY"
     sessionEncryptKey: "$AUTH_SESSION_ENCRYPT_KEY"
-    sessionTtlSeconds: "$SESSION_TTL_SECONDS:86400"
+    browserSessionTtlSeconds: "$BROWSER_SESSION_TTL_SECONDS:2592000"
+    desktopSessionTtlSeconds: "$DESKTOP_SESSION_TTL_SECONDS:31536000"
     sessionRefreshThresholdSeconds: "$SESSION_REFRESH_THRESHOLD_SECONDS:60"
+    browserAbsoluteLifetimeSeconds: "$BROWSER_ABSOLUTE_LIFETIME_SECONDS:7776000"
+    desktopAbsoluteLifetimeSeconds: "$DESKTOP_ABSOLUTE_LIFETIME_SECONDS:63072000"
     secureCookie: "$SECURE_COOKIE:true"
     password:
       minLength: "$PASSWORD_MIN_LENGTH:12"

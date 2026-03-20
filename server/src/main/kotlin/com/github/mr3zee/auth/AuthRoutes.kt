@@ -55,6 +55,7 @@ fun Route.authRoutes() {
                         userId = user.id.value,
                         role = user.role,
                         csrfToken = csrfToken,
+                        clientType = request.clientType,
                         createdAt = now,
                         lastAccessedAt = now,
                     )
@@ -106,6 +107,7 @@ fun Route.authRoutes() {
                         userId = user.id.value,
                         role = user.role,
                         csrfToken = csrfToken,
+                        clientType = request.clientType,
                         createdAt = now,
                         lastAccessedAt = now,
                     )

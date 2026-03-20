@@ -13,9 +13,11 @@ data class DatabaseConfig(
 data class AuthConfig(
     val sessionSignKey: String,
     val sessionEncryptKey: String = "",
-    val sessionTtlSeconds: Long = 86400,
+    val browserSessionTtlSeconds: Long = 2_592_000, // 30 days
+    val desktopSessionTtlSeconds: Long = 31_536_000, // 1 year
     val sessionRefreshThresholdSeconds: Long = 60,
-    val absoluteSessionLifetimeSeconds: Long = 604800,
+    val browserAbsoluteLifetimeSeconds: Long = 7_776_000, // 90 days
+    val desktopAbsoluteLifetimeSeconds: Long = 63_072_000, // 2 years
 )
 
 data class PasswordPolicyConfig(
@@ -63,16 +65,20 @@ fun ApplicationConfig.authConfig(): AuthConfig {
         }
     }
 
-    val sessionTtlSeconds = propertyOrNull("app.auth.sessionTtlSeconds")?.getString()?.toLongOrNull() ?: 86400L
+    val browserSessionTtlSeconds = propertyOrNull("app.auth.browserSessionTtlSeconds")?.getString()?.toLongOrNull() ?: 2_592_000L
+    val desktopSessionTtlSeconds = propertyOrNull("app.auth.desktopSessionTtlSeconds")?.getString()?.toLongOrNull() ?: 31_536_000L
     val sessionRefreshThresholdSeconds = propertyOrNull("app.auth.sessionRefreshThresholdSeconds")?.getString()?.toLongOrNull() ?: 60L
-    val absoluteSessionLifetimeSeconds = propertyOrNull("app.auth.absoluteSessionLifetimeSeconds")?.getString()?.toLongOrNull() ?: 604800L
+    val browserAbsoluteLifetimeSeconds = propertyOrNull("app.auth.browserAbsoluteLifetimeSeconds")?.getString()?.toLongOrNull() ?: 7_776_000L
+    val desktopAbsoluteLifetimeSeconds = propertyOrNull("app.auth.desktopAbsoluteLifetimeSeconds")?.getString()?.toLongOrNull() ?: 63_072_000L
 
     return AuthConfig(
         sessionSignKey = sessionSignKey,
         sessionEncryptKey = sessionEncryptKey,
-        sessionTtlSeconds = sessionTtlSeconds,
+        browserSessionTtlSeconds = browserSessionTtlSeconds,
+        desktopSessionTtlSeconds = desktopSessionTtlSeconds,
         sessionRefreshThresholdSeconds = sessionRefreshThresholdSeconds,
-        absoluteSessionLifetimeSeconds = absoluteSessionLifetimeSeconds,
+        browserAbsoluteLifetimeSeconds = browserAbsoluteLifetimeSeconds,
+        desktopAbsoluteLifetimeSeconds = desktopAbsoluteLifetimeSeconds,
     )
 }
 

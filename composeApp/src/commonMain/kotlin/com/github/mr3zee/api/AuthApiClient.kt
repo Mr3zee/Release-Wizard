@@ -1,5 +1,8 @@
 package com.github.mr3zee.api
 
+import com.github.mr3zee.model.ClientType
+import com.github.mr3zee.util.RuntimeContext
+import com.github.mr3zee.util.currentRuntimeContext
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -7,10 +10,16 @@ import io.ktor.http.*
 
 class AuthApiClient(private val client: HttpClient) {
 
+    private val clientType: ClientType
+        get() = when (currentRuntimeContext()) {
+            RuntimeContext.DESKTOP -> ClientType.DESKTOP
+            RuntimeContext.BROWSER -> ClientType.BROWSER
+        }
+
     suspend fun login(username: String, password: String): UserInfo {
         val response = client.post(serverUrl(ApiRoutes.Auth.LOGIN)) {
             contentType(ContentType.Application.Json)
-            setBody(LoginRequest(username = username, password = password))
+            setBody(LoginRequest(username = username, password = password, clientType = clientType))
         }
         return response.body()
     }
@@ -18,7 +27,7 @@ class AuthApiClient(private val client: HttpClient) {
     suspend fun register(username: String, password: String): UserInfo {
         val response = client.post(serverUrl(ApiRoutes.Auth.REGISTER)) {
             contentType(ContentType.Application.Json)
-            setBody(RegisterRequest(username = username, password = password))
+            setBody(RegisterRequest(username = username, password = password, clientType = clientType))
         }
         return response.body()
     }

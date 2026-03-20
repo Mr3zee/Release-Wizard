@@ -2,6 +2,7 @@ package com.github.mr3zee.auth
 
 import com.github.mr3zee.*
 import com.github.mr3zee.api.*
+import com.github.mr3zee.model.ClientType
 import com.github.mr3zee.model.TeamId
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -146,8 +147,11 @@ class SecurityHardeningTest {
     fun `session with expired TTL returns 401`() = testApplication {
         val shortTtlAuthConfig = AuthConfig(
             sessionSignKey = testAuthConfig().sessionSignKey,
-            sessionTtlSeconds = 0,
+            browserSessionTtlSeconds = 0,
+            desktopSessionTtlSeconds = 0,
             sessionRefreshThresholdSeconds = 0,
+            browserAbsoluteLifetimeSeconds = 0,
+            desktopAbsoluteLifetimeSeconds = 0,
         )
         application {
             testModule(authConfig = shortTtlAuthConfig)
@@ -155,6 +159,65 @@ class SecurityHardeningTest {
         val client = jsonClient()
         client.login()
 
+        val response = client.get(ApiRoutes.Auth.ME)
+        assertEquals(HttpStatusCode.Unauthorized, response.status)
+    }
+
+    @Test
+    fun `browser session expires while desktop session stays alive`() = testApplication {
+        val asymmetricConfig = AuthConfig(
+            sessionSignKey = testAuthConfig().sessionSignKey,
+            browserSessionTtlSeconds = 0,
+            desktopSessionTtlSeconds = 31_536_000,
+            sessionRefreshThresholdSeconds = 0,
+            browserAbsoluteLifetimeSeconds = 0,
+            desktopAbsoluteLifetimeSeconds = 63_072_000,
+        )
+        application { testModule(authConfig = asymmetricConfig) }
+
+        val browserClient = jsonClient()
+        browserClient.login(username = "browser_user", password = "browserpass", clientType = ClientType.BROWSER)
+        val browserResponse = browserClient.get(ApiRoutes.Auth.ME)
+        assertEquals(HttpStatusCode.Unauthorized, browserResponse.status)
+
+        val desktopClient = jsonClient()
+        desktopClient.login(username = "desktop_user", password = "desktoppass", clientType = ClientType.DESKTOP)
+        val desktopResponse = desktopClient.get(ApiRoutes.Auth.ME)
+        assertEquals(HttpStatusCode.OK, desktopResponse.status)
+    }
+
+    @Test
+    fun `desktop session with expired TTL returns 401`() = testApplication {
+        val shortDesktopConfig = AuthConfig(
+            sessionSignKey = testAuthConfig().sessionSignKey,
+            browserSessionTtlSeconds = 31_536_000,
+            desktopSessionTtlSeconds = 0,
+            sessionRefreshThresholdSeconds = 0,
+            browserAbsoluteLifetimeSeconds = 63_072_000,
+            desktopAbsoluteLifetimeSeconds = 0,
+        )
+        application { testModule(authConfig = shortDesktopConfig) }
+
+        val client = jsonClient()
+        client.login(clientType = ClientType.DESKTOP)
+        val response = client.get(ApiRoutes.Auth.ME)
+        assertEquals(HttpStatusCode.Unauthorized, response.status)
+    }
+
+    @Test
+    fun `absolute lifetime expires independently of idle TTL`() = testApplication {
+        val absoluteOnlyConfig = AuthConfig(
+            sessionSignKey = testAuthConfig().sessionSignKey,
+            browserSessionTtlSeconds = 31_536_000,
+            desktopSessionTtlSeconds = 31_536_000,
+            sessionRefreshThresholdSeconds = 0,
+            browserAbsoluteLifetimeSeconds = 0,
+            desktopAbsoluteLifetimeSeconds = 0,
+        )
+        application { testModule(authConfig = absoluteOnlyConfig) }
+
+        val client = jsonClient()
+        client.login()
         val response = client.get(ApiRoutes.Auth.ME)
         assertEquals(HttpStatusCode.Unauthorized, response.status)
     }

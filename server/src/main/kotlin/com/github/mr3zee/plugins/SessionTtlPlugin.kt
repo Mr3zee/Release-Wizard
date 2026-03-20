@@ -3,6 +3,7 @@ package com.github.mr3zee.plugins
 import com.github.mr3zee.AuthConfig
 import com.github.mr3zee.auth.AuthService
 import com.github.mr3zee.auth.UserSession
+import com.github.mr3zee.model.ClientType
 import com.github.mr3zee.model.UserId
 import io.ktor.server.application.*
 import io.ktor.server.response.*
@@ -16,8 +17,11 @@ private val log = LoggerFactory.getLogger("com.github.mr3zee.plugins.SessionTtlP
 /**
  * Session TTL & rotation plugin.
  *
+ * Applies per-client-type TTLs: browser sessions (30 days default),
+ * desktop sessions (1 year default).
+ *
  * onCall phase:
- * - Checks `lastAccessedAt + sessionTtlSeconds` against current time.
+ * - Checks `lastAccessedAt + ttl` against current time (TTL based on session's clientType).
  *   If expired → clears session (the auth challenge plugin will respond 401).
  * - If session is still valid but past the refresh threshold → updates `lastAccessedAt`.
  *
@@ -29,24 +33,39 @@ private val log = LoggerFactory.getLogger("com.github.mr3zee.plugins.SessionTtlP
 val SessionTtl = createApplicationPlugin(name = "SessionTtl") {
     val authConfig = application.getKoin().get<AuthConfig>()
     val authService = application.getKoin().get<AuthService>()
-    val ttlMillis = authConfig.sessionTtlSeconds.coerceIn(0, 31536000) * 1000  // max 1 year
-    val refreshThresholdMillis = authConfig.sessionRefreshThresholdSeconds.coerceIn(0, 31536000) * 1000
-    // AUTH-M5: Absolute session lifetime — sessions older than this are invalidated regardless of activity
-    val absoluteLifetimeMillis = authConfig.absoluteSessionLifetimeSeconds.coerceIn(0, 31536000) * 1000
+    val maxTtlSeconds = 63_072_000L // 2 years ceiling
+    val browserTtlMillis = authConfig.browserSessionTtlSeconds.coerceIn(0, maxTtlSeconds) * 1000
+    val desktopTtlMillis = authConfig.desktopSessionTtlSeconds.coerceIn(0, maxTtlSeconds) * 1000
+    val refreshThresholdMillis = authConfig.sessionRefreshThresholdSeconds.coerceIn(0, maxTtlSeconds) * 1000
+    val browserAbsoluteLifetimeMillis = authConfig.browserAbsoluteLifetimeSeconds.coerceIn(0, maxTtlSeconds) * 1000
+    val desktopAbsoluteLifetimeMillis = authConfig.desktopAbsoluteLifetimeSeconds.coerceIn(0, maxTtlSeconds) * 1000
 
     onCall { call ->
-        val session = call.sessions.get<UserSession>() ?: return@onCall
+        var session = call.sessions.get<UserSession>() ?: return@onCall
 
         val nowMillis = Clock.System.now().toEpochMilliseconds()
 
-        // Migrate legacy sessions (created before TTL feature) by setting timestamps now
-        if (session.lastAccessedAt == 0L) {
-            call.sessions.set(session.copy(lastAccessedAt = nowMillis, createdAt = if (session.createdAt == 0L) nowMillis else session.createdAt))
-            return@onCall
+        // Migrate legacy sessions (created before per-client TTL feature) by setting timestamps
+        if (session.lastAccessedAt == 0L || session.createdAt == 0L) {
+            session = session.copy(
+                lastAccessedAt = if (session.lastAccessedAt == 0L) nowMillis else session.lastAccessedAt,
+                createdAt = if (session.createdAt == 0L) nowMillis else session.createdAt,
+            )
+            call.sessions.set(session)
+            // Fall through to TTL checks — migrated sessions are still subject to expiry
         }
 
-        // AUTH-M5: Check absolute session lifetime (e.g. 7 days from creation)
-        if (session.createdAt > 0 && nowMillis - session.createdAt > absoluteLifetimeMillis) {
+        val ttlMillis = when (session.clientType) {
+            ClientType.BROWSER -> browserTtlMillis
+            ClientType.DESKTOP -> desktopTtlMillis
+        }
+        val absoluteLifetimeMillis = when (session.clientType) {
+            ClientType.BROWSER -> browserAbsoluteLifetimeMillis
+            ClientType.DESKTOP -> desktopAbsoluteLifetimeMillis
+        }
+
+        // Check absolute session lifetime
+        if (nowMillis - session.createdAt > absoluteLifetimeMillis) {
             log.debug("Session absolute lifetime exceeded for user '{}' (age {}ms > max {}ms)", session.username, nowMillis - session.createdAt, absoluteLifetimeMillis)
             call.sessions.clear<UserSession>()
             return@onCall

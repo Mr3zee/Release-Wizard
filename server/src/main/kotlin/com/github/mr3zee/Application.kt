@@ -189,7 +189,7 @@ fun Application.module() {
     install(Sessions) {
         cookie<UserSession>("SESSION") {
             cookie.path = "/"
-            cookie.maxAgeInSeconds = authConfig.sessionTtlSeconds
+            cookie.maxAgeInSeconds = maxOf(authConfig.browserSessionTtlSeconds, authConfig.desktopSessionTtlSeconds)
             cookie.httpOnly = true
             cookie.secure = this@module.environment.config.propertyOrNull("app.auth.secureCookie")?.getString()?.toBooleanStrictOrNull() ?: true
             cookie.extensions["SameSite"] = "Lax"

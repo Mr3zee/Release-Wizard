@@ -1,6 +1,7 @@
 package com.github.mr3zee
 
 import com.github.mr3zee.api.*
+import com.github.mr3zee.model.ClientType
 import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.audit.auditModule
@@ -177,7 +178,7 @@ fun Application.testModule(
     install(Sessions) {
         cookie<UserSession>("SESSION") {
             cookie.path = "/"
-            cookie.maxAgeInSeconds = 86400
+            cookie.maxAgeInSeconds = maxOf(authConfig.browserSessionTtlSeconds, authConfig.desktopSessionTtlSeconds)
             cookie.httpOnly = true
             cookie.extensions["SameSite"] = "Lax"
             if (authConfig.sessionEncryptKey.isNotEmpty()) {
@@ -345,16 +346,17 @@ fun ApplicationTestBuilder.jsonClient() = createClient {
 suspend fun HttpClient.login(
     username: String = "admin",
     password: String = "adminpass",
+    clientType: ClientType = ClientType.BROWSER,
 ) {
     // Register (idempotent — error on duplicate is fine)
     post(ApiRoutes.Auth.REGISTER) {
         contentType(ContentType.Application.Json)
-        setBody(RegisterRequest(username = username, password = password))
+        setBody(RegisterRequest(username = username, password = password, clientType = clientType))
     }
     // Login to get a session cookie
     post(ApiRoutes.Auth.LOGIN) {
         contentType(ContentType.Application.Json)
-        setBody(LoginRequest(username = username, password = password))
+        setBody(LoginRequest(username = username, password = password, clientType = clientType))
     }
 }
 
