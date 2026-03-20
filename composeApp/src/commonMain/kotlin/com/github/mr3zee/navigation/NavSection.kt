@@ -44,4 +44,7 @@ fun Screen.parentSection(): NavSection? = when (this) {
     is Screen.ConnectionForm -> NavSection.CONNECTIONS
     is Screen.TeamList -> NavSection.TEAMS
     is Screen.TeamDetail, is Screen.TeamManage, is Screen.AuditLog, Screen.MyInvites -> NavSection.TEAMS
+    is Screen.Profile -> null
+    is Screen.ResetPassword -> null
+    is Screen.AdminUsers -> null
 }
