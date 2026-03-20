@@ -6,6 +6,7 @@ import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.model.ClientType
 import com.github.mr3zee.model.UserId
 import io.ktor.server.application.*
+import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.sessions.*
 import org.koin.ktor.ext.getKoin
@@ -110,6 +111,8 @@ val SessionTtl = createApplicationPlugin(name = "SessionTtl") {
     onCallRespond { call, _ ->
         // Read the final session state (after route handlers may have created/updated it)
         val session = call.sessions.get<UserSession>() ?: return@onCallRespond
+        // Only add cache/CSRF headers for API responses — static assets are managed by CachingHeaders plugin
+        if (!call.request.path().startsWith("/api/")) return@onCallRespond
         if (session.csrfToken.isNotEmpty()) {
             call.response.header(CSRF_TOKEN_HEADER, session.csrfToken)
         }
