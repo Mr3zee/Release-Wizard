@@ -510,4 +510,51 @@ class SerializationTest {
         assertEquals(GatePhase.PRE, decoded.gatePhase)
         assertEquals("Approve to start 'Build'", decoded.gateMessage)
     }
+
+    @Test
+    fun `block description round trip`() {
+        val description = "# Heading\nSome **bold** text"
+        val graph = DagGraph(
+            blocks = listOf(
+                Block.ActionBlock(
+                    id = BlockId("b1"),
+                    name = "Build",
+                    description = description,
+                    type = BlockType.TEAMCITY_BUILD,
+                ),
+                Block.ContainerBlock(
+                    id = BlockId("c1"),
+                    name = "Group",
+                    description = description,
+                    children = DagGraph(),
+                ),
+            ),
+        )
+        val encoded = json.encodeToString(DagGraph.serializer(), graph)
+        val decoded = json.decodeFromString(DagGraph.serializer(), encoded)
+        assertEquals(graph, decoded)
+    }
+
+    @Test
+    fun `backward compatibility - block without description`() {
+        val actionJson = """{"kind":"action","id":"b1","name":"Test","type":"TEAMCITY_BUILD"}"""
+        val actionBlock = json.decodeFromString(Block.serializer(), actionJson)
+        assertEquals("", actionBlock.description)
+
+        val containerJson = """{"kind":"container","id":"c1","name":"Group","children":{"blocks":[],"edges":[],"positions":{}}}"""
+        val containerBlock = json.decodeFromString(Block.serializer(), containerJson)
+        assertEquals("", containerBlock.description)
+    }
+
+    @Test
+    fun `block description present in JSON`() {
+        val block = Block.ActionBlock(
+            id = BlockId("b1"),
+            name = "Build",
+            description = "Deploy to production",
+            type = BlockType.TEAMCITY_BUILD,
+        )
+        val encoded = json.encodeToString(Block.serializer(), block)
+        assertTrue(encoded.contains("\"description\":\"Deploy to production\""))
+    }
 }

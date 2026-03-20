@@ -38,6 +38,10 @@ kotlin {
             implementation(projects.shared)
             implementation(libs.kotlinx.datetime)
 
+            // Markdown
+            implementation(libs.markdown.renderer)
+            implementation(libs.markdown.renderer.m3)
+
             // Ktor client
             implementation(libs.ktor.clientCore)
             implementation(libs.ktor.clientContentNegotiation)

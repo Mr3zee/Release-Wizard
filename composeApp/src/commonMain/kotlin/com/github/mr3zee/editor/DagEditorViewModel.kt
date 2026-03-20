@@ -249,7 +249,10 @@ class DagEditorViewModel(
             try {
                 val updated = apiClient.updateProject(
                     p.id,
-                    UpdateProjectRequest(dagGraph = _graph.value),
+                    UpdateProjectRequest(
+                        dagGraph = _graph.value,
+                        description = p.description,
+                    ),
                 )
                 _project.value = updated
                 _isDirty.value = false
@@ -407,6 +410,14 @@ class DagEditorViewModel(
         _selectedBlockIds.value = emptySet()
     }
 
+    // Project-level property updates (not tracked by undo — undo only covers graph changes).
+
+    fun updateProjectDescription(description: String) {
+        if (isReadOnly.value) return
+        _project.value = _project.value?.copy(description = description)
+        _isDirty.value = true
+    }
+
     // Property updates — mutate graph without flooding undo stack.
     // Undo tracks structural changes (add/remove blocks/edges, moves).
 
@@ -420,6 +431,22 @@ class DagEditorViewModel(
                     when (block) {
                         is Block.ActionBlock -> block.copy(name = name)
                         is Block.ContainerBlock -> block.copy(name = name)
+                    }
+                }
+            )
+        )
+    }
+
+    fun updateBlockDescription(blockId: BlockId, description: String) {
+        if (isReadOnly.value) return
+        val g = _graph.value
+        updateGraphSilent(
+            g.copy(
+                blocks = g.blocks.map { block ->
+                    if (block.id != blockId) return@map block
+                    when (block) {
+                        is Block.ActionBlock -> block.copy(description = description)
+                        is Block.ContainerBlock -> block.copy(description = description)
                     }
                 }
             )

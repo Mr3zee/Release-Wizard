@@ -147,12 +147,12 @@ class ProjectListViewModel(
         }
     }
 
-    fun createProject(name: String, onCreated: ((ProjectId) -> Unit)? = null) {
+    fun createProject(name: String, description: String = "", onCreated: ((ProjectId) -> Unit)? = null) {
         viewModelScope.launch {
             _error.value = null
             try {
                 val teamId = activeTeamId.value ?: error("No active team selected")
-                val project = apiClient.createProject(CreateProjectRequest(name = name, teamId = teamId))
+                val project = apiClient.createProject(CreateProjectRequest(name = name, teamId = teamId, description = description))
                 loadProjects()
                 onCreated?.invoke(project.id)
             } catch (e: Exception) {

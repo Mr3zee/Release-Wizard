@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwInlineConfirmation
+import com.github.mr3zee.components.RwMarkdownText
 import com.github.mr3zee.components.RwTooltip
 import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
@@ -347,6 +348,13 @@ fun ReleaseDetailScreen(
                                         Text(packStringResource(Res.string.common_close))
                                     }
                                 }
+                                if (block.description.isNotBlank()) {
+                                    Spacer(modifier = Modifier.height(Spacing.xs))
+                                    RwMarkdownText(
+                                        markdown = block.description,
+                                        modifier = Modifier.fillMaxWidth().testTag("block_description_text"),
+                                    )
+                                }
                                 Spacer(modifier = Modifier.height(Spacing.sm))
                                 Text(
                                     text = packStringResource(Res.string.releases_block_status, packStringResource(Res.string.block_status_waiting)),
@@ -418,6 +426,14 @@ private fun BlockDetailPanel(
                 RwButton(onClick = onDismiss, variant = RwButtonVariant.Ghost) {
                     Text(packStringResource(Res.string.common_close))
                 }
+            }
+
+            if (block.description.isNotBlank()) {
+                Spacer(modifier = Modifier.height(Spacing.xs))
+                RwMarkdownText(
+                    markdown = block.description,
+                    modifier = Modifier.testTag("block_description_text"),
+                )
             }
 
             Spacer(modifier = Modifier.height(Spacing.sm))
