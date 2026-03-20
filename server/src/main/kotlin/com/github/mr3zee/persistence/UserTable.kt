@@ -10,4 +10,5 @@ object UserTable : UUIDTable("users") {
     val passwordHash = varchar("password_hash", 255)
     val role = enumerationByName<UserRole>("role", 50)
     val createdAt = timestamp("created_at")
+    val passwordChangedAt = timestamp("password_changed_at").nullable()
 }

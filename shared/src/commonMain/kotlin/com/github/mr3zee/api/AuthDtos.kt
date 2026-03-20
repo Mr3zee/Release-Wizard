@@ -31,6 +31,7 @@ data class UserInfo(
     val id: String? = null,
     val role: UserRole? = null,
     val teams: List<UserTeamInfo> = emptyList(),
+    val createdAt: Long? = null,
 )
 
 @Serializable
@@ -49,3 +50,53 @@ data class UpdateUserRoleRequest(
 data class UserListResponse(
     val users: List<User>,
 )
+
+@Serializable
+data class ChangeUsernameRequest(
+    val newUsername: String,
+    val currentPassword: String,
+) {
+    override fun toString() = "ChangeUsernameRequest(newUsername=$newUsername, password=****)"
+}
+
+@Serializable
+data class ChangePasswordRequest(
+    val currentPassword: String,
+    val newPassword: String,
+) {
+    override fun toString() = "ChangePasswordRequest(password=****)"
+}
+
+@Serializable
+data class DeleteAccountRequest(
+    val confirmUsername: String,
+    val currentPassword: String,
+) {
+    override fun toString() = "DeleteAccountRequest(confirmUsername=$confirmUsername, password=****)"
+}
+
+@Serializable
+data class GeneratePasswordResetRequest(
+    val userId: String,
+)
+
+@Serializable
+data class PasswordResetLinkResponse(
+    val token: String,
+    val expiresAt: Long,
+)
+
+@Serializable
+data class ResetPasswordRequest(
+    val token: String,
+    val newPassword: String,
+) {
+    override fun toString() = "ResetPasswordRequest(token=****, password=****)"
+}
+
+@Serializable
+data class ValidateResetTokenRequest(
+    val token: String,
+) {
+    override fun toString() = "ValidateResetTokenRequest(token=****)"
+}
