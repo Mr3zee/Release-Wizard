@@ -41,11 +41,13 @@ class DagEditorViewModel(
     private val connectionApiClient: ConnectionApiClient? = null,
     private val currentUserId: String? = null,
     private val canForceUnlock: Boolean = false,
+    autoSaveDebounceMs: Long = AUTO_SAVE_DEBOUNCE_MS,
 ) : ViewModel() {
 
     companion object {
         private const val HEARTBEAT_INTERVAL_MS = 2 * 60 * 1000L // 2 minutes
         private const val HEARTBEAT_MAX_RETRIES = 3
+        const val AUTO_SAVE_DEBOUNCE_MS = 3_000L
     }
 
     private val _project = MutableStateFlow<ProjectTemplate?>(null)
@@ -103,6 +105,62 @@ class DagEditorViewModel(
     val showForceUnlock: Boolean get() = canForceUnlock
 
     private var heartbeatJob: Job? = null
+
+    // Auto-save
+    private val autoSaveManager = AutoSaveManager(
+        scope = viewModelScope,
+        debounceMs = autoSaveDebounceMs,
+        save = { performAutoSave() },
+    )
+    val autoSaveStatus: StateFlow<AutoSaveStatus> = autoSaveManager.status
+
+    init {
+        // Cancel auto-save when entering read-only mode
+        viewModelScope.launch {
+            isReadOnly.collect { readOnly ->
+                if (readOnly) {
+                    autoSaveManager.cancelPendingAutoSave()
+                }
+            }
+        }
+    }
+
+    private suspend fun performAutoSave() {
+        val p = _project.value ?: return
+        val graphSnapshot = _graph.value
+        val descSnapshot = p.description
+        try {
+            val updated = apiClient.updateProject(
+                p.id,
+                UpdateProjectRequest(
+                    dagGraph = graphSnapshot,
+                    description = descSnapshot,
+                ),
+            )
+            // Capture current description before overwriting _project
+            val currentDesc = _project.value?.description
+            _project.value = updated
+            // Only clear dirty if state hasn't changed during the save
+            if (_graph.value == graphSnapshot && currentDesc == descSnapshot) {
+                _isDirty.value = false
+            }
+        } catch (e: ClientRequestException) {
+            if (e.response.status.value == 409) {
+                val conflict = e.parseLockConflict()
+                if (conflict != null) {
+                    _lockState.value = LockState.LockLost
+                    heartbeatJob?.cancel()
+                    autoSaveManager.cancelPendingAutoSave()
+                }
+            }
+            throw e
+        }
+    }
+
+    private fun scheduleAutoSave() {
+        if (isReadOnly.value || !_isDirty.value || _isSaving.value) return
+        autoSaveManager.scheduleAutoSave()
+    }
 
     // External config discovery (TC build types, GH workflows, etc.)
     private val _teamConnections = MutableStateFlow<List<Connection>>(emptyList())
@@ -241,6 +299,7 @@ class DagEditorViewModel(
 
     fun save() {
         if (isReadOnly.value) return
+        autoSaveManager.cancelPendingAutoSave()
         flushPendingUndo()
         val p = _project.value ?: return
         viewModelScope.launch {
@@ -256,12 +315,15 @@ class DagEditorViewModel(
                 )
                 _project.value = updated
                 _isDirty.value = false
+                autoSaveManager.resetRetryCounter()
+                autoSaveManager.setStatus(AutoSaveStatus.Saved)
             } catch (e: ClientRequestException) {
                 if (e.response.status.value == 409) {
                     val conflict = e.parseLockConflict()
                     if (conflict != null) {
                         _lockState.value = LockState.LockLost
                         heartbeatJob?.cancel()
+                        autoSaveManager.cancelPendingAutoSave()
                     }
                 }
                 _error.value = e.toUiMessage()
@@ -383,6 +445,7 @@ class DagEditorViewModel(
     fun commitMove() {
         pushUndoState(_graph.value)
         revalidate()
+        scheduleAutoSave()
     }
 
     fun addEdge(fromBlockId: BlockId, toBlockId: BlockId) {
@@ -416,6 +479,7 @@ class DagEditorViewModel(
         if (isReadOnly.value) return
         _project.value = _project.value?.copy(description = description)
         _isDirty.value = true
+        scheduleAutoSave()
     }
 
     // Property updates — mutate graph without flooding undo stack.
@@ -618,6 +682,7 @@ class DagEditorViewModel(
         _isDirty.value = true
         updateUndoRedoState()
         revalidate()
+        scheduleAutoSave()
     }
 
     fun redo() {
@@ -629,6 +694,7 @@ class DagEditorViewModel(
         _isDirty.value = true
         updateUndoRedoState()
         revalidate()
+        scheduleAutoSave()
     }
 
     fun copySelected() {
@@ -700,6 +766,7 @@ class DagEditorViewModel(
         _isDirty.value = true
         pushUndoState(newGraph)
         revalidate()
+        scheduleAutoSave()
     }
 
     /** Property change — debounced push to undo stack (avoids flood on every keystroke). */
@@ -714,6 +781,7 @@ class DagEditorViewModel(
             pushUndoState(newGraph)
             pendingUndoGraph = null
         }
+        scheduleAutoSave()
     }
 
     private fun pushUndoState(graph: DagGraph) {
