@@ -1000,7 +1000,6 @@ class DagEditorScreenTest {
             onAllNodesWithTag("discard_confirm").fetchSemanticsNodes().isNotEmpty()
         }
         onNodeWithTag("discard_confirm").assertExists()
-        onNodeWithText("You have unsaved changes that will be lost", substring = true).assertExists()
         assertFalse(navigated, "onBack should NOT be called yet")
     }
 

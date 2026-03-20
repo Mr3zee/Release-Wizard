@@ -218,6 +218,11 @@
     <string name="editor_loading">Loading\u2026</string>
     <string name="editor_read_only">(read-only)</string>
     <string name="editor_dirty_indicator">*</string>
+    <string name="editor_autosave_saving">Saving\u2026</string>
+    <string name="editor_autosave_saved">Saved</string>
+    <string name="editor_autosave_failed_retrying">Save failed, retrying\u2026</string>
+    <string name="editor_autosave_failed_exhausted">Auto-save failed</string>
+    <string name="editor_unsaved_navigate_warning">Changes haven\'t been saved yet — leave anyway?</string>
     <string name="editor_lock_self_session">You are editing this project in another session</string>
     <string name="editor_lock_by_other">This project is being edited by %1$s</string>
     <string name="editor_lock_acquire_failed">Could not acquire the editing lock. Someone else may be editing, or there may be a connection issue. Try again.</string>

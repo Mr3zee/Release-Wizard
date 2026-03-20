@@ -1,8 +1,12 @@
 package com.github.mr3zee.editor
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -10,8 +14,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -68,6 +75,7 @@ fun DagEditorScreen(
     val isFetchingConfigs by viewModel.isFetchingConfigs.collectAsState()
     val configFetchError by viewModel.configFetchError.collectAsState()
     val isFetchingConfigParams by viewModel.isFetchingConfigParams.collectAsState()
+    val autoSaveStatus by viewModel.autoSaveStatus.collectAsState()
 
     val appColors = LocalAppColors.current
 
@@ -108,6 +116,7 @@ fun DagEditorScreen(
     val currentIsDirty by rememberUpdatedState(isDirty)
     val currentLockState by rememberUpdatedState(lockState)
     val currentIsSaving by rememberUpdatedState(isSaving)
+    val currentAutoSaveStatus by rememberUpdatedState(autoSaveStatus)
     val guardedNavigate: (() -> Unit) -> Unit = remember {
         { destination ->
             when {
@@ -149,11 +158,8 @@ fun DagEditorScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = AppTypography.body,
                             )
-                        } else if (isDirty) {
-                            Text(
-                                " " + packStringResource(Res.string.editor_dirty_indicator),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                        } else {
+                            AutoSaveIndicator(autoSaveStatus)
                         }
                     }
                 },
@@ -178,10 +184,11 @@ fun DagEditorScreen(
                         }
                     }
                     val saveMod = if (currentHostOS() == HostOS.MACOS) "\u2318" else "Ctrl"
+                    val autoSaveExhausted = autoSaveStatus is AutoSaveStatus.Failed && (autoSaveStatus as AutoSaveStatus.Failed).exhausted
                     RwTooltip(tooltip = "$saveMod+S") {
                         RwButton(
                             onClick = { viewModel.save() },
-                            variant = if (isDirty) RwButtonVariant.Primary else RwButtonVariant.Ghost,
+                            variant = if (isDirty || autoSaveExhausted) RwButtonVariant.Primary else RwButtonVariant.Ghost,
                             enabled = isDirty && !isSaving && !isReadOnly,
                             modifier = Modifier.testTag("save_button"),
                         ) {
@@ -279,9 +286,17 @@ fun DagEditorScreen(
             )
 
             // Inline confirmation banners
+            val discardMessage = if (
+                currentAutoSaveStatus is AutoSaveStatus.Pending ||
+                currentAutoSaveStatus is AutoSaveStatus.Saving
+            ) {
+                packStringResource(Res.string.editor_unsaved_navigate_warning)
+            } else {
+                packStringResource(Res.string.common_unsaved_message)
+            }
             RwInlineConfirmation(
                 visible = pendingDiscardNavigation != null,
-                message = packStringResource(Res.string.common_unsaved_message),
+                message = discardMessage,
                 confirmLabel = packStringResource(Res.string.common_discard),
                 onConfirm = {
                     val nav = pendingDiscardNavigation
@@ -504,6 +519,86 @@ fun DagEditorScreen(
     }
 
     } // ProvideShortcutActions
+}
+
+@Composable
+private fun AutoSaveIndicator(status: AutoSaveStatus) {
+    val appColors = LocalAppColors.current
+
+    AnimatedContent(
+        targetState = status,
+        contentKey = { it::class },
+        transitionSpec = { fadeIn() togetherWith fadeOut() },
+        modifier = Modifier.testTag("auto_save_indicator"),
+    ) { targetStatus ->
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 4.dp),
+        ) {
+            when (targetStatus) {
+                is AutoSaveStatus.Idle -> {}
+                is AutoSaveStatus.Pending -> {
+                    Text(
+                        " " + packStringResource(Res.string.editor_dirty_indicator),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = AppTypography.body,
+                    )
+                }
+                is AutoSaveStatus.Saving -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(14.dp),
+                        strokeWidth = 2.dp,
+                        color = appColors.chromeTextSecondary,
+                    )
+                    Text(
+                        " " + packStringResource(Res.string.editor_autosave_saving),
+                        color = appColors.chromeTextSecondary,
+                        style = AppTypography.body,
+                    )
+                }
+                is AutoSaveStatus.Saved -> {
+                    Icon(
+                        Icons.Default.Check,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = appColors.chromeTextSecondary,
+                    )
+                    Text(
+                        " " + packStringResource(Res.string.editor_autosave_saved),
+                        color = appColors.chromeTextSecondary,
+                        style = AppTypography.body,
+                    )
+                }
+                is AutoSaveStatus.Failed -> {
+                    if (targetStatus.exhausted) {
+                        Icon(
+                            Icons.Default.Warning,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                        Text(
+                            " " + packStringResource(Res.string.editor_autosave_failed_exhausted),
+                            color = MaterialTheme.colorScheme.error,
+                            style = AppTypography.body,
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            " " + packStringResource(Res.string.editor_autosave_failed_retrying),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = AppTypography.body,
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
