@@ -64,7 +64,7 @@ object EmojisPack {
             "auth_create_account_button" to "\ud83c\udd95\ud83d\udc64",
             "auth_password" to "\ud83d\udd12",
             "auth_password_mismatch" to "\ud83d\udd12\u274c\ud83d\udd12",
-            "auth_password_requirements" to "1\ufe0f\u20e32\ufe0f\u20e3\u2b06\ufe0f \ud83d\udd20\ud83d\udd22",
+            "auth_password_requirements" to "1\ufe0f\u20e36\ufe0f\u20e3\u2b06\ufe0f \ud83d\udd20\ud83d\udd22\u2757",
             "auth_sign_in_button" to "\ud83d\udd11\ud83d\udeaa",
             "auth_sign_in_continue" to "\ud83d\udd11\ud83d\udc64\u27a1\ufe0f",
             "auth_sign_out" to "\ud83d\udeaa\ud83d\udc4b",

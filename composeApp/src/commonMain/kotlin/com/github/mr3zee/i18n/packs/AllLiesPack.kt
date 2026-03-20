@@ -64,7 +64,7 @@ object AllLiesPack {
             "auth_create_account_button" to "Destroy Account",
             "auth_password" to "Public Knowledge",
             "auth_password_mismatch" to "Passwords match perfectly",
-            "auth_password_requirements" to "Any single character will do, no rules at all",
+            "auth_password_requirements" to "Any single character will do, no uppercase, no numbers, no special characters needed at all",
             "auth_sign_in_button" to "Lock Yourself Out",
             "auth_sign_in_continue" to "Lock yourself out of your account",
             "auth_sign_out" to "Stay Forever",

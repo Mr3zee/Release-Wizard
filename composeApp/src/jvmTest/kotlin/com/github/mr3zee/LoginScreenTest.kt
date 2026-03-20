@@ -678,14 +678,14 @@ class LoginScreenTest {
         setContent { MaterialTheme { LoginScreen(viewModel = viewModel) } }
 
         // In login mode, password requirements should not be shown
-        onNodeWithText("At least 12 characters", substring = true).assertDoesNotExist()
+        onNodeWithText("At least 16 characters", substring = true).assertDoesNotExist()
 
         // Switch to register mode
         onNodeWithTag("toggle_auth_mode").performClick()
         waitForIdle()
 
         // Password requirements hint should now be visible
-        onNodeWithText("At least 12 characters", substring = true).assertExists()
+        onNodeWithText("At least 16 characters", substring = true).assertExists()
     }
 
     @Test

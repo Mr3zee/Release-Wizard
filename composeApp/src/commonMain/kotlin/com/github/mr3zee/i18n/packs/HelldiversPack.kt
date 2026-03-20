@@ -45,7 +45,7 @@ object HelldiversPack {
             "auth_create_account" to "Enlist for Managed Democracy",
             "auth_create_account_button" to "Enlist Now",
             "auth_password" to "Security Clearance Code",
-            "auth_password_requirements" to "At least 12 characters with uppercase and a number. Super Earth demands strong credentials, Citizen.",
+            "auth_password_requirements" to "At least 16 characters, including an uppercase letter, a number, and a special character. Super Earth demands strong credentials, Citizen.",
             "auth_sign_in_button" to "Deploy!",
             "auth_sign_in_continue" to "Authenticate to your duty station",
             "auth_sign_out" to "End Tour of Duty",

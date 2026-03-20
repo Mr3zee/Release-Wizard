@@ -64,7 +64,7 @@ object GenZPack {
             "auth_create_account_button" to "Manifest Account",
             "auth_password" to "Secret Code",
             "auth_password_mismatch" to "Passwords don't match no cap",
-            "auth_password_requirements" to "At least 12 characters fr fr, gotta be strong bestie",
+            "auth_password_requirements" to "At least 16 characters fr fr, with an uppercase letter, a number, and a special character bestie",
             "auth_sign_in_button" to "Slide In",
             "auth_sign_in_continue" to "Slide into your account bestie",
             "auth_sign_out" to "Peace Out",

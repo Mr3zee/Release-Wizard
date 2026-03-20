@@ -67,7 +67,7 @@ object RickRollPack {
             "auth_create_account_button" to "We're No Strangers (Create account)",
             "auth_password" to "You know the rules (Password)",
             "auth_password_mismatch" to "Passwords ran around and deserted each other",
-            "auth_password_requirements" to "A full commitment: at least 12 characters with an uppercase letter and a number",
+            "auth_password_requirements" to "A full commitment: at least 16 characters, including an uppercase letter, a number, and a special character",
             "auth_sign_in_button" to "Never Gonna Give You Up (Sign in)",
             "auth_sign_in_continue" to "We've known each other for so long \u2014 sign in to your account",
             "auth_sign_out" to "Never gonna say goodbye (but sign out)",

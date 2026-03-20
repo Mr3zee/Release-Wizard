@@ -1,5 +1,6 @@
 package com.github.mr3zee.profile
 
+import com.github.mr3zee.LocalPasswordPolicyHint
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -90,6 +91,7 @@ fun ProfileScreen(
     onNavigateToAdminUsers: () -> Unit,
     onAccountDeleted: () -> Unit,
 ) {
+    val passwordPolicyHint = LocalPasswordPolicyHint.current
     val userInfo by viewModel.userInfo.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
@@ -663,6 +665,7 @@ private fun ChangePasswordForm(
     onSubmit: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val passwordPolicyHint = LocalPasswordPolicyHint.current
     val passwordMismatch = confirmNewPassword.isNotEmpty() && newPassword != confirmNewPassword
     val canSubmit = currentPassword.isNotBlank() && newPassword.isNotBlank() &&
         confirmNewPassword.isNotBlank() && !passwordMismatch && !isSubmitting
@@ -711,7 +714,7 @@ private fun ChangePasswordForm(
             singleLine = true,
             visualTransformation = if (showNewPassword) VisualTransformation.None else PasswordVisualTransformation(),
             supportingText = {
-                Text(packStringResource(Res.string.auth_password_requirements))
+                Text(passwordPolicyHint ?: packStringResource(Res.string.auth_password_requirements))
             },
             trailingIcon = {
                 PasswordVisibilityToggle(

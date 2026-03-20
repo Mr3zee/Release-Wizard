@@ -1,5 +1,6 @@
 package com.github.mr3zee.auth
 
+import com.github.mr3zee.PasswordPolicyConfig
 import com.github.mr3zee.api.*
 import com.github.mr3zee.model.UserRole
 import com.github.mr3zee.model.UserId
@@ -27,6 +28,23 @@ fun Route.authRoutes() {
     val accountLockout by inject<AccountLockoutService>()
     val teamRepository by inject<TeamRepository>()
     val passwordResetService by inject<PasswordResetService>()
+    val passwordPolicyConfig by inject<PasswordPolicyConfig>()
+
+    // Public: password policy (no auth needed, clients render requirements dynamically)
+    rateLimit(RateLimitName("authenticated-api")) {
+        get(ApiRoutes.Auth.PASSWORD_POLICY) {
+            call.response.header(HttpHeaders.CacheControl, "public, max-age=3600")
+            call.respond(
+                PasswordPolicyResponse(
+                    minLength = passwordPolicyConfig.minLength,
+                    maxLength = PasswordValidator.MAX_PASSWORD_LENGTH,
+                    requireUppercase = passwordPolicyConfig.requireUppercase,
+                    requireDigit = passwordPolicyConfig.requireDigit,
+                    requireSpecial = passwordPolicyConfig.requireSpecial,
+                )
+            )
+        }
+    }
 
     rateLimit(RateLimitName("login")) {
         post(ApiRoutes.Auth.LOGIN) {

@@ -1,5 +1,6 @@
 package com.github.mr3zee.auth
 
+import com.github.mr3zee.LocalPasswordPolicyHint
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
@@ -46,6 +47,7 @@ import releasewizard.composeapp.generated.resources.*
 fun LoginScreen(
     viewModel: AuthViewModel,
 ) {
+    val passwordPolicyHint = LocalPasswordPolicyHint.current
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
 
@@ -138,7 +140,7 @@ fun LoginScreen(
                     singleLine = true,
                     visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
                     supportingText = if (isRegisterMode) {
-                        { Text(packStringResource(Res.string.auth_password_requirements)) }
+                        { Text(passwordPolicyHint ?: packStringResource(Res.string.auth_password_requirements)) }
                     } else null,
                     trailingIcon = {
                         RwTooltip(tooltip = if (showPassword) packStringResource(Res.string.common_hide_password) else packStringResource(Res.string.common_show_password)) {

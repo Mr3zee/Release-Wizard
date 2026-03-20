@@ -54,7 +54,7 @@ class WritingAuditTest {
         waitForIdle()
 
         // Verify updated password policy text
-        onNodeWithText("At least 12 characters, including an uppercase letter and a number")
+        onNodeWithText("At least 16 characters, including an uppercase letter, a number, and a special character")
             .assertExists()
     }
 
@@ -67,7 +67,7 @@ class WritingAuditTest {
         setContent { MaterialTheme { LoginScreen(viewModel = viewModel) } }
 
         // In login mode, password policy should not be visible
-        onNodeWithText("At least 12 characters", substring = true).assertDoesNotExist()
+        onNodeWithText("At least 16 characters", substring = true).assertDoesNotExist()
     }
 
     // ══════════════════════════════════════════════════════════════

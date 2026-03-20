@@ -52,6 +52,12 @@ import com.github.mr3zee.theme.saveLanguagePack
 import com.github.mr3zee.theme.saveThemePreference
 import kotlinx.coroutines.flow.MutableStateFlow
 
+/**
+ * CompositionLocal for the server-driven password policy hint string.
+ * Screens read this instead of receiving it via prop drilling.
+ */
+val LocalPasswordPolicyHint = compositionLocalOf<String?> { null }
+
 @Composable
 fun App() {
     val httpClient = remember { createHttpClient() }
@@ -73,6 +79,29 @@ fun App() {
     val projectListViewModel = remember { ProjectListViewModel(projectApiClient, activeTeamId) }
     val connectionsViewModel = remember { ConnectionsViewModel(connectionApiClient, activeTeamId) }
     val releaseListViewModel = remember { ReleaseListViewModel(releaseApiClient, projectApiClient, activeTeamId) }
+
+    var passwordPolicyHint by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        try {
+            val policy = authApiClient.getPasswordPolicy()
+            val parts = mutableListOf("At least ${policy.minLength} characters")
+            val requirements = mutableListOf<String>()
+            if (policy.requireUppercase) requirements += "an uppercase letter"
+            if (policy.requireDigit) requirements += "a number"
+            if (policy.requireSpecial) requirements += "a special character"
+            val reqText = when (requirements.size) {
+                0 -> ""
+                1 -> requirements[0]
+                else -> requirements.dropLast(1).joinToString(", ") + ", and " + requirements.last()
+            }
+            if (reqText.isNotEmpty()) parts += "including $reqText"
+            passwordPolicyHint = parts.joinToString(", ")
+        } catch (e: Exception) {
+            // Fallback if server unreachable — log for debugging
+            println("Failed to fetch password policy: ${e.message}")
+            passwordPolicyHint = null
+        }
+    }
 
     val profileViewModel = remember { ProfileViewModel(authApiClient) }
     LaunchedEffect(profileViewModel) {
@@ -186,6 +215,7 @@ fun App() {
     }
 
     AppTheme(themePreference = themePreference, languagePack = languagePack) {
+        CompositionLocalProvider(LocalPasswordPolicyHint provides passwordPolicyHint) {
         Surface(
             modifier = Modifier
                 .fillMaxSize()
@@ -318,6 +348,7 @@ fun App() {
                 visible = showShortcutsOverlay,
                 onDismiss = { showShortcutsOverlay = false },
             )
+        }
         }
     }
 }
