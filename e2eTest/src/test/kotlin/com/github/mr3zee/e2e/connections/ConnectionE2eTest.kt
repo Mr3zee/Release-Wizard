@@ -1,11 +1,8 @@
 package com.github.mr3zee.e2e.connections
 
 import androidx.compose.ui.test.*
-import com.github.mr3zee.App
-import com.github.mr3zee.createTestTeam
 import com.github.mr3zee.e2e.E2eTestBase
 import com.github.mr3zee.login
-import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 
 @OptIn(ExperimentalTestApi::class)
@@ -13,33 +10,54 @@ class ConnectionE2eTest : E2eTestBase() {
 
     @Test
     fun `navigate to connections screen`() = runComposeUiTest {
-        runBlocking {
-            directClient.login("conn-user", "TestPass123")
-            directClient.createTestTeam("Conn Team")
-        }
+        directClient.login("conn-nav-user", "TestPass123")
 
-        setContent { App() }
+        loginAndCreateTeamViaUi("conn-nav-user", "TestPass123", "Conn Team")
+        navigateToSection("sidebar_nav_connections", "connection_list_screen")
 
-        // Login
+        onNodeWithTag("connection_list_screen").assertExists()
+    }
+
+    @Test
+    fun `create slack connection through UI`() = runComposeUiTest {
+        directClient.login("conn-create-user", "TestPass123")
+
+        loginAndCreateTeamViaUi("conn-create-user", "TestPass123", "Conn Create Team")
+        navigateToSection("sidebar_nav_connections", "connection_list_screen")
+
+        onNodeWithTag("create_connection_fab").performClick()
+
         waitUntil(timeoutMillis = 10_000L) {
-            onAllNodesWithTag("login_screen").fetchSemanticsNodes().isNotEmpty()
+            onAllNodesWithTag("connection_form_screen").fetchSemanticsNodes().isNotEmpty()
         }
-        onNodeWithTag("login_username").performTextInput("conn-user")
-        onNodeWithTag("login_password").performTextInput("TestPass123")
+
+        onNodeWithTag("connection_name_field").performTextInput("E2E Slack")
         waitForIdle()
-        onNodeWithTag("login_button").performClick()
 
-        // Wait for initial navigation
-        waitUntil(timeoutMillis = 10_000L) {
-            onAllNodesWithTag("project_list_screen").fetchSemanticsNodes().isNotEmpty() ||
-                onAllNodesWithTag("team_list_screen").fetchSemanticsNodes().isNotEmpty()
+        // Select Slack type
+        onNodeWithTag("connection_type_selector").performClick()
+        waitForIdle()
+        waitUntil(timeoutMillis = 5_000L) {
+            onAllNodesWithText("Slack").fetchSemanticsNodes().isNotEmpty()
         }
+        onAllNodesWithText("Slack").onFirst().performClick()
+        waitForIdle()
 
-        // Navigate to connections via sidebar
-        onNodeWithTag("sidebar_nav_connections", useUnmergedTree = true).performClick()
+        // Fill webhook URL
+        waitUntil(timeoutMillis = 5_000L) {
+            onAllNodesWithTag("slack_webhook_url").fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithTag("slack_webhook_url").performTextInput("https://hooks.slack.com/services/T00/B00/xxx")
+        waitForIdle()
 
+        onNodeWithTag("save_connection_button").performClick()
+
+        // Should navigate back to list with the new connection
         waitUntil(timeoutMillis = 10_000L) {
-            onAllNodesWithText("Connections").fetchSemanticsNodes().isNotEmpty()
+            onAllNodesWithTag("connection_list_screen").fetchSemanticsNodes().isNotEmpty()
+        }
+        waitUntil(timeoutMillis = 10_000L) {
+            onAllNodesWithText("E2E Slack").fetchSemanticsNodes().isNotEmpty()
         }
     }
 }
