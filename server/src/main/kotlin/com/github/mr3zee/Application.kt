@@ -53,6 +53,9 @@ import io.ktor.server.plugins.ContentTransformationException
 import io.ktor.server.plugins.calllogging.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
+import io.ktor.http.content.*
+import io.ktor.server.plugins.cachingheaders.*
+import io.ktor.server.plugins.compression.*
 import io.ktor.server.plugins.defaultheaders.*
 import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.plugins.statuspages.*
@@ -121,6 +124,31 @@ fun Application.module() {
                 "style-src 'self' 'unsafe-inline'; img-src 'self' data:; " +
                 "connect-src 'self'; base-uri 'self'; frame-ancestors 'none'",
         )
+    }
+
+    install(Compression) {
+        gzip {
+            minimumSize(1024)
+        }
+    }
+
+    install(CachingHeaders) {
+        options { call, outgoingContent ->
+            val path = call.request.path()
+            when {
+                path.endsWith(".wasm") ->
+                    CachingOptions(CacheControl.MaxAge(maxAgeSeconds = 365 * 24 * 3600, visibility = CacheControl.Visibility.Public))
+                path.matches(CONTENT_HASH_JS_REGEX) ->
+                    CachingOptions(CacheControl.MaxAge(maxAgeSeconds = 365 * 24 * 3600, visibility = CacheControl.Visibility.Public))
+                path.endsWith(".js") || path.endsWith(".css") ->
+                    CachingOptions(CacheControl.NoCache(null))
+                path.endsWith(".map") ->
+                    CachingOptions(CacheControl.NoCache(null))
+                outgoingContent.contentType?.withoutParameters()?.match(ContentType.Text.Html) == true ->
+                    CachingOptions(CacheControl.NoCache(null))
+                else -> null
+            }
+        }
     }
 
     install(CORS) {
@@ -485,6 +513,9 @@ fun Application.configureRouting(appVersion: String = "dev") {
         environment.log.info("Frontend bundle detected — serving SPA from classpath:static/")
     }
 }
+
+/** Matches content-hashed JS files like `/static/12345.js` (Webpack chunk filenames). */
+private val CONTENT_HASH_JS_REGEX = Regex(".*/\\d+\\.js$")
 
 private val UUID_REGEX = Regex("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
 private val FILE_PATH_REGEX = Regex("(/[\\w.\\-]+){2,}")

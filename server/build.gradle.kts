@@ -33,6 +33,8 @@ dependencies {
     implementation(libs.ktor.serverDefaultHeaders)
     implementation(libs.ktor.serverRateLimit)
     implementation(libs.ktor.serverCors)
+    implementation(libs.ktor.serverCompression)
+    implementation(libs.ktor.serverCachingHeaders)
     implementation(libs.ktor.serializationKotlinxJson)
 
     // Ktor client (for outbound API calls to external services)
