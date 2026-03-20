@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.kotlinJvm)
     alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.ktor)
+    alias(libs.plugins.jib)
     application
     `java-test-fixtures`
 }
@@ -146,6 +147,62 @@ val extractNgrok = tasks.register<Copy>("extractNgrok") {
         unix("rwxr-xr-x")
     }
 }
+
+// --- Frontend bundling & Jib container image ---
+
+// Frontend build output directory (classpath: static/*)
+val frontendBuildDir = layout.buildDirectory.dir("generated-resources/static")
+
+// Build WasmJS frontend and stage in build directory (not source tree, to avoid stale files in :server:run)
+val copyFrontend = tasks.register<Sync>("copyFrontendToResources") {
+    dependsOn(":composeApp:wasmJsBrowserDistribution")
+    from(rootProject.layout.projectDirectory.dir("composeApp/build/dist/wasmJs/productionExecutable"))
+    into(frontendBuildDir)
+}
+
+jib {
+    from {
+        image = "amazoncorretto:21-alpine"
+    }
+    to {
+        image = "release-wizard"
+        tags = setOf(version.toString(), "latest")
+    }
+    container {
+        mainClass = "io.ktor.server.netty.EngineMain"
+        ports = listOf("8080")
+        user = "65534" // nobody — non-root, matches Console default runAsUser
+        creationTime.set("USE_CURRENT_TIMESTAMP")
+        jvmFlags = listOf(
+            "-XX:MaxRAMPercentage=75.0",
+            "-XX:InitialRAMPercentage=50.0",
+        )
+    }
+    // Include frontend build output on the container classpath
+    extraDirectories {
+        paths {
+            path {
+                setFrom(layout.buildDirectory.dir("generated-resources"))
+                into = "/app/resources"
+            }
+        }
+    }
+}
+
+// runApp = bundled local mode (builds frontend, then runs server)
+tasks.register<JavaExec>("runApp") {
+    dependsOn(copyFrontend, "classes")
+    classpath = sourceSets["main"].runtimeClasspath + files(layout.buildDirectory.dir("generated-resources"))
+    mainClass.set("io.ktor.server.netty.EngineMain")
+    jvmArgs = application.applicationDefaultJvmArgs.toList()
+}
+
+// Jib tasks also need frontend
+tasks.named("jib") { dependsOn(copyFrontend) }
+tasks.named("jibDockerBuild") { dependsOn(copyFrontend) }
+tasks.named("jibBuildTar") { dependsOn(copyFrontend) }
+
+// --- Integration tests ---
 
 tasks.register<Test>("integrationTest") {
     dependsOn(extractNgrok)

@@ -58,6 +58,7 @@ import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
+import io.ktor.server.http.content.*
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import io.ktor.server.websocket.*
@@ -114,6 +115,12 @@ fun Application.module() {
         header("Referrer-Policy", "strict-origin-when-cross-origin")
         header("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
         header("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+        header(
+            "Content-Security-Policy",
+            "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; " +
+                "style-src 'self' 'unsafe-inline'; img-src 'self' data:; " +
+                "connect-src 'self'; base-uri 'self'; frame-ancestors 'none'",
+        )
     }
 
     install(CORS) {
@@ -424,14 +431,9 @@ fun Application.module() {
 }
 
 fun Application.configureRouting(appVersion: String = "dev") {
+    val hasFrontend = this::class.java.classLoader.getResource("static/index.html") != null
+
     routing {
-        // INFRA-L4: Root endpoint does not disclose version in production
-        get("/") {
-            call.respond(mapOf(
-                "service" to "Release Wizard API",
-                "status" to "running",
-            ))
-        }
         healthRoute()
         authRoutes()
         webhookRoutes()
@@ -452,6 +454,25 @@ fun Application.configureRouting(appVersion: String = "dev") {
                 tagRoutes()
             }
         }
+
+        if (hasFrontend) {
+            singlePageApplication {
+                useResources = true
+                filesPath = "static"
+            }
+        } else {
+            // API-only mode (split development) — show status at root
+            get("/") {
+                call.respond(mapOf(
+                    "service" to "Release Wizard API",
+                    "status" to "running",
+                ))
+            }
+        }
+    }
+
+    if (hasFrontend) {
+        environment.log.info("Frontend bundle detected — serving SPA from classpath:static/")
     }
 }
 
