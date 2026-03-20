@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.FolderOpen
@@ -58,8 +59,18 @@ fun ProjectListScreen(
     val isManualRefresh by viewModel.isManualRefresh.collectAsState()
     val refreshError by viewModel.refreshError.collectAsState()
 
+    val sortOrder by viewModel.sortOrder.collectAsState()
+
     var showCreateDialog by remember { mutableStateOf(false) }
     var projectToDelete by remember { mutableStateOf<ProjectTemplate?>(null) }
+    val sortedProjects = remember(projects, sortOrder) {
+        when (sortOrder) {
+            ProjectSortOrder.NAME_ASC -> projects.sortedBy { it.name.lowercase() }
+            ProjectSortOrder.NAME_DESC -> projects.sortedByDescending { it.name.lowercase() }
+            ProjectSortOrder.NEWEST -> projects.sortedByDescending { it.updatedAt }
+            ProjectSortOrder.OLDEST -> projects.sortedBy { it.updatedAt }
+        }
+    }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val searchFocusRequester = remember { FocusRequester() }
@@ -153,6 +164,15 @@ fun ProjectListScreen(
                     .testTag("search_field"),
             )
 
+            SortDropdown(
+                sortOrder = sortOrder,
+                onSortOrderChange = { viewModel.setSortOrder(it) },
+                modifier = Modifier
+                    .widthIn(max = 1200.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = Spacing.lg),
+            )
+
             CreateProjectInlineForm(
                 visible = showCreateDialog,
                 onDismiss = { showCreateDialog = false },
@@ -244,7 +264,7 @@ fun ProjectListScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     contentPadding = PaddingValues(bottom = 80.dp),
                 ) {
-                    items(projects, key = { it.id.value }) { project ->
+                    items(sortedProjects, key = { it.id.value }) { project ->
                         Column(modifier = Modifier.widthIn(max = 1200.dp)) {
                             ProjectListItem(
                                 project = project,
@@ -384,4 +404,57 @@ private fun CreateProjectInlineForm(
                 .testTag("project_name_input"),
         )
     }
+}
+
+@Composable
+private fun SortDropdown(
+    sortOrder: ProjectSortOrder,
+    onSortOrderChange: (ProjectSortOrder) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+        modifier = modifier,
+    ) {
+        Text(
+            packStringResource(Res.string.common_sort_by),
+            style = AppTypography.label,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Box {
+            RwButton(
+                onClick = { expanded = true },
+                variant = RwButtonVariant.Ghost,
+                modifier = Modifier.testTag("sort_dropdown_button"),
+            ) {
+                Text(sortOrder.label())
+                Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(18.dp))
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+            ) {
+                ProjectSortOrder.entries.forEach { order ->
+                    DropdownMenuItem(
+                        text = { Text(order.label()) },
+                        onClick = {
+                            onSortOrderChange(order)
+                            expanded = false
+                        },
+                        modifier = Modifier.testTag("sort_option_${order.name}"),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProjectSortOrder.label(): String = when (this) {
+    ProjectSortOrder.NAME_ASC -> packStringResource(Res.string.common_sort_name_asc)
+    ProjectSortOrder.NAME_DESC -> packStringResource(Res.string.common_sort_name_desc)
+    ProjectSortOrder.NEWEST -> packStringResource(Res.string.common_sort_newest)
+    ProjectSortOrder.OLDEST -> packStringResource(Res.string.common_sort_oldest)
 }

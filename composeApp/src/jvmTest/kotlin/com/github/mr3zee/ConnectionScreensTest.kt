@@ -584,6 +584,71 @@ class ConnectionScreensTest {
         onNodeWithTag("section_header_github", useUnmergedTree = true).assertExists()
     }
 
+    // ---- Sort Tests ----
+
+    private val sortableConnectionsJson = """{"connections":[
+        {"id":"c1","name":"Zebra Conn","type":"GITHUB","config":{"type":"github","token":"t","owner":"o","repo":"r"},"createdAt":"2026-03-10T00:00:00Z","updatedAt":"2026-03-10T00:00:00Z"},
+        {"id":"c2","name":"Alpha Conn","type":"SLACK","config":{"type":"slack","webhookUrl":"https://hooks.slack.com/test"},"createdAt":"2026-03-12T00:00:00Z","updatedAt":"2026-03-12T00:00:00Z"}
+    ]}"""
+
+    @Test
+    fun `connection list sort dropdown exists`() = runComposeUiTest {
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient(sortableConnectionsJson)), MutableStateFlow(TeamId("test-team")))
+        setContent { MaterialTheme { ConnectionListScreen(viewModel = vm, onCreateConnection = {}, onEditConnection = {}, onBack = {}) } }
+
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Zebra Conn").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("sort_dropdown_button").assertExists()
+    }
+
+    @Test
+    fun `connection list sort dropdown shows all options`() = runComposeUiTest {
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient(sortableConnectionsJson)), MutableStateFlow(TeamId("test-team")))
+        setContent { MaterialTheme { ConnectionListScreen(viewModel = vm, onCreateConnection = {}, onEditConnection = {}, onBack = {}) } }
+
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Zebra Conn").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("sort_dropdown_button").performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("sort_option_NAME_ASC").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("sort_option_NAME_ASC").assertExists()
+        onNodeWithTag("sort_option_NAME_DESC").assertExists()
+        onNodeWithTag("sort_option_NEWEST").assertExists()
+        onNodeWithTag("sort_option_OLDEST").assertExists()
+    }
+
+    @Test
+    fun `connection list default sort is name ascending`() = runComposeUiTest {
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient(sortableConnectionsJson)), MutableStateFlow(TeamId("test-team")))
+        setContent { MaterialTheme { ConnectionListScreen(viewModel = vm, onCreateConnection = {}, onEditConnection = {}, onBack = {}) } }
+
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Zebra Conn").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithText("Name (A–Z)", substring = true).assertExists()
+    }
+
+    @Test
+    fun `connection list sort by name descending changes label`() = runComposeUiTest {
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient(sortableConnectionsJson)), MutableStateFlow(TeamId("test-team")))
+        setContent { MaterialTheme { ConnectionListScreen(viewModel = vm, onCreateConnection = {}, onEditConnection = {}, onBack = {}) } }
+
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Zebra Conn").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("sort_dropdown_button").performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("sort_option_NAME_DESC").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("sort_option_NAME_DESC").performClick()
+        waitForIdle()
+        onNodeWithText("Name (Z–A)", substring = true).assertExists()
+    }
+
+    @Test
+    fun `connection list sort by newest changes label`() = runComposeUiTest {
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient(sortableConnectionsJson)), MutableStateFlow(TeamId("test-team")))
+        setContent { MaterialTheme { ConnectionListScreen(viewModel = vm, onCreateConnection = {}, onEditConnection = {}, onBack = {}) } }
+
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Zebra Conn").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("sort_dropdown_button").performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("sort_option_NEWEST").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("sort_option_NEWEST").performClick()
+        waitForIdle()
+        onNodeWithText("Newest first", substring = true).assertExists()
+    }
+
     @Test
     fun `password toggle reveals password text`() = runComposeUiTest {
         val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")), MutableStateFlow(TeamId("test-team")))

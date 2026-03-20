@@ -99,7 +99,13 @@ fun TeamListScreen(
         topBar = {
             Box {
                 TopAppBar(
-                    title = { Text(packStringResource(Res.string.teams_title)) },
+                    title = {
+                        Text(
+                            packStringResource(Res.string.teams_title),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    },
                     navigationIcon = {
                         if (onBack != null) {
                             RwButton(onClick = onBack, variant = RwButtonVariant.Ghost) {

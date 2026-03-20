@@ -314,6 +314,102 @@ class ProjectListScreenTest {
         onNodeWithText("My Pipeline").assertExists()
     }
 
+    // ---- Sort Tests ----
+
+    private val sortableProjectsJson = """{"projects":[
+        {"id":"p1","name":"Zebra Project","description":"","dagGraph":{"blocks":[],"edges":[],"positions":{}},"parameters":[],"createdAt":"2026-03-10T00:00:00Z","updatedAt":"2026-03-10T00:00:00Z"},
+        {"id":"p2","name":"Alpha Project","description":"","dagGraph":{"blocks":[],"edges":[],"positions":{}},"parameters":[],"createdAt":"2026-03-12T00:00:00Z","updatedAt":"2026-03-12T00:00:00Z"},
+        {"id":"p3","name":"Middle Project","description":"","dagGraph":{"blocks":[],"edges":[],"positions":{}},"parameters":[],"createdAt":"2026-03-11T00:00:00Z","updatedAt":"2026-03-11T00:00:00Z"}
+    ]}"""
+
+    @Test
+    fun `sort dropdown button exists`() = runComposeUiTest {
+        val vm = ProjectListViewModel(ProjectApiClient(projectClient(sortableProjectsJson)), MutableStateFlow(TeamId("test-team")))
+        setContent { MaterialTheme { ProjectListScreen(viewModel = vm, onEditProject = {}) } }
+
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Zebra Project").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("sort_dropdown_button").assertExists()
+    }
+
+    @Test
+    fun `sort dropdown shows options on click`() = runComposeUiTest {
+        val vm = ProjectListViewModel(ProjectApiClient(projectClient(sortableProjectsJson)), MutableStateFlow(TeamId("test-team")))
+        setContent { MaterialTheme { ProjectListScreen(viewModel = vm, onEditProject = {}) } }
+
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Zebra Project").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("sort_dropdown_button").performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("sort_option_NAME_ASC").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("sort_option_NAME_ASC").assertExists()
+        onNodeWithTag("sort_option_NAME_DESC").assertExists()
+        onNodeWithTag("sort_option_NEWEST").assertExists()
+        onNodeWithTag("sort_option_OLDEST").assertExists()
+    }
+
+    @Test
+    fun `default sort is name ascending`() = runComposeUiTest {
+        val vm = ProjectListViewModel(ProjectApiClient(projectClient(sortableProjectsJson)), MutableStateFlow(TeamId("test-team")))
+        setContent { MaterialTheme { ProjectListScreen(viewModel = vm, onEditProject = {}) } }
+
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Zebra Project").fetchSemanticsNodes().isNotEmpty() }
+        // Default sort label should be "Name (A–Z)"
+        onNodeWithText("Name (A–Z)", substring = true).assertExists()
+    }
+
+    @Test
+    fun `sort by name descending changes button label`() = runComposeUiTest {
+        val vm = ProjectListViewModel(ProjectApiClient(projectClient(sortableProjectsJson)), MutableStateFlow(TeamId("test-team")))
+        setContent {
+            MaterialTheme {
+                ProjectListScreen(viewModel = vm, onEditProject = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Zebra Project").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("sort_dropdown_button").performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("sort_option_NAME_DESC").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("sort_option_NAME_DESC").performClick()
+        waitForIdle()
+
+        // Button label should update to the selected sort
+        onNodeWithText("Name (Z–A)", substring = true).assertExists()
+    }
+
+    @Test
+    fun `sort by newest changes button label`() = runComposeUiTest {
+        val vm = ProjectListViewModel(ProjectApiClient(projectClient(sortableProjectsJson)), MutableStateFlow(TeamId("test-team")))
+        setContent {
+            MaterialTheme {
+                ProjectListScreen(viewModel = vm, onEditProject = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Zebra Project").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("sort_dropdown_button").performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("sort_option_NEWEST").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("sort_option_NEWEST").performClick()
+        waitForIdle()
+
+        onNodeWithText("Newest first", substring = true).assertExists()
+    }
+
+    @Test
+    fun `sort by oldest changes button label`() = runComposeUiTest {
+        val vm = ProjectListViewModel(ProjectApiClient(projectClient(sortableProjectsJson)), MutableStateFlow(TeamId("test-team")))
+        setContent {
+            MaterialTheme {
+                ProjectListScreen(viewModel = vm, onEditProject = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Zebra Project").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("sort_dropdown_button").performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("sort_option_OLDEST").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("sort_option_OLDEST").performClick()
+        waitForIdle()
+
+        onNodeWithText("Oldest first", substring = true).assertExists()
+    }
+
     @Test
     fun `dismiss refresh error hides banner`() = runComposeUiTest {
         val failOnRefresh = AtomicBoolean(false)

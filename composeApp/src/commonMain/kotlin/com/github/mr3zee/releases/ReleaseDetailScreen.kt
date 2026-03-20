@@ -541,7 +541,7 @@ private fun BlockDetailPanel(
                     Text(
                         text = packStringResource(Res.string.releases_block_output_entry, key, value),
                         style = AppTypography.bodySmall,
-                        modifier = Modifier.padding(start = Spacing.lg),
+                        modifier = Modifier.padding(start = Spacing.md),
                     )
                 }
             }

@@ -145,7 +145,7 @@ fun AuditLogScreen(
                 LazyColumn(
                     modifier = Modifier.fillMaxSize().weight(1f).testTag("audit_event_list"),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    contentPadding = PaddingValues(bottom = Spacing.lg),
+                    contentPadding = PaddingValues(bottom = Spacing.xl),
                 ) {
                     items(events, key = { it.id }) { event ->
                         AuditEventItem(

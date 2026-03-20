@@ -457,6 +457,11 @@ object EmojisPack {
             "sidebar_collapse" to "\u25c0\ufe0f Collapse sidebar",
             "sidebar_expand" to "\u25b6\ufe0f Expand sidebar",
             "sidebar_sign_out_confirm" to "\ud83d\udc4b Click again to sign out",
+            "common_sort_by" to "\ud83d\udd00\ud83d\udcca",
+            "common_sort_name_asc" to "\ud83c\udff7\ufe0f\u2b06\ufe0f\ud83c\udd70\ufe0f\u27a1\ufe0f\ud83c\uddff",
+            "common_sort_name_desc" to "\ud83c\udff7\ufe0f\u2b07\ufe0f\ud83c\uddff\u27a1\ufe0f\ud83c\udd70\ufe0f",
+            "common_sort_newest" to "\ud83c\udd95\u2b06\ufe0f",
+            "common_sort_oldest" to "\ud83d\udcc6\u2b06\ufe0f",
         ),
         plurals = mapOf(
             "blocks" to PluralOverride(

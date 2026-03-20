@@ -233,16 +233,18 @@ fun ConnectionFormScreen(
                             style = AppTypography.bodySmall,
                             modifier = Modifier.weight(1f),
                         )
-                        RwIconButton(
-                            onClick = { viewModel.dismissError() },
-                            modifier = Modifier.testTag("connection_error_dismiss"),
-                        ) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = packStringResource(Res.string.common_dismiss),
-                                modifier = Modifier.size(18.dp),
-                                tint = MaterialTheme.colorScheme.onErrorContainer,
-                            )
+                        RwTooltip(tooltip = packStringResource(Res.string.common_dismiss)) {
+                            RwIconButton(
+                                onClick = { viewModel.dismissError() },
+                                modifier = Modifier.testTag("connection_error_dismiss"),
+                            ) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = packStringResource(Res.string.common_dismiss),
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                                )
+                            }
                         }
                     }
                 }

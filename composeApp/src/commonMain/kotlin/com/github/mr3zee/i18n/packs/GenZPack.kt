@@ -457,6 +457,11 @@ object GenZPack {
             "sidebar_collapse" to "Make It Smol",
             "sidebar_expand" to "Go Full Main Character",
             "sidebar_sign_out_confirm" to "Fr fr click again to dip",
+            "common_sort_by" to "Sort by bestie",
+            "common_sort_name_asc" to "Name (A\u2013Z) no cap",
+            "common_sort_name_desc" to "Name (Z\u2013A) fr fr",
+            "common_sort_newest" to "Newest first slay",
+            "common_sort_oldest" to "Oldest first ngl",
         ),
         plurals = mapOf(
             "blocks" to PluralOverride(

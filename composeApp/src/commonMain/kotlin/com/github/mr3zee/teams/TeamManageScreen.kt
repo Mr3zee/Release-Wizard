@@ -197,7 +197,7 @@ fun TeamManageScreen(
                         modifier = Modifier
                             .widthIn(max = 1200.dp)
                             .fillMaxWidth()
-                            .padding(Spacing.lg),
+                            .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {

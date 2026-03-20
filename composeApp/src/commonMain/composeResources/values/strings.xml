@@ -525,4 +525,11 @@
     <string name="sidebar_expand">Expand sidebar</string>
     <string name="sidebar_sign_out_confirm">Click again to sign out</string>
     <string name="sidebar_app_abbreviation">RW</string>
+
+    <!-- Sort -->
+    <string name="common_sort_by">Sort by</string>
+    <string name="common_sort_name_asc">Name (A–Z)</string>
+    <string name="common_sort_name_desc">Name (Z–A)</string>
+    <string name="common_sort_newest">Newest first</string>
+    <string name="common_sort_oldest">Oldest first</string>
 </resources>

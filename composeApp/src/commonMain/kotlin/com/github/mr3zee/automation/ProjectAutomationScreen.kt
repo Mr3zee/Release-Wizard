@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.api.CreateMavenTriggerRequest
@@ -205,7 +206,7 @@ fun ProjectAutomationScreen(
                     addButtonLabel = packStringResource(Res.string.automation_add_schedule),
                     addButtonTestTag = "add_schedule_button",
                     onAdd = { showCreateSchedule = true },
-                    leadingIcon = { Icon(Icons.Default.Schedule, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                    leadingIcon = { Icon(Icons.Default.Schedule, contentDescription = packStringResource(Res.string.automation_schedules_section), modifier = Modifier.size(20.dp)) },
                 ) {
                     CreateScheduleInlineForm(
                         visible = showCreateSchedule,
@@ -255,7 +256,7 @@ fun ProjectAutomationScreen(
                     }
                 }
 
-                HorizontalDivider()
+                HorizontalDivider(modifier = Modifier.padding(horizontal = Spacing.xs))
 
                 // ── Webhook Triggers Section ──
                 AutomationSection(
@@ -263,7 +264,7 @@ fun ProjectAutomationScreen(
                     addButtonLabel = packStringResource(Res.string.automation_add_webhook),
                     addButtonTestTag = "add_webhook_button",
                     onAdd = { if (!isSaving) viewModel.createWebhookTrigger(CreateTriggerRequest()) },
-                    leadingIcon = { Icon(Icons.Default.Link, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                    leadingIcon = { Icon(Icons.Default.Link, contentDescription = packStringResource(Res.string.automation_webhook_section), modifier = Modifier.size(20.dp)) },
                     addButtonEnabled = !isSaving,
                 ) {
                     // Persistent webhook secret card — shown until user clicks dismiss
@@ -313,7 +314,7 @@ fun ProjectAutomationScreen(
                     }
                 }
 
-                HorizontalDivider()
+                HorizontalDivider(modifier = Modifier.padding(horizontal = Spacing.xs))
 
                 // ── Maven Publication Triggers Section ──
                 AutomationSection(
@@ -321,7 +322,7 @@ fun ProjectAutomationScreen(
                     addButtonLabel = packStringResource(Res.string.automation_add_maven),
                     addButtonTestTag = "add_maven_button",
                     onAdd = { showCreateMaven = true },
-                    leadingIcon = { Icon(Icons.Default.Inventory2, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                    leadingIcon = { Icon(Icons.Default.Inventory2, contentDescription = packStringResource(Res.string.automation_maven_section), modifier = Modifier.size(20.dp)) },
                 ) {
                     CreateMavenTriggerInlineForm(
                         visible = showCreateMaven,
@@ -708,7 +709,11 @@ private fun CreateMavenTriggerInlineForm(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             modifier = Modifier
-                .clickable(role = Role.Checkbox) { includeSnapshots = !includeSnapshots }
+                .toggleable(
+                    value = includeSnapshots,
+                    role = Role.Checkbox,
+                    onValueChange = { includeSnapshots = it },
+                )
                 .testTag("maven_include_snapshots"),
         ) {
             RwCheckbox(checked = includeSnapshots, onCheckedChange = null)

@@ -80,6 +80,9 @@ class ConnectionsViewModel(
     private val _refreshError = MutableStateFlow<UiMessage?>(null)
     val refreshError: StateFlow<UiMessage?> = _refreshError
 
+    private val _sortOrder = MutableStateFlow(ConnectionSortOrder.NAME_ASC)
+    val sortOrder: StateFlow<ConnectionSortOrder> = _sortOrder
+
     private val pageSize = 20
 
     init {
@@ -102,6 +105,10 @@ class ConnectionsViewModel(
 
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
+    }
+
+    fun setSortOrder(order: ConnectionSortOrder) {
+        _sortOrder.value = order
     }
 
     fun setTypeFilter(type: ConnectionType?) {
@@ -279,4 +286,8 @@ class ConnectionsViewModel(
     fun dismissRefreshError() {
         _refreshError.value = null
     }
+}
+
+enum class ConnectionSortOrder {
+    NAME_ASC, NAME_DESC, NEWEST, OLDEST
 }

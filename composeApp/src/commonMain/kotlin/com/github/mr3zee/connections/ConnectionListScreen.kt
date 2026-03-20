@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material3.*
@@ -66,7 +67,17 @@ fun ConnectionListScreen(
     val refreshError by viewModel.refreshError.collectAsState()
     val testingConnectionIds by viewModel.testingConnectionIds.collectAsState()
 
+    val sortOrder by viewModel.sortOrder.collectAsState()
+
     var connectionToDelete by remember { mutableStateOf<Connection?>(null) }
+    val sortedConnections = remember(connections, sortOrder) {
+        when (sortOrder) {
+            ConnectionSortOrder.NAME_ASC -> connections.sortedBy { it.name.lowercase() }
+            ConnectionSortOrder.NAME_DESC -> connections.sortedByDescending { it.name.lowercase() }
+            ConnectionSortOrder.NEWEST -> connections.sortedByDescending { it.updatedAt }
+            ConnectionSortOrder.OLDEST -> connections.sortedBy { it.updatedAt }
+        }
+    }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val searchFocusRequester = remember { FocusRequester() }
@@ -217,7 +228,14 @@ fun ConnectionListScreen(
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(Spacing.xs))
+            ConnectionSortDropdown(
+                sortOrder = sortOrder,
+                onSortOrderChange = { viewModel.setSortOrder(it) },
+                modifier = Modifier
+                    .widthIn(max = 1200.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = Spacing.lg),
+            )
 
             if (isLoading) {
                 Box(
@@ -286,7 +304,7 @@ fun ConnectionListScreen(
                     contentPadding = PaddingValues(bottom = 80.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    items(connections, key = { it.id.value }) { connection ->
+                    items(sortedConnections, key = { it.id.value }) { connection ->
                         Column(modifier = Modifier.widthIn(max = 1200.dp)) {
                             ConnectionListItem(
                                 connection = connection,
@@ -393,4 +411,57 @@ private fun ConnectionListItem(
             modifier = Modifier.size(20.dp),
         )
     }
+}
+
+@Composable
+private fun ConnectionSortDropdown(
+    sortOrder: ConnectionSortOrder,
+    onSortOrderChange: (ConnectionSortOrder) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+        modifier = modifier,
+    ) {
+        Text(
+            packStringResource(Res.string.common_sort_by),
+            style = AppTypography.label,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Box {
+            RwButton(
+                onClick = { expanded = true },
+                variant = RwButtonVariant.Ghost,
+                modifier = Modifier.testTag("sort_dropdown_button"),
+            ) {
+                Text(sortOrder.label())
+                Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(18.dp))
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+            ) {
+                ConnectionSortOrder.entries.forEach { order ->
+                    DropdownMenuItem(
+                        text = { Text(order.label()) },
+                        onClick = {
+                            onSortOrderChange(order)
+                            expanded = false
+                        },
+                        modifier = Modifier.testTag("sort_option_${order.name}"),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ConnectionSortOrder.label(): String = when (this) {
+    ConnectionSortOrder.NAME_ASC -> packStringResource(Res.string.common_sort_name_asc)
+    ConnectionSortOrder.NAME_DESC -> packStringResource(Res.string.common_sort_name_desc)
+    ConnectionSortOrder.NEWEST -> packStringResource(Res.string.common_sort_newest)
+    ConnectionSortOrder.OLDEST -> packStringResource(Res.string.common_sort_oldest)
 }

@@ -213,7 +213,7 @@ fun LoginScreen(
                         Text(
                             text = currentError.resolve(),
                             color = MaterialTheme.colorScheme.error,
-                            style = AppTypography.body,
+                            style = AppTypography.bodySmall,
                             textAlign = TextAlign.Start,
                             modifier = Modifier.fillMaxWidth().testTag("login_error"),
                         )

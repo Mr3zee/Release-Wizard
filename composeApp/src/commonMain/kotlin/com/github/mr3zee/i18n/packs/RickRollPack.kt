@@ -457,6 +457,11 @@ object RickRollPack {
             "sidebar_collapse" to "Never Gonna Shrink Around",
             "sidebar_expand" to "Never Gonna Widen Up",
             "sidebar_sign_out_confirm" to "You know the rules, click again",
+            "common_sort_by" to "You know the rules (Sort by)",
+            "common_sort_name_asc" to "Name (A\u2013Z) \u2014 never gonna mix them up",
+            "common_sort_name_desc" to "Name (Z\u2013A) \u2014 full commitment to reverse",
+            "common_sort_newest" to "Newest first \u2014 never gonna give up the latest",
+            "common_sort_oldest" to "Oldest first \u2014 we've known each other for so long",
         ),
         plurals = mapOf(
             "blocks" to PluralOverride(

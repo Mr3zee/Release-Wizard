@@ -457,6 +457,11 @@ object HelldiversPack {
             "sidebar_collapse" to "Minimize HUD",
             "sidebar_expand" to "Full HUD Display",
             "sidebar_sign_out_confirm" to "Confirm RTB, Helldiver!",
+            "common_sort_by" to "Sort by Tactical Order",
+            "common_sort_name_asc" to "Callsign (A\u2013Z)",
+            "common_sort_name_desc" to "Callsign (Z\u2013A)",
+            "common_sort_newest" to "Latest Deployment First",
+            "common_sort_oldest" to "Earliest Deployment First",
         ),
         plurals = mapOf(
             "blocks" to PluralOverride(

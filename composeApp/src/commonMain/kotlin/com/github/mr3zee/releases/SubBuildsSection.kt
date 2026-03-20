@@ -6,13 +6,21 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Help
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import com.github.mr3zee.i18n.packStringResource
@@ -141,11 +149,11 @@ private fun SubBuildRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        Text(
-            text = subBuild.status.statusIcon(),
-            style = AppTypography.body,
-            color = subBuild.status.statusColor(),
-            modifier = Modifier.testTag("sub_build_status_icon_${subBuild.id}"),
+        Icon(
+            imageVector = subBuild.status.statusIcon(),
+            contentDescription = subBuild.status.name.lowercase().replaceFirstChar { it.uppercase() },
+            tint = subBuild.status.statusColor(),
+            modifier = Modifier.size(16.dp).testTag("sub_build_status_icon_${subBuild.id}"),
         )
         Text(
             text = subBuild.name,
@@ -178,13 +186,13 @@ private fun SubBuildRow(
     }
 }
 
-private fun SubBuildStatus.statusIcon(): String = when (this) {
-    SubBuildStatus.QUEUED -> "\u23F2"      // clock / timer
-    SubBuildStatus.RUNNING -> "\u25B6"     // play / spinner indicator
-    SubBuildStatus.SUCCEEDED -> "\u2713"   // checkmark
-    SubBuildStatus.FAILED -> "\u2717"      // X mark
-    SubBuildStatus.CANCELLED -> "\u2298"   // circled slash
-    SubBuildStatus.UNKNOWN -> "?"
+private fun SubBuildStatus.statusIcon(): ImageVector = when (this) {
+    SubBuildStatus.QUEUED -> Icons.Default.Schedule
+    SubBuildStatus.RUNNING -> Icons.Default.PlayArrow
+    SubBuildStatus.SUCCEEDED -> Icons.Default.Check
+    SubBuildStatus.FAILED -> Icons.Default.Close
+    SubBuildStatus.CANCELLED -> Icons.Default.Block
+    SubBuildStatus.UNKNOWN -> Icons.Default.Help
 }
 
 @Composable

@@ -457,6 +457,11 @@ object AllLiesPack {
             "sidebar_collapse" to "Expand sidebar",
             "sidebar_expand" to "Collapse sidebar",
             "sidebar_sign_out_confirm" to "Don't click again to stay",
+            "common_sort_by" to "Randomize by",
+            "common_sort_name_asc" to "Name (Z\u2013A)",
+            "common_sort_name_desc" to "Name (A\u2013Z)",
+            "common_sort_newest" to "Oldest first",
+            "common_sort_oldest" to "Newest first",
         ),
         plurals = mapOf(
             "blocks" to PluralOverride(

@@ -190,53 +190,51 @@ Each group has a dedicated file with full descriptions, file locations, and fix 
 
 ---
 
-## Phase 3: Polish & Low-Priority Fixes
+## Phase 3: Polish & Low-Priority Fixes — ✅ COMPLETE
 
 > **Details:** [`issues/APP_ISSUES_POLISH.md`](issues/APP_ISSUES_POLISH.md)
 
-These can be done after Phase 1 and 2. Each is independent.
+### Stream 3A: Animation & Transitions — ✅ DONE
+| ID | Issue | Status |
+|----|-------|--------|
+| 3A-1 | LoginScreen card height jumps on mode toggle | ✅ Fixed in Phase 2 (AnimatedVisibility) |
+| 3A-2 | MyInvites no animation on card removal | ✅ Fixed in Phase 2 (animateItem) |
+| 3A-3 | Save button style abrupt transition (Ghost→Primary) | ⏭️ Reverted — Secondary+disabled draws attention without payoff |
 
-### Stream 3A: Animation & Transitions
-| ID | Issue | Screen | Fix |
-|----|-------|--------|-----|
-| 3A-1 | LoginScreen card height jumps on mode toggle | LoginScreen | AnimatedVisibility for confirm password |
-| 3A-2 | MyInvites no animation on card removal | MyInvites | Add `animateItem()` |
-| 3A-3 | Save button style abrupt transition (Ghost→Primary) | ProjectEditor | Use outlined style when clean |
+### Stream 3B: Tooltips & Accessibility Completions — ✅ DONE
+| ID | Issue | Status |
+|----|-------|--------|
+| 3B-1 | Password visibility toggle lacks tooltip | ✅ Fixed in Phase 2 (RwTooltip) |
+| 3B-2 | Toolbar buttons lack tooltips | ✅ Fixed in Phase 2 (RwTooltip) |
+| 3B-3 | Section icons lack contentDescription | ✅ Added to Schedule, Link, Inventory2 icons |
+| 3B-4 | Checkbox state not announced to screen readers | ✅ Changed to `toggleable()` for proper state |
+| 3B-5 | Warning icon missing contentDescription | ✅ Fixed in Phase 2 |
+| 3B-6 | Error banner dismiss lacks tooltip | ✅ Wrapped with RwTooltip |
 
-### Stream 3B: Tooltips & Accessibility Completions
-| ID | Issue | Screen | Fix |
-|----|-------|--------|-----|
-| 3B-1 | Password visibility toggle lacks tooltip | LoginScreen | Add RwTooltip |
-| 3B-2 | Toolbar buttons lack tooltips | TeamDetail | Add RwTooltip to all |
-| 3B-3 | Section icons lack contentDescription | ProjectAutomation | Add descriptions |
-| 3B-4 | Checkbox state not announced to screen readers | ProjectAutomation | Add state semantics |
-| 3B-5 | Warning icon missing contentDescription | TeamDetail | Add contentDescription |
-| 3B-6 | Error banner dismiss lacks tooltip | ConnectionForm | Add RwTooltip |
+### Stream 3C: Minor Spacing & Padding — ✅ DONE
+| ID | Issue | Status |
+|----|-------|--------|
+| 3C-1 | LazyColumn missing bottom contentPadding | ✅ AuditLog Spacing.lg → Spacing.xl; TeamDetail fixed in Phase 2 |
+| 3C-2 | Filter chip spacer too small (4dp) | ✅ Changed Spacing.xs → Spacing.sm |
+| 3C-3 | Outputs 32dp double-indent | ✅ Changed Spacing.lg → Spacing.md (12dp compromise) |
+| 3C-4 | Section heading padding inconsistency | ✅ Standardized members heading to horizontal/vertical |
+| 3C-5 | HorizontalDivider placement in Automation | ✅ Added horizontal padding to dividers |
 
-### Stream 3C: Minor Spacing & Padding
-| ID | Issue | Screen | Fix |
-|----|-------|--------|-----|
-| 3C-1 | LazyColumn missing bottom contentPadding | AuditLog, TeamDetail | Add contentPadding |
-| 3C-2 | Filter chip spacer too small (4dp) | ConnectionList | Increase to Spacing.sm |
-| 3C-3 | Outputs 32dp double-indent | ReleaseView | Fix padding nesting |
-| 3C-4 | Section heading padding inconsistency | TeamManage | Standardize padding |
-| 3C-5 | HorizontalDivider placement in Automation | ProjectAutomation | Align with content padding |
+### Stream 3D: Typography Refinements — ✅ DONE
+| ID | Issue | Status |
+|----|-------|--------|
+| 3D-1 | Login error text uses body (14sp) | ✅ Changed to bodySmall (13sp) |
+| 3D-2 | Login subtitle text borderline contrast | ⏭️ Skipped — onSurfaceVariant is consistent and passes WCAG AA |
+| 3D-3 | SubBuild status icons use Unicode | ✅ Replaced with Material icons (Schedule, PlayArrow, Check, Close, Block, Help) |
+| 3D-4 | TopAppBar title missing maxLines/overflow | ✅ Added maxLines = 1, overflow = Ellipsis |
 
-### Stream 3D: Typography Refinements
-| ID | Issue | Screen | Fix |
-|----|-------|--------|-----|
-| 3D-1 | Login error text uses body (14sp) — too large for inline errors | LoginScreen | Use bodySmall/caption |
-| 3D-2 | Login subtitle text borderline contrast | LoginScreen | Increase to ~#B0B8C4 |
-| 3D-3 | SubBuild status icons use Unicode | ReleaseView | Replace with Material icons |
-| 3D-4 | TopAppBar title missing maxLines/overflow | TeamList | Add maxLines = 1, overflow = Ellipsis |
-
-### Stream 3E: Information Density
-| ID | Issue | Screen | Fix |
-|----|-------|--------|-----|
-| 3E-1 | Missing invite timestamp on invite cards | MyInvites | Show "Invited X days ago" |
-| 3E-2 | No count indicator for filtered/total releases | ReleaseList | Add "Showing X of Y" |
-| 3E-3 | No sort controls | ProjectList, ConnectionList | Add sort dropdown (name, date) |
-| 3E-4 | Missing metadata on project cards | ProjectList | Add "Last edited X ago" |
+### Stream 3E: Information Density — ✅ DONE
+| ID | Issue | Status |
+|----|-------|--------|
+| 3E-1 | Missing invite timestamp on invite cards | ⏭️ Skipped per user decision |
+| 3E-2 | No count indicator for filtered/total releases | ⏭️ Skipped — requires ViewModel total count changes |
+| 3E-3 | No sort controls | ✅ Sort dropdown (Name A-Z/Z-A, Newest/Oldest) in ProjectList + ConnectionList; state in ViewModel |
+| 3E-4 | Missing metadata on project cards | ⏭️ Skipped per user decision |
 
 ---
 

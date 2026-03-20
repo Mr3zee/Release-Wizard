@@ -53,6 +53,9 @@ class ProjectListViewModel(
     private val _refreshError = MutableStateFlow<UiMessage?>(null)
     val refreshError: StateFlow<UiMessage?> = _refreshError
 
+    private val _sortOrder = MutableStateFlow(ProjectSortOrder.NAME_ASC)
+    val sortOrder: StateFlow<ProjectSortOrder> = _sortOrder
+
     private val pageSize = 20
 
     init {
@@ -70,6 +73,10 @@ class ProjectListViewModel(
 
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
+    }
+
+    fun setSortOrder(order: ProjectSortOrder) {
+        _sortOrder.value = order
     }
 
     fun refresh() {
@@ -173,4 +180,8 @@ class ProjectListViewModel(
     fun dismissRefreshError() {
         _refreshError.value = null
     }
+}
+
+enum class ProjectSortOrder {
+    NAME_ASC, NAME_DESC, NEWEST, OLDEST
 }

@@ -457,6 +457,11 @@ object RickAndMortyPack {
             "sidebar_collapse" to "Shrink Portal",
             "sidebar_expand" to "Expand Portal",
             "sidebar_sign_out_confirm" to "Click again, *burp* Morty",
+            "common_sort_by" to "Sort by, *burp* Morty",
+            "common_sort_name_asc" to "Name (A\u2013Z), whatever",
+            "common_sort_name_desc" to "Name (Z\u2013A), *burp* backwards",
+            "common_sort_newest" to "Newest first, Morty",
+            "common_sort_oldest" to "Oldest first, *burp* ancient history",
         ),
         plurals = mapOf(
             "blocks" to PluralOverride(
