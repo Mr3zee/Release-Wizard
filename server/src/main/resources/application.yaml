@@ -30,7 +30,7 @@ app:
     sessionRefreshThresholdSeconds: "$SESSION_REFRESH_THRESHOLD_SECONDS:60"
     browserAbsoluteLifetimeSeconds: "$BROWSER_ABSOLUTE_LIFETIME_SECONDS:7776000"
     desktopAbsoluteLifetimeSeconds: "$DESKTOP_ABSOLUTE_LIFETIME_SECONDS:63072000"
-    secureCookie: "$SECURE_COOKIE:true"
+    secureCookie: "$SECURE_COOKIE:false"
     password:
       minLength: "$PASSWORD_MIN_LENGTH:12"
       requireUppercase: "$PASSWORD_REQUIRE_UPPERCASE:true"
