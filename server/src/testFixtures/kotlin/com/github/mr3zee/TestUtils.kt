@@ -319,7 +319,7 @@ suspend fun waitUntil(
 /**
  * Ktor client plugin that captures X-CSRF-Token from responses and attaches it to subsequent requests.
  */
-private val CsrfTokenTestPlugin = createClientPlugin("CsrfTokenTest") {
+val CsrfTokenTestPlugin = createClientPlugin("CsrfTokenTest") {
     var csrfToken = ""
     onRequest { request, _ ->
         if (csrfToken.isNotEmpty()) {

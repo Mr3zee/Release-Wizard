@@ -46,3 +46,4 @@ plugins {
 include(":composeApp")
 include(":server")
 include(":shared")
+include(":e2eTest")

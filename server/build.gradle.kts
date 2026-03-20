@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.ktor)
     application
+    `java-test-fixtures`
 }
 
 group = "com.github.mr3zee"
@@ -60,6 +61,16 @@ dependencies {
     implementation(libs.koin.ktor)
     implementation(libs.koin.loggerSlf4j)
 
+    // Test fixtures (shared between test, integrationTest, and e2eTest module)
+    testFixturesImplementation(libs.ktor.serverTestHost)
+    testFixturesImplementation(libs.ktor.clientContentNegotiation)
+    testFixturesImplementation(libs.ktor.clientSerializationKotlinxJson)
+    testFixturesImplementation(libs.koin.test)
+    testFixturesImplementation(libs.ktor.clientWebsockets)
+    testFixturesImplementation(libs.ktor.clientMock)
+    testFixturesImplementation(libs.h2)
+    testFixturesImplementation(libs.kotlin.testJunit)
+
     // Test
     testImplementation(libs.ktor.serverTestHost)
     testImplementation(libs.ktor.clientContentNegotiation)
@@ -77,10 +88,13 @@ sourceSets {
     create("integrationTest") {
         kotlin.srcDir("src/integrationTest/kotlin")
         resources.srcDir("src/integrationTest/resources")
-        compileClasspath += sourceSets["main"].output + sourceSets["test"].output
-        runtimeClasspath += sourceSets["main"].output + sourceSets["test"].output
+        compileClasspath += sourceSets["main"].output + sourceSets["test"].output + sourceSets["testFixtures"].output
+        runtimeClasspath += sourceSets["main"].output + sourceSets["test"].output + sourceSets["testFixtures"].output
     }
 }
+
+// testFixtures needs to see main's implementation deps (Ktor plugins, Koin, shared module, etc.)
+configurations["testFixturesImplementation"].extendsFrom(configurations["implementation"])
 
 configurations["integrationTestImplementation"].extendsFrom(configurations["testImplementation"])
 configurations["integrationTestRuntimeOnly"].extendsFrom(configurations["testRuntimeOnly"])
