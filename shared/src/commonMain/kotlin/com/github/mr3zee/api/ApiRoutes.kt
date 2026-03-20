@@ -105,4 +105,5 @@ object ApiRoutes {
     }
 
     const val HEALTH = "/health"
+    const val HEALTHZ = "/healthz"
 }

@@ -114,7 +114,16 @@ fun ApplicationConfig.webhookConfig(): WebhookConfig {
     )
 }
 
+private val corsLog = org.slf4j.LoggerFactory.getLogger("com.github.mr3zee.Config")
+
 fun ApplicationConfig.corsConfig(): CorsConfig {
-    val origins = propertyOrNull("app.cors.allowedOrigins")?.getList() ?: emptyList()
+    val origins = propertyOrNull("app.cors.allowedOrigins")?.getList()
+        ?.filter { origin ->
+            if (origin.isBlank()) {
+                corsLog.warn("Blank CORS origin filtered — verify CORS_ALLOWED_ORIGIN env vars if cross-origin access is needed")
+                false
+            } else true
+        }
+        ?: emptyList()
     return CorsConfig(allowedOrigins = origins)
 }

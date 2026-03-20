@@ -1,6 +1,7 @@
 [versions]
 androidx-lifecycle = "2.9.6"
 cronUtils = "9.2.1"
+jib = "3.5.3"
 composeHotReload = "1.0.0"
 composeMultiplatform = "1.10.0"
 composeUnstyled = "1.49.6"
@@ -93,4 +94,5 @@ composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "k
 kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ktor = { id = "io.ktor.plugin", version.ref = "ktor" }
+jib = { id = "com.google.cloud.tools.jib", version.ref = "jib" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }

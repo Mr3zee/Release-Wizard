@@ -21,6 +21,7 @@ server/src/main/resources/static
 
 # Secrets and credentials
 .env*
+!.env.example
 *.key
 *.pem
 *.jks
