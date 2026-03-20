@@ -201,7 +201,13 @@ fun Application.module() {
             cookie.secure = this@module.environment.config.propertyOrNull("app.auth.secureCookie")?.getString()?.toBooleanStrictOrNull() ?: true
             cookie.extensions["SameSite"] = "Lax"
             if (authConfig.sessionEncryptKey.isNotEmpty()) {
-                transform(SessionTransportTransformerEncrypt(hex(authConfig.sessionEncryptKey), hex(authConfig.sessionSignKey)))
+                // Custom ivGenerator: Ktor 3.3.3 bug passes encryptionKeySize instead of
+                // blockSize, causing AES-256 to generate 32-byte IV instead of 16-byte.
+                transform(SessionTransportTransformerEncrypt(
+                    hex(authConfig.sessionEncryptKey),
+                    hex(authConfig.sessionSignKey),
+                    ivGenerator = { ByteArray(16).apply { java.security.SecureRandom().nextBytes(this) } },
+                ))
             } else {
                 this@module.environment.log.warn("Session encryption key not configured — session cookies will be signed but not encrypted")
                 transform(SessionTransportTransformerMessageAuthentication(hex(authConfig.sessionSignKey)))
