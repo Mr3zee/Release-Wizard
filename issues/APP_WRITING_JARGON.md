@@ -40,3 +40,9 @@ Finished: `"The external build did not report status updates"`.
 ### AUTOMATION_17 — "Parameter Key" is vague (LOW)
 **Current:** `"Parameter Key"` with hint `"e.g. version"`
 **Fix:** `"Release parameter key"` with expanded hint explaining the purpose.
+
+## Resolution
+
+**Status:** SKIPPED
+
+All 9 issues skipped per user request — app is for tech users, jargon is intended and appropriate for the target audience.

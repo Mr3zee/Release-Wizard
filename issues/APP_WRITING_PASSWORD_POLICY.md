@@ -27,3 +27,13 @@ Bypasses localization. Also omits lockout duration even though it's available.
 - Or better: fetch the policy from the server so the hint stays in sync automatically.
 - Add a `supportingText` hint for the username field in register mode: `"Up to 64 characters."`
 - Create a typed `UiMessage.AccountLocked(duration)` so the lockout message can be localized.
+
+## Resolution
+
+**Status:** RESOLVED
+
+| Issue | Status | Notes |
+|-------|--------|-------|
+| LOGIN_01 | Fixed | Updated `auth_password_requirements` to "At least 12 characters, including an uppercase letter and a number" |
+| LOGIN_11 | Fixed | Added `auth_username_hint` ("Up to 64 characters") shown in register mode |
+| LOGIN_09 | Minor | Server-side lockout message not addressed (server code change out of scope) |

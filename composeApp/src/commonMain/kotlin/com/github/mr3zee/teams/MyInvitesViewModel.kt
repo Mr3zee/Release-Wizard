@@ -69,12 +69,13 @@ class MyInvitesViewModel(
         }
     }
 
-    fun declineInvite(inviteId: String) {
+    fun declineInvite(inviteId: String, onDeclined: () -> Unit = {}) {
         viewModelScope.launch {
             _loadingInviteIds.value += inviteId
             try {
                 apiClient.declineInvite(inviteId)
                 loadInvites()
+                onDeclined()
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {

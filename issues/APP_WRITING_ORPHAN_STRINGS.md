@@ -73,3 +73,26 @@ The last one contains important behavioral information that should be surfaced t
 **Fix for all:** Wire each string to its intended location, or remove from `strings.xml`
 and all 6 language packs. For strings that contain useful information (like
 `maven_created_message`), prioritize wiring over removal.
+
+## Resolution
+
+**Status:** RESOLVED
+
+| Issue | Status | Notes |
+|-------|--------|-------|
+| EDITOR_09 | Fixed | 3 orphan dialog titles removed from strings.xml and all 6 language packs |
+| RELDETAIL_01 | Fixed | 7 orphan release detail strings removed |
+| AUTOMATION_01/02 | Fixed | 5 orphan automation strings removed |
+| CONNLIST_01 | Fixed | `connections_delete_title` removed |
+| CONNLIST_02 | Fixed | `connections_webhook_display` removed |
+| PROJLIST_06 | Fixed | `projects_delete_title` removed |
+| RELLIST_07 | Fixed | 2 orphan release archive/delete titles removed |
+| TEAMDETAIL_04 | Fixed | 2 orphan team leave strings removed |
+| TEAMMGMT_13 | Fixed | 2 short-form promote/demote strings removed |
+| TEAMMGMT_11 | Fixed | `teams_keep` removed |
+| CONNFORM_06 | Fixed | `connections_polling_default_hint` removed |
+| AUDIT_09 | Fixed | `teams_load_more` removed |
+| GLOBAL_11 | Fixed | `shortcuts_close` duplicate removed |
+| GLOBAL_18 | Fixed | `sidebar_sign_out` duplicate removed |
+
+18 strings removed total from strings.xml and all 6 language packs.

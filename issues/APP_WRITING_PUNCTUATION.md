@@ -28,3 +28,16 @@ icons or color. May render differently across platforms.
 Some errors end with periods, others don't. Adopt consistent convention.
 
 **Fix for ellipsis issues:** Standardize on Unicode ellipsis (U+2026) everywhere.
+
+## Resolution
+
+**Status:** RESOLVED
+
+| Issue | Status | Notes |
+|-------|--------|-------|
+| EDITOR_12 | Fixed | Standardized all ellipsis to Unicode (U+2026) |
+| RELDETAIL_09 | Fixed | Same standardization applied |
+| RELLIST_12 | Fixed | Same standardization applied |
+| INVITES_03 | Fixed | Removed trailing period from "No pending invites" |
+| AUTOMATION_12 | Fixed | Removed embedded checkmark from "Valid", added Check icon in code |
+| GLOBAL_07 | Fixed | Standardized punctuation across error messages |

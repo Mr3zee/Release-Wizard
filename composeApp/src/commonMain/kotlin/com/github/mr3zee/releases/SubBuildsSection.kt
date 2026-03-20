@@ -151,7 +151,14 @@ private fun SubBuildRow(
     ) {
         Icon(
             imageVector = subBuild.status.statusIcon(),
-            contentDescription = subBuild.status.name.lowercase().replaceFirstChar { it.uppercase() },
+            contentDescription = when (subBuild.status) {
+                SubBuildStatus.QUEUED -> packStringResource(Res.string.sub_builds_status_queued)
+                SubBuildStatus.RUNNING -> packStringResource(Res.string.sub_builds_status_running)
+                SubBuildStatus.SUCCEEDED -> packStringResource(Res.string.sub_builds_status_succeeded)
+                SubBuildStatus.FAILED -> packStringResource(Res.string.sub_builds_status_failed)
+                SubBuildStatus.CANCELLED -> packStringResource(Res.string.sub_builds_status_cancelled)
+                SubBuildStatus.UNKNOWN -> packStringResource(Res.string.sub_builds_status_unknown)
+            },
             tint = subBuild.status.statusColor(),
             modifier = Modifier.size(16.dp).testTag("sub_build_status_icon_${subBuild.id}"),
         )

@@ -58,3 +58,21 @@ at save time. Add `isError` state with `"Must be between 5 and 300"`.
 
 ### GLOBAL_07 — Inconsistent punctuation in errors (LOW)
 Some error messages end with periods, others don't. Adopt a consistent convention.
+
+## Resolution
+
+**Status:** RESOLVED
+
+| Issue | Status | Notes |
+|-------|--------|-------|
+| GLOBAL_02/LOGIN_02 | Fixed | "Incorrect username or password. Please check your credentials and try again." |
+| GLOBAL_03 | Fixed | "You don't have permission to perform this action. Contact your team lead if you need access." |
+| GLOBAL_04 | Fixed | "The requested item could not be found. It may have been deleted or moved." |
+| GLOBAL_05 | Fixed | "Something went wrong with your input. Please review your changes and try again." |
+| GLOBAL_06 | Fixed | "Something went wrong on the server. Please try again, and if the problem persists, contact your administrator." |
+| GLOBAL_15 | Fixed | Split into `error_registration_failed` + `error_username_taken` |
+| LOGIN_03 | Fixed | Added INVALID_CREDENTIALS and REGISTRATION_FAILED code-based mapping in `toUiMessage()` |
+| EDITOR_07 | Fixed | "Could not acquire the editing lock. Someone else may be editing, or there may be a connection issue." |
+| AUTOMATION_11 | Fixed | "Invalid format — expected 5 fields (e.g., 0 9 * * 1-5)" |
+| CONNFORM_12 | Fixed | Added `connections_polling_out_of_range` = "Must be between 5 and 300 seconds" |
+| GLOBAL_07 | Fixed | Standardized punctuation across error messages |

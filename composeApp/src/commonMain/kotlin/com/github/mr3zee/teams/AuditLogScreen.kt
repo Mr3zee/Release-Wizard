@@ -12,6 +12,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.RefreshErrorBanner
@@ -116,7 +118,8 @@ fun AuditLogScreen(
 
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+                    val loadingDesc = packStringResource(Res.string.loading_audit)
+                    CircularProgressIndicator(modifier = Modifier.semantics { contentDescription = loadingDesc })
                 }
             } else if (events.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {

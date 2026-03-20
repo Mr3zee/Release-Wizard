@@ -20,6 +20,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.testTag
 import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.ListItemCard
@@ -190,7 +192,8 @@ fun ProjectListScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    CircularProgressIndicator()
+                    val loadingDesc = packStringResource(Res.string.loading_projects)
+                    CircularProgressIndicator(modifier = Modifier.semantics { contentDescription = loadingDesc })
                 }
             } else if (error != null) {
                 Box(
@@ -402,7 +405,7 @@ private fun CreateProjectInlineForm(
             value = name,
             onValueChange = { name = it },
             label = packStringResource(Res.string.projects_project_name),
-            placeholder = packStringResource(Res.string.projects_project_name),
+            placeholder = packStringResource(Res.string.projects_project_name_placeholder),
             singleLine = true,
             modifier = Modifier
                 .fillMaxWidth()

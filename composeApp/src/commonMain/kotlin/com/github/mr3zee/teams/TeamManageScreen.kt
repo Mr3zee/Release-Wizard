@@ -10,6 +10,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
@@ -122,7 +124,8 @@ fun TeamManageScreen(
     ) { padding ->
         if (isLoading) {
             Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+                val loadingDesc = packStringResource(Res.string.loading_team_manage)
+                CircularProgressIndicator(modifier = Modifier.semantics { contentDescription = loadingDesc })
             }
         } else {
             Column(modifier = Modifier.fillMaxSize().padding(padding)) {
@@ -269,6 +272,16 @@ fun TeamManageScreen(
                                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
                         )
                     }
+                    if (invites.isEmpty()) {
+                        item {
+                            Text(
+                                packStringResource(Res.string.teams_no_pending_invites),
+                                style = AppTypography.body,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.widthIn(max = 1200.dp).fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                            )
+                        }
+                    }
                     items(invites, key = { "invite-${it.id}" }) { invite ->
                         Column(modifier = Modifier.widthIn(max = 1200.dp)) {
                             InviteItem(
@@ -277,7 +290,7 @@ fun TeamManageScreen(
                             )
                             RwInlineConfirmation(
                                 visible = inviteToCancel?.id == invite.id,
-                                message = packStringResource(Res.string.teams_cancel_invite_confirmation, invite.invitedUsername),
+                                message = packStringResource(Res.string.teams_revoke_invite_confirmation, invite.invitedUsername),
                                 confirmLabel = packStringResource(Res.string.teams_revoke_invite),
                                 onConfirm = {
                                     viewModel.cancelInvite(invite.id)
@@ -303,6 +316,16 @@ fun TeamManageScreen(
                             .fillMaxWidth()
                             .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
                     )
+                }
+                if (joinRequests.isEmpty()) {
+                    item {
+                        Text(
+                            packStringResource(Res.string.teams_no_join_requests),
+                            style = AppTypography.body,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.widthIn(max = 1200.dp).fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                        )
+                    }
                 }
                 items(joinRequests, key = { "request-${it.id}" }) { request ->
                     JoinRequestItem(
@@ -334,7 +357,7 @@ fun TeamManageScreen(
                                 variant = RwButtonVariant.Danger,
                                 modifier = Modifier.testTag("delete_team_button"),
                             ) {
-                                Text(packStringResource(Res.string.common_delete))
+                                Text(packStringResource(Res.string.teams_delete_team))
                             }
                         }
                     }

@@ -7,6 +7,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
@@ -18,6 +19,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.semantics.Role
@@ -191,7 +194,8 @@ fun ProjectAutomationScreen(
     ) { padding ->
         if (isLoading) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+                val loadingDesc = packStringResource(Res.string.loading_automation)
+                CircularProgressIndicator(modifier = Modifier.semantics { contentDescription = loadingDesc })
             }
         } else {
             Box(
@@ -597,10 +601,19 @@ private fun CreateScheduleInlineForm(
                         "${packStringResource(Res.string.schedule_next_run_label)}: $nextRunHint",
                         color = MaterialTheme.colorScheme.primary,
                     )
-                    showValidation && isCronValid -> Text(
-                        packStringResource(Res.string.schedule_cron_valid),
-                        color = MaterialTheme.colorScheme.primary,
-                    )
+                    showValidation && isCronValid -> Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(14.dp),
+                        )
+                        Spacer(modifier = Modifier.width(Spacing.xxs))
+                        Text(
+                            packStringResource(Res.string.schedule_cron_valid),
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
                     showValidation && !isCronValid -> Text(
                         packStringResource(Res.string.schedule_cron_invalid),
                         color = MaterialTheme.colorScheme.error,

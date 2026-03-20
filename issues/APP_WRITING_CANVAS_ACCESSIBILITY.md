@@ -41,3 +41,13 @@ For the DAG canvas:
 For the release list:
 - Add `Modifier.semantics(mergeDescendants = true) { contentDescription = "$title, ${status}" }`
   to the `ListItemCard`.
+
+## Resolution
+
+**Status:** PARTIAL
+
+| Issue | Status | Notes |
+|-------|--------|-------|
+| RELDETAIL_06 | Minor | DAG canvas semantics not addressed (complex, out of scope) |
+| RELLIST_05 | Minor | Semantic grouping not addressed |
+| RELDETAIL_11 | Fixed | Sub-build status icons now use localized string resources via `SubBuildStatus` when expression |

@@ -295,7 +295,7 @@ fun ConnectionFormScreen(
                         if (!isEditMode) {
                             Icon(
                                 Icons.Default.ArrowDropDown,
-                                contentDescription = null,
+                                contentDescription = packStringResource(Res.string.connections_type_dropdown),
                                 modifier = Modifier.size(20.dp),
                             )
                         }
@@ -335,7 +335,7 @@ fun ConnectionFormScreen(
                 ) {
                     Icon(
                         Icons.Default.Lock,
-                        contentDescription = null,
+                        contentDescription = packStringResource(Res.string.editor_lock_icon),
                         modifier = Modifier.size(14.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -363,14 +363,14 @@ fun ConnectionFormScreen(
                         value = slackWebhookUrl,
                         onValueChange = { slackWebhookUrl = it },
                         label = packStringResource(Res.string.connections_slack_webhook_url),
-                        placeholder = "https://hooks.slack.com/services/...",
+                        placeholder = packStringResource(Res.string.connections_slack_webhook_placeholder),
                         singleLine = true,
                         visualTransformation = if (showSlackWebhook) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
                             RwIconButton(onClick = { showSlackWebhook = !showSlackWebhook }, modifier = Modifier.size(32.dp).testTag("slack_webhook_url_toggle_visibility")) {
                                 Icon(
                                     if (showSlackWebhook) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    contentDescription = if (showSlackWebhook) packStringResource(Res.string.common_hide_password) else packStringResource(Res.string.common_show_password),
+                                    contentDescription = if (showSlackWebhook) packStringResource(Res.string.common_hide_value) else packStringResource(Res.string.common_show_value),
                                 )
                             }
                         },
@@ -389,7 +389,7 @@ fun ConnectionFormScreen(
                         value = teamCityServerUrl,
                         onValueChange = { teamCityServerUrl = it },
                         label = packStringResource(Res.string.connections_tc_server_url),
-                        placeholder = "https://teamcity.example.com",
+                        placeholder = packStringResource(Res.string.connections_tc_server_placeholder),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().testTag("teamcity_server_url"),
                     )
@@ -397,14 +397,14 @@ fun ConnectionFormScreen(
                         value = teamCityToken,
                         onValueChange = { teamCityToken = it },
                         label = packStringResource(Res.string.connections_tc_token),
-                        placeholder = "eyJ0eXAi...",
+                        placeholder = packStringResource(Res.string.connections_tc_token_placeholder),
                         singleLine = true,
                         visualTransformation = if (showTeamCityToken) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
                             RwIconButton(onClick = { showTeamCityToken = !showTeamCityToken }, modifier = Modifier.size(32.dp).testTag("teamcity_token_toggle_visibility")) {
                                 Icon(
                                     if (showTeamCityToken) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    contentDescription = if (showTeamCityToken) packStringResource(Res.string.common_hide_password) else packStringResource(Res.string.common_show_password),
+                                    contentDescription = if (showTeamCityToken) packStringResource(Res.string.common_hide_value) else packStringResource(Res.string.common_show_value),
                                 )
                             }
                         },
@@ -417,7 +417,7 @@ fun ConnectionFormScreen(
                             teamCityPollingInterval = filtered
                         },
                         label = packStringResource(Res.string.connections_tc_polling_interval),
-                        placeholder = "30",
+                        placeholder = packStringResource(Res.string.connections_tc_polling_placeholder),
                         singleLine = true,
                         supportingText = {
                             Text(
@@ -440,14 +440,14 @@ fun ConnectionFormScreen(
                         value = githubToken,
                         onValueChange = { githubToken = it },
                         label = packStringResource(Res.string.connections_github_pat),
-                        placeholder = "ghp_xxxx...",
+                        placeholder = packStringResource(Res.string.connections_github_pat_placeholder),
                         singleLine = true,
                         visualTransformation = if (showGithubToken) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
                             RwIconButton(onClick = { showGithubToken = !showGithubToken }, modifier = Modifier.size(32.dp).testTag("github_token_toggle_visibility")) {
                                 Icon(
                                     if (showGithubToken) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    contentDescription = if (showGithubToken) packStringResource(Res.string.common_hide_password) else packStringResource(Res.string.common_show_password),
+                                    contentDescription = if (showGithubToken) packStringResource(Res.string.common_hide_value) else packStringResource(Res.string.common_show_value),
                                 )
                             }
                         },
@@ -457,15 +457,21 @@ fun ConnectionFormScreen(
                         value = githubOwner,
                         onValueChange = { githubOwner = it },
                         label = packStringResource(Res.string.connections_github_owner),
-                        placeholder = "my-org",
+                        placeholder = packStringResource(Res.string.connections_github_owner_placeholder),
                         singleLine = true,
+                        supportingText = {
+                            Text(
+                                packStringResource(Res.string.connections_github_owner_hint),
+                                style = AppTypography.bodySmall,
+                            )
+                        },
                         modifier = Modifier.fillMaxWidth().testTag("github_owner"),
                     )
                     RwTextField(
                         value = githubRepo,
                         onValueChange = { githubRepo = it },
                         label = packStringResource(Res.string.connections_github_repo),
-                        placeholder = "my-repo",
+                        placeholder = packStringResource(Res.string.connections_github_repo_placeholder),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().testTag("github_repo"),
                     )
@@ -476,7 +482,7 @@ fun ConnectionFormScreen(
                             githubPollingInterval = filtered
                         },
                         label = packStringResource(Res.string.connections_github_polling_interval),
-                        placeholder = "30",
+                        placeholder = packStringResource(Res.string.connections_github_polling_placeholder),
                         singleLine = true,
                         supportingText = {
                             Text(

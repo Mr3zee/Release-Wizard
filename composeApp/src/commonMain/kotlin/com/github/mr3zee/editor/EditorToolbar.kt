@@ -64,8 +64,9 @@ fun EditorToolbar(
         )
 
         BlockType.entries.forEach { type ->
+            val blockName = defaultBlockName(type)
             RwButton(
-                onClick = { onAddBlock(type, defaultBlockName(type)) },
+                onClick = { onAddBlock(type, blockName) },
                 variant = RwButtonVariant.Secondary,
                 enabled = enabled,
                 contentColor = blockTypeColor(type, appColors),
@@ -86,8 +87,9 @@ fun EditorToolbar(
             }
         }
 
+        val defaultContainerName = packStringResource(Res.string.editor_default_container_name)
         RwButton(
-            onClick = { onAddContainer("Container") },
+            onClick = { onAddContainer(defaultContainerName) },
             variant = RwButtonVariant.Secondary,
             enabled = enabled,
             contentColor = appColors.containerBlock,
@@ -176,7 +178,7 @@ fun EditorToolbar(
             }
         }
 
-        RwTooltip(tooltip = "Delete") {
+        RwTooltip(tooltip = packStringResource(Res.string.editor_toolbar_delete)) {
             RwButton(
                 onClick = onDelete,
                 variant = RwButtonVariant.Secondary,
@@ -193,11 +195,12 @@ fun EditorToolbar(
     }
 }
 
+@Composable
 private fun defaultBlockName(type: BlockType): String = when (type) {
-    BlockType.TEAMCITY_BUILD -> "Build"
-    BlockType.GITHUB_ACTION -> "Action"
-    BlockType.GITHUB_PUBLICATION -> "Publish"
-    BlockType.SLACK_MESSAGE -> "Notify"
+    BlockType.TEAMCITY_BUILD -> packStringResource(Res.string.editor_default_build_name)
+    BlockType.GITHUB_ACTION -> packStringResource(Res.string.editor_default_action_name)
+    BlockType.GITHUB_PUBLICATION -> packStringResource(Res.string.editor_default_publish_name)
+    BlockType.SLACK_MESSAGE -> packStringResource(Res.string.editor_default_notify_name)
 }
 
 // Uses blockTypeColor from DagCanvas.kt

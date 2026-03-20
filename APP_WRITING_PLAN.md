@@ -6,6 +6,39 @@ labels, error messages, placeholder text, and jargon.
 
 **Total issues found: 181 across 14 screens**
 
+## Resolution Summary
+
+**Overall: 129 fixed, 1 already resolved, 18 minor (deferred), 9 skipped**
+
+- 14 of 19 issue files fully resolved
+- 2 files partially resolved (Canvas Accessibility, Capitalization)
+- 1 file already resolved before audit (Missing Audit Action)
+- 1 file skipped by design (Jargon — app targets technical users)
+- 18 minor items deferred (complex interaction states, runtime-dependent context, out-of-scope server changes)
+
+| # | Issue File | Status | Fixed | Minor | Skipped |
+|---|-----------|--------|-------|-------|---------|
+| 1 | APP_WRITING_PASSWORD_POLICY | RESOLVED | 2 | 1 | 0 |
+| 2 | APP_WRITING_MISSING_AUDIT_ACTION | ALREADY RESOLVED | 1 | 0 | 0 |
+| 3 | APP_WRITING_HARDCODED_STRINGS | RESOLVED | 3 | 0 | 0 |
+| 4 | APP_WRITING_RETRY_MISMATCH | RESOLVED | 4 | 0 | 0 |
+| 5 | APP_WRITING_ERROR_MESSAGES | RESOLVED | 11 | 0 | 0 |
+| 6 | APP_WRITING_ORPHAN_STRINGS | RESOLVED | 15 | 0 | 0 |
+| 7 | APP_WRITING_CONFIRMATIONS | RESOLVED | 9 | 1 | 0 |
+| 8 | APP_WRITING_ACTION_LABELS | RESOLVED | 9 | 1 | 0 |
+| 9 | APP_WRITING_PLACEHOLDERS | RESOLVED | 6 | 1 | 0 |
+| 10 | APP_WRITING_EMPTY_STATES | RESOLVED | 9 | 0 | 0 |
+| 11 | APP_WRITING_CANVAS_ACCESSIBILITY | PARTIAL | 1 | 2 | 0 |
+| 12 | APP_WRITING_ACCESSIBILITY_ICONS | RESOLVED | 12 | 3 | 0 |
+| 13 | APP_WRITING_ACCESSIBILITY_LOADING | RESOLVED | 9 | 0 | 0 |
+| 14 | APP_WRITING_TERMINOLOGY | RESOLVED | 9 | 4 | 0 |
+| 15 | APP_WRITING_CAPITALIZATION | PARTIAL | 7 | 1 | 0 |
+| 16 | APP_WRITING_SORT_LABELS | RESOLVED | 4 | 1 | 0 |
+| 17 | APP_WRITING_JARGON | SKIPPED | 0 | 0 | 9 |
+| 18 | APP_WRITING_PUNCTUATION | RESOLVED | 6 | 0 | 0 |
+| 19 | APP_WRITING_THEME_AND_SIDEBAR | RESOLVED | 12 | 3 | 0 |
+| | **Total** | | **129** | **18** | **9** |
+
 ## Summary by Severity
 
 | Severity | Count | Description |
@@ -18,42 +51,42 @@ labels, error messages, placeholder text, and jargon.
 
 ### Critical (fix first)
 
-| # | Issue File | Issues | Key Problems |
-|---|-----------|--------|--------------|
-| 1 | [APP_WRITING_PASSWORD_POLICY](issues/APP_WRITING_PASSWORD_POLICY.md) | 3 | Client says "8 chars" but server requires 12 — guaranteed registration failures |
-| 2 | [APP_WRITING_MISSING_AUDIT_ACTION](issues/APP_WRITING_MISSING_AUDIT_ACTION.md) | 1 | `ADMIN_ACCESS` has no display name — potential runtime crash |
-| 3 | [APP_WRITING_HARDCODED_STRINGS](issues/APP_WRITING_HARDCODED_STRINGS.md) | 3 | 17+ strings bypass localization/language-pack system |
-| 4 | [APP_WRITING_RETRY_MISMATCH](issues/APP_WRITING_RETRY_MISMATCH.md) | 4 | "Retry" buttons perform wrong action (reload vs retry) |
-| 5 | [APP_WRITING_ERROR_MESSAGES](issues/APP_WRITING_ERROR_MESSAGES.md) | 12 | "Access denied", "Not found", "Invalid credentials" — terse, non-actionable |
+| # | Issue File | Issues | Status | Key Problems |
+|---|-----------|--------|--------|--------------|
+| 1 | [APP_WRITING_PASSWORD_POLICY](issues/APP_WRITING_PASSWORD_POLICY.md) | 3 | RESOLVED | Client says "8 chars" but server requires 12 — guaranteed registration failures |
+| 2 | [APP_WRITING_MISSING_AUDIT_ACTION](issues/APP_WRITING_MISSING_AUDIT_ACTION.md) | 1 | ALREADY RESOLVED | `ADMIN_ACCESS` has no display name — potential runtime crash |
+| 3 | [APP_WRITING_HARDCODED_STRINGS](issues/APP_WRITING_HARDCODED_STRINGS.md) | 3 | RESOLVED | 17+ strings bypass localization/language-pack system |
+| 4 | [APP_WRITING_RETRY_MISMATCH](issues/APP_WRITING_RETRY_MISMATCH.md) | 4 | RESOLVED | "Retry" buttons perform wrong action (reload vs retry) |
+| 5 | [APP_WRITING_ERROR_MESSAGES](issues/APP_WRITING_ERROR_MESSAGES.md) | 12 | RESOLVED | "Access denied", "Not found", "Invalid credentials" — terse, non-actionable |
 
 ### High Priority
 
-| # | Issue File | Issues | Key Problems |
-|---|-----------|--------|--------------|
-| 6 | [APP_WRITING_ORPHAN_STRINGS](issues/APP_WRITING_ORPHAN_STRINGS.md) | 15 | 25+ strings defined but never used — dead translation burden |
-| 7 | [APP_WRITING_CONFIRMATIONS](issues/APP_WRITING_CONFIRMATIONS.md) | 10 | Destructive confirmations don't explain consequences |
-| 8 | [APP_WRITING_ACTION_LABELS](issues/APP_WRITING_ACTION_LABELS.md) | 10 | "Leave", "Fit", "Test" — vague or misleading buttons |
-| 9 | [APP_WRITING_PLACEHOLDERS](issues/APP_WRITING_PLACEHOLDERS.md) | 7 | No required-field indicators; label=placeholder redundancy |
-| 10 | [APP_WRITING_EMPTY_STATES](issues/APP_WRITING_EMPTY_STATES.md) | 9 | Empty states that don't guide users on what to do next |
+| # | Issue File | Issues | Status | Key Problems |
+|---|-----------|--------|--------|--------------|
+| 6 | [APP_WRITING_ORPHAN_STRINGS](issues/APP_WRITING_ORPHAN_STRINGS.md) | 15 | RESOLVED | 25+ strings defined but never used — dead translation burden |
+| 7 | [APP_WRITING_CONFIRMATIONS](issues/APP_WRITING_CONFIRMATIONS.md) | 10 | RESOLVED | Destructive confirmations don't explain consequences |
+| 8 | [APP_WRITING_ACTION_LABELS](issues/APP_WRITING_ACTION_LABELS.md) | 10 | RESOLVED | "Leave", "Fit", "Test" — vague or misleading buttons |
+| 9 | [APP_WRITING_PLACEHOLDERS](issues/APP_WRITING_PLACEHOLDERS.md) | 7 | RESOLVED | No required-field indicators; label=placeholder redundancy |
+| 10 | [APP_WRITING_EMPTY_STATES](issues/APP_WRITING_EMPTY_STATES.md) | 9 | RESOLVED | Empty states that don't guide users on what to do next |
 
 ### Accessibility
 
-| # | Issue File | Issues | Key Problems |
-|---|-----------|--------|--------------|
-| 11 | [APP_WRITING_CANVAS_ACCESSIBILITY](issues/APP_WRITING_CANVAS_ACCESSIBILITY.md) | 3 | DAG canvas invisible to screen readers |
-| 12 | [APP_WRITING_ACCESSIBILITY_ICONS](issues/APP_WRITING_ACCESSIBILITY_ICONS.md) | 15 | Meaningful icons with null contentDescription |
-| 13 | [APP_WRITING_ACCESSIBILITY_LOADING](issues/APP_WRITING_ACCESSIBILITY_LOADING.md) | 9 | Loading spinners with no accessible labels |
+| # | Issue File | Issues | Status | Key Problems |
+|---|-----------|--------|--------|--------------|
+| 11 | [APP_WRITING_CANVAS_ACCESSIBILITY](issues/APP_WRITING_CANVAS_ACCESSIBILITY.md) | 3 | PARTIAL | DAG canvas invisible to screen readers |
+| 12 | [APP_WRITING_ACCESSIBILITY_ICONS](issues/APP_WRITING_ACCESSIBILITY_ICONS.md) | 15 | RESOLVED | Meaningful icons with null contentDescription |
+| 13 | [APP_WRITING_ACCESSIBILITY_LOADING](issues/APP_WRITING_ACCESSIBILITY_LOADING.md) | 9 | RESOLVED | Loading spinners with no accessible labels |
 
 ### Consistency & Polish
 
-| # | Issue File | Issues | Key Problems |
-|---|-----------|--------|--------------|
-| 14 | [APP_WRITING_TERMINOLOGY](issues/APP_WRITING_TERMINOLOGY.md) | 13 | "step" vs "block", "Sign in" vs "Register" vs "Create Account" |
-| 15 | [APP_WRITING_CAPITALIZATION](issues/APP_WRITING_CAPITALIZATION.md) | 8 | Mixed Title Case / sentence case across buttons and labels |
-| 16 | [APP_WRITING_SORT_LABELS](issues/APP_WRITING_SORT_LABELS.md) | 5 | "Newest first" sorts by updatedAt, not createdAt |
-| 17 | [APP_WRITING_JARGON](issues/APP_WRITING_JARGON.md) | 9 | "POST", "Cron Expression", "${" syntax in user-facing hints |
-| 18 | [APP_WRITING_PUNCTUATION](issues/APP_WRITING_PUNCTUATION.md) | 6 | ASCII `...` vs Unicode `…`, trailing periods, embedded symbols |
-| 19 | [APP_WRITING_THEME_AND_SIDEBAR](issues/APP_WRITING_THEME_AND_SIDEBAR.md) | 15 | "Theme: Auto" ambiguity, panel tooltips, role action wording |
+| # | Issue File | Issues | Status | Key Problems |
+|---|-----------|--------|--------|--------------|
+| 14 | [APP_WRITING_TERMINOLOGY](issues/APP_WRITING_TERMINOLOGY.md) | 13 | RESOLVED | "step" vs "block", "Sign in" vs "Register" vs "Create Account" |
+| 15 | [APP_WRITING_CAPITALIZATION](issues/APP_WRITING_CAPITALIZATION.md) | 8 | PARTIAL | Mixed Title Case / sentence case across buttons and labels |
+| 16 | [APP_WRITING_SORT_LABELS](issues/APP_WRITING_SORT_LABELS.md) | 5 | RESOLVED | "Newest first" sorts by updatedAt, not createdAt |
+| 17 | [APP_WRITING_JARGON](issues/APP_WRITING_JARGON.md) | 9 | SKIPPED | "POST", "Cron Expression", "${" syntax in user-facing hints |
+| 18 | [APP_WRITING_PUNCTUATION](issues/APP_WRITING_PUNCTUATION.md) | 6 | RESOLVED | ASCII `...` vs Unicode `…`, trailing periods, embedded symbols |
+| 19 | [APP_WRITING_THEME_AND_SIDEBAR](issues/APP_WRITING_THEME_AND_SIDEBAR.md) | 15 | RESOLVED | "Theme: Auto" ambiguity, panel tooltips, role action wording |
 
 ## Screens Reviewed
 

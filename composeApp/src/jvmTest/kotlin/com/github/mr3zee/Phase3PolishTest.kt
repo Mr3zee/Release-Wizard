@@ -118,7 +118,7 @@ class Phase3PolishTest {
             MaterialTheme { ConnectionListScreen(viewModel = vm, onCreateConnection = {}, onEditConnection = {}, onBack = {}) }
         }
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("No connections yet", substring = true).fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithText("No connections yet. Add one to get started.").assertExists()
+        onNodeWithText("No connections yet. Connections link external services", substring = true).assertExists()
         onNodeWithTag("empty_state_create_connection_button").assertExists()
     }
 
@@ -140,7 +140,7 @@ class Phase3PolishTest {
             MaterialTheme { TeamListScreen(viewModel = vm, onTeamClick = {}, onTeamCreated = {}, onMyInvites = {}) }
         }
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("No teams yet", substring = true).fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithText("No teams yet. Create one to get started.").assertExists()
+        onNodeWithText("No teams yet. Create a team or ask a colleague to invite you.").assertExists()
         onNodeWithTag("empty_state_create_team_button").assertExists()
     }
 

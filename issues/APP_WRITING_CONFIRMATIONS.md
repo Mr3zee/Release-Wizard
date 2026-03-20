@@ -50,3 +50,20 @@ deletes show nothing.
 ### GLOBAL_19 — Unsaved changes discard prompt (LOW)
 **Current:** `"You have unsaved changes. Discard them?"`
 **Suggested:** `"You have unsaved changes that will be lost. Do you want to discard them?"`
+
+## Resolution
+
+**Status:** RESOLVED
+
+| Issue | Status | Notes |
+|-------|--------|-------|
+| PROJLIST_05 | Fixed | Added consequence info to project delete confirmation |
+| RELLIST_08 | Fixed | Changed to consequence-first phrasing |
+| TEAMDETAIL_08 | Fixed | Added access loss and rejoin info |
+| TEAMMGMT_09 | Fixed | Added consequence info about project access |
+| TEAMMGMT_02 | Fixed | Aligned phrasing patterns |
+| AUTOMATION_03 | Minor | Webhook delete still uses generic message (context depends on runtime data) |
+| INVITES_05 | Fixed | Changed "from" to "to" and added rejoin info |
+| EDITOR_11 | Fixed | Reworded to explain options |
+| EDITOR_16 | Fixed | Changed "Force unlock will" to "This will end" |
+| GLOBAL_19 | Fixed | Added "will be lost" consequence |

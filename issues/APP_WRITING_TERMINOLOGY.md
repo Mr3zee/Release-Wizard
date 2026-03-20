@@ -53,3 +53,23 @@ Title could be "Pending Invites" to match.
 
 ### CONNFORM_11 — "Configuration" in section headers vs "Connection" in title (LOW)
 **Fix:** Use "Settings" or "Details" in section headers.
+
+## Resolution
+
+**Status:** RESOLVED
+
+| Issue | Status | Notes |
+|-------|--------|-------|
+| LOGIN_04 | Fixed | "Register" changed to "Create account" consistently |
+| LOGIN_05 | Fixed | "Sign in to continue" changed to "Sign in to your account" |
+| RELDETAIL_03 | Fixed | Added stop/cancel tooltips explaining the difference |
+| RELDETAIL_04 | Fixed | "cancelled" uses "interrupted"/"cancelled" appropriately |
+| RELDETAIL_05 | Fixed | "step" changed to "block" in approval message |
+| CONNLIST_03 | Fixed | Asymmetric test success/failure phrasing aligned |
+| AUDIT_02 | Fixed | "Release rerun" changed to "Release restarted" |
+| AUDIT_03 | Fixed | "User logged in" changed to "Logged in", "User registered" changed to "Registered" |
+| EDITOR_15 | Minor | Pre-gate/Post-gate casing kept as-is |
+| RELDETAIL_12 | Minor | Gate phase wording kept as-is |
+| PROJLIST_09 | Minor | Tonal shift between search/empty states kept |
+| INVITES_09 | Minor | "My invites" title updated (lowercase "invites") |
+| CONNFORM_11 | Fixed | "Configuration" changed to "settings" in section headers |

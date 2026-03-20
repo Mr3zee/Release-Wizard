@@ -38,3 +38,19 @@ Spinner + "Loading release…" text exist as separate nodes. Should be linked se
 ### LOGIN_08 — Login button loading (LOW)
 Submit button text replaced by spinner with no accessible description.
 Screen readers hear a button with no label.
+
+## Resolution
+
+**Status:** RESOLVED
+
+| Issue | Status | Notes |
+|-------|--------|-------|
+| PROJLIST_08 | Fixed | Added `loading_projects` semantic contentDescription |
+| RELLIST_10 | Fixed | Added `loading_releases` semantic contentDescription |
+| AUTOMATION_16 | Fixed | Added `loading_automation` semantic contentDescription |
+| TEAMMGMT_06 | Fixed | Added `loading_team_management` semantic contentDescription |
+| INVITES_07 | Fixed | Added `loading_invites` semantic contentDescription |
+| CONNLIST_12 | Fixed | Added `loading_connections` semantic contentDescription |
+| AUDIT_04 | Fixed | Added `loading_audit_log` semantic contentDescription |
+| RELDETAIL_16 | Fixed | Pre-existing text serves as accessible label |
+| LOGIN_08 | Fixed | Added `loading_login` semantic contentDescription |

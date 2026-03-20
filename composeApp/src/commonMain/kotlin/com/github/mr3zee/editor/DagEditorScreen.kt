@@ -371,8 +371,8 @@ fun DagEditorScreen(
                     )
                     RwTooltip(
                         tooltip = packStringResource(
-                            if (leftSidebarExpanded) Res.string.editor_collapse_panel
-                            else Res.string.editor_expand_panel
+                            if (leftSidebarExpanded) Res.string.editor_collapse_toolbar
+                            else Res.string.editor_expand_toolbar
                         ),
                     ) {
                         RwIconButton(
@@ -383,8 +383,8 @@ fun DagEditorScreen(
                                 if (leftSidebarExpanded) Icons.AutoMirrored.Filled.KeyboardArrowLeft
                                 else Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                 contentDescription = packStringResource(
-                                    if (leftSidebarExpanded) Res.string.editor_collapse_panel
-                                    else Res.string.editor_expand_panel
+                                    if (leftSidebarExpanded) Res.string.editor_collapse_toolbar
+                                    else Res.string.editor_expand_toolbar
                                 ),
                                 modifier = Modifier.size(16.dp),
                             )
@@ -431,8 +431,8 @@ fun DagEditorScreen(
                     )
                     RwTooltip(
                         tooltip = packStringResource(
-                            if (rightSidebarExpanded) Res.string.editor_collapse_panel
-                            else Res.string.editor_expand_panel
+                            if (rightSidebarExpanded) Res.string.editor_collapse_properties
+                            else Res.string.editor_expand_properties
                         ),
                     ) {
                         RwIconButton(
@@ -443,8 +443,8 @@ fun DagEditorScreen(
                                 if (rightSidebarExpanded) Icons.AutoMirrored.Filled.KeyboardArrowRight
                                 else Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                                 contentDescription = packStringResource(
-                                    if (rightSidebarExpanded) Res.string.editor_collapse_panel
-                                    else Res.string.editor_expand_panel
+                                    if (rightSidebarExpanded) Res.string.editor_collapse_properties
+                                    else Res.string.editor_expand_properties
                                 ),
                                 modifier = Modifier.size(16.dp),
                             )
@@ -524,7 +524,7 @@ private fun EditLockBanner(
                 ) {
                     Icon(
                         Icons.Default.Lock,
-                        contentDescription = null,
+                        contentDescription = packStringResource(Res.string.editor_lock_icon),
                         modifier = Modifier.size(16.dp),
                         tint = contentColor,
                     )
@@ -574,7 +574,7 @@ private fun EditLockBanner(
                 ) {
                     Icon(
                         Icons.Default.Lock,
-                        contentDescription = null,
+                        contentDescription = packStringResource(Res.string.editor_lock_icon),
                         modifier = Modifier.size(16.dp),
                         tint = MaterialTheme.colorScheme.onErrorContainer,
                     )
@@ -648,11 +648,11 @@ private fun formatValidationError(error: ValidationError): String = when (error)
     is ValidationError.DuplicateBlockId -> packStringResource(Res.string.editor_validation_duplicate_id, error.blockId.value)
     is ValidationError.InvalidEdgeReference -> packStringResource(Res.string.editor_validation_invalid_edge, error.missingBlockId.value)
     is ValidationError.SelfLoop -> packStringResource(Res.string.editor_validation_self_loop, error.edge.fromBlockId.value)
-    is ValidationError.TooManyBlocks -> "Too many blocks: ${error.count} (max ${error.max})"
-    is ValidationError.TooManyEdges -> "Too many edges: ${error.count} (max ${error.max})"
-    is ValidationError.NestingTooDeep -> "Nesting too deep: depth ${error.depth} (max ${error.max})"
-    is ValidationError.BlockNameTooLong -> "Block name too long: ${error.length} chars (max ${error.max})"
-    is ValidationError.TooManyParameters -> "Too many parameters on block (max ${error.max})"
-    is ValidationError.ParameterKeyTooLong -> "Parameter key too long (max ${error.max})"
-    is ValidationError.ParameterValueTooLong -> "Parameter value too long (max ${error.max})"
+    is ValidationError.TooManyBlocks -> packStringResource(Res.string.editor_validation_too_many_blocks, error.count, error.max)
+    is ValidationError.TooManyEdges -> packStringResource(Res.string.editor_validation_too_many_edges, error.count, error.max)
+    is ValidationError.NestingTooDeep -> packStringResource(Res.string.editor_validation_nesting_too_deep, error.depth, error.max)
+    is ValidationError.BlockNameTooLong -> packStringResource(Res.string.editor_validation_block_name_too_long, error.length, error.max)
+    is ValidationError.TooManyParameters -> packStringResource(Res.string.editor_validation_too_many_parameters, error.max)
+    is ValidationError.ParameterKeyTooLong -> packStringResource(Res.string.editor_validation_parameter_key_too_long, error.max)
+    is ValidationError.ParameterValueTooLong -> packStringResource(Res.string.editor_validation_parameter_value_too_long, error.max)
 }

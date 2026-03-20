@@ -87,7 +87,7 @@ fun SidebarTeamSwitcher(
                 .padding(Spacing.sm),
             contentAlignment = Alignment.Center,
         ) {
-            RwTooltip(tooltip = activeTeamName) {
+            RwTooltip(tooltip = activeTeamName.ifEmpty { packStringResource(Res.string.sidebar_team_none) }) {
                 UnstyledButton(
                     onClick = { if (userTeams.size > 1) showDropdown = true },
                     modifier = Modifier
@@ -147,7 +147,7 @@ fun SidebarTeamSwitcher(
                     if (userTeams.size > 1) {
                         Icon(
                             Icons.Default.ArrowDropDown,
-                            contentDescription = null,
+                            contentDescription = packStringResource(Res.string.projects_switch_team),
                             tint = colors.chromeTextSecondary,
                             modifier = Modifier.size(18.dp),
                         )
@@ -281,7 +281,11 @@ fun SidebarSettingsContent(
                 }
                 Icon(
                     if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = null,
+                    contentDescription = if (expanded) {
+                        packStringResource(Res.string.sidebar_settings_collapse)
+                    } else {
+                        packStringResource(Res.string.sidebar_settings_expand)
+                    },
                     tint = colors.chromeTextTertiary,
                     modifier = Modifier
                         .size(18.dp)

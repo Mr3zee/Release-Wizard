@@ -36,3 +36,18 @@ Same action has three different labels with inconsistent casing and verb.
 ### LOGIN_10 — "Sign In" button vs "Sign in" toggle link (LOW)
 Mixed capitalization for the same phrase.
 **Fix:** Adopt sentence case everywhere ("Sign in", "Create account").
+
+## Resolution
+
+**Status:** PARTIAL
+
+| Issue | Status | Notes |
+|-------|--------|-------|
+| PROJLIST_02 | Minor | Mixed case kept for form titles vs buttons |
+| EDITOR_05 | Fixed | Brand names properly capitalized (TeamCity, GitHub, Slack) |
+| TEAMLIST_03 | Fixed | "Request to Join" changed to "Request to join" |
+| TEAMLIST_04 | Fixed | "My Invites" changed to "My invites" |
+| CONNLIST_10 | Fixed | Orphan title removed entirely |
+| CONNFORM_07 | Fixed | "Polling Interval (seconds)" changed to "Polling interval" |
+| RELLIST_01 | Fixed | Unified to "Start release" everywhere |
+| LOGIN_10 | Fixed | "Sign In" changed to "Sign in", "Create Account" changed to "Create account" |

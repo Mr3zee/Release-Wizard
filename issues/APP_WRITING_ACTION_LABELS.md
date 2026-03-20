@@ -42,3 +42,20 @@ Ctrl+/ toggles the overlay, but description says "Show" (one-directional).
 ### TEAMMGMT_05 — "Delete" in Danger Zone (MEDIUM)
 Section says "Delete Team" but button just says "Delete".
 **Fix:** Use `"Delete Team"` as the button label.
+
+## Resolution
+
+**Status:** RESOLVED
+
+| Issue | Status | Notes |
+|-------|--------|-------|
+| TEAMDETAIL_01 | Fixed | "Leave" changed to "Leave team" |
+| EDITOR_06 | Fixed | "Fit" changed to "Reset view" |
+| CONNLIST_08 | Fixed | "Test" changed to "Test connection" |
+| AUTOMATION_09 | Fixed | "I've saved it" changed to "Done" |
+| GLOBAL_08 | Fixed | "Click again" changed to "Select again" |
+| GLOBAL_13 | Fixed | "Create new item" changed to "Create new" |
+| GLOBAL_14 | Fixed | "Close dialog / deselect" changed to "Close or deselect" |
+| GLOBAL_16 | Fixed | "Show keyboard shortcuts" changed to "Toggle keyboard shortcuts" |
+| TEAMMGMT_05 | Fixed | Danger zone button changed to "Delete Team" |
+| TEAMDETAIL_09 | Minor | "Audit Log" vs "Manage" kept as-is (consistent within toolbar) |

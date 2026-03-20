@@ -31,3 +31,15 @@ Screen readers hear "Name A to Z" with no context that this is a sort control.
 For sort labels: Replace `"Newest first"` / `"Oldest first"` with `"Recently updated"` /
 `"Least recently updated"` across all list screens. Apply to `common_sort_newest` and
 `common_sort_oldest` in `strings.xml` — single change fixes all screens.
+
+## Resolution
+
+**Status:** RESOLVED
+
+| Issue | Status | Notes |
+|-------|--------|-------|
+| PROJLIST_01 | Fixed | "Newest first" changed to "Recently updated" |
+| CONNLIST_09 | Fixed | Same change applied |
+| RELLIST_11 | Fixed | Removed duplicate timestamp from release list title |
+| AUTOMATION_04 | Fixed | "Next run" changed to "Schedule" label |
+| PROJLIST_10 | Minor | Sort button semantic context not addressed |

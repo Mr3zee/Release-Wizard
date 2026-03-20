@@ -57,7 +57,7 @@ class ConnectionScreensTest {
         }
 
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("No connections yet", substring = true).fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithText("No connections yet. Add one to get started.").assertExists()
+        onNodeWithText("No connections yet. Connections link external services", substring = true).assertExists()
     }
 
     @Test
@@ -79,7 +79,7 @@ class ConnectionScreensTest {
         }
 
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("My GitHub").fetchSemanticsNodes().isNotEmpty() }
-        onAllNodesWithText("Test").assertCountEquals(2)
+        onAllNodesWithText("Test connection").assertCountEquals(2)
         onAllNodesWithText("Delete").assertCountEquals(2)
     }
 
@@ -245,8 +245,8 @@ class ConnectionScreensTest {
             MaterialTheme { ConnectionListScreen(viewModel = vm, onCreateConnection = {}, onEditConnection = {}, onBack = {}) }
         }
 
-        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Retry").fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithText("Retry").assertExists()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Refresh").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithText("Refresh").assertExists()
     }
 
     @Test
@@ -648,7 +648,7 @@ class ConnectionScreensTest {
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("sort_option_NEWEST").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("sort_option_NEWEST").performClick()
         waitForIdle()
-        onNodeWithText("Newest first", substring = true).assertExists()
+        onNodeWithText("Recently updated", substring = true).assertExists()
     }
 
     @Test
@@ -662,31 +662,28 @@ class ConnectionScreensTest {
         onNodeWithTag("github_token").performTextInput("secret123")
         waitForIdle()
 
-        // Before toggling: the toggle icon should have "Show password" content description
+        // Before toggling: the toggle icon should have "Show value" content description
         onNode(
-            hasTestTag("github_token_toggle_visibility") and hasContentDescription("Show password"),
-            useUnmergedTree = true,
-        ).assertExists("Toggle should show 'Show password' before clicking")
+            hasTestTag("github_token_toggle_visibility") and hasContentDescription("Show value"),
+        ).assertExists("Toggle should show 'Show value' before clicking")
 
         // Click the toggle visibility button
-        onNodeWithTag("github_token_toggle_visibility", useUnmergedTree = true).performClick()
+        onNodeWithTag("github_token_toggle_visibility").performClick()
         waitForIdle()
 
-        // After toggling: the toggle icon should have "Hide password" content description
+        // After toggling: the toggle icon should have "Hide value" content description
         onNode(
-            hasTestTag("github_token_toggle_visibility") and hasContentDescription("Hide password"),
-            useUnmergedTree = true,
-        ).assertExists("Toggle should show 'Hide password' after clicking")
+            hasTestTag("github_token_toggle_visibility") and hasContentDescription("Hide value"),
+        ).assertExists("Toggle should show 'Hide value' after clicking")
 
         // Click again to re-hide
-        onNodeWithTag("github_token_toggle_visibility", useUnmergedTree = true).performClick()
+        onNodeWithTag("github_token_toggle_visibility").performClick()
         waitForIdle()
 
-        // Should revert back to "Show password"
+        // Should revert back to "Show value"
         onNode(
-            hasTestTag("github_token_toggle_visibility") and hasContentDescription("Show password"),
-            useUnmergedTree = true,
-        ).assertExists("Toggle should revert to 'Show password' after second click")
+            hasTestTag("github_token_toggle_visibility") and hasContentDescription("Show value"),
+        ).assertExists("Toggle should revert to 'Show value' after second click")
     }
 
     // ===========================================================================
@@ -746,7 +743,7 @@ class ConnectionScreensTest {
         // Alpha (2026-03-12) is newer than Zebra (2026-03-10), so should be first
         onNodeWithText("Alpha Conn").assertExists()
         onNodeWithText("Zebra Conn").assertExists()
-        onNodeWithText("Newest first", substring = true).assertExists()
+        onNodeWithText("Recently updated", substring = true).assertExists()
         // Verify relative vertical positions: Alpha (c2, newer) should appear above Zebra (c1, older)
         val alphaTop = onNodeWithTag("connection_item_c2", useUnmergedTree = true)
             .getUnclippedBoundsInRoot().top
@@ -768,7 +765,7 @@ class ConnectionScreensTest {
         // Zebra (2026-03-10) is oldest, so should be first
         onNodeWithText("Zebra Conn").assertExists()
         onNodeWithText("Alpha Conn").assertExists()
-        onNodeWithText("Oldest first", substring = true).assertExists()
+        onNodeWithText("Least recently updated", substring = true).assertExists()
         // Verify relative vertical positions: Zebra (c1, older) should appear above Alpha (c2, newer)
         val zebraTop = onNodeWithTag("connection_item_c1", useUnmergedTree = true)
             .getUnclippedBoundsInRoot().top

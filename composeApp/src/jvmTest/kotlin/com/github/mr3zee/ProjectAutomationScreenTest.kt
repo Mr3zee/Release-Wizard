@@ -421,7 +421,7 @@ class ProjectAutomationScreenTest {
         onNodeWithTag("schedule_cron_input", useUnmergedTree = true).performTextInput("bad cron")
 
         // Validation error text should appear and button stays disabled
-        onNodeWithText("Invalid cron expression", substring = true).assertExists()
+        onNodeWithText("Invalid format", substring = true).assertExists()
         onNodeWithTag("schedule_create_button", useUnmergedTree = true).assertIsNotEnabled()
     }
 
@@ -443,7 +443,7 @@ class ProjectAutomationScreenTest {
         onNodeWithTag("schedule_cron_input", useUnmergedTree = true).performTextInput("30 14 * * 2")
 
         // Should show valid indicator
-        onNodeWithText("Valid cron expression", substring = true).assertExists()
+        onNodeWithText("Valid", substring = true).assertExists()
         onNodeWithTag("schedule_create_button", useUnmergedTree = true).assertIsEnabled()
     }
 
@@ -805,7 +805,7 @@ class ProjectAutomationScreenTest {
         onNodeWithTag("maven_repo_url_field", useUnmergedTree = true).performTextInput("ftp://invalid.url")
 
         // Should show URL validation error
-        onNodeWithText("URL must start with http:// or https://", substring = true).assertExists()
+        onNodeWithText("Must start with http:// or https://", substring = true).assertExists()
 
         // Fill other fields
         onNodeWithTag("maven_group_id_field", useUnmergedTree = true).performTextInput("org.test")
@@ -833,7 +833,7 @@ class ProjectAutomationScreenTest {
         onNodeWithTag("maven_repo_url_field", useUnmergedTree = true).performTextInput("https://repo1.maven.org/maven2")
 
         // No error text about URL should be shown
-        onNodeWithText("URL must start with http:// or https://", substring = true).assertDoesNotExist()
+        onNodeWithText("Must start with http:// or https://", substring = true).assertDoesNotExist()
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -911,7 +911,7 @@ class ProjectAutomationScreenTest {
 
         // Wait for error snackbar to appear (the error message from server or fallback)
         waitUntil(timeoutMillis = 5000L) {
-            onAllNodesWithText("error", substring = true, ignoreCase = true).fetchSemanticsNodes().isNotEmpty()
+            onAllNodesWithText("went wrong", substring = true, ignoreCase = true).fetchSemanticsNodes().isNotEmpty()
         }
     }
 
@@ -1192,8 +1192,8 @@ class ProjectAutomationScreenTest {
             onAllNodesWithText("com.example:my-lib").fetchSemanticsNodes().isNotEmpty()
         }
 
-        // "Never checked" text should appear since lastCheckedAt is null
-        onNodeWithText("Never checked", substring = true, useUnmergedTree = true).assertExists()
+        // "Never" text should appear since lastCheckedAt is null
+        onNodeWithText("Never", substring = true, useUnmergedTree = true).assertExists()
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -1356,8 +1356,8 @@ class ProjectAutomationScreenTest {
 
         // All three section headers should be visible
         onNodeWithText("Schedules", substring = true).assertExists()
-        onNodeWithText("Webhook", substring = true).assertExists()
-        onNodeWithText("Maven", substring = true).assertExists()
+        onAllNodesWithText("Webhook", substring = true).onFirst().assertExists()
+        onAllNodesWithText("Maven", substring = true).onFirst().assertExists()
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -1402,8 +1402,10 @@ class ProjectAutomationScreenTest {
             onAllNodesWithTag("confirm_delete_maven_m1", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
 
-        // Confirmation message should contain the artifact identity
-        onNodeWithText("com.example:my-lib", substring = true, useUnmergedTree = true).assertExists()
+        // Confirmation message should contain the artifact identity (also appears in item card)
+        onAllNodesWithText("com.example:my-lib", substring = true, useUnmergedTree = true).fetchSemanticsNodes().let {
+            assert(it.size >= 2) { "Artifact identity should appear in item and confirmation" }
+        }
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -1427,7 +1429,7 @@ class ProjectAutomationScreenTest {
         // Enter cron with only 3 fields
         onNodeWithTag("schedule_cron_input", useUnmergedTree = true).performTextInput("0 9 *")
 
-        onNodeWithText("Invalid cron expression", substring = true).assertExists()
+        onNodeWithText("Invalid format", substring = true).assertExists()
         onNodeWithTag("schedule_create_button", useUnmergedTree = true).assertIsNotEnabled()
     }
 
@@ -1448,7 +1450,7 @@ class ProjectAutomationScreenTest {
         // Enter cron with minute = 60 (invalid, max is 59)
         onNodeWithTag("schedule_cron_input", useUnmergedTree = true).performTextInput("60 9 * * *")
 
-        onNodeWithText("Invalid cron expression", substring = true).assertExists()
+        onNodeWithText("Invalid format", substring = true).assertExists()
         onNodeWithTag("schedule_create_button", useUnmergedTree = true).assertIsNotEnabled()
     }
 
@@ -1469,7 +1471,7 @@ class ProjectAutomationScreenTest {
         // Enter cron with range and step expressions
         onNodeWithTag("schedule_cron_input", useUnmergedTree = true).performTextInput("*/15 9-17 * * 1-5")
 
-        onNodeWithText("Valid cron expression", substring = true).assertExists()
+        onNodeWithText("Valid", substring = true).assertExists()
         onNodeWithTag("schedule_create_button", useUnmergedTree = true).assertIsEnabled()
     }
 
@@ -1491,7 +1493,7 @@ class ProjectAutomationScreenTest {
         onNodeWithTag("schedule_cron_input", useUnmergedTree = true).performTextInput("0 9 * * 1-5")
 
         // Should show the preset description as a hint
-        onNodeWithText("Weekdays", substring = true).assertExists()
+        onNodeWithText("weekday", substring = true, ignoreCase = true).assertExists()
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -1516,7 +1518,7 @@ class ProjectAutomationScreenTest {
         onNodeWithTag("maven_repo_url_field", useUnmergedTree = true).performTextInput("http://repo.example.com")
 
         // No URL error should appear
-        onNodeWithText("URL must start with http:// or https://", substring = true).assertDoesNotExist()
+        onNodeWithText("Must start with http:// or https://", substring = true).assertDoesNotExist()
     }
 
     @Test
@@ -1599,8 +1601,10 @@ class ProjectAutomationScreenTest {
             onAllNodesWithTag("confirm_delete_schedule_s1", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
 
-        // The confirmation message includes the cron expression
-        onNodeWithText("0 9 * * *", substring = true, useUnmergedTree = true).assertExists()
+        // The confirmation message includes the cron expression (also shown in the schedule item)
+        onAllNodesWithText("0 9 * * *", substring = true, useUnmergedTree = true).fetchSemanticsNodes().let {
+            assert(it.size >= 2) { "Cron expression should appear in item and confirmation" }
+        }
     }
 
     @Test
@@ -1613,6 +1617,6 @@ class ProjectAutomationScreenTest {
         }
 
         // Webhook items show a label (the text "Webhook Trigger" or similar)
-        onNodeWithText("Webhook", substring = true).assertExists()
+        onAllNodesWithText("Webhook", substring = true).onFirst().assertExists()
     }
 }

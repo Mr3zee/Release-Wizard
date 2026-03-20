@@ -61,3 +61,25 @@ Could mean received or remaining.
 
 ### AUDIT_06 — "Lock forcibly released" is only 3-word label (LOW)
 Minor inconsistency; all others are 2 words. Consider `"Lock force-released"`.
+
+## Resolution
+
+**Status:** RESOLVED
+
+| Issue | Status | Notes |
+|-------|--------|-------|
+| GLOBAL_01 | Fixed | "Theme: Auto" changed to "Theme: System" |
+| GLOBAL_17 | Fixed | Collapsed sidebar shows tooltip "No team selected" instead of bare "?" |
+| EDITOR_08 | Fixed | Split panel tooltips: toolbar vs properties |
+| TEAMMGMT_07 | Fixed | "Promote to Lead"/"Demote to Collaborator" changed to "Set as Lead"/"Set as Collaborator" |
+| TEAMMGMT_08 | Fixed | "(You)" changed to "You" |
+| INVITES_02 | Fixed | Updated to "When someone invites you to a team, the invitation will appear here." |
+| INVITES_06 | Minor | "Invited by" kept as-is |
+| TEAMMGMT_04 | Fixed | Key renamed from `teams_cancel_invite_confirmation` to `teams_revoke_invite_confirmation` |
+| TEAMMGMT_12 | Minor | "Dismiss" vs "Close" kept (component-level concern) |
+| CONNFORM_09 | Fixed | "Type cannot be changed after creation" expanded to longer guidance |
+| RELDETAIL_14 | Fixed | Title now uses `releases_release_title` with release ID |
+| RELDETAIL_08 | Fixed | "Outputs:" changed to "Outputs" (removed colon) |
+| RELDETAIL_10 | Minor | "Stopped" duration label kept |
+| RELDETAIL_13 | Fixed | "2 of 3 approvals" changed to "2 of 3 approvals received" |
+| AUDIT_06 | Fixed | "Lock forcibly released" changed to "Lock force-released" |

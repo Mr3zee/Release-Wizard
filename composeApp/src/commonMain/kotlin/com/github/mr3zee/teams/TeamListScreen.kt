@@ -77,15 +77,15 @@ fun TeamListScreen(
     }
     ProvideShortcutActions(shortcutActions) {
 
-    val retryLabel = packStringResource(Res.string.common_retry)
+    val refreshLabel = packStringResource(Res.string.common_refresh)
     val resolvedError = error?.resolve()
 
-    // Show errors via snackbar
+    // Show errors via snackbar — use Refresh since the error may come from load or join
     LaunchedEffect(error) {
         val msg = resolvedError ?: return@LaunchedEffect
         snackbarHostState.showSnackbar(
             message = msg,
-            actionLabel = retryLabel,
+            actionLabel = refreshLabel,
             duration = SnackbarDuration.Long,
         ).let { result ->
             if (result == SnackbarResult.ActionPerformed) {
@@ -389,7 +389,7 @@ private fun CreateTeamInlineForm(
             value = name,
             onValueChange = { name = it },
             label = packStringResource(Res.string.teams_team_name),
-            placeholder = packStringResource(Res.string.teams_team_name),
+            placeholder = packStringResource(Res.string.teams_team_name_placeholder),
             singleLine = true,
             modifier = Modifier.fillMaxWidth().testTag("team_name_input"),
         )
@@ -398,7 +398,7 @@ private fun CreateTeamInlineForm(
             value = description,
             onValueChange = { description = it },
             label = packStringResource(Res.string.teams_description_optional),
-            placeholder = packStringResource(Res.string.teams_description_optional),
+            placeholder = packStringResource(Res.string.teams_description_placeholder),
             modifier = Modifier.fillMaxWidth().testTag("team_description_input"),
         )
     }

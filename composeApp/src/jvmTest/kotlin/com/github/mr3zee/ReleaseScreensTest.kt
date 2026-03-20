@@ -344,7 +344,7 @@ class ReleaseScreensTest {
         }
 
         onNodeWithTag("disconnected_indicator").assertExists()
-        onNodeWithText("Reconnecting (attempt 3)...").assertExists()
+        onNodeWithText("Reconnecting (attempt 3)\u2026").assertExists()
     }
 
     @Test
@@ -684,7 +684,7 @@ class ReleaseScreensTest {
             click(Offset(190f, 135f))
         }
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("block_detail_panel").fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithText("Outputs:").assertExists()
+        onNodeWithText("Outputs").assertExists()
         onNodeWithText("buildNumber: 42", substring = true).assertExists()
     }
 
@@ -2820,7 +2820,7 @@ class ReleaseScreensTest {
         clickBlock(this)
 
         onNodeWithTag("block_status_text").assertExists()
-        onNodeWithText("Stopped", substring = true).assertExists()
+        onAllNodesWithText("Stopped", substring = true).onFirst().assertExists()
         onNodeWithTag("stopped_context_text", useUnmergedTree = true).assertExists()
         onNodeWithText("re-execute when the release is resumed", substring = true, useUnmergedTree = true).assertExists()
         // Duration text should show "Stopped" label
@@ -2951,8 +2951,8 @@ class ReleaseScreensTest {
 
         onNodeWithTag("sub_builds_section", useUnmergedTree = true).assertExists()
         onNodeWithTag("sub_builds_header", useUnmergedTree = true).assertExists()
-        // Summary shows "1/2" (1 succeeded out of 2 total)
-        onNodeWithText("1", substring = true, useUnmergedTree = true).assertExists()
+        // Summary shows "1/2 succeeded" (1 succeeded out of 2 total)
+        onNodeWithText("1/2 succeeded", substring = true, useUnmergedTree = true).assertExists()
     }
 
     // QA-RELDETAIL-22: Sub-builds expanding shows individual rows
@@ -3080,7 +3080,7 @@ class ReleaseScreensTest {
 
         // Should show snackbar with server error message
         waitUntil(timeoutMillis = 3000L) {
-            onAllNodesWithText("error", substring = true, ignoreCase = true).fetchSemanticsNodes().isNotEmpty()
+            onAllNodesWithText("went wrong", substring = true, ignoreCase = true).fetchSemanticsNodes().isNotEmpty()
         }
     }
 

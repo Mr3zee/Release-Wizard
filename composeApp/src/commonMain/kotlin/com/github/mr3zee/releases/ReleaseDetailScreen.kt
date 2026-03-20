@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwInlineConfirmation
+import com.github.mr3zee.components.RwTooltip
 import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.model.*
@@ -93,8 +94,13 @@ fun ReleaseDetailScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
+                        val titleText = if (release != null) {
+                            packStringResource(Res.string.releases_release_title, release.id.value.take(8))
+                        } else {
+                            packStringResource(Res.string.releases_detail_title)
+                        }
                         Text(
-                            packStringResource(Res.string.releases_detail_title),
+                            titleText,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -126,20 +132,24 @@ fun ReleaseDetailScreen(
                         )
                     }
                     if (release?.status == ReleaseStatus.RUNNING) {
-                        RwButton(
-                            onClick = { activeConfirmation = ActiveConfirmation.StopRelease },
-                            modifier = Modifier.testTag("stop_release_button"),
-                            variant = RwButtonVariant.Secondary,
-                        ) {
-                            Text(packStringResource(Res.string.releases_stop))
+                        RwTooltip(tooltip = packStringResource(Res.string.releases_stop_tooltip)) {
+                            RwButton(
+                                onClick = { activeConfirmation = ActiveConfirmation.StopRelease },
+                                modifier = Modifier.testTag("stop_release_button"),
+                                variant = RwButtonVariant.Secondary,
+                            ) {
+                                Text(packStringResource(Res.string.releases_stop))
+                            }
                         }
-                        RwButton(
-                            onClick = { activeConfirmation = ActiveConfirmation.CancelRelease },
-                            modifier = Modifier.testTag("cancel_release_button"),
-                            variant = RwButtonVariant.Ghost,
-                            contentColor = MaterialTheme.colorScheme.error,
-                        ) {
-                            Text(packStringResource(Res.string.common_cancel))
+                        RwTooltip(tooltip = packStringResource(Res.string.releases_cancel_tooltip)) {
+                            RwButton(
+                                onClick = { activeConfirmation = ActiveConfirmation.CancelRelease },
+                                modifier = Modifier.testTag("cancel_release_button"),
+                                variant = RwButtonVariant.Ghost,
+                                contentColor = MaterialTheme.colorScheme.error,
+                            ) {
+                                Text(packStringResource(Res.string.common_cancel))
+                            }
                         }
                     }
                     if (release?.status == ReleaseStatus.STOPPED) {
@@ -150,23 +160,27 @@ fun ReleaseDetailScreen(
                         ) {
                             Text(packStringResource(Res.string.releases_resume))
                         }
-                        RwButton(
-                            onClick = { activeConfirmation = ActiveConfirmation.CancelRelease },
-                            modifier = Modifier.testTag("cancel_release_button"),
-                            variant = RwButtonVariant.Ghost,
-                            contentColor = MaterialTheme.colorScheme.error,
-                        ) {
-                            Text(packStringResource(Res.string.common_cancel))
+                        RwTooltip(tooltip = packStringResource(Res.string.releases_cancel_tooltip)) {
+                            RwButton(
+                                onClick = { activeConfirmation = ActiveConfirmation.CancelRelease },
+                                modifier = Modifier.testTag("cancel_release_button"),
+                                variant = RwButtonVariant.Ghost,
+                                contentColor = MaterialTheme.colorScheme.error,
+                            ) {
+                                Text(packStringResource(Res.string.common_cancel))
+                            }
                         }
                     }
                     if (release?.status == ReleaseStatus.PENDING) {
-                        RwButton(
-                            onClick = { activeConfirmation = ActiveConfirmation.CancelRelease },
-                            modifier = Modifier.testTag("cancel_release_button"),
-                            variant = RwButtonVariant.Ghost,
-                            contentColor = MaterialTheme.colorScheme.error,
-                        ) {
-                            Text(packStringResource(Res.string.common_cancel))
+                        RwTooltip(tooltip = packStringResource(Res.string.releases_cancel_tooltip)) {
+                            RwButton(
+                                onClick = { activeConfirmation = ActiveConfirmation.CancelRelease },
+                                modifier = Modifier.testTag("cancel_release_button"),
+                                variant = RwButtonVariant.Ghost,
+                                contentColor = MaterialTheme.colorScheme.error,
+                            ) {
+                                Text(packStringResource(Res.string.common_cancel))
+                            }
                         }
                     }
                     if (release != null && release.status.isTerminal) {

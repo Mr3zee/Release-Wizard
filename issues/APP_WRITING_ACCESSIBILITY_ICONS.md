@@ -60,3 +60,25 @@ No indication of expanded/collapsed state for screen readers.
 ### GLOBAL_20 — Sign-out button state change (MEDIUM)
 Content description stays `"Sign Out"` even during confirmation state.
 Screen readers get no indication of the state change.
+
+## Resolution
+
+**Status:** RESOLVED
+
+| Issue | Status | Notes |
+|-------|--------|-------|
+| EDITOR_03 | Fixed | Lock banner icons now use `editor_lock_icon` contentDescription |
+| EDITOR_13 | Fixed | Added `editor_prop_remove_description` string |
+| CONNFORM_03 | Fixed | ArrowDropDown uses `connections_type_dropdown`, Lock uses `editor_lock_icon` |
+| CONNFORM_05 | Fixed | Slack/TC/GitHub toggles use "Show value"/"Hide value" instead of "password" |
+| CONNLIST_05 | Fixed | Empty-state icon has contentDescription |
+| CONNLIST_06 | Fixed | Sort dropdown arrow has contentDescription |
+| CONNLIST_07 | Fixed | Chevron has contentDescription |
+| AUTOMATION_07 | Fixed | Added `automation_preset_dropdown` string |
+| AUTOMATION_08 | Minor | Toggle switch labels not individually addressed |
+| RELLIST_06 | Fixed | Warning icon uses "Warning" contentDescription |
+| INVITES_04 | Fixed | Empty-state mail icon has contentDescription |
+| AUDIT_07 | Minor | Decorative, kept as null |
+| GLOBAL_09 | Fixed | Settings chevron has contentDescription |
+| GLOBAL_10 | Fixed | Team-switcher dropdown arrow has contentDescription |
+| GLOBAL_20 | Minor | Sign-out button state change not addressed (complex interaction state) |

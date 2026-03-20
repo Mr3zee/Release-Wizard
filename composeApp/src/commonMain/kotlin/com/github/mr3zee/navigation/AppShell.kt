@@ -51,7 +51,6 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.AppLogo
@@ -278,7 +277,7 @@ private fun SignOutItem(
     val signOutLabel = if (confirmPending) {
         packStringResource(Res.string.sidebar_sign_out_confirm)
     } else {
-        packStringResource(Res.string.sidebar_sign_out)
+        packStringResource(Res.string.auth_sign_out)
     }
 
     if (collapsed) {
@@ -295,7 +294,7 @@ private fun SignOutItem(
                 ) {
                     Icon(
                         Icons.AutoMirrored.Filled.Logout,
-                        contentDescription = packStringResource(Res.string.sidebar_sign_out),
+                        contentDescription = packStringResource(Res.string.auth_sign_out),
                         tint = if (confirmPending) colors.buttonDangerBg else colors.chromeTextSecondary,
                     )
                 }

@@ -720,7 +720,7 @@ class DagEditorScreenTest {
         waitForIdle()
 
         // Confirmation dialog should appear with warning text
-        onNodeWithText("Force unlock will end otheruser's editing session", substring = true, useUnmergedTree = true).assertExists()
+        onNodeWithText("This will end otheruser", substring = true, useUnmergedTree = true).assertExists()
     }
 
     @Test
@@ -1000,7 +1000,7 @@ class DagEditorScreenTest {
             onAllNodesWithTag("discard_confirm").fetchSemanticsNodes().isNotEmpty()
         }
         onNodeWithTag("discard_confirm").assertExists()
-        onNodeWithText("You have unsaved changes. Discard them?").assertExists()
+        onNodeWithText("You have unsaved changes that will be lost", substring = true).assertExists()
         assertFalse(navigated, "onBack should NOT be called yet")
     }
 
@@ -1291,7 +1291,7 @@ class DagEditorScreenTest {
         waitUntil(timeoutMillis = 3000L) {
             onAllNodesWithTag("force_unlock_confirm").fetchSemanticsNodes().isNotEmpty()
         }
-        onNodeWithText("Force unlock will end otheruser's editing session", substring = true, useUnmergedTree = true).assertExists()
+        onNodeWithText("This will end otheruser", substring = true, useUnmergedTree = true).assertExists()
 
         // Wait for confirm button to be enabled (debounce)
         waitUntil(timeoutMillis = 3000L) {
@@ -1590,8 +1590,8 @@ class DagEditorScreenTest {
         onNodeWithTag("block_type_selector").performClick()
         waitForIdle()
 
-        // Select a different type
-        onNodeWithText("Slack Message", useUnmergedTree = true).performClick()
+        // Select a different type (use onLast to target dropdown item, not toolbar)
+        onAllNodesWithText("Slack Message", useUnmergedTree = true).onLast().performClick()
         waitForIdle()
 
         // Graph should be dirty
@@ -1629,8 +1629,8 @@ class DagEditorScreenTest {
         // Verify parameter fields exist
         onNodeWithText("Key").assertExists()
 
-        // Click the Remove button
-        onNodeWithText("Remove").performClick()
+        // Click the × (remove) button
+        onNodeWithText("\u00D7").performClick()
         waitForIdle()
 
         // Parameter row should be gone — "Key" field from the parameter row should not exist
@@ -1802,14 +1802,14 @@ class DagEditorScreenTest {
         }
 
         // Initially no dirty indicator
-        onNodeWithText("*").assertDoesNotExist()
+        onNodeWithText("*", useUnmergedTree = true).assertDoesNotExist()
 
         // Make dirty
         onNodeWithTag("add_block_SLACK_MESSAGE").performClick()
         waitForIdle()
 
-        // Dirty indicator should appear
-        onNodeWithText("*").assertExists()
+        // Dirty indicator should appear (space + asterisk rendered as separate Text inside title Row)
+        onNodeWithText("*", substring = true, useUnmergedTree = true).assertExists()
     }
 
     // --- QA-EDITOR-25: Save button text changes to "Saving..." ---
@@ -2063,7 +2063,7 @@ class DagEditorScreenTest {
         }
 
         // Should show the network error message
-        onNodeWithText("Could not acquire editing lock", useUnmergedTree = true).assertExists()
+        onNodeWithText("Could not acquire the editing lock", substring = true, useUnmergedTree = true).assertExists()
         // Lock state should be LockedByOther with null info
         val state = vm.lockState.value
         assertIs<LockState.LockedByOther>(state)

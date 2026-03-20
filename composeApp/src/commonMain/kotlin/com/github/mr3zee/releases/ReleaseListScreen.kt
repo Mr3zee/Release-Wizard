@@ -41,6 +41,8 @@ import com.github.mr3zee.model.ReleaseStatus
 import com.github.mr3zee.model.isTerminal
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.github.mr3zee.model.ProjectTemplate
 import com.github.mr3zee.theme.AppShapes
 import com.github.mr3zee.theme.AppTypography
@@ -325,7 +327,8 @@ fun ReleaseListScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    CircularProgressIndicator()
+                    val loadingDesc = packStringResource(Res.string.loading_releases)
+                    CircularProgressIndicator(modifier = Modifier.semantics { contentDescription = loadingDesc })
                 }
             } else if (error != null) {
                 Box(
@@ -335,7 +338,7 @@ fun ReleaseListScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
                             Icons.Default.Warning,
-                            contentDescription = null,
+                            contentDescription = packStringResource(Res.string.releases_warning_icon),
                             modifier = Modifier.size(48.dp),
                             tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
                         )
@@ -573,13 +576,8 @@ private fun ReleaseListItem(
     modifier: Modifier = Modifier,
 ) {
     var showMenu by remember { mutableStateOf(false) }
-    val displayName = projectName ?: release.projectTemplateId.value.take(8)
+    val displayName = projectName ?: packStringResource(Res.string.releases_unknown_project)
     val startedAt = release.startedAt
-    val title = if (startedAt != null) {
-        "$displayName — ${formatTimestamp(startedAt)}"
-    } else {
-        displayName
-    }
 
     ListItemCard(
         onClick = onClick,
@@ -589,7 +587,7 @@ private fun ReleaseListItem(
         Column(modifier = Modifier.weight(1f)) {
             RwTooltip(tooltip = packStringResource(Res.string.releases_release_id_tooltip, release.id.value)) {
                 Text(
-                    text = title,
+                    text = displayName,
                     style = AppTypography.subheading,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

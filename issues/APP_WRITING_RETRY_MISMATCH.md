@@ -28,3 +28,14 @@ confirmation. If they accidentally decline, there's no way to know what happened
 **Fix:** Add success snackbar strings:
 - `teams_invite_accepted`: `"Joined \"%1$s\" successfully."`
 - `teams_invite_declined`: `"Invite from \"%1$s\" declined."`
+
+## Resolution
+
+**Status:** RESOLVED
+
+| Issue | Status | Notes |
+|-------|--------|-------|
+| TEAMLIST_09 | Fixed | Changed snackbar action label to "Refresh" since error flow is shared |
+| TEAMDETAIL_03 | Fixed | Changed retry action to call `viewModel.leaveTeam()` instead of `viewModel.refresh()` |
+| CONNLIST_04 | Fixed | Changed snackbar action label to "Refresh" since error flow is shared |
+| INVITES_01 | Fixed | Added success snackbar feedback for both accept and decline actions |

@@ -60,7 +60,7 @@ class TeamScreensTest {
         }
 
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("No teams yet", substring = true).fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithText("No teams yet. Create one to get started.").assertExists()
+        onNodeWithText("No teams yet. Create a team or ask a colleague to invite you.").assertExists()
     }
 
     @Test
@@ -107,7 +107,7 @@ class TeamScreensTest {
         onNodeWithTag("team_search_field").assertExists()
     }
 
-    // --- QA-TEAMLIST-1: Non-member team shows "Request to Join" button ---
+    // --- QA-TEAMLIST-1: Non-member team shows "Request to join" button ---
 
     @Test
     fun `non-member team shows request to join button`() = runComposeUiTest {
@@ -125,10 +125,10 @@ class TeamScreensTest {
         }
 
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Alpha Team", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
-        // t1 is a member — should show Member badge, no Request to Join
+        // t1 is a member — should show Member badge, no Request to join
         onNodeWithTag("member_badge_t1", useUnmergedTree = true).assertExists()
-        // t2 is not a member — should show "Request to Join" button
-        onNodeWithText("Request to Join", useUnmergedTree = true).assertExists()
+        // t2 is not a member — should show "Request to join" button
+        onNodeWithText("Request to join", useUnmergedTree = true).assertExists()
     }
 
     // --- QA-TEAMLIST-2: Member team item click fires callback ---
@@ -176,8 +176,8 @@ class TeamScreensTest {
         // Both items should show Member badge
         onNodeWithTag("member_badge_t1", useUnmergedTree = true).assertExists()
         onNodeWithTag("member_badge_t2", useUnmergedTree = true).assertExists()
-        // No "Request to Join" button should be visible
-        onAllNodesWithText("Request to Join", useUnmergedTree = true).assertCountEquals(0)
+        // No "Request to join" button should be visible
+        onAllNodesWithText("Request to join", useUnmergedTree = true).assertCountEquals(0)
     }
 
     @Test
@@ -196,11 +196,11 @@ class TeamScreensTest {
         }
 
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Alpha Team", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
-        // All teams should show "Request to Join"
-        onAllNodesWithText("Request to Join", useUnmergedTree = true).assertCountEquals(2)
+        // All teams should show "Request to join"
+        onAllNodesWithText("Request to join", useUnmergedTree = true).assertCountEquals(2)
     }
 
-    // --- QA-TEAMLIST-4: "Request to Join" calls VM and shows info banner ---
+    // --- QA-TEAMLIST-4: "Request to join" calls VM and shows info banner ---
 
     @Test
     fun `request to join calls VM and shows info banner`() = runComposeUiTest {
@@ -222,9 +222,9 @@ class TeamScreensTest {
             }
         }
 
-        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Request to Join", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
-        // Click "Request to Join" on t2
-        onNodeWithText("Request to Join", useUnmergedTree = true).performClick()
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Request to join", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        // Click "Request to join" on t2
+        onNodeWithText("Request to join", useUnmergedTree = true).performClick()
         // Should show success info banner
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Join request submitted", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
         onNodeWithText("Join request submitted", useUnmergedTree = true).assertExists()
@@ -352,9 +352,9 @@ class TeamScreensTest {
             }
         }
 
-        // Snackbar should appear with error message and Retry action
-        waitUntil(timeoutMillis = 5000L) { onAllNodesWithText("Retry").fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithText("Retry").assertExists()
+        // Snackbar should appear with error message and Refresh action
+        waitUntil(timeoutMillis = 5000L) { onAllNodesWithText("Refresh").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithText("Refresh").assertExists()
     }
 
     // --- QA-TEAMLIST-9: Search field sends query to API ---
@@ -503,7 +503,7 @@ class TeamScreensTest {
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Alpha Team", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("team_detail_screen").assertExists()
         // "Alpha Team" appears in TopAppBar title + info card heading — assert at least one exists
-        onNodeWithText("Alpha Team", useUnmergedTree = true).assertExists()
+        onAllNodesWithText("Alpha Team", useUnmergedTree = true).onFirst().assertExists()
         onNodeWithText("The first team", useUnmergedTree = true).assertExists()
         onNodeWithText("alice", useUnmergedTree = true).assertExists()
         onNodeWithText("bob", useUnmergedTree = true).assertExists()
@@ -579,7 +579,7 @@ class TeamScreensTest {
         onNodeWithText("Retry").performClick()
         // Should reload and show team data
         waitUntil(timeoutMillis = 5000L) { onAllNodesWithText("Alpha Team", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithText("Alpha Team", useUnmergedTree = true).assertExists()
+        onAllNodesWithText("Alpha Team", useUnmergedTree = true).onFirst().assertExists()
         assertTrue(callCount.get() >= 2, "loadDetail should have been called at least twice (initial + retry)")
     }
 
@@ -614,7 +614,7 @@ class TeamScreensTest {
         waitUntil(timeoutMillis = 2000L) { onAllNodesWithTag("leave_team_confirm").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("leave_team_confirm").assertExists()
         // Should show confirmation message with team name
-        onNodeWithText("Are you sure you want to leave \"Alpha Team\"?", useUnmergedTree = true).assertExists()
+        onNodeWithText("You will lose access to", substring = true, useUnmergedTree = true).assertExists()
     }
 
     // --- QA-TEAMDETAIL-5: Confirming leave fires onBack() ---
@@ -824,7 +824,7 @@ class TeamScreensTest {
         waitUntil(timeoutMillis = 2000L) { onAllNodesWithTag("invite_user_id_input").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("invite_user_id_input").assertExists()
         // "Invite User" appears as both button text and form title — assert at least one exists
-        onNodeWithText("Invite User", useUnmergedTree = true).assertExists()
+        onAllNodesWithText("Invite User", useUnmergedTree = true).onFirst().assertExists()
     }
 
     @Test
@@ -837,10 +837,10 @@ class TeamScreensTest {
         }
 
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("alice", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
-        // Alice is TEAM_LEAD, so "Demote to Collaborator" should appear
-        onAllNodesWithText("Demote to Collaborator", useUnmergedTree = true).assertCountEquals(1)
-        // Bob is COLLABORATOR, so "Promote to Lead" should appear
-        onAllNodesWithText("Promote to Lead", useUnmergedTree = true).assertCountEquals(1)
+        // Alice is TEAM_LEAD, so "Set as Collaborator" should appear
+        onAllNodesWithText("Set as Collaborator", useUnmergedTree = true).assertCountEquals(1)
+        // Bob is COLLABORATOR, so "Set as Lead" should appear
+        onAllNodesWithText("Set as Lead", useUnmergedTree = true).assertCountEquals(1)
         // Both should have Remove
         onAllNodesWithText("Remove", useUnmergedTree = true).assertCountEquals(2)
     }
@@ -911,7 +911,7 @@ class TeamScreensTest {
         }
 
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("No pending invites", substring = true).fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithText("No pending invites.").assertExists()
+        onNodeWithText("No pending invites").assertExists()
     }
 
     // QA-INVITES-1: Accept triggers acceptInvite, fires callback, removes invite
@@ -972,7 +972,7 @@ class TeamScreensTest {
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("decline_invite_confirm_inv1").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("decline_invite_confirm_inv1").assertExists()
         // The confirmation message includes the team name
-        onNodeWithText("Decline invite from \"Alpha Team\"?", substring = true, useUnmergedTree = true).assertExists()
+        onNodeWithText("Decline invitation to", substring = true, useUnmergedTree = true).assertExists()
     }
 
     // QA-INVITES-3: Confirming decline removes invite

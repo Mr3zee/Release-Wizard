@@ -37,6 +37,8 @@ import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.LocalAppColors
 import com.github.mr3zee.theme.Spacing
@@ -93,16 +95,16 @@ fun ConnectionListScreen(
     }
     ProvideShortcutActions(shortcutActions) {
 
-    val retryLabel = packStringResource(Res.string.common_retry)
+    val refreshLabel = packStringResource(Res.string.common_refresh)
     val resolvedError = error?.resolve()
     val resolvedTestSuccess = testSuccess?.resolve()
 
-    // Show errors via snackbar
+    // Show errors via snackbar — use Refresh since the error may come from load, delete, or test
     LaunchedEffect(error) {
         val msg = resolvedError ?: return@LaunchedEffect
         snackbarHostState.showSnackbar(
             message = msg,
-            actionLabel = retryLabel,
+            actionLabel = refreshLabel,
             duration = SnackbarDuration.Long,
         ).let { result ->
             if (result == SnackbarResult.ActionPerformed) {
@@ -242,7 +244,8 @@ fun ConnectionListScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
-                    CircularProgressIndicator()
+                    val loadingDesc = packStringResource(Res.string.loading_connections)
+                    CircularProgressIndicator(modifier = Modifier.semantics { contentDescription = loadingDesc })
                 }
             } else if (connections.isEmpty()) {
                 Box(
@@ -275,7 +278,7 @@ fun ConnectionListScreen(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(
                                 Icons.Outlined.Link,
-                                contentDescription = null,
+                                contentDescription = packStringResource(Res.string.connections_empty_icon),
                                 modifier = Modifier.size(48.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             )
@@ -406,7 +409,7 @@ private fun ConnectionListItem(
         }
         Icon(
             Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = null,
+            contentDescription = packStringResource(Res.string.connections_open),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(20.dp),
         )
@@ -437,7 +440,7 @@ private fun ConnectionSortDropdown(
                 modifier = Modifier.testTag("sort_dropdown_button"),
             ) {
                 Text(sortOrder.label())
-                Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.ArrowDropDown, contentDescription = packStringResource(Res.string.connections_sort_dropdown), modifier = Modifier.size(18.dp))
             }
             DropdownMenu(
                 expanded = expanded,

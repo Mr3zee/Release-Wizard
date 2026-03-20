@@ -19,3 +19,11 @@ team details will never see a readable label for this event.
 2. Add branch in `AuditAction.displayName()`:
    `AuditAction.ADMIN_ACCESS -> Res.string.audit_action_admin_access`
 3. Add themed overrides in all 6 language packs.
+
+## Resolution
+
+**Status:** ALREADY RESOLVED
+
+| Issue | Status | Notes |
+|-------|--------|-------|
+| AUDIT_01 | Already fixed | Was already fixed before this audit — `ADMIN_ACCESS` has both a string resource and a `displayName()` mapping |

@@ -42,10 +42,16 @@ suspend fun Exception.toUiMessage(): UiMessage {
     return when (this) {
         is ClientRequestException -> {
             val errorResponse = parseError()
-            if (errorResponse != null && errorResponse.error.isNotBlank()) {
-                UiMessage.Raw(errorResponse.error)
-            } else if (errorResponse != null) {
-                UiMessage.ServerError
+            if (errorResponse != null) {
+                when (errorResponse.code) {
+                    "INVALID_CREDENTIALS" -> UiMessage.InvalidCredentials
+                    "REGISTRATION_FAILED" -> UiMessage.RegistrationFailed
+                    else -> if (errorResponse.error.isNotBlank()) {
+                        UiMessage.Raw(errorResponse.error)
+                    } else {
+                        UiMessage.ServerError
+                    }
+                }
             } else {
                 when (response.status.value) {
                     401 -> UiMessage.NotAuthenticated

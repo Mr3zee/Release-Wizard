@@ -77,7 +77,7 @@ fun TeamDetailScreen(
             duration = SnackbarDuration.Long,
         )
         if (result == SnackbarResult.ActionPerformed) {
-            viewModel.refresh()
+            viewModel.leaveTeam { onBack() }
         }
         viewModel.dismissActionError()
     }

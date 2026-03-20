@@ -36,7 +36,7 @@ class LoginScreenTest {
         onNodeWithTag("login_password").assertExists()
         onNodeWithTag("login_button").assertExists()
         onNodeWithText("Release Wizard").assertExists()
-        onNodeWithText("Sign in to continue").assertExists()
+        onNodeWithText("Sign in to your account").assertExists()
     }
 
     @Test
@@ -102,7 +102,7 @@ class LoginScreenTest {
         onNodeWithTag("login_button").performClick()
 
         waitUntil(timeoutMillis = 3000L) {
-            onAllNodesWithText("Invalid credentials").fetchSemanticsNodes().isNotEmpty()
+            onAllNodesWithText("Incorrect username or password", substring = true).fetchSemanticsNodes().isNotEmpty()
         }
         onNodeWithTag("login_error").assertExists()
     }
@@ -126,7 +126,7 @@ class LoginScreenTest {
         onNodeWithTag("login_button").performClick()
 
         waitUntil(timeoutMillis = 3000L) {
-            onAllNodesWithText("Invalid credentials").fetchSemanticsNodes().isNotEmpty()
+            onAllNodesWithText("Incorrect username or password", substring = true).fetchSemanticsNodes().isNotEmpty()
         }
 
         // Typing in username should dismiss error
@@ -145,7 +145,7 @@ class LoginScreenTest {
         onNodeWithTag("login_button").performClick()
 
         waitUntil(timeoutMillis = 3000L) {
-            onAllNodesWithText("Invalid credentials").fetchSemanticsNodes().isNotEmpty()
+            onAllNodesWithText("Incorrect username or password", substring = true).fetchSemanticsNodes().isNotEmpty()
         }
 
         // Typing in password should dismiss error
@@ -164,7 +164,7 @@ class LoginScreenTest {
         onNodeWithTag("login_button").performClick()
 
         waitUntil(timeoutMillis = 3000L) {
-            onAllNodesWithText("Invalid credentials").fetchSemanticsNodes().isNotEmpty()
+            onAllNodesWithText("Incorrect username or password", substring = true).fetchSemanticsNodes().isNotEmpty()
         }
 
         // Toggling auth mode should dismiss error
@@ -196,9 +196,9 @@ class LoginScreenTest {
         onNodeWithTag("register_button").performClick()
 
         waitUntil(timeoutMillis = 3000L) {
-            onAllNodesWithText("Registration failed").fetchSemanticsNodes().isNotEmpty()
+            onAllNodesWithText("Registration failed", substring = true).fetchSemanticsNodes().isNotEmpty()
         }
-        onNodeWithText("Registration failed").assertExists()
+        onNodeWithText("Registration failed", substring = true).assertExists()
     }
 
     // --- Helper: creates a client whose /auth/login response never completes (hangs) ---
@@ -358,9 +358,9 @@ class LoginScreenTest {
                 .fetchSemanticsNodes().isNotEmpty()
         }
 
-        // The button text "Sign In" should be replaced by the spinner,
-        // so "Sign In" should not be visible while loading
-        onNodeWithText("Sign In").assertDoesNotExist()
+        // The button text "Sign in" should be replaced by the spinner,
+        // so "Sign in" should not be visible while loading
+        onNodeWithText("Sign in").assertDoesNotExist()
     }
 
     // ==================================================================================
@@ -392,8 +392,8 @@ class LoginScreenTest {
         val viewModel = AuthViewModel(AuthApiClient(loginClient()))
         setContent { MaterialTheme { LoginScreen(viewModel = viewModel) } }
 
-        // Login mode shows "Sign in to continue"
-        onNodeWithText("Sign in to continue").assertExists()
+        // Login mode shows "Sign in to your account"
+        onNodeWithText("Sign in to your account").assertExists()
         onNodeWithText("Create an account").assertDoesNotExist()
 
         // Switch to register mode
@@ -402,7 +402,7 @@ class LoginScreenTest {
 
         // Register mode shows "Create an account"
         onNodeWithText("Create an account").assertExists()
-        onNodeWithText("Sign in to continue").assertDoesNotExist()
+        onNodeWithText("Sign in to your account").assertDoesNotExist()
     }
 
     // ==================================================================================
@@ -423,7 +423,7 @@ class LoginScreenTest {
         waitForIdle()
 
         // Button should show "Create Account" text
-        onNodeWithText("Create Account").assertExists()
+        onNodeWithText("Create account").assertExists()
     }
 
     // ==================================================================================
@@ -443,7 +443,7 @@ class LoginScreenTest {
 
         // Before clicking: confirm password toggle should have "Show password" content description
         onNode(
-            hasTestTag("login_confirm_password_toggle_visibility") and hasContentDescription("Show password"),
+            hasAnyAncestor(hasTestTag("login_confirm_password_toggle_visibility")) and hasContentDescription("Show password"),
             useUnmergedTree = true,
         ).assertExists()
 
@@ -453,7 +453,7 @@ class LoginScreenTest {
 
         // After clicking: should now show "Hide password" content description
         onNode(
-            hasTestTag("login_confirm_password_toggle_visibility") and hasContentDescription("Hide password"),
+            hasAnyAncestor(hasTestTag("login_confirm_password_toggle_visibility")) and hasContentDescription("Hide password"),
             useUnmergedTree = true,
         ).assertExists()
 
@@ -463,7 +463,7 @@ class LoginScreenTest {
 
         // Should be back to "Show password"
         onNode(
-            hasTestTag("login_confirm_password_toggle_visibility") and hasContentDescription("Show password"),
+            hasAnyAncestor(hasTestTag("login_confirm_password_toggle_visibility")) and hasContentDescription("Show password"),
             useUnmergedTree = true,
         ).assertExists()
     }
@@ -479,20 +479,20 @@ class LoginScreenTest {
         // Show password in login mode
         onNodeWithTag("login_password_toggle_visibility", useUnmergedTree = true).performClick()
         waitForIdle()
-        // Verify the password toggle now shows "Hide password" (using testTag to disambiguate)
+        // Verify the password toggle now shows "Hide password" (using ancestor to disambiguate)
         onNode(
-            hasTestTag("login_password_toggle_visibility") and hasContentDescription("Hide password"),
+            hasAnyAncestor(hasTestTag("login_password_toggle_visibility")) and hasContentDescription("Hide password"),
             useUnmergedTree = true,
         ).assertExists()
 
         // Switch to register mode — password visibility should reset to hidden
-        onNodeWithTag("toggle_auth_mode").performClick()
+        onNodeWithTag("toggle_auth_mode", useUnmergedTree = true).performClick()
         waitForIdle()
 
         // After switching, the password toggle should be back to "Show password"
-        // Use testTag to disambiguate from the confirm password toggle (both exist in register mode)
+        // Use ancestor to disambiguate from the confirm password toggle (both exist in register mode)
         onNode(
-            hasTestTag("login_password_toggle_visibility") and hasContentDescription("Show password"),
+            hasAnyAncestor(hasTestTag("login_password_toggle_visibility")) and hasContentDescription("Show password"),
             useUnmergedTree = true,
         ).assertExists()
     }
@@ -562,7 +562,7 @@ class LoginScreenTest {
 
         // Wait for the error from the failing login
         waitUntil(timeoutMillis = 3000L) {
-            onAllNodesWithText("Invalid credentials").fetchSemanticsNodes().isNotEmpty()
+            onAllNodesWithText("Incorrect username or password", substring = true).fetchSemanticsNodes().isNotEmpty()
         }
         onNodeWithTag("login_error").assertExists()
     }
@@ -597,9 +597,9 @@ class LoginScreenTest {
 
         // Wait for the error from the failing register
         waitUntil(timeoutMillis = 3000L) {
-            onAllNodesWithText("Registration failed").fetchSemanticsNodes().isNotEmpty()
+            onAllNodesWithText("Registration failed", substring = true).fetchSemanticsNodes().isNotEmpty()
         }
-        onNodeWithText("Registration failed").assertExists()
+        onNodeWithText("Registration failed", substring = true).assertExists()
     }
 
     @Test
@@ -678,14 +678,14 @@ class LoginScreenTest {
         setContent { MaterialTheme { LoginScreen(viewModel = viewModel) } }
 
         // In login mode, password requirements should not be shown
-        onNodeWithText("At least 8 characters with a number and letter").assertDoesNotExist()
+        onNodeWithText("At least 12 characters", substring = true).assertDoesNotExist()
 
         // Switch to register mode
         onNodeWithTag("toggle_auth_mode").performClick()
         waitForIdle()
 
         // Password requirements hint should now be visible
-        onNodeWithText("At least 8 characters with a number and letter").assertExists()
+        onNodeWithText("At least 12 characters", substring = true).assertExists()
     }
 
     @Test
@@ -693,8 +693,8 @@ class LoginScreenTest {
         val viewModel = AuthViewModel(AuthApiClient(loginClient()))
         setContent { MaterialTheme { LoginScreen(viewModel = viewModel) } }
 
-        // In login mode, toggle button should say "Don't have an account? Register"
-        onNodeWithText("Don't have an account? Register").assertExists()
+        // In login mode, toggle button should say "Don't have an account? Create account"
+        onNodeWithText("Don't have an account? Create account").assertExists()
 
         // Switch to register mode
         onNodeWithTag("toggle_auth_mode").performClick()
@@ -702,6 +702,6 @@ class LoginScreenTest {
 
         // Now toggle button should say "Already have an account? Sign in"
         onNodeWithText("Already have an account? Sign in").assertExists()
-        onNodeWithText("Don't have an account? Register").assertDoesNotExist()
+        onNodeWithText("Don't have an account? Create account").assertDoesNotExist()
     }
 }

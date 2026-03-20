@@ -378,7 +378,7 @@ class ProjectListScreenTest {
         onNodeWithTag("sort_option_NEWEST").performClick()
         waitForIdle()
 
-        onNodeWithText("Newest first", substring = true).assertExists()
+        onNodeWithText("Recently updated", substring = true).assertExists()
     }
 
     @Test
@@ -396,7 +396,7 @@ class ProjectListScreenTest {
         onNodeWithTag("sort_option_OLDEST").performClick()
         waitForIdle()
 
-        onNodeWithText("Oldest first", substring = true).assertExists()
+        onNodeWithText("Least recently updated", substring = true).assertExists()
     }
 
     @Test

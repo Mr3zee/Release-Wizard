@@ -12,8 +12,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import com.github.mr3zee.components.ListItemCard
 import com.github.mr3zee.components.RefreshErrorBanner
 import com.github.mr3zee.components.RefreshIconButton
@@ -47,6 +50,7 @@ fun MyInvitesScreen(
     var declineInviteId by remember { mutableStateOf<String?>(null) }
 
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     val retryLabel = packStringResource(Res.string.common_retry)
     val resolvedError = error?.resolve()
 
@@ -113,14 +117,15 @@ fun MyInvitesScreen(
 
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+                    val loadingDesc = packStringResource(Res.string.loading_invites)
+                    CircularProgressIndicator(modifier = Modifier.semantics { contentDescription = loadingDesc })
                 }
             } else if (invites.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
                             Icons.Default.Mail,
-                            contentDescription = null,
+                            contentDescription = packStringResource(Res.string.teams_invites_empty_icon),
                             modifier = Modifier.size(48.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         )
@@ -146,12 +151,22 @@ fun MyInvitesScreen(
                 ) {
                     items(invites, key = { it.id }) { invite ->
                         val isInviteLoading = invite.id in loadingInviteIds
+                        val acceptedMessage = packStringResource(Res.string.teams_invite_accepted, invite.teamName)
+                        val declinedMessage = packStringResource(Res.string.teams_invite_declined_success, invite.teamName)
                         Column(modifier = Modifier.widthIn(max = 1200.dp).animateItem()) {
                             InviteCard(
                                 invite = invite,
                                 isLoading = isInviteLoading,
                                 onAccept = {
-                                    viewModel.acceptInvite(invite.id) { onInviteAccepted() }
+                                    viewModel.acceptInvite(invite.id) {
+                                        onInviteAccepted()
+                                        scope.launch {
+                                            snackbarHostState.showSnackbar(
+                                                message = acceptedMessage,
+                                                duration = SnackbarDuration.Short,
+                                            )
+                                        }
+                                    }
                                 },
                                 onDecline = { declineInviteId = invite.id },
                             )
@@ -161,7 +176,14 @@ fun MyInvitesScreen(
                                 confirmLabel = packStringResource(Res.string.teams_decline),
                                 onConfirm = {
                                     declineInviteId = null
-                                    viewModel.declineInvite(invite.id)
+                                    viewModel.declineInvite(invite.id) {
+                                        scope.launch {
+                                            snackbarHostState.showSnackbar(
+                                                message = declinedMessage,
+                                                duration = SnackbarDuration.Short,
+                                            )
+                                        }
+                                    }
                                 },
                                 onDismiss = { declineInviteId = null },
                                 isDestructive = true,

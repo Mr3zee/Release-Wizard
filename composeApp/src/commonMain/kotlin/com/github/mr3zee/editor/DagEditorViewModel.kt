@@ -145,6 +145,7 @@ class DagEditorViewModel(
         undoIndex = -1
         pushUndoState(p.dagGraph)
         _isDirty.value = false
+        revalidate()
         attemptAcquireLock()
         loadTeamConnections()
     }

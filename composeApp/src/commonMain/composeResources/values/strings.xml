@@ -7,7 +7,7 @@
     <string name="common_create">Create</string>
     <string name="common_delete">Delete</string>
     <string name="common_save">Save</string>
-    <string name="common_saving">Saving...</string>
+    <string name="common_saving">Saving\u2026</string>
     <string name="common_retry">Retry</string>
     <string name="common_refresh">Refresh</string>
     <string name="common_dismiss">Dismiss</string>
@@ -25,34 +25,42 @@
     <string name="common_expand_all">Expand All</string>
     <string name="common_collapse_all">Collapse All</string>
     <string name="common_unsaved_title">Unsaved Changes</string>
-    <string name="common_unsaved_message">You have unsaved changes. Discard them?</string>
+    <string name="common_unsaved_message">You have unsaved changes that will be lost. Do you want to discard them?</string>
     <string name="common_danger_zone">Danger Zone</string>
 
+    <!-- ==================== Common: Password / Value Toggle ==================== -->
+    <string name="common_hide_password">Hide password</string>
+    <string name="common_show_password">Show password</string>
+    <string name="common_hide_value">Hide value</string>
+    <string name="common_show_value">Show value</string>
+
     <!-- ==================== Error Messages ==================== -->
-    <string name="error_invalid_credentials">Invalid credentials</string>
-    <string name="error_registration_failed">Registration failed. Username may already be taken.</string>
+    <string name="error_invalid_credentials">Incorrect username or password. Please check your credentials and try again.</string>
+    <string name="error_registration_failed">Registration failed. Please try again.</string>
+    <string name="error_username_taken">That username is already taken.</string>
     <string name="error_session_expired">Session expired. Please log in again.</string>
     <string name="error_not_authenticated">Please log in to continue.</string>
-    <string name="error_access_denied">Access denied</string>
-    <string name="error_not_found">Not found</string>
-    <string name="error_invalid_request">Invalid request</string>
-    <string name="error_server">Server error. Please try again.</string>
+    <string name="error_access_denied">You don\u0027t have permission to perform this action. Contact your team lead if you need access.</string>
+    <string name="error_not_found">The requested item could not be found. It may have been deleted or moved.</string>
+    <string name="error_invalid_request">Something went wrong with your input. Please review your changes and try again.</string>
+    <string name="error_server">Something went wrong on the server. Please try again, and if the problem persists, contact your administrator.</string>
     <string name="error_cannot_connect">Cannot connect to server. Check your connection.</string>
 
     <!-- ==================== Auth ==================== -->
     <string name="auth_app_title">Release Wizard</string>
     <string name="auth_create_account">Create an account</string>
-    <string name="auth_sign_in_continue">Sign in to continue</string>
+    <string name="auth_sign_in_continue">Sign in to your account</string>
     <string name="auth_username">Username</string>
     <string name="auth_password">Password</string>
-    <string name="auth_create_account_button">Create Account</string>
-    <string name="auth_sign_in_button">Sign In</string>
+    <string name="auth_create_account_button">Create account</string>
+    <string name="auth_sign_in_button">Sign in</string>
     <string name="auth_toggle_to_signin">Already have an account? Sign in</string>
-    <string name="auth_toggle_to_register">Don&apos;t have an account? Register</string>
+    <string name="auth_toggle_to_register">Don\u0027t have an account? Create account</string>
     <string name="auth_confirm_password">Confirm Password</string>
     <string name="auth_password_mismatch">Passwords do not match</string>
-    <string name="auth_password_requirements">At least 8 characters with a number and letter</string>
+    <string name="auth_password_requirements">At least 12 characters, including an uppercase letter and a number</string>
     <string name="auth_sign_out">Sign Out</string>
+    <string name="auth_username_hint">Up to 64 characters</string>
 
     <!-- ==================== Projects ==================== -->
     <string name="projects_title_with_team">Projects - %1$s</string>
@@ -60,46 +68,69 @@
     <string name="projects_teams">Teams</string>
     <string name="projects_releases">Releases</string>
     <string name="projects_connections">Connections</string>
-    <string name="settings_theme_auto">Theme: Auto</string>
+    <string name="settings_theme_auto">Theme: System</string>
     <string name="settings_theme_light">Theme: Light</string>
     <string name="settings_theme_dark">Theme: Dark</string>
-    <string name="projects_search_placeholder">Search projects...</string>
+    <string name="projects_search_placeholder">Search projects\u2026</string>
     <string name="projects_empty_state">No projects yet. Create one to get started.</string>
     <string name="projects_create_project">Create project</string>
     <string name="projects_new_project">New Project</string>
     <string name="projects_project_name">Project name</string>
-    <string name="projects_delete_title">Delete Project</string>
-    <string name="projects_delete_confirmation">Are you sure you want to delete \"%1$s\"?</string>
+    <string name="projects_project_name_placeholder">e.g. My Library v2.0</string>
+    <string name="projects_delete_confirmation">Are you sure you want to delete \"%1$s\"? This will permanently remove the project and all its pipeline configuration.</string>
     <string name="projects_switch_team_title">Switch Team</string>
     <string name="projects_no_team">No Team</string>
 
     <!-- ==================== Connections ==================== -->
     <string name="connections_title">Connections</string>
-    <string name="connections_search_placeholder">Search connections...</string>
-    <string name="connections_empty_state">No connections yet. Add one to get started.</string>
+    <string name="connections_search_placeholder">Search connections\u2026</string>
+    <string name="connections_empty_state">No connections yet. Connections link external services like Slack, GitHub, and TeamCity to your release pipeline. Create one to get started.</string>
     <string name="connections_create">Create connection</string>
-    <string name="connections_delete_title">Delete Connection</string>
     <string name="connections_delete_confirmation">Are you sure you want to delete \"%1$s\"?</string>
-    <string name="connections_test">Test</string>
-    <string name="connections_webhook_display">Webhook: %1$s</string>
+    <string name="connections_test">Test connection</string>
     <string name="connections_edit_title">Edit Connection</string>
     <string name="connections_new_title">New Connection</string>
     <string name="connections_name_label">Connection Name</string>
     <string name="connections_name_placeholder">e.g., Production GitHub</string>
     <string name="connections_type_label">Type</string>
+    <string name="connections_type_dropdown">Open type selector</string>
     <string name="connections_slack_webhook_url">Webhook URL</string>
     <string name="connections_tc_server_url">Server URL</string>
     <string name="connections_tc_token">Token</string>
-    <string name="connections_tc_polling_interval">Polling Interval (seconds)</string>
+    <string name="connections_tc_polling_interval">Polling interval</string>
     <string name="connections_github_pat">Personal Access Token</string>
     <string name="connections_github_owner">Owner</string>
     <string name="connections_github_repo">Repository</string>
-    <string name="connections_github_polling_interval">Polling Interval (seconds)</string>
+    <string name="connections_github_polling_interval">Polling interval</string>
     <string name="connections_test_succeeded">Connection test succeeded: %1$s</string>
-    <string name="connections_test_failed">Test failed: %1$s</string>
-    <string name="connections_polling_default_hint">Default: 30 seconds (range: 5-300)</string>
-    <string name="connections_type_locked_hint">Type cannot be changed after creation</string>
-    <string name="connections_polling_range_hint">5–300 seconds, default: 30</string>
+    <string name="connections_test_failed">Connection test failed: %1$s</string>
+    <string name="connections_type_locked_hint">Connection type is fixed after creation. To use a different type, create a new connection.</string>
+    <string name="connections_polling_range_hint">5\u2013300 seconds, default: 30</string>
+    <string name="connections_polling_out_of_range">Must be between 5 and 300 seconds</string>
+    <string name="connections_open">Open connection</string>
+    <string name="connections_sort_dropdown">Change sort order</string>
+    <string name="connections_empty_icon">No connections</string>
+
+    <!-- Connection placeholders -->
+    <string name="connections_slack_webhook_placeholder">https://hooks.slack.com/services/\u2026</string>
+    <string name="connections_tc_server_placeholder">https://teamcity.example.com</string>
+    <string name="connections_tc_token_placeholder">Paste your TeamCity access token</string>
+    <string name="connections_tc_polling_placeholder">30</string>
+    <string name="connections_github_pat_placeholder">ghp_xxxx\u2026</string>
+    <string name="connections_github_owner_placeholder">my-org</string>
+    <string name="connections_github_repo_placeholder">my-repo</string>
+    <string name="connections_github_polling_placeholder">30</string>
+
+    <!-- Connection credential hints -->
+    <string name="connections_github_owner_hint">GitHub username or organization name</string>
+    <string name="connections_github_pat_hint">Generate at GitHub \u003E Settings \u003E Developer settings \u003E Tokens</string>
+    <string name="connections_tc_token_hint">Create at TeamCity \u003E My Settings \u0026 Tools \u003E Access Tokens</string>
+    <string name="connections_slack_webhook_hint">Create at api.slack.com \u003E Your Apps \u003E Incoming Webhooks</string>
+
+    <!-- ==================== Connections: Section Headers ==================== -->
+    <string name="connections_section_slack">Slack settings</string>
+    <string name="connections_section_teamcity">TeamCity settings</string>
+    <string name="connections_section_github">GitHub settings</string>
 
     <!-- ==================== Editor: Toolbar ==================== -->
     <string name="editor_toolbar_blocks">Blocks</string>
@@ -111,6 +142,13 @@
     <string name="editor_toolbar_paste">Paste</string>
     <string name="editor_toolbar_delete">Delete</string>
 
+    <!-- ==================== Editor: Default Block Names ==================== -->
+    <string name="editor_default_container_name">Container</string>
+    <string name="editor_default_build_name">Build</string>
+    <string name="editor_default_action_name">Action</string>
+    <string name="editor_default_publish_name">Publish</string>
+    <string name="editor_default_notify_name">Notify</string>
+
     <!-- ==================== Editor: Block Type Display Names ==================== -->
     <string name="block_type_teamcity_build">TeamCity Build</string>
     <string name="block_type_github_action">GitHub Action</string>
@@ -118,10 +156,10 @@
     <string name="block_type_slack_message">Slack Message</string>
 
     <!-- ==================== Editor: Block Type Labels (canvas) ==================== -->
-    <string name="block_label_teamcity_build">teamcity build</string>
-    <string name="block_label_github_action">github action</string>
-    <string name="block_label_github_publication">github publication</string>
-    <string name="block_label_slack_message">slack message</string>
+    <string name="block_label_teamcity_build">TeamCity build</string>
+    <string name="block_label_github_action">GitHub action</string>
+    <string name="block_label_github_publication">GitHub publication</string>
+    <string name="block_label_slack_message">Slack message</string>
     <string name="block_label_container">container</string>
 
     <!-- ==================== Editor: Properties Panel ==================== -->
@@ -140,11 +178,12 @@
     <string name="editor_prop_key">Key</string>
     <string name="editor_prop_value">Value</string>
     <string name="editor_prop_remove">\u00D7</string>
+    <string name="editor_prop_remove_description">Remove parameter</string>
     <string name="editor_prop_connection">Connection</string>
     <string name="editor_prop_connection_none">None</string>
-    <string name="editor_prop_connection_select">Select connection…</string>
+    <string name="editor_prop_connection_select">Select connection\u2026</string>
     <string name="editor_config_selector">Configuration</string>
-    <string name="editor_config_selector_placeholder">Search configurations…</string>
+    <string name="editor_config_selector_placeholder">Search configurations\u2026</string>
     <string name="editor_config_no_configs">No configurations found</string>
 
     <!-- ==================== Editor: Gates ==================== -->
@@ -157,32 +196,30 @@
     <string name="editor_gate_approval_count_error">Must be 1 or more</string>
 
     <!-- ==================== Editor: Template Picker ==================== -->
-    <string name="editor_template_picker_title">Insert Template</string>
     <string name="editor_template_parameters">Parameters</string>
     <string name="editor_template_block_outputs">Block Outputs</string>
-    <string name="editor_template_empty">No parameters or predecessor outputs available</string>
+    <string name="editor_template_empty">No templates available. Add project parameters or connect predecessor blocks with outputs to see options here.</string>
     <string name="editor_template_default_value">Default: %1$s</string>
     <string name="editor_template_tooltip">Insert template (or type \${)</string>
     <string name="editor_template_button">{}</string>
 
     <!-- ==================== Editor: Lock / Session ==================== -->
     <string name="editor_lock_unknown_user">another user</string>
-    <string name="editor_loading">Loading...</string>
+    <string name="editor_lock_icon">Locked</string>
+    <string name="editor_loading">Loading\u2026</string>
     <string name="editor_read_only">(read-only)</string>
     <string name="editor_dirty_indicator">*</string>
     <string name="editor_lock_self_session">You are editing this project in another session</string>
     <string name="editor_lock_by_other">This project is being edited by %1$s</string>
-    <string name="editor_lock_acquire_failed">Could not acquire editing lock</string>
+    <string name="editor_lock_acquire_failed">Could not acquire the editing lock. Someone else may be editing, or there may be a connection issue. Try again.</string>
     <string name="editor_lock_lost_banner">Your editing session was interrupted. Changes preserved locally.</string>
     <string name="editor_lock_reacquire_failed">Could not re-acquire lock: %1$s</string>
 
     <!-- ==================== Editor: Dialogs ==================== -->
-    <string name="editor_dialog_lock_expired_title">Editing Lock Expired</string>
-    <string name="editor_dialog_lock_expired_body">You have unsaved changes that cannot be saved because your editing lock expired.</string>
+    <string name="editor_dialog_lock_expired_body">Your editing lock has expired. You can re-acquire the lock to save your changes, or discard them and leave.</string>
     <string name="editor_dialog_lock_expired_discard">Discard changes and leave</string>
     <string name="editor_dialog_reacquire_save">Re-acquire and Save</string>
-    <string name="editor_dialog_force_unlock_title">Force Unlock</string>
-    <string name="editor_dialog_force_unlock_body">Force unlock will end %1$s&apos;s editing session. They may lose unsaved changes. Continue?</string>
+    <string name="editor_dialog_force_unlock_body">This will end %1$s\u0027s editing session. They may lose unsaved changes. Continue?</string>
     <string name="editor_dialog_force_unlock_confirm">Force Unlock</string>
 
     <!-- ==================== Editor: Validation ==================== -->
@@ -191,19 +228,33 @@
     <string name="editor_validation_duplicate_id">Duplicate block ID: %1$s</string>
     <string name="editor_validation_invalid_edge">Edge references missing block: %1$s</string>
     <string name="editor_validation_self_loop">Self-loop on block: %1$s</string>
+    <string name="editor_validation_too_many_blocks">Too many blocks: %1$d (max %2$d)</string>
+    <string name="editor_validation_too_many_edges">Too many edges: %1$d (max %2$d)</string>
+    <string name="editor_validation_nesting_too_deep">Nesting too deep: depth %1$d (max %2$d)</string>
+    <string name="editor_validation_block_name_too_long">Block name too long: %1$d chars (max %2$d)</string>
+    <string name="editor_validation_too_many_parameters">Too many parameters on block (max %1$d)</string>
+    <string name="editor_validation_parameter_key_too_long">Parameter key too long (max %1$d)</string>
+    <string name="editor_validation_parameter_value_too_long">Parameter value too long (max %1$d)</string>
     <string name="editor_empty_canvas_hint">Drag from an output port to an input port to connect blocks</string>
-    <string name="editor_zoom_fit">Fit</string>
+    <string name="editor_empty_canvas_no_blocks">Add blocks from the toolbar to get started</string>
+    <string name="editor_zoom_fit">Reset view</string>
     <string name="editor_zoom_in">Zoom in</string>
     <string name="editor_zoom_out">Zoom out</string>
-    <string name="editor_collapse_panel">Collapse panel</string>
-    <string name="editor_expand_panel">Expand panel</string>
+    <string name="editor_collapse_toolbar">Collapse toolbar</string>
+    <string name="editor_expand_toolbar">Expand toolbar</string>
+    <string name="editor_collapse_properties">Collapse properties</string>
+    <string name="editor_expand_properties">Expand properties</string>
+
+    <!-- ==================== Editor: Refresh Content Descriptions ==================== -->
+    <string name="editor_refresh_parameters">Refresh parameters</string>
+    <string name="editor_refresh_configurations">Refresh configurations</string>
 
     <!-- ==================== Releases ==================== -->
     <string name="releases_title">Releases</string>
-    <string name="releases_search_placeholder">Search releases...</string>
+    <string name="releases_search_placeholder">Search releases\u2026</string>
     <string name="releases_filter_all_projects">All Projects</string>
     <string name="releases_empty_state">No releases yet. Create one to get started.</string>
-    <string name="releases_create_release">Create Release</string>
+    <string name="releases_create_release">Start release</string>
     <string name="releases_filter_status_label">Status</string>
     <string name="releases_filter_project_label">Project</string>
     <string name="releases_start_release">Start release</string>
@@ -213,38 +264,29 @@
     <string name="releases_project_label">Project: %1$s</string>
     <string name="releases_started_label">Started: %1$s</string>
     <string name="releases_archive">Archive</string>
-    <string name="releases_archive_title">Archive Release</string>
-    <string name="releases_archive_confirmation">Are you sure you want to archive this release?</string>
-    <string name="releases_delete_title">Delete Release</string>
+    <string name="releases_archive_confirmation">This release will be moved to the archive. It will no longer appear in active views.</string>
     <string name="releases_delete_confirmation">This will permanently delete the release and all its data. This cannot be undone.</string>
     <string name="releases_detail_title">Release</string>
-    <string name="releases_loading">Loading release…</string>
-    <string name="releases_reconnecting">Reconnecting (attempt %1$d)...</string>
+    <string name="releases_loading">Loading release\u2026</string>
+    <string name="releases_reconnecting">Reconnecting (attempt %1$d)\u2026</string>
     <string name="releases_disconnected">Disconnected</string>
-    <string name="releases_cancel_title">Cancel Release</string>
     <string name="releases_cancel_body">Cancel this release? In-progress blocks will be interrupted.</string>
     <string name="releases_cancel_confirm">Cancel Release</string>
-    <string name="releases_keep_running">Keep Running</string>
     <string name="releases_stop">Stop</string>
     <string name="releases_resume">Resume</string>
-    <string name="releases_stop_title">Stop Release?</string>
-    <string name="releases_stop_body">This will pause execution. Running blocks will be stopped and external builds will be cancelled. You can resume later.</string>
-    <string name="releases_stop_block_title">Stop Block?</string>
+    <string name="releases_stop_body">This will pause execution. Running blocks will be interrupted and external builds will be cancelled. You can resume later.</string>
     <string name="releases_stop_block_body">Stopping this block will pause the entire release. All other running blocks will also be interrupted. External builds will be cancelled. You can resume later.</string>
     <string name="releases_stop_confirm">Stop Release</string>
     <string name="releases_stop_block_confirm">Stop</string>
     <string name="releases_stopped_context">This block was stopped. It will re-execute when the release is resumed.</string>
     <string name="releases_rerun">Re-run</string>
-    <string name="releases_approve_title">Approve: %1$s</string>
-    <string name="releases_approve_fallback_name">Step</string>
-    <string name="releases_approve_default_message">Approve this step? The pipeline will continue.</string>
+    <string name="releases_approve_default_message">Approve this block to continue the release pipeline.</string>
     <string name="releases_block_status">Status: %1$s</string>
-    <string name="releases_webhook_status_label">Build Status</string>
     <string name="releases_webhook_no_updates_running">No status updates received yet</string>
     <string name="releases_webhook_no_updates_finished">No status updates were reported by this build</string>
-    <string name="releases_block_outputs">Outputs:</string>
+    <string name="releases_block_outputs">Outputs</string>
     <string name="releases_block_output_entry">%1$s: %2$s</string>
-    <string name="releases_approval_progress">%1$d of %2$d approvals</string>
+    <string name="releases_approval_progress">%1$d of %2$d approvals received</string>
     <string name="releases_error_failed_at">Failed at: %1$s</string>
     <string name="releases_artifacts">Artifacts</string>
     <string name="releases_expand_node">Expand %1$s</string>
@@ -253,14 +295,24 @@
     <string name="releases_file">File</string>
     <string name="releases_expand_error">Expand error details</string>
     <string name="releases_collapse_error">Collapse error details</string>
+    <string name="releases_warning_icon">Warning</string>
+    <string name="releases_unknown_project">Unknown project</string>
+    <string name="releases_stop_tooltip">Pause this release (you can resume later)</string>
+    <string name="releases_cancel_tooltip">Permanently cancel this release</string>
 
     <!-- ==================== Releases: Sub-builds ==================== -->
     <string name="sub_builds_summary">Sub-builds (%1$d/%2$d succeeded)</string>
-    <string name="sub_builds_discovering">Discovering build chain...</string>
+    <string name="sub_builds_discovering">Discovering build chain\u2026</string>
     <string name="sub_builds_stage">Stage %1$d</string>
     <string name="sub_builds_open_link">Open</string>
+    <string name="sub_builds_status_queued">Queued</string>
+    <string name="sub_builds_status_running">Running</string>
+    <string name="sub_builds_status_succeeded">Succeeded</string>
+    <string name="sub_builds_status_failed">Failed</string>
+    <string name="sub_builds_status_cancelled">Cancelled</string>
+    <string name="sub_builds_status_unknown">Unknown</string>
     <string name="gh_jobs_summary">Jobs (%1$d/%2$d succeeded)</string>
-    <string name="gh_jobs_discovering">Discovering workflow jobs...</string>
+    <string name="gh_jobs_discovering">Discovering workflow jobs\u2026</string>
 
     <!-- ==================== Block Status Display Names ==================== -->
     <string name="block_status_waiting">Waiting</string>
@@ -286,7 +338,7 @@
 
     <!-- ==================== Releases: Gate Phases ==================== -->
     <string name="releases_gate_phase_pre">Waiting for approval before execution</string>
-    <string name="releases_gate_phase_post">Execution complete — waiting for approval</string>
+    <string name="releases_gate_phase_post">Execution complete \u2014 waiting for approval</string>
     <string name="releases_gate_phase_unknown">Waiting for approval</string>
 
     <!-- ==================== Start Release Dialog ==================== -->
@@ -298,26 +350,29 @@
 
     <!-- ==================== Teams ==================== -->
     <string name="teams_title">Teams</string>
-    <string name="teams_my_invites">My Invites</string>
-    <string name="teams_search_placeholder">Search teams...</string>
-    <string name="teams_empty_state">No teams yet. Create one to get started.</string>
+    <string name="teams_my_invites">My invites</string>
+    <string name="teams_search_placeholder">Search teams\u2026</string>
+    <string name="teams_empty_state">No teams yet. Create a team or ask a colleague to invite you.</string>
     <string name="teams_new_team">New Team</string>
     <string name="teams_team_name">Team name</string>
+    <string name="teams_team_name_placeholder">e.g., Android Core Team</string>
     <string name="teams_description_optional">Description (optional)</string>
+    <string name="teams_description_placeholder">e.g., Manages Android library releases</string>
     <string name="teams_member_badge">Member</string>
-    <string name="teams_request_to_join">Request to Join</string>
+    <string name="teams_request_to_join">Request to join</string>
     <string name="teams_join_request_submitted">Join request submitted</string>
     <string name="teams_team_fallback">Team</string>
-    <string name="teams_leave">Leave</string>
+    <string name="teams_leave">Leave team</string>
     <string name="teams_audit_log">Audit Log</string>
     <string name="teams_manage">Manage</string>
     <string name="teams_members_section">Members</string>
     <string name="teams_no_members">No members yet</string>
-    <string name="teams_leave_title">Leave Team</string>
-    <string name="teams_leave_confirmation">Are you sure you want to leave \"%1$s\"?</string>
-    <string name="teams_leave_fallback">this team</string>
+    <string name="teams_no_members_hint_lead">Invite members from the Manage screen.</string>
+    <string name="teams_no_members_hint">Members will appear here once they join.</string>
+    <string name="teams_leave_confirmation">You will lose access to \"%1$s\" and its projects. To rejoin, you\u0027ll need a new invite.</string>
     <string name="teams_role_lead">Lead</string>
     <string name="teams_role_collaborator">Collaborator</string>
+    <string name="teams_join_hint">Join this team to access its projects</string>
 
     <!-- ==================== Teams: Manage ==================== -->
     <string name="teams_manage_title">Manage Team</string>
@@ -325,15 +380,12 @@
     <string name="teams_invite_user">Invite User</string>
     <string name="teams_pending_invites_count">Pending Invites (%1$d)</string>
     <string name="teams_join_requests_count">Join Requests (%1$d)</string>
-    <string name="teams_remove_member_confirmation">Are you sure you want to remove %1$s?</string>
+    <string name="teams_remove_member_confirmation">Remove %1$s from this team? They will lose access to all team projects and will need a new invite to rejoin.</string>
     <string name="teams_remove">Remove</string>
-    <string name="teams_cancel_invite_confirmation">Revoke invite for %1$s?</string>
+    <string name="teams_revoke_invite_confirmation">Revoke invite for %1$s?</string>
     <string name="teams_revoke_invite">Revoke</string>
-    <string name="teams_keep">Keep</string>
-    <string name="teams_promote">Promote</string>
-    <string name="teams_promote_to_lead">Promote to Lead</string>
-    <string name="teams_demote">Demote</string>
-    <string name="teams_demote_to_collaborator">Demote to Collaborator</string>
+    <string name="teams_promote_to_lead">Set as Lead</string>
+    <string name="teams_demote_to_collaborator">Set as Collaborator</string>
     <string name="teams_updated_success">%1$s updated</string>
     <string name="teams_edit_team">Edit Team</string>
     <string name="teams_delete_team">Delete Team</string>
@@ -343,21 +395,24 @@
     <string name="teams_invite_username_label">Username</string>
     <string name="teams_invite_username_placeholder">Enter username</string>
     <string name="teams_invite">Invite</string>
-    <string name="teams_you_badge">(You)</string>
+    <string name="teams_you_badge">You</string>
+    <string name="teams_no_pending_invites">No pending invites</string>
+    <string name="teams_no_join_requests">No pending join requests</string>
 
     <!-- ==================== Teams: My Invites ==================== -->
-    <string name="teams_no_pending_invites">No pending invites.</string>
-    <string name="teams_invites_empty_hint">When a team lead invites you, it will appear here.</string>
+    <string name="teams_invites_empty_hint">When someone invites you to a team, the invitation will appear here.</string>
     <string name="teams_invited_by">Invited by %1$s</string>
     <string name="teams_accept">Accept</string>
     <string name="teams_decline">Decline</string>
-    <string name="teams_decline_confirmation">Decline invite from \"%1$s\"? You\'ll need a new invite to join.</string>
+    <string name="teams_decline_confirmation">Decline invitation to \"%1$s\"? You\u0027ll need a new invite to join this team.</string>
+    <string name="teams_invite_accepted">Joined \"%1$s\" successfully.</string>
+    <string name="teams_invite_declined_success">Invite from \"%1$s\" declined.</string>
+    <string name="teams_invites_empty_icon">No invites</string>
 
     <!-- ==================== Teams: Audit Log ==================== -->
     <string name="teams_audit_log_title">Audit Log</string>
     <string name="teams_no_audit_events">No audit events yet.</string>
     <string name="teams_audit_empty_hint">Audit events will appear here as team activity occurs.</string>
-    <string name="teams_load_more">Load more</string>
     <string name="teams_audit_entry_by">by %1$s \u2022 %2$s</string>
 
     <!-- ==================== Releases: Block Detail ==================== -->
@@ -367,18 +422,8 @@
     <string name="releases_waiting_elapsed">Waiting: %1$s</string>
     <string name="releases_block_waiting_info">This block is waiting to execute.</string>
 
-    <!-- ==================== Connections: Section Headers ==================== -->
-    <string name="connections_section_slack">Slack Configuration</string>
-    <string name="connections_section_teamcity">TeamCity Configuration</string>
-    <string name="connections_section_github">GitHub Configuration</string>
-
-    <!-- ==================== Common: Password Toggle ==================== -->
-    <string name="common_hide_password">Hide password</string>
-    <string name="common_show_password">Show password</string>
-
     <!-- ==================== Keyboard Shortcuts ==================== -->
     <string name="shortcuts_title">Keyboard Shortcuts</string>
-    <string name="shortcuts_close">Close</string>
     <string name="shortcuts_menu_item">Keyboard Shortcuts</string>
     <string name="shortcuts_category_navigation">Navigation</string>
     <string name="shortcuts_category_actions">Actions</string>
@@ -389,12 +434,12 @@
     <string name="shortcut_nav_teams">Go to Teams</string>
     <string name="shortcut_nav_back">Go back</string>
     <string name="shortcut_action_search">Focus search</string>
-    <string name="shortcut_action_create">Create new item</string>
+    <string name="shortcut_action_create">Create new</string>
     <string name="shortcut_action_refresh">Refresh</string>
     <string name="shortcut_action_save">Save</string>
-    <string name="shortcut_action_help">Show keyboard shortcuts</string>
+    <string name="shortcut_action_help">Toggle keyboard shortcuts</string>
     <string name="shortcut_action_theme">Toggle theme</string>
-    <string name="shortcut_action_escape">Close dialog / deselect</string>
+    <string name="shortcut_action_escape">Close or deselect</string>
     <string name="shortcut_editor_undo">Undo</string>
     <string name="shortcut_editor_redo">Redo</string>
     <string name="shortcut_editor_copy">Copy</string>
@@ -417,12 +462,13 @@
     <string name="automation_delete_confirm_message">This action cannot be undone.</string>
     <string name="automation_open_button">Automation</string>
     <string name="automation_webhook_item_label">Webhook Trigger</string>
+    <string name="automation_preset_dropdown">Open preset list</string>
     <string name="schedule_create_title">New Schedule</string>
     <string name="schedule_cron_label">Cron Expression</string>
     <string name="schedule_cron_hint">e.g. 0 9 * * 1-5</string>
-    <string name="schedule_cron_valid">Valid ✓</string>
-    <string name="schedule_cron_invalid">Invalid cron syntax</string>
-    <string name="schedule_next_run_label">Next run</string>
+    <string name="schedule_cron_valid">Valid</string>
+    <string name="schedule_cron_invalid">Invalid format \u2014 expected 5 fields (e.g., 0 9 * * 1-5)</string>
+    <string name="schedule_next_run_label">Schedule</string>
     <string name="schedule_preset_label">Preset</string>
     <string name="schedule_preset_daily">Every day at 9 AM</string>
     <string name="schedule_preset_weekdays">Every weekday at 9 AM</string>
@@ -430,8 +476,8 @@
     <string name="schedule_parameters_label">Parameters (optional)</string>
     <string name="webhook_create_title">New Webhook Trigger</string>
     <string name="webhook_secret_dialog_title">Webhook Secret</string>
-    <string name="webhook_secret_warning">This is the only time this secret will be shown. Save it now — it cannot be retrieved later.</string>
-    <string name="webhook_secret_saved">I\'ve saved it</string>
+    <string name="webhook_secret_warning">This is the only time this secret will be shown. Save it now \u2014 it cannot be retrieved later.</string>
+    <string name="webhook_secret_saved">Done</string>
     <string name="webhook_parameters_label">Parameters Template (optional)</string>
     <string name="maven_create_title">New Maven Publication Trigger</string>
     <string name="maven_repo_url_label">Repository URL</string>
@@ -449,14 +495,10 @@
     <string name="maven_last_checked_never">Never</string>
     <string name="automation_checked_just_now">just now</string>
     <string name="automation_description">Configure triggers that automatically start releases for this project</string>
-    <string name="automation_empty_schedules_hint">Schedule releases to run automatically on a cron schedule. Add one above to get started.</string>
-    <string name="automation_empty_webhooks_hint">Trigger releases via HTTP webhook from your CI/CD pipeline. Add one above to get started.</string>
-    <string name="automation_empty_maven_hint">Trigger releases when new versions are published to Maven. Add one above to get started.</string>
+    <string name="automation_empty_schedules_hint">Schedule releases to run automatically on a cron schedule. Use the Add button to get started.</string>
+    <string name="automation_empty_webhooks_hint">Trigger releases via HTTP webhook from your CI/CD pipeline. Use the Add button to get started.</string>
+    <string name="automation_empty_maven_hint">Trigger releases when new versions are published to Maven. Use the Add button to get started.</string>
     <string name="maven_url_validation_error">Must start with http:// or https://</string>
-
-    <!-- ==================== Editor: Refresh Content Descriptions ==================== -->
-    <string name="editor_refresh_parameters">Refresh parameters</string>
-    <string name="editor_refresh_configurations">Refresh configurations</string>
 
     <!-- ==================== Audit: Action Display Names ==================== -->
     <string name="audit_action_team_created">Team created</string>
@@ -478,7 +520,7 @@
     <string name="audit_action_project_deleted">Project deleted</string>
     <string name="audit_action_release_started">Release started</string>
     <string name="audit_action_release_cancelled">Release cancelled</string>
-    <string name="audit_action_release_rerun">Release rerun</string>
+    <string name="audit_action_release_rerun">Release restarted</string>
     <string name="audit_action_release_archived">Release archived</string>
     <string name="audit_action_release_deleted">Release deleted</string>
     <string name="audit_action_release_stopped">Release stopped</string>
@@ -498,9 +540,9 @@
     <string name="audit_action_trigger_fired">Trigger fired</string>
     <string name="audit_action_tag_renamed">Tag renamed</string>
     <string name="audit_action_tag_deleted">Tag deleted</string>
-    <string name="audit_action_lock_force_released">Lock forcibly released</string>
-    <string name="audit_action_user_login">User logged in</string>
-    <string name="audit_action_user_register">User registered</string>
+    <string name="audit_action_lock_force_released">Lock force-released</string>
+    <string name="audit_action_user_login">Logged in</string>
+    <string name="audit_action_user_register">Registered</string>
     <string name="audit_action_admin_access">Admin access</string>
     <string name="audit_action_unknown">Unknown action</string>
 
@@ -526,16 +568,27 @@
     <string name="sidebar_connections">Connections</string>
     <string name="sidebar_teams">Teams</string>
     <string name="sidebar_settings">Settings</string>
-    <string name="sidebar_sign_out">Sign Out</string>
     <string name="sidebar_collapse">Collapse sidebar</string>
     <string name="sidebar_expand">Expand sidebar</string>
-    <string name="sidebar_sign_out_confirm">Click again to sign out</string>
-    <string name="sidebar_app_abbreviation">RW</string>
+    <string name="sidebar_settings_expand">Expand settings</string>
+    <string name="sidebar_settings_collapse">Collapse settings</string>
+    <string name="sidebar_sign_out_confirm">Select again to sign out</string>
+    <string name="sidebar_team_none">No team selected</string>
 
     <!-- Sort -->
     <string name="common_sort_by">Sort by</string>
-    <string name="common_sort_name_asc">Name (A–Z)</string>
-    <string name="common_sort_name_desc">Name (Z–A)</string>
-    <string name="common_sort_newest">Newest first</string>
-    <string name="common_sort_oldest">Oldest first</string>
+    <string name="common_sort_name_asc">Name (A\u2013Z)</string>
+    <string name="common_sort_name_desc">Name (Z\u2013A)</string>
+    <string name="common_sort_newest">Recently updated</string>
+    <string name="common_sort_oldest">Least recently updated</string>
+
+    <!-- ==================== Loading Accessibility ==================== -->
+    <string name="loading_projects">Loading projects</string>
+    <string name="loading_releases">Loading releases</string>
+    <string name="loading_automation">Loading automation settings</string>
+    <string name="loading_team_manage">Loading team</string>
+    <string name="loading_invites">Loading invites</string>
+    <string name="loading_connections">Loading connections</string>
+    <string name="loading_audit">Loading audit events</string>
+    <string name="loading_login">Signing in</string>
 </resources>

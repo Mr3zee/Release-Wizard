@@ -50,3 +50,19 @@ Cards at 70% opacity with no explanation for screen readers or sighted users.
 ### RELLIST_09 — Truncated UUID fallback for deleted project (LOW)
 When `projectName` is null, shows raw truncated UUID like `"a3f8c2b1"`.
 **Fix:** Use `"Unknown project"` fallback.
+
+## Resolution
+
+**Status:** RESOLVED
+
+| Issue | Status | Notes |
+|-------|--------|-------|
+| TEAMMGMT_01 | Fixed | Added empty states for pending invites and join requests |
+| EDITOR_17 | Fixed | Added `editor_empty_canvas_no_blocks` for zero-block state |
+| TEAMDETAIL_07 | Fixed | Added member hints for leads and non-leads |
+| TEAMLIST_08 | Fixed | Changed to "Create a team or ask a colleague to invite you" |
+| CONNLIST_11 | Fixed | Added description of what connections are |
+| EDITOR_10 | Fixed | Improved template picker empty state |
+| AUTOMATION_13 | Fixed | Changed "Add one above" to "Use the Add button" |
+| TEAMLIST_06 | Fixed | Added `teams_join_hint` for non-member cards |
+| RELLIST_09 | Fixed | Added `releases_unknown_project` fallback |

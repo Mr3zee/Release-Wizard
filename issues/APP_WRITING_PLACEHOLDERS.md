@@ -42,3 +42,17 @@ Save button silently disables with no explanation of which fields are missing.
 No "*" markers, no inline validation, no "Required" hints.
 **Fix:** Add required indicators to mandatory field labels and inline validation
 messages when a required field is blank after interaction.
+
+## Resolution
+
+**Status:** RESOLVED
+
+| Issue | Status | Notes |
+|-------|--------|-------|
+| LOGIN_06 | Fixed | Removed redundant placeholder, kept label |
+| PROJLIST_07 | Fixed | Added distinct placeholder "e.g. My Library v2.0" |
+| TEAMLIST_07 | Fixed | Added distinct placeholders for team name and description |
+| CONNFORM_10 | Fixed | Changed JWT-looking placeholder to "Paste your TeamCity access token" |
+| CONNFORM_08 | Fixed | Added supporting text "GitHub username or organization name" |
+| CONNFORM_04 | Fixed | Added credential setup hints for GitHub PAT, TeamCity token, and Slack webhook |
+| CONNFORM_01 | Minor | Required field indicators not added (would need larger form validation redesign) |

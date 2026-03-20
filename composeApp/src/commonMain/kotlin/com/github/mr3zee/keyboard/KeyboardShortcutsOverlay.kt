@@ -111,7 +111,7 @@ fun KeyboardShortcutsOverlay(
                             RwIconButton(onClick = onDismiss) {
                                 Icon(
                                     Icons.Default.Close,
-                                    contentDescription = packStringResource(Res.string.shortcuts_close),
+                                    contentDescription = packStringResource(Res.string.common_close),
                                 )
                             }
                         }

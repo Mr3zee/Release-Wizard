@@ -23,6 +23,8 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -113,8 +115,10 @@ fun LoginScreen(
                     value = username,
                     onValueChange = { username = it; viewModel.dismissError() },
                     label = packStringResource(Res.string.auth_username),
-                    placeholder = packStringResource(Res.string.auth_username),
                     singleLine = true,
+                    supportingText = if (isRegisterMode) {
+                        { Text(packStringResource(Res.string.auth_username_hint)) }
+                    } else null,
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(usernameFocusRequester)
@@ -131,7 +135,6 @@ fun LoginScreen(
                     value = password,
                     onValueChange = { password = it; viewModel.dismissError() },
                     label = packStringResource(Res.string.auth_password),
-                    placeholder = packStringResource(Res.string.auth_password),
                     singleLine = true,
                     visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
                     supportingText = if (isRegisterMode) {
@@ -224,6 +227,7 @@ fun LoginScreen(
                     }
                 }
 
+                val loadingLoginDesc = packStringResource(Res.string.loading_login)
                 RwButton(
                     onClick = onSubmit,
                     variant = RwButtonVariant.Primary,
@@ -234,7 +238,7 @@ fun LoginScreen(
                 ) {
                     if (isLoading) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
+                            modifier = Modifier.size(16.dp).semantics { contentDescription = loadingLoginDesc },
                             strokeWidth = 2.dp,
                         )
                     } else {

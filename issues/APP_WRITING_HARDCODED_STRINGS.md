@@ -44,3 +44,13 @@ Eight placeholder values are hardcoded inline:
 - `"my-repo"`
 
 **Fix:** Extract each into `strings.xml` (e.g., `connections_slack_webhook_placeholder`).
+
+## Resolution
+
+**Status:** RESOLVED
+
+| Issue | Status | Notes |
+|-------|--------|-------|
+| EDITOR_01 | Fixed | All 7 validation strings extracted to `editor_validation_*` resources with `packStringResource` |
+| EDITOR_02 | Fixed | Default block names extracted to `editor_default_*_name` resources; `defaultBlockName()` made `@Composable` |
+| CONNFORM_02 | Fixed | All 8 placeholder values extracted to `connections_*_placeholder` resources |
