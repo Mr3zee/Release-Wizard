@@ -224,6 +224,7 @@ object GenZPack {
             "editor_lock_unknown_user" to "some mysterious bestie",
             "editor_markdown_edit" to "Edit",
             "editor_markdown_preview" to "Preview slay",
+            "editor_markdown_images_not_supported" to "Pics? Not it, bestie",
             "editor_project_description_header" to "Project Vibes",
             "editor_prop_add_description" to "Add vibe check",
             "editor_prop_add_parameter" to "+ Manifest Parameter",

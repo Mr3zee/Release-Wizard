@@ -85,7 +85,6 @@ argon2 = { module = "de.mkammerer:argon2-jvm", version.ref = "argon2" }
 
 # Markdown
 markdown-renderer = { module = "com.mikepenz:multiplatform-markdown-renderer", version.ref = "multiplatformMarkdown" }
-markdown-renderer-m3 = { module = "com.mikepenz:multiplatform-markdown-renderer-m3", version.ref = "multiplatformMarkdown" }
 
 # Koin
 koin-ktor = { module = "io.insert-koin:koin-ktor", version.ref = "koin" }

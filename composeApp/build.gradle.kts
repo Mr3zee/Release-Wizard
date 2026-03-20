@@ -40,7 +40,6 @@ kotlin {
 
             // Markdown
             implementation(libs.markdown.renderer)
-            implementation(libs.markdown.renderer.m3)
 
             // Ktor client
             implementation(libs.ktor.clientCore)

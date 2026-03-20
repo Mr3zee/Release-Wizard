@@ -226,6 +226,7 @@ object HelldiversPack {
             "editor_lock_unknown_user" to "an unidentified Helldiver",
             "editor_markdown_edit" to "Draft",
             "editor_markdown_preview" to "Review Intel",
+            "editor_markdown_images_not_supported" to "Visual intel not cleared for display",
             "editor_project_description_header" to "Operation Briefing",
             "editor_prop_add_description" to "Add mission briefing",
             "editor_prop_add_parameter" to "+ Requisition Parameter",
