@@ -26,7 +26,7 @@ PK constraint catch is the safety net, not the intended design.
 
 ## High
 
-### PROJ-H1: `validateConnectionTeamConsistency` not called on `updateProject`
+### ✅ PROJ-H1: `validateConnectionTeamConsistency` not called on `updateProject`
 
 **Files:** `ProjectsService.kt:69-88`
 
@@ -34,7 +34,7 @@ PUT can silently inject cross-team connection IDs.
 
 ---
 
-### PROJ-H2: No server-side DAG validation on create or update
+### ✅ PROJ-H2: No server-side DAG validation on create or update
 
 **Files:** `ProjectsService.kt`, `DagValidator.kt`
 
@@ -44,7 +44,7 @@ PUT can silently inject cross-team connection IDs.
 
 ---
 
-### PROJ-H3: `findAllWithCount` two separate queries without snapshot
+### ✅ PROJ-H3: `findAllWithCount` two separate queries without snapshot
 
 **Files:** `ExposedProjectsRepository.kt:84-103`
 
@@ -52,7 +52,7 @@ PUT can silently inject cross-team connection IDs.
 
 ---
 
-### PROJ-H4: Blank-name validation in route only — bypassed by internal callers
+### ✅ PROJ-H4: Blank-name validation in route only — bypassed by internal callers
 
 **Files:** `ProjectsRoutes.kt:33-36`
 
@@ -63,7 +63,7 @@ PUT can silently inject cross-team connection IDs.
 ## Medium
 
 ### PROJ-M1: Lock bypass — write proceeds when no lock exists
-### PROJ-M3: `updateProject` emits no audit event
+### ✅ PROJ-M3: `updateProject` emits no audit event
 ### PROJ-M4: `teamIds` silently drops invalid UUIDs
 
 ---

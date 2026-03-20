@@ -419,6 +419,8 @@ object GenZPack {
             "audit_action_user_login" to "Slid in bestie",
             "audit_action_user_register" to "New main character arc",
             "audit_action_admin_access" to "Admin really said 'I am the manager'",
+            "audit_action_unknown" to "Idk what this action even is ngl",
+            "audit_target_unknown" to "Some mystery thing bestie",
             "audit_target_team" to "Squad",
             "audit_target_user" to "Bestie",
             "audit_target_project" to "Project",

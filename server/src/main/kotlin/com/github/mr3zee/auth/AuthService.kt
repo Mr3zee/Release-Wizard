@@ -65,7 +65,8 @@ class DatabaseAuthService(private val db: Database) : AuthService {
             .singleOrNull() ?: run {
             // Prevent timing-based user enumeration by performing a dummy verification
             argon2.verify(DUMMY_HASH, password.toCharArray())
-            log.warn("Login failed for user '{}': not found", username)
+            // AUTH-L2: Uniform log message for all login failures to prevent user enumeration via logs
+            log.warn("Login failed for user '{}'", username)
             return@dbQuery null
         }
         val hash = row[UserTable.passwordHash]
@@ -73,40 +74,60 @@ class DatabaseAuthService(private val db: Database) : AuthService {
             log.info("Login succeeded for user '{}'", username)
             row.toUser()
         } else {
-            log.warn("Login failed for user '{}': wrong password", username)
+            // AUTH-L2: Same message as user-not-found to prevent log-based enumeration
+            log.warn("Login failed for user '{}'", username)
             null
         }
     }
 
-    override suspend fun register(username: String, password: String): User? =
-        withContext(Dispatchers.IO) {
-            suspendTransaction(db, transactionIsolation = Connection.TRANSACTION_SERIALIZABLE) {
-                val existing = UserTable.selectAll()
-                    .where { UserTable.username eq username }
-                    .singleOrNull()
-                if (existing != null) {
-                    // Normalize timing so duplicate-username path takes roughly the same time as success path
-                    argon2.hash(ARGON2_ITERATIONS, ARGON2_MEMORY_KB, ARGON2_PARALLELISM, "dummy-timing-normalization".toCharArray())
-                    return@suspendTransaction null
+    override suspend fun register(username: String, password: String): User? {
+        // AUTH-M1: Pre-compute the password hash OUTSIDE the SERIALIZABLE transaction
+        // to avoid holding the DB lock during the ~400ms Argon2 computation.
+        val hash = withContext(Dispatchers.IO) {
+            argon2.hash(ARGON2_ITERATIONS, ARGON2_MEMORY_KB, ARGON2_PARALLELISM, password.toCharArray())
+        }
+        return withContext(Dispatchers.IO) {
+            try {
+                suspendTransaction(db, transactionIsolation = Connection.TRANSACTION_SERIALIZABLE) {
+                    val existing = UserTable.selectAll()
+                        .where { UserTable.username eq username }
+                        .singleOrNull()
+                    if (existing != null) {
+                        return@suspendTransaction null
+                    }
+
+                    val isFirstUser = UserTable.selectAll().count() == 0L
+                    val role = if (isFirstUser) UserRole.ADMIN else UserRole.USER
+
+                    val id = UUID.randomUUID()
+                    val now = Clock.System.now()
+                    UserTable.insert {
+                        it[UserTable.id] = id
+                        it[UserTable.username] = username
+                        it[UserTable.passwordHash] = hash
+                        it[UserTable.role] = role
+                        it[UserTable.createdAt] = now
+                    }
+
+                    User(id = UserId(id.toString()), username = username, role = role)
                 }
-
-                val isFirstUser = UserTable.selectAll().count() == 0L
-                val role = if (isFirstUser) UserRole.ADMIN else UserRole.USER
-
-                val id = UUID.randomUUID()
-                val now = Clock.System.now()
-                val hash = argon2.hash(ARGON2_ITERATIONS, ARGON2_MEMORY_KB, ARGON2_PARALLELISM, password.toCharArray())
-                UserTable.insert {
-                    it[UserTable.id] = id
-                    it[UserTable.username] = username
-                    it[UserTable.passwordHash] = hash
-                    it[UserTable.role] = role
-                    it[UserTable.createdAt] = now
+            } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+                // AUTH-M1: Catch unique constraint violation from concurrent registrations.
+                // With hash computed outside the transaction, two concurrent registrations
+                // can both pass the SELECT check, then one fails at INSERT with a constraint violation.
+                if (e.message?.contains("unique constraint", ignoreCase = true) == true ||
+                    e.message?.contains("duplicate key", ignoreCase = true) == true ||
+                    e.cause?.message?.contains("unique constraint", ignoreCase = true) == true ||
+                    e.cause?.message?.contains("duplicate key", ignoreCase = true) == true
+                ) {
+                    log.debug("Concurrent registration detected for username '{}'", username)
+                    null
+                } else {
+                    throw e
                 }
-
-                User(id = UserId(id.toString()), username = username, role = role)
             }
         }
+    }
 
     override suspend fun getUserById(id: UserId): User? = dbQuery {
         UserTable.selectAll()

@@ -136,9 +136,12 @@ class DefaultTriggerService(
         teamAccessService.checkMembership(TeamId(projectTeamId), session)
     }
 
+    // MAVEN-H4: SecureRandom singleton — avoid per-call instantiation (entropy pool depletion under load)
+    private val secureRandom = SecureRandom()
+
     private fun generateSecret(): String {
         val bytes = ByteArray(32)
-        SecureRandom().nextBytes(bytes)
+        secureRandom.nextBytes(bytes)
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
     }
 

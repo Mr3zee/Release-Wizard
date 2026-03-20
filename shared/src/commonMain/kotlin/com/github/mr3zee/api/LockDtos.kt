@@ -16,4 +16,6 @@ data class ProjectLockConflictResponse(
     val error: String,
     val code: String,
     val lock: ProjectLockInfo,
+    // INFRA-L2: Include correlation ID for traceability
+    val correlationId: String? = null,
 )

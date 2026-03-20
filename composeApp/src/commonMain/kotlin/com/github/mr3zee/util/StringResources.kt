@@ -149,6 +149,7 @@ fun AuditAction.displayName(): String = packStringResource(
         AuditAction.USER_LOGIN -> Res.string.audit_action_user_login
         AuditAction.USER_REGISTER -> Res.string.audit_action_user_register
         AuditAction.ADMIN_ACCESS -> Res.string.audit_action_admin_access
+        AuditAction.UNKNOWN -> Res.string.audit_action_unknown
     }
 )
 
@@ -164,5 +165,6 @@ fun AuditTargetType.displayName(): String = packStringResource(
         AuditTargetType.SCHEDULE -> Res.string.audit_target_schedule
         AuditTargetType.TRIGGER -> Res.string.audit_target_trigger
         AuditTargetType.TAG -> Res.string.audit_target_tag
+        AuditTargetType.UNKNOWN -> Res.string.audit_target_unknown
     }
 )

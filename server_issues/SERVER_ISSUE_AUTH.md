@@ -60,7 +60,7 @@ Empty token permanently bypasses CSRF enforcement.
 
 ## Medium
 
-### AUTH-M1: Dummy hash inside SERIALIZABLE transaction holds lock ~400ms
+### ✅ AUTH-M1: Dummy hash inside SERIALIZABLE transaction holds lock ~400ms
 ### AUTH-M2: Unsafe `updateUserRole` is public
 ### AUTH-M3: `TeamRepository` injected per-request inside handler lambda
 ### AUTH-M4: Session role cached — 60s demotion lag window
@@ -72,8 +72,8 @@ Empty token permanently bypasses CSRF enforcement.
 
 ## Low
 
-### AUTH-L1: Empty CSRF token bypass — migration path never closes
-### AUTH-L2: Log messages differentiate "not found" vs "wrong password"
-### AUTH-L3: `UserTable.username` varchar(255) vs route limit of 64
+### ✅ AUTH-L1: Empty CSRF token bypass — migration path never closes
+### ✅ AUTH-L2: Log messages differentiate "not found" vs "wrong password"
+### ✅ AUTH-L3: `UserTable.username` varchar(255) vs route limit of 64
 ### AUTH-L4: Test password violates production policy
-### AUTH-L5: Whitespace satisfies `requireSpecial` check
+### ✅ AUTH-L5: Whitespace satisfies `requireSpecial` check

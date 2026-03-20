@@ -8,7 +8,9 @@ data class UserSession(
     val username: String,
     val userId: String,
     val role: UserRole,
-    val csrfToken: String = "",
+    // AUTH-L1: No default — CSRF token must always be set explicitly at login/registration.
+    // Legacy sessions with empty token are rejected by CsrfPlugin (AUTH-H6).
+    val csrfToken: String,
     val createdAt: Long = 0L,
     val lastAccessedAt: Long = 0L,
 )

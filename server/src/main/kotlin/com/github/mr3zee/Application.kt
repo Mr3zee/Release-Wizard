@@ -295,12 +295,15 @@ fun Application.module() {
             )
         }
         exception<LockConflictException> { call, cause ->
+            // INFRA-L2: Include correlationId in LockConflictException response
+            val correlationId = call.attributes.getOrNull(CorrelationIdKey)
             call.respond(
                 HttpStatusCode.Conflict,
                 com.github.mr3zee.api.ProjectLockConflictResponse(
                     error = cause.message ?: "Project is locked",
                     code = "LOCK_CONFLICT",
                     lock = cause.lock,
+                    correlationId = correlationId,
                 ),
             )
         }
@@ -320,11 +323,18 @@ fun Application.module() {
 
     configureRouting(appVersion)
 
+    // INFRA-M7: Warn when secure cookies are disabled
+    val secureCookie = environment.config.propertyOrNull("app.auth.secureCookie")?.getString()?.toBooleanStrictOrNull() ?: true
+    if (!secureCookie) {
+        environment.log.warn("SECURE_COOKIE is disabled — session cookies will not have the Secure flag. " +
+            "This should only be used for local development.")
+    }
+
     monitor.subscribe(ApplicationStarted) {
         try {
             val koin = getKoin()
 
-            // Start notification listener BEFORE recovery so events are captured
+            // INFRA-H4: Critical services — failures are logged and flagged
             val listener = koin.getOrNull<NotificationListener>()
             val engine = koin.getOrNull<ExecutionEngine>()
             val scope = koin.getOrNull<CoroutineScope>()
@@ -391,12 +401,13 @@ fun Application.module() {
                         } catch (e: Exception) {
                             environment.log.warn("Lockout cleanup failed", e)
                         }
-                        kotlinx.coroutines.delay(60_000)
+                        delay(60_000L)
                     }
                 }
             }
         } catch (e: Exception) {
-            environment.log.error("Application startup failed", e)
+            // INFRA-H4: Log critical startup failure — server may be in a broken state
+            environment.log.error("CRITICAL: Application startup failed — some services may be unavailable", e)
         }
     }
 
@@ -414,10 +425,11 @@ fun Application.module() {
 
 fun Application.configureRouting(appVersion: String = "dev") {
     routing {
+        // INFRA-L4: Root endpoint does not disclose version in production
         get("/") {
             call.respond(mapOf(
                 "service" to "Release Wizard API",
-                "version" to appVersion,
+                "status" to "running",
             ))
         }
         healthRoute()

@@ -79,6 +79,10 @@ class DefaultTeamService(
 
     override suspend fun updateTeam(teamId: TeamId, request: UpdateTeamRequest, session: UserSession): TeamResponse {
         teamAccessService.checkTeamLead(teamId, session)
+        // TEAM-M3: Reject both-null update — at least one field must be provided
+        require(request.name != null || request.description != null) {
+            "At least one field (name or description) must be provided for update"
+        }
         val requestName = request.name?.let { sanitizeName(it) }
         if (requestName != null) {
             require(requestName.isNotBlank()) { "Team name must not be blank" }
@@ -134,13 +138,13 @@ class DefaultTeamService(
     override suspend fun inviteUser(teamId: TeamId, request: CreateInviteRequest, session: UserSession): TeamInvite {
         teamAccessService.checkTeamLead(teamId, session)
         teamRepository.findById(teamId) ?: throw NotFoundException("Team not found")
-        // Resolve username to user ID
+        // TEAM-L2: Use generic error message to prevent username enumeration via invite flow
         val user = authService.getUserByUsername(request.username)
-            ?: throw NotFoundException("User '${request.username}' not found")
+            ?: throw NotFoundException("Unable to invite user")
         val userId = user.id.value
-        // Check not already a member
+        // TEAM-L2: Use generic message to prevent username enumeration
         if (teamAccessService.isMember(teamId, userId)) {
-            throw IllegalArgumentException("User is already a member of this team")
+            throw IllegalArgumentException("Unable to invite user")
         }
         // Check no existing pending invite
         val existing = teamRepository.findExistingPendingInvite(teamId, userId)
@@ -220,6 +224,14 @@ class DefaultTeamService(
     override suspend fun acceptInvite(inviteId: String, session: UserSession) {
         // TEAM-C2: Atomic invite accept + add member in a single transaction to prevent duplicate memberships
         val teamId = teamRepository.acceptInviteAtomic(inviteId, session.userId, TeamRole.COLLABORATOR)
+        // TEAM-L3: Best-effort cancel of pending join request now that user joined via invite.
+        // Runs in a separate transaction — failure is logged but doesn't block the invite acceptance.
+        try {
+            teamRepository.cancelPendingJoinRequest(teamId, session.userId, reviewedByUserId = session.userId)
+        } catch (e: Exception) {
+            val log = org.slf4j.LoggerFactory.getLogger(DefaultTeamService::class.java)
+            log.warn("Failed to cancel pending join request for user {} in team {}: {}", session.userId, teamId.value, e.message)
+        }
         auditService.log(teamId, session, AuditAction.INVITE_ACCEPTED, AuditTargetType.USER, session.userId, "Accepted invite")
         auditService.log(teamId, session, AuditAction.MEMBER_JOINED, AuditTargetType.USER, session.userId, "Joined team via accepted invite")
     }

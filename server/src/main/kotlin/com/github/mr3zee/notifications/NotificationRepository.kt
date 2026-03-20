@@ -24,6 +24,6 @@ interface NotificationRepository {
         config: NotificationConfig,
         enabled: Boolean,
     ): NotificationConfigEntity
-    suspend fun update(id: String, config: NotificationConfig?, enabled: Boolean?): NotificationConfigEntity?
+    // NOTIF-H3: update() removed — orphaned attack surface with no route or service caller
     suspend fun delete(id: String): Boolean
 }

@@ -68,7 +68,12 @@ class DefaultScheduleService(
         // Reject expressions that fire more than once per 5 minutes
         CronUtils.validateMinimumInterval(request.cronExpression)
 
+        // SCHED-H1: Reject if next run cannot be computed — schedule would never fire
         val nextRunAt = CronUtils.computeNextRun(request.cronExpression)
+            ?: throw IllegalArgumentException(
+                "Cannot compute next execution time for cron expression '${request.cronExpression}'. " +
+                    "The schedule would never fire."
+            )
 
         val entity = repository.create(
             projectId = projectId,
@@ -78,12 +83,7 @@ class DefaultScheduleService(
             createdBy = session.userId,
             nextRunAt = nextRunAt,
         )
-        val projectTeamId = projectsRepository.findTeamId(projectId)
-        if (projectTeamId != null) {
-            auditService.log(TeamId(projectTeamId), session, AuditAction.SCHEDULE_CREATED, AuditTargetType.SCHEDULE, entity.id, "Created schedule for project ${projectId.value}")
-        }
         log.info("Schedule created: {} for project {} (cron='{}')", entity.id, projectId.value, request.cronExpression)
-        // SCHED-M5: Audit schedule creation
         auditService.log(TeamId(teamId), session, AuditAction.SCHEDULE_CREATED, AuditTargetType.SCHEDULE, entity.id, "Created schedule with cron '${request.cronExpression}' for project ${projectId.value}")
         return entity.toModel()
     }
@@ -95,12 +95,7 @@ class DefaultScheduleService(
         val nextRunAt = if (enabled) CronUtils.computeNextRun(entity.cronExpression) else entity.nextRunAt
         val updated = repository.update(id, enabled = enabled, nextRunAt = nextRunAt, lastRunAt = null)
         if (updated != null) {
-            val projectTeamId = projectsRepository.findTeamId(entity.projectId)
-            if (projectTeamId != null) {
-                auditService.log(TeamId(projectTeamId), session, AuditAction.SCHEDULE_UPDATED, AuditTargetType.SCHEDULE, id, "Schedule toggled to enabled=$enabled")
-            }
             log.info("Schedule {} toggled to enabled={}", id, enabled)
-            // SCHED-M5: Audit schedule toggle
             auditService.log(TeamId(teamId), session, AuditAction.SCHEDULE_UPDATED, AuditTargetType.SCHEDULE, id, "Toggled schedule to enabled=$enabled")
         }
         return updated?.toModel()
@@ -111,12 +106,7 @@ class DefaultScheduleService(
         val teamId = resolveProjectTeamId(entity.projectId, session)
         val deleted = repository.delete(id)
         if (deleted) {
-            val projectTeamId = projectsRepository.findTeamId(entity.projectId)
-            if (projectTeamId != null) {
-                auditService.log(TeamId(projectTeamId), session, AuditAction.SCHEDULE_DELETED, AuditTargetType.SCHEDULE, id, "Deleted schedule for project ${entity.projectId.value}")
-            }
             log.info("Schedule deleted: {}", id)
-            // SCHED-M5: Audit schedule deletion
             auditService.log(TeamId(teamId), session, AuditAction.SCHEDULE_DELETED, AuditTargetType.SCHEDULE, id, "Deleted schedule for project ${entity.projectId.value}")
         }
         return deleted

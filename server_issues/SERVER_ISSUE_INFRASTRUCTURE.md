@@ -14,7 +14,7 @@ Entropy pool depletion under load. Thread-safe, should be singleton.
 
 ---
 
-### INFRA-C2: `SchemaUtils.create` — no migration strategy; schema drift is silent
+### ✅ INFRA-C2: `SchemaUtils.create` — no migration strategy; schema drift is silent
 
 **Files:** `DatabaseFactory.kt:23-48`
 
@@ -26,7 +26,7 @@ Entropy pool depletion under load. Thread-safe, should be singleton.
 
 ## High
 
-### INFRA-H1: `RequestSizeLimit` does not terminate pipeline after 413
+### ✅ INFRA-H1: `RequestSizeLimit` does not terminate pipeline after 413
 
 **Files:** `RequestSizeLimit.kt:19-34`
 
@@ -54,7 +54,7 @@ Route handler still executes after 413 response. Chunked bodies bypass entirely.
 
 ---
 
-### INFRA-H4: Critical startup services swallow failures
+### ✅ INFRA-H4: Critical startup services swallow failures
 
 **Files:** `Application.kt:286-323`
 
@@ -66,22 +66,22 @@ Server stays up in broken state if recovery or listener fails.
 
 ## Medium
 
-### INFRA-M1: HikariCP missing keepaliveTime/idleTimeout
-### INFRA-M2: CorrelationId ignores upstream header
+### ✅ INFRA-M1: HikariCP missing keepaliveTime/idleTimeout
+### ✅ INFRA-M2: CorrelationId ignores upstream header
 ### INFRA-M3: http:// CORS origins silently fail
 ### INFRA-M4: Health check hits DB every call, no rate limit
-### INFRA-M5: `likeContains` relies on caller discipline
+### ✅ INFRA-M5: `likeContains` relies on caller discipline
 ### INFRA-M6: Default postgres/postgres credentials in YAML
-### INFRA-M7: `SECURE_COOKIE=false` without production guard
+### ✅ INFRA-M7: `SECURE_COOKIE=false` without production guard
 ### INFRA-M8: Legacy session migration resets TTL
 
 ---
 
 ## Low
 
-### INFRA-L1: Encryption key validation mismatch (chars vs bytes)
-### INFRA-L2: `LockConflictException` missing correlationId
+### ✅ INFRA-L1: Encryption key validation mismatch (chars vs bytes)
+### ✅ INFRA-L2: `LockConflictException` missing correlationId
 ### INFRA-L3: `Cache-Control: no-store` conditional on session
-### INFRA-L4: Root endpoint discloses version
-### INFRA-L5: Exception messages echoed to clients
+### ✅ INFRA-L4: Root endpoint discloses version
+### ✅ INFRA-L5: Exception messages echoed to clients
 ### INFRA-L6: `safeOffset` takes Int, truncates silently

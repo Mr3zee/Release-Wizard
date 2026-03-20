@@ -65,6 +65,24 @@ fun initDatabase(ds: DataSource): Database {
  * PostgreSQL supports partial indexes; H2 does not — failures are logged and ignored.
  */
 private fun createPartialIndexes(ds: DataSource) {
+    // TAG-L3: Create composite index on (team_id, tag) for efficient team-scoped tag queries
+    val regularIndexes = listOf(
+        """CREATE INDEX IF NOT EXISTS idx_release_tags_team_tag
+           ON release_tags (team_id, tag)""",
+    )
+    ds.connection.use { conn ->
+        conn.autoCommit = true
+        for (sql in regularIndexes) {
+            try {
+                conn.createStatement().use { stmt ->
+                    stmt.execute(sql.trimIndent())
+                }
+            } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+                log.warn("Index creation skipped: {}", e.message)
+            }
+        }
+    }
+
     val partialIndexes = listOf(
         // TEAM-H2: Only one PENDING invite per (team, user)
         """CREATE UNIQUE INDEX IF NOT EXISTS uq_invite_pending_team_user

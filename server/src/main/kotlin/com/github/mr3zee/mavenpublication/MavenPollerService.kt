@@ -45,9 +45,11 @@ class MavenPollerService(
         }
     }
 
+    // MAVEN-L2: Cancel and signal for clean shutdown
     fun stop() {
-        pollingJob?.cancel()
+        val job = pollingJob ?: return
         pollingJob = null
+        job.cancel()
     }
 
     internal suspend fun pollAllTriggers() {

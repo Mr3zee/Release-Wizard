@@ -68,6 +68,9 @@ enum class AuditAction {
     // Auth
     USER_LOGIN,
     USER_REGISTER,
+
+    // TAG-M6: Fallback for unrecognized enum values from newer server versions
+    UNKNOWN,
 }
 
 @Serializable
@@ -81,6 +84,8 @@ enum class AuditTargetType {
     SCHEDULE,
     TRIGGER,
     TAG,
+    // TAG-M6: Fallback for unrecognized enum values
+    UNKNOWN,
 }
 
 @Serializable

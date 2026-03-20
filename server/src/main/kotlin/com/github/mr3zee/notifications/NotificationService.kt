@@ -86,9 +86,14 @@ class DefaultNotificationService(
         return deleted
     }
 
+    // NOTIF-H2: Fixed ownership check — empty userId means the config was created
+    // without proper attribution and should only be deletable by admins or the team lead.
     private fun checkOwnership(entity: NotificationConfigEntity, session: UserSession) {
         if (session.role == UserRole.ADMIN) return
-        if (entity.userId.isNotEmpty() && entity.userId != session.userId) {
+        if (entity.userId.isEmpty()) {
+            throw ForbiddenException("Only admins can manage system notification configs")
+        }
+        if (entity.userId != session.userId) {
             throw ForbiddenException("Access denied")
         }
     }

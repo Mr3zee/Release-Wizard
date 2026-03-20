@@ -12,7 +12,9 @@ import com.github.mr3zee.releases.ReleasesRepository
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.http.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import org.slf4j.LoggerFactory
@@ -30,12 +32,16 @@ class NotificationListener(
 ) {
     private val log = LoggerFactory.getLogger(NotificationListener::class.java)
 
-    fun start(engine: ExecutionEngine, scope: CoroutineScope) {
-        scope.launch {
+    // NOTIF-H6: Return Job so caller can manage listener lifecycle (cancel, join)
+    fun start(engine: ExecutionEngine, scope: CoroutineScope): Job {
+        return scope.launch {
             engine.events.collect { event ->
                 if (event is ReleaseEvent.ReleaseCompleted) {
                     try {
                         handleReleaseCompleted(event.releaseId, event.status)
+                    } catch (e: CancellationException) {
+                        // NOTIF-M1: Re-throw CancellationException to respect coroutine cancellation
+                        throw e
                     } catch (e: Exception) {
                         log.error("Failed to send notification for release {}", event.releaseId.value, e)
                     }

@@ -419,6 +419,8 @@ object HelldiversPack {
             "audit_action_user_login" to "Helldiver reporting for duty",
             "audit_action_user_register" to "New Helldiver enlisted",
             "audit_action_admin_access" to "Super Earth command override",
+            "audit_action_unknown" to "Unclassified operation, Citizen",
+            "audit_target_unknown" to "Unidentified asset",
             "audit_target_team" to "Squad",
             "audit_target_user" to "Helldiver",
             "audit_target_project" to "Operation",

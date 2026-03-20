@@ -8,6 +8,7 @@ import kotlinx.coroutines.withContext
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
+import org.slf4j.LoggerFactory
 import java.sql.Connection
 import java.util.UUID
 import kotlin.time.Clock
@@ -18,6 +19,7 @@ interface AuditRepository {
 }
 
 class ExposedAuditRepository(private val db: Database) : AuditRepository {
+    private val log = LoggerFactory.getLogger(ExposedAuditRepository::class.java)
 
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
         withContext(Dispatchers.IO) { suspendTransaction(db) { block() } }
@@ -59,15 +61,28 @@ class ExposedAuditRepository(private val db: Database) : AuditRepository {
         events to totalCount
     }
 
-    private fun ResultRow.toAuditEvent(): AuditEvent = AuditEvent(
-        id = this[AuditEventTable.id].value.toString(),
-        teamId = this[AuditEventTable.teamId]?.let { TeamId(it) },
-        actorUserId = this[AuditEventTable.actorUserId]?.let { entityId -> UserId(entityId.value.toString()) },
-        actorUsername = this[AuditEventTable.actorUsername],
-        action = AuditAction.valueOf(this[AuditEventTable.action]),
-        targetType = AuditTargetType.valueOf(this[AuditEventTable.targetType]),
-        targetId = this[AuditEventTable.targetId],
-        details = this[AuditEventTable.details],
-        timestamp = this[AuditEventTable.timestamp].toEpochMilliseconds(),
-    )
+    private fun ResultRow.toAuditEvent(): AuditEvent {
+        // TAG-M6: Gracefully handle unknown enum values instead of crashing with IllegalArgumentException
+        val actionStr = this[AuditEventTable.action]
+        val action = runCatching { AuditAction.valueOf(actionStr) }.getOrElse {
+            log.warn("Unknown AuditAction '{}' found in audit event, mapping to UNKNOWN", actionStr)
+            AuditAction.UNKNOWN
+        }
+        val targetTypeStr = this[AuditEventTable.targetType]
+        val targetType = runCatching { AuditTargetType.valueOf(targetTypeStr) }.getOrElse {
+            log.warn("Unknown AuditTargetType '{}' found in audit event, mapping to UNKNOWN", targetTypeStr)
+            AuditTargetType.UNKNOWN
+        }
+        return AuditEvent(
+            id = this[AuditEventTable.id].value.toString(),
+            teamId = this[AuditEventTable.teamId]?.let { TeamId(it) },
+            actorUserId = this[AuditEventTable.actorUserId]?.let { entityId -> UserId(entityId.value.toString()) },
+            actorUsername = this[AuditEventTable.actorUsername],
+            action = action,
+            targetType = targetType,
+            targetId = this[AuditEventTable.targetId],
+            details = this[AuditEventTable.details],
+            timestamp = this[AuditEventTable.timestamp].toEpochMilliseconds(),
+        )
+    }
 }

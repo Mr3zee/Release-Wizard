@@ -23,7 +23,8 @@ class PasswordValidator(private val config: PasswordPolicyConfig) {
         if (config.requireDigit && password.none { it.isDigit() }) {
             errors += "Password must contain at least one digit"
         }
-        if (config.requireSpecial && password.none { !it.isLetterOrDigit() }) {
+        // AUTH-L5: Whitespace does not count as a special character
+        if (config.requireSpecial && password.none { !it.isLetterOrDigit() && !it.isWhitespace() }) {
             errors += "Password must contain at least one special character"
         }
         return errors

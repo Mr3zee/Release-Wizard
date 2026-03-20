@@ -20,6 +20,7 @@ class InfoRoutesTest {
 
         val body = response.body<Map<String, String>>()
         assertEquals("Release Wizard API", body["service"])
-        assertTrue(body.containsKey("version"))
+        // INFRA-L4: Version no longer disclosed; status field present instead
+        assertEquals("running", body["status"])
     }
 }

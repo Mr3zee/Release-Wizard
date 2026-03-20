@@ -419,6 +419,8 @@ object EmojisPack {
             "audit_action_user_login" to "\ud83d\udc64\u27a1\ufe0f",
             "audit_action_user_register" to "\ud83d\udc64\u2728",
             "audit_action_admin_access" to "\ud83d\udd11\ud83d\udc51",
+            "audit_action_unknown" to "\u2753\u26a1\u2753",
+            "audit_target_unknown" to "\u2753",
             "audit_target_team" to "\ud83d\udc65",
             "audit_target_user" to "\ud83d\udc64",
             "audit_target_project" to "\ud83d\udcc1",

@@ -37,8 +37,9 @@ fun Route.releaseWebSocketRoutes() {
 
     route("${ApiRoutes.Releases.BASE}/{id}") {
         webSocket("/ws") {
-            // BUG-7: Validate Origin header to prevent cross-origin WebSocket hijacking.
+            // BUG-7 + REL-M6: Validate Origin header to prevent cross-origin WebSocket hijacking.
             // Fail closed: if Origin is present, it MUST match the Host header.
+            // REL-M6: Also fail closed on parse errors (null originHost from URI).
             val origin = call.request.headers["Origin"]
             if (origin != null) {
                 val host = call.request.headers["Host"]
@@ -48,7 +49,15 @@ fun Route.releaseWebSocketRoutes() {
                     return@webSocket
                 }
                 val originHost = try { java.net.URI(origin).host } catch (_: Exception) { null }
-                if (originHost != null && originHost != host.substringBefore(":")) {
+                // REL-M6: Fail closed if origin cannot be parsed
+                if (originHost == null) {
+                    log.warn("Cross-origin WebSocket rejected: cannot parse Origin header '{}'", origin)
+                    close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Invalid Origin header"))
+                    return@webSocket
+                }
+                // REL-M6: Compare with port to prevent port-based attacks
+                val hostWithoutPort = host.substringBefore(":")
+                if (originHost != hostWithoutPort) {
                     log.warn("Cross-origin WebSocket rejected: origin={}, host={}", origin, host)
                     close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Cross-origin WebSocket not allowed"))
                     return@webSocket

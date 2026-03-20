@@ -24,7 +24,7 @@ Team-scoped routes call `tagRepository` directly, skipping service validation an
 
 ## High
 
-### TAG-H1: `renameTag` TOCTOU race — conflict-check and update not atomic
+### ✅ TAG-H1: `renameTag` TOCTOU race — conflict-check and update not atomic
 
 **Files:** `ExposedTagRepository.kt:78-91`
 
@@ -32,13 +32,13 @@ Team-scoped routes call `tagRepository` directly, skipping service validation an
 
 ---
 
-### TAG-H2: `setTagsForRelease` delete-then-insert without isolation
+### ✅ TAG-H2: `setTagsForRelease` delete-then-insert without isolation
 
 **Files:** `ExposedTagRepository.kt:36-46`
 
 ---
 
-### TAG-H3: Cross-team IDOR in `renameTag` deduplication
+### ✅ TAG-H3: Cross-team IDOR in `renameTag` deduplication
 
 **Files:** `ExposedTagRepository.kt:78-81`
 
@@ -48,7 +48,7 @@ Deduplication query doesn't filter by teamId.
 
 ---
 
-### TAG-H4: Tag names have no length or character validation
+### ✅ TAG-H4: Tag names have no length or character validation
 
 **Files:** `TagService.kt:29`, `ReleaseTagTable.kt:8`
 
@@ -58,12 +58,12 @@ Deduplication query doesn't filter by teamId.
 
 ## Medium
 
-### TAG-M1: Audit log injection via user-controlled `details` field
-### TAG-M2: `AuditRepository.findByTeam` two queries without snapshot
+### ✅ TAG-M1: Audit log injection via user-controlled `details` field
+### ✅ TAG-M2: `AuditRepository.findByTeam` two queries without snapshot
 ### TAG-M3: `AuditService.log` silently swallows all failures
-### TAG-M4: `AuditService` registered in `teamsModule` — scope leak
+### ✅ TAG-M4: `AuditService` registered in `teamsModule` — scope leak
 ### TAG-M5: Audit log readable by any team member
-### TAG-M6: Unknown enum values on read cause 500
+### ✅ TAG-M6: Unknown enum values on read cause 500
 
 ---
 
@@ -71,4 +71,4 @@ Deduplication query doesn't filter by teamId.
 
 ### TAG-L1: `renameTag` count doesn't reflect deduplication deletes
 ### TAG-L2: `AuditEvent.id` passed as empty string
-### TAG-L3: Missing composite index on `(teamId, tag)`
+### ✅ TAG-L3: Missing composite index on `(teamId, tag)`

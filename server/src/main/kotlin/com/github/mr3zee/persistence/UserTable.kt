@@ -5,7 +5,8 @@ import org.jetbrains.exposed.v1.core.dao.id.java.UUIDTable
 import org.jetbrains.exposed.v1.datetime.timestamp
 
 object UserTable : UUIDTable("users") {
-    val username = varchar("username", 255).uniqueIndex()
+    // AUTH-L3: Aligned with route-level validation (max 64 chars)
+    val username = varchar("username", 64).uniqueIndex()
     val passwordHash = varchar("password_hash", 255)
     val role = enumerationByName<UserRole>("role", 50)
     val createdAt = timestamp("created_at")

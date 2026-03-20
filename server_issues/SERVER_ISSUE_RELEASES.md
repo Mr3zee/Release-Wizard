@@ -46,7 +46,7 @@ Neither method performs authorization checks. Currently safe because callers che
 
 ---
 
-### REL-H3: No per-user WebSocket connection limit — DoS via memory exhaustion
+### ✅ REL-H3: No per-user WebSocket connection limit — DoS via memory exhaustion
 
 **Files:** `ReleaseWebSocketRoutes.kt`
 
@@ -58,7 +58,7 @@ No cap on simultaneous WebSocket connections per user. Each allocates unbounded 
 
 ## Medium
 
-### REL-H4: `Channel.UNLIMITED` per WebSocket connection — unbounded memory growth
+### ✅ REL-H4: `Channel.UNLIMITED` per WebSocket connection — unbounded memory growth
 
 **Files:** `ReleaseWebSocketRoutes.kt:85`
 
@@ -68,7 +68,7 @@ Slow consumers cause the channel buffer to grow without bound.
 
 ---
 
-### REL-M1: Service-layer state transitions are TOCTOU
+### ✅ REL-M1: Service-layer state transitions are TOCTOU
 
 **Files:** `ReleasesService.kt` (multiple lifecycle methods)
 
@@ -78,7 +78,7 @@ Status checks happen against a stale DB read, then engine calls follow without l
 
 ---
 
-### REL-M2: `batchStopBlocks` does not update WAITING blocks to STOPPED
+### ✅ REL-M2: `batchStopBlocks` does not update WAITING blocks to STOPPED
 
 **Files:** `ExecutionEngine.kt:392-398`
 
@@ -106,7 +106,7 @@ Any team member can stop, cancel, archive, delete, or restart blocks. Only Team 
 
 ---
 
-### REL-M5: `rerunRelease` skips `validateConnectionTeamConsistency` on stale snapshot
+### ✅ REL-M5: `rerunRelease` skips `validateConnectionTeamConsistency` on stale snapshot
 
 **Files:** `ReleasesService.kt:197-202`
 
@@ -116,7 +116,7 @@ Rerun reuses the original DAG snapshot without re-validating connection team con
 
 ---
 
-### REL-M6: WebSocket Origin validation incomplete
+### ✅ REL-M6: WebSocket Origin validation incomplete
 
 **Files:** `ReleaseWebSocketRoutes.kt:33-41`
 
@@ -124,7 +124,7 @@ Missing Origin header bypasses the check. Port is stripped from comparison.
 
 ---
 
-### REL-M7: No size bounds on `parameters`, `tags`, or approval `input`
+### ✅ REL-M7: No size bounds on `parameters`, `tags`, or approval `input`
 
 **Files:** `ReleasesRoutes.kt`, `ReleaseDtos.kt`
 

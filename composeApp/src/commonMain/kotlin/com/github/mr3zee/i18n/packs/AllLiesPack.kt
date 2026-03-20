@@ -419,6 +419,8 @@ object AllLiesPack {
             "audit_action_user_login" to "Nobody logged in",
             "audit_action_user_register" to "No new users here",
             "audit_action_admin_access" to "Nobody accessed anything",
+            "audit_action_unknown" to "Completely known and documented action",
+            "audit_target_unknown" to "Precisely identified target",
             "audit_target_team" to "Definitely not a team",
             "audit_target_user" to "Nobody",
             "audit_target_project" to "Nonexistent project",

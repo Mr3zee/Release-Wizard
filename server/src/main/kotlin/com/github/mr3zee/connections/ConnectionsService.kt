@@ -87,6 +87,10 @@ class DefaultConnectionsService(
     override suspend fun updateConnection(id: ConnectionId, request: UpdateConnectionRequest, session: UserSession): Connection? {
         // CONN-M3: Blank-name validation on update path
         request.name?.let { require(it.isNotBlank()) { "Connection name must not be blank" } }
+        // CONN-M2: Reject no-op PUT — at least one field must be provided
+        require(request.name != null || request.config != null) {
+            "At least one field (name or config) must be provided for update"
+        }
         checkAccess(id, session)
         // CONN-H4: Fetch teamId before update to avoid TOCTOU if connection is deleted concurrently
         val teamId = repository.findTeamId(id)

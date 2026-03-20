@@ -56,8 +56,12 @@ object CronUtils {
             }
         } catch (e: IllegalArgumentException) {
             throw e
-        } catch (_: Exception) {
-            // If we can't determine the interval, allow it (parsing was already validated)
+        } catch (e: Exception) {
+            // SCHED-H2: Log warning when interval cannot be computed (library bug or unusual expression).
+            // The cron expression has already been parsed and validated — rejecting here could block
+            // valid expressions that trigger edge cases in the cron-utils interval computation.
+            val log = org.slf4j.LoggerFactory.getLogger("com.github.mr3zee.schedules.CronUtils")
+            log.warn("Could not compute interval for cron expression '{}': {}", cronExpression, e.message)
         }
     }
 }

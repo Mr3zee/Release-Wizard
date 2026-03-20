@@ -419,6 +419,8 @@ object RickAndMortyPack {
             "audit_action_user_login" to "User portaled in",
             "audit_action_user_register" to "New user registered, *burp* great",
             "audit_action_admin_access" to "Council of Ricks override",
+            "audit_action_unknown" to "Nobody knows, *burp* Morty",
+            "audit_target_unknown" to "Some *burp* thing",
             "audit_target_team" to "Team",
             "audit_target_user" to "Morty",
             "audit_target_project" to "Experiment",

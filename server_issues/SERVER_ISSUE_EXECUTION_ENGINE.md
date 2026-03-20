@@ -36,7 +36,7 @@
 
 ## High
 
-### EXEC-H1: GitHub run-ID discovery picks wrong run under concurrent dispatches
+### ✅ EXEC-H1: GitHub run-ID discovery picks wrong run under concurrent dispatches
 
 **Files:** `GitHubActionExecutor.kt:142-168`
 
@@ -46,7 +46,7 @@ After dispatching a workflow, the executor fetches `?per_page=1` (most recent ru
 
 ---
 
-### EXEC-H2: `cancelExecution` bypasses `emitCompletionOnce` — duplicate WebSocket events
+### ✅ EXEC-H2: `cancelExecution` bypasses `emitCompletionOnce` — duplicate WebSocket events
 
 **Files:** `ExecutionEngine.kt:117-123, 139-173`
 
@@ -56,7 +56,7 @@ After dispatching a workflow, the executor fetches `?per_page=1` (most recent ru
 
 ---
 
-### EXEC-H3: Stop/restart clear `replayBuffers` before emitting events — breaks WS sequence continuity
+### ✅ EXEC-H3: Stop/restart clear `replayBuffers` before emitting events — breaks WS sequence continuity
 
 **Files:** `ExecutionEngine.kt:470-505, 392-394`
 
@@ -66,7 +66,7 @@ After dispatching a workflow, the executor fetches `?per_page=1` (most recent ru
 
 ---
 
-### EXEC-H4: `resumeAction` loses original `startedAt` — duration data corrupted on recovery
+### ✅ EXEC-H4: `resumeAction` loses original `startedAt` — duration data corrupted on recovery
 
 **Files:** `ExecutionEngine.kt:307-338, 361`
 
@@ -86,7 +86,7 @@ After dispatching a workflow, the executor fetches `?per_page=1` (most recent ru
 
 ---
 
-### EXEC-H6: TLS certificate verification not explicitly configured for CIO HttpClient
+### ✅ EXEC-H6: TLS certificate verification not explicitly configured for CIO HttpClient
 
 **Files:** `AppModule.kt`
 
@@ -96,7 +96,7 @@ The shared `HttpClient(CIO)` uses default settings. The CIO engine may not verif
 
 ---
 
-### EXEC-H7: No concurrency cap on parallel DAG block execution
+### ✅ EXEC-H7: No concurrency cap on parallel DAG block execution
 
 **Files:** `ExecutionEngine.kt:988-994`
 
@@ -108,7 +108,7 @@ The shared `HttpClient(CIO)` uses default settings. The CIO engine may not verif
 
 ## Medium
 
-### EXEC-M1: No maximum total wait time for build polling
+### ✅ EXEC-M1: No maximum total wait time for build polling
 
 **Files:** `BuildPollingService.kt:51-87, 307-362`
 
@@ -118,7 +118,7 @@ Once a build transitions to RUNNING, there is no upper bound on polling duration
 
 ---
 
-### EXEC-M2: `CancellationException` swallowed in `TeamCityArtifactService.fetchRecursive`
+### ✅ EXEC-M2: `CancellationException` swallowed in `TeamCityArtifactService.fetchRecursive`
 
 **Files:** `TeamCityArtifactService.kt:43-95`
 
@@ -128,7 +128,7 @@ The recursive HTTP calls catch `Exception` which includes `CancellationException
 
 ---
 
-### EXEC-M3: `ExecutionContext.blockOutputs` exposes live mutable map to executors
+### ✅ EXEC-M3: `ExecutionContext.blockOutputs` exposes live mutable map to executors
 
 **Files:** `ExecutionEngine.kt:1033`
 
@@ -138,7 +138,7 @@ The `blockOutputs` map reference is shared with executors. The interface does no
 
 ---
 
-### EXEC-M4: O(n^2) linear scan for block lookup in wave loop
+### ✅ EXEC-M4: O(n^2) linear scan for block lookup in wave loop
 
 **Files:** `ExecutionEngine.kt:989-990`
 

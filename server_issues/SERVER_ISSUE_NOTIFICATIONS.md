@@ -26,18 +26,18 @@ Any authenticated team member can register a URL targeting internal services.
 
 ## High
 
-### NOTIF-H2: Ownership bypass when `userId` is empty
-### NOTIF-H3: `update()` implemented but unguarded — orphaned attack surface
+### ✅ NOTIF-H2: Ownership bypass when `userId` is empty
+### ✅ NOTIF-H3: `update()` implemented but unguarded — orphaned attack surface
 ### ✅ NOTIF-H4: Webhook URL (secret credential) returned in API responses
-### NOTIF-H5: No HTTP response status validation in `sendSlackNotification`
-### NOTIF-H6: Listener has no stop/cancel mechanism
+### ✅ NOTIF-H5: No HTTP response status validation in `sendSlackNotification`
+### ✅ NOTIF-H6: Listener has no stop/cancel mechanism
 
 ---
 
 ## Medium
 
-### NOTIF-M1: `CancellationException` swallowed in event collection
-### NOTIF-M2: No per-project notification config limit
+### ✅ NOTIF-M1: `CancellationException` swallowed in event collection
+### ✅ NOTIF-M2: No per-project notification config limit
 ### NOTIF-M3: Cross-team leakage — all members see all configs
 ### NOTIF-M4: `type: String` redundant and can diverge from config discriminator
 

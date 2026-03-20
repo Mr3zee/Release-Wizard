@@ -27,24 +27,24 @@ Two instances read same snapshot, both fire for same version.
 ## High
 
 ### ✅ MAVEN-H1: SSRF — stored `repoUrl` polled forever without re-validation
-### MAVEN-H2: No response body size cap on Maven metadata fetches
+### ✅ MAVEN-H2: No response body size cap on Maven metadata fetches
 ### MAVEN-H3: Webhook timing side-channel in `fireWebhook`
-### MAVEN-H4: `SecureRandom` instantiated per-call in `generateSecret`
+### ✅ MAVEN-H4: `SecureRandom` instantiated per-call in `generateSecret`
 
 ---
 
 ## Medium
 
-### MAVEN-M1: No rate limit on unauthenticated webhook endpoint
-### MAVEN-M2: No per-project trigger count cap
-### MAVEN-M3: `pollAllTriggers()` has no upper bound on total duration
+### ✅ MAVEN-M1: No rate limit on unauthenticated webhook endpoint
+### ✅ MAVEN-M2: No per-project trigger count cap
+### ✅ MAVEN-M3: `pollAllTriggers()` has no upper bound on total duration
 ### MAVEN-M4: Partial persistence — no idempotency on version fires
-### MAVEN-M5: Live network fetch synchronously in create handler
+### ✅ MAVEN-M5: Live network fetch synchronously in create handler
 
 ---
 
 ## Low
 
 ### MAVEN-L1: Webhook secret stored as plain SHA-256
-### MAVEN-L2: `stop()` does not await job completion
+### ✅ MAVEN-L2: `stop()` does not await job completion
 ### MAVEN-M6/M7: `http://` allowed, no URL normalization

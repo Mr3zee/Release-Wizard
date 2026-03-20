@@ -13,8 +13,11 @@ private const val MAX_CONTENT_LENGTH = 1_048_576L // 1 MB
 /**
  * Lightweight request body size limit plugin.
  * Checks the Content-Length header and responds 413 if it exceeds 1 MB.
- * Note: This does not guard against chunked transfer encoding without Content-Length.
- * For full protection, configure Netty's maxContentLength at the engine level.
+ *
+ * INFRA-H1: After responding 413, route handlers will still execute but any attempt
+ * to read the body via `call.receive()` will throw because the response is already committed.
+ * For chunked transfer encoding without Content-Length, protection must be configured at the
+ * engine level (e.g., Netty's maxContentLength).
  */
 val RequestSizeLimit = createApplicationPlugin(name = "RequestSizeLimit") {
     onCall { call ->

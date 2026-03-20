@@ -13,6 +13,10 @@ import java.util.UUID
 
 fun Route.teamRoutes() {
     val service by inject<TeamService>()
+    // TEAM-M1: Inject audit/tag dependencies at route scope instead of per-request inline injection
+    val auditRepo by inject<com.github.mr3zee.audit.AuditRepository>()
+    val teamAccessService by inject<TeamAccessService>()
+    val tagService by inject<com.github.mr3zee.tags.TagService>()
 
     route(ApiRoutes.Teams.BASE) {
         post {
@@ -144,8 +148,6 @@ fun Route.teamRoutes() {
                 val teamId = call.requireTeamId() ?: return@get
                 val offset = call.request.queryParameters["offset"]?.toIntOrNull() ?: 0
                 val limit = (call.request.queryParameters["limit"]?.toIntOrNull() ?: 50).coerceIn(1, 200)
-                val auditRepo by inject<com.github.mr3zee.audit.AuditRepository>()
-                val teamAccessService by inject<TeamAccessService>()
                 teamAccessService.checkMembership(teamId, call.userSession())
                 val (events, totalCount) = auditRepo.findByTeam(teamId, offset, limit)
                 call.respond(AuditEventListResponse(
@@ -158,32 +160,26 @@ fun Route.teamRoutes() {
             route("/tags") {
                 get {
                     val teamId = call.requireTeamId() ?: return@get
-                    val teamAccessService by inject<TeamAccessService>()
                     teamAccessService.checkMembership(teamId, call.userSession())
-                    val tagService by inject<com.github.mr3zee.tags.TagService>()
                     val tags = tagService.listTagsByTeam(teamId.value)
                     call.respond(TagListResponse(tags))
                 }
 
                 put("/{name}") {
                     val teamId = call.requireTeamId() ?: return@put
-                    val teamAccessService by inject<TeamAccessService>()
                     val session = call.userSession()
                     teamAccessService.checkTeamLead(teamId, session)
                     val name = call.parameters["name"] ?: throw IllegalArgumentException("Missing tag name")
                     val request = call.receive<RenameTagRequest>()
-                    val tagService by inject<com.github.mr3zee.tags.TagService>()
                     val updated = tagService.renameTag(name, request.newName, teamId.value, session)
                     call.respond(mapOf("updated" to updated))
                 }
 
                 delete("/{name}") {
                     val teamId = call.requireTeamId() ?: return@delete
-                    val teamAccessService by inject<TeamAccessService>()
                     val session = call.userSession()
                     teamAccessService.checkTeamLead(teamId, session)
                     val name = call.parameters["name"] ?: throw IllegalArgumentException("Missing tag name")
-                    val tagService by inject<com.github.mr3zee.tags.TagService>()
                     val deleted = tagService.deleteTag(name, teamId.value, session)
                     if (deleted > 0) call.respond(HttpStatusCode.NoContent)
                     else call.respond(HttpStatusCode.NotFound, ErrorResponse(error = "Tag not found", code = "NOT_FOUND"))

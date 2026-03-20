@@ -27,27 +27,27 @@ Three separate transactions. Concurrent accepts create duplicate membership rows
 ## High
 
 ### ✅ TEAM-H1: Admin bypass ignores last-lead mutation guard
-### TEAM-H2: Invite uniqueness constraint logically broken (includes status)
-### TEAM-H3: Join request uniqueness has same flaw
-### TEAM-H4: `approveJoinRequest` missing membership check
-### TEAM-H5: No invite expiry — stale PENDING invites valid indefinitely
+### ✅ TEAM-H2: Invite uniqueness constraint logically broken (includes status)
+### ✅ TEAM-H3: Join request uniqueness has same flaw
+### ✅ TEAM-H4: `approveJoinRequest` missing membership check
+### ✅ TEAM-H5: No invite expiry — stale PENDING invites valid indefinitely
 
 ---
 
 ## Medium
 
-### TEAM-M1: Route-level DI anti-pattern for /audit and /tags
+### ✅ TEAM-M1: Route-level DI anti-pattern for /audit and /tags
 ### TEAM-M2: `listTeams` leaks all team names
-### TEAM-M3: Both-null update is silent no-op with spurious audit
+### ✅ TEAM-M3: Both-null update is silent no-op with spurious audit
 ### TEAM-M4: `findMembership` fetches username on every access check
-### TEAM-M5: ADMIN bypass produces no audit trail
+### ✅ TEAM-M5: ADMIN bypass produces no audit trail
 ### TEAM-M6: Team deletion RESTRICT FK causes 500
-### TEAM-M7: No rate limit on invite/join-request creation
+### ✅ TEAM-M7: No rate limit on invite/join-request creation
 
 ---
 
 ## Low
 
 ### TEAM-L1: Redundant cascade deletes
-### TEAM-L2: Username enumeration via invite flow
-### TEAM-L3: Pending join request not cancelled on invite accept
+### ✅ TEAM-L2: Username enumeration via invite flow
+### ✅ TEAM-L3: Pending join request not cancelled on invite accept

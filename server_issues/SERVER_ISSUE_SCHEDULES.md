@@ -26,7 +26,7 @@
 
 ## High
 
-### SCHED-H1: `computeNextRun` returns null silently — schedule stored but never fires
+### ✅ SCHED-H1: `computeNextRun` returns null silently — schedule stored but never fires
 
 **Files:** `CronUtils.kt:28-30`, `ScheduleService.kt:52`
 
@@ -36,7 +36,7 @@
 
 ---
 
-### SCHED-H2: `validateMinimumInterval` silently passes on non-IAE exceptions
+### ✅ SCHED-H2: `validateMinimumInterval` silently passes on non-IAE exceptions
 
 **Files:** `CronUtils.kt:57-61`
 
@@ -56,7 +56,7 @@ Blanket `catch (_: Exception)` bypasses the rate-limit check if the cron library
 
 ---
 
-### SCHED-H4: No per-project schedule count cap
+### ✅ SCHED-H4: No per-project schedule count cap
 
 **Files:** `ScheduleService.kt:39-63`, `SchedulerService.kt:67-80`
 
@@ -72,6 +72,6 @@ Unbounded schedule creation can saturate the execution engine.
 ### SCHED-M2: `pollingJob` var not thread-safe
 ### SCHED-M3: Recovery blocks polling; no exception guard
 ### SCHED-M4: Silent retry of permanently broken schedules
-### SCHED-M5: No audit trail for schedule CRUD operations
-### SCHED-M6: Scheduled releases bypass audit actor attribution
-### SCHED-M8: Unbounded parameter injection into scheduled releases
+### ✅ SCHED-M5: No audit trail for schedule CRUD operations
+### ✅ SCHED-M6: Scheduled releases bypass audit actor attribution
+### ✅ SCHED-M8: Unbounded parameter injection into scheduled releases

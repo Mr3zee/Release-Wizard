@@ -502,6 +502,7 @@
     <string name="audit_action_user_login">User logged in</string>
     <string name="audit_action_user_register">User registered</string>
     <string name="audit_action_admin_access">Admin access</string>
+    <string name="audit_action_unknown">Unknown action</string>
 
     <!-- ==================== Audit: Target Type Display Names ==================== -->
     <string name="audit_target_team">Team</string>
@@ -513,6 +514,7 @@
     <string name="audit_target_schedule">Schedule</string>
     <string name="audit_target_trigger">Trigger</string>
     <string name="audit_target_tag">Tag</string>
+    <string name="audit_target_unknown">Unknown</string>
 
     <!-- ==================== Branding ==================== -->
     <string name="app_logo_description">Release Wizard logo</string>

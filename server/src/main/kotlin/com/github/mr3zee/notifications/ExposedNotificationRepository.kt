@@ -71,25 +71,7 @@ class ExposedNotificationRepository(private val db: Database) : NotificationRepo
         )
     }
 
-    override suspend fun update(
-        id: String,
-        config: NotificationConfig?,
-        enabled: Boolean?,
-    ): NotificationConfigEntity? = dbQuery {
-        val uuid = UUID.fromString(id)
-        val updated = NotificationConfigTable.update({ NotificationConfigTable.id eq uuid }) { stmt ->
-            config?.let { stmt[NotificationConfigTable.config] = it }
-            enabled?.let { stmt[NotificationConfigTable.enabled] = it }
-        }
-        if (updated > 0) {
-            NotificationConfigTable.selectAll()
-                .where { NotificationConfigTable.id eq uuid }
-                .single()
-                .toEntity()
-        } else {
-            null
-        }
-    }
+    // NOTIF-H3: update() removed — orphaned attack surface
 
     override suspend fun delete(id: String): Boolean = dbQuery {
         val deleted = NotificationConfigTable.deleteWhere {

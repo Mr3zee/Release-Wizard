@@ -419,6 +419,8 @@ object RickRollPack {
             "audit_action_user_login" to "We're no strangers \u2014 user logged in",
             "audit_action_user_register" to "New user \u2014 you know the rules",
             "audit_action_admin_access" to "Admin gave you up, admin let you down",
+            "audit_action_unknown" to "Never gonna tell you what this action is",
+            "audit_target_unknown" to "We both know what's been going on (Unknown)",
             "audit_target_team" to "Team (no strangers)",
             "audit_target_user" to "You (know the rules)",
             "audit_target_project" to "Project",

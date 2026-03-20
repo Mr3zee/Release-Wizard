@@ -2,11 +2,9 @@ package com.github.mr3zee.connections
 
 import com.github.mr3zee.ForbiddenException
 import com.github.mr3zee.NotFoundException
-import com.github.mr3zee.WebhookConfig
 import com.github.mr3zee.api.*
 import com.github.mr3zee.auth.userSession
 import kotlin.coroutines.cancellation.CancellationException
-import com.github.mr3zee.model.Connection
 import com.github.mr3zee.model.ConnectionId
 import com.github.mr3zee.model.ConnectionType
 import com.github.mr3zee.model.TeamId
@@ -23,7 +21,6 @@ private val log = LoggerFactory.getLogger("com.github.mr3zee.connections.Connect
 
 fun Route.connectionRoutes() {
     val service by inject<ConnectionsService>()
-    val webhookConfig by inject<WebhookConfig>()
 
     route(ApiRoutes.Connections.BASE) {
         get {
@@ -36,12 +33,10 @@ fun Route.connectionRoutes() {
             val (connections, totalCount) = service.listConnections(
                 call.userSession(), teamId, offset, limit, search, type,
             )
-            val webhookUrls = connections.mapNotNull { conn ->
-                webhookUrl(conn, webhookConfig)?.let { conn.id.value to it }
-            }.toMap()
+            // CONN-L6: webhookUrls removed — TC/GH webhook endpoints replaced by server-side polling
             call.respond(ConnectionListResponse(
                 connections = connections,
-                webhookUrls = webhookUrls,
+                webhookUrls = emptyMap(),
                 pagination = PaginationInfo(totalCount = totalCount, offset = offset, limit = limit),
             ))
         }
@@ -51,7 +46,7 @@ fun Route.connectionRoutes() {
             // CONN-M3: Blank-name validation moved to service layer
             val connection = service.createConnection(request, call.userSession())
             log.info("Connection created: {} (type={})", connection.id.value, connection.config::class.simpleName)
-            call.respond(HttpStatusCode.Created, ConnectionResponse(connection, webhookUrl(connection, webhookConfig)))
+            call.respond(HttpStatusCode.Created, ConnectionResponse(connection, webhookUrl = null))
         }
 
         route("/{id}") {
@@ -59,7 +54,7 @@ fun Route.connectionRoutes() {
                 val id = call.requireConnectionId() ?: return@get
                 val connection = service.getConnection(id, call.userSession())
                 if (connection != null) {
-                    call.respond(ConnectionResponse(connection, webhookUrl(connection, webhookConfig)))
+                    call.respond(ConnectionResponse(connection, webhookUrl = null))
                 } else {
                     call.respond(HttpStatusCode.NotFound, ErrorResponse(error = "Connection not found", code = "NOT_FOUND"))
                 }
@@ -70,7 +65,7 @@ fun Route.connectionRoutes() {
                 val request = call.receive<UpdateConnectionRequest>()
                 val connection = service.updateConnection(id, request, call.userSession())
                 if (connection != null) {
-                    call.respond(ConnectionResponse(connection, webhookUrl(connection, webhookConfig)))
+                    call.respond(ConnectionResponse(connection, webhookUrl = null))
                 } else {
                     call.respond(HttpStatusCode.NotFound, ErrorResponse(error = "Connection not found", code = "NOT_FOUND"))
                 }
@@ -103,14 +98,12 @@ fun Route.connectionRoutes() {
                   catch (e: NotFoundException) { throw e }
                   catch (e: ForbiddenException) { throw e }
                   catch (e: IllegalArgumentException) {
-                    // CONN-M1: Sanitize — IAE from SSRF validation is safe to relay; others get generic message
                     log.warn("Bad request fetching TC build types for connection {}: {}", id.value, e.message)
                     call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Invalid request", code = "BAD_REQUEST"))
                 } catch (e: UnsupportedOperationException) {
                     log.warn("Unsupported operation fetching TC build types for connection {}: {}", id.value, e.message)
                     call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Operation not supported for this connection type", code = "BAD_REQUEST"))
                 } catch (e: Exception) {
-                    // CONN-M1: Log details server-side, return generic message to client
                     log.error("Failed to fetch TC build types for connection {}", id.value, e)
                     call.respond(HttpStatusCode.BadGateway, ErrorResponse(error = "Failed to communicate with external service", code = "BAD_GATEWAY"))
                 }
@@ -143,6 +136,11 @@ fun Route.connectionRoutes() {
                     call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Missing workflowFile", code = "VALIDATION_ERROR"))
                     return@get
                 }
+                // CONN-L3: Validate workflow file format (must be a simple filename like "ci.yml")
+                if (!workflowFile.matches(Regex("^[a-zA-Z0-9._-]+$"))) {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Invalid workflow file name format", code = "VALIDATION_ERROR"))
+                    return@get
+                }
                 try {
                     val result = service.fetchExternalConfigParameters(id, workflowFile, call.userSession())
                     call.respond(result)
@@ -150,7 +148,6 @@ fun Route.connectionRoutes() {
                   catch (e: NotFoundException) { throw e }
                   catch (e: ForbiddenException) { throw e }
                   catch (e: Exception) {
-                    // CONN-M1: Generic error to client, details in server log
                     log.error("Failed to fetch GH workflow parameters for connection {}, workflow '{}'", id.value, workflowFile, e)
                     call.respond(HttpStatusCode.BadGateway, ErrorResponse(error = "Failed to communicate with external service", code = "BAD_GATEWAY"))
                 }
@@ -176,19 +173,12 @@ fun Route.connectionRoutes() {
                     log.warn("Unsupported operation fetching TC parameters for connection {}: {}", id.value, e.message)
                     call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Operation not supported for this connection type", code = "BAD_REQUEST"))
                 } catch (e: Exception) {
-                    // CONN-M1: Generic error to client, details in server log
                     log.error("Failed to fetch TC parameters for connection {}, buildType '{}'", id.value, buildTypeId, e)
                     call.respond(HttpStatusCode.BadGateway, ErrorResponse(error = "Failed to communicate with external service", code = "BAD_GATEWAY"))
                 }
             }
         }
     }
-}
-
-@Suppress("UNUSED_PARAMETER")
-private fun webhookUrl(connection: Connection, webhookConfig: WebhookConfig): String? {
-    // TC/GH webhook endpoints removed — build completion is now via server-side polling
-    return null
 }
 
 private suspend fun ApplicationCall.requireConnectionId(): ConnectionId? {
