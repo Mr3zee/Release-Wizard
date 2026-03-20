@@ -11,6 +11,7 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -33,13 +34,13 @@ class BuildPollingServiceTest {
 
     @Test
     fun `TC poll transitions from queued to running to finished`() = runBlocking {
-        var pollCount = 0
+        val pollCount = AtomicInteger(0)
 
         val client = mockClient { request ->
             val url = request.url.toString()
             if (url.contains("/app/rest/builds/id:42")) {
-                pollCount++
-                val responseBody = when (pollCount) {
+                val count = pollCount.incrementAndGet()
+                val responseBody = when (count) {
                     1 -> """{"state":"queued","status":null}"""
                     2 -> """{"state":"running","status":null}"""
                     else -> """{"state":"finished","status":"SUCCESS","number":"build-42"}"""
@@ -79,13 +80,13 @@ class BuildPollingServiceTest {
 
     @Test
     fun `GH poll transitions from queued to in_progress to completed`() = runBlocking {
-        var pollCount = 0
+        val pollCount = AtomicInteger(0)
 
         val client = mockClient { request ->
             val url = request.url.toString()
             if (url.contains("/actions/runs/789")) {
-                pollCount++
-                val responseBody = when (pollCount) {
+                val count = pollCount.incrementAndGet()
+                val responseBody = when (count) {
                     1 -> """{"status":"queued","conclusion":null,"html_url":"https://github.com/o/r/actions/runs/789"}"""
                     2 -> """{"status":"in_progress","conclusion":null,"html_url":"https://github.com/o/r/actions/runs/789"}"""
                     else -> """{"status":"completed","conclusion":"success","html_url":"https://github.com/o/r/actions/runs/789"}"""
@@ -170,13 +171,13 @@ class BuildPollingServiceTest {
 
     @Test
     fun `GH poll backs off on low rate limit`() = runBlocking {
-        var pollCount = 0
+        val pollCount = AtomicInteger(0)
 
         val client = mockClient { request ->
             val url = request.url.toString()
             if (url.contains("/actions/runs/789")) {
-                pollCount++
-                if (pollCount == 1) {
+                val count = pollCount.incrementAndGet()
+                if (count == 1) {
                     // First response: low rate limit, should cause backoff
                     respond(
                         """{"status":"in_progress","conclusion":null,"html_url":"https://github.com/o/r/actions/runs/789"}""",
@@ -213,7 +214,7 @@ class BuildPollingServiceTest {
 
         assertEquals("success", result["runStatus"])
         // The rate limit backoff should have caused at least 2 polls
-        assertTrue(pollCount >= 2, "Should have polled at least twice (once with rate limit, once completed)")
+        assertTrue(pollCount.get() >= 2, "Should have polled at least twice (once with rate limit, once completed)")
     }
 
     // --- GitHub job discovery ---
@@ -456,15 +457,15 @@ class BuildPollingServiceTest {
 
     @Test
     fun `TC queue timeout resets once build starts running`() = runBlocking {
-        var pollCount = 0
+        val pollCount = AtomicInteger(0)
 
         val client = mockClient { request ->
             val url = request.url.toString()
             if (url.contains("/app/rest/builds/id:42")) {
-                pollCount++
+                val count = pollCount.incrementAndGet()
                 val responseBody = when {
-                    pollCount <= 2 -> """{"state":"queued","status":null}"""
-                    pollCount <= 5 -> """{"state":"running","status":null}"""
+                    count <= 2 -> """{"state":"queued","status":null}"""
+                    count <= 5 -> """{"state":"running","status":null}"""
                     else -> """{"state":"finished","status":"SUCCESS","number":"build-42"}"""
                 }
                 respond(
@@ -490,7 +491,7 @@ class BuildPollingServiceTest {
         } ?: error("TC poll timed out")
 
         assertEquals("SUCCESS", result["buildStatus"])
-        assertTrue(pollCount >= 6, "Should have polled through queued, running, and finished states")
+        assertTrue(pollCount.get() >= 6, "Should have polled through queued, running, and finished states")
     }
 
     // --- Sub-build discovery failure ---

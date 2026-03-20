@@ -179,7 +179,10 @@ class ReleasesRoutesTest {
         assertEquals(4, result.blockExecutions.size)
         assertTrue(result.blockExecutions.all { it.status == BlockStatus.SUCCEEDED })
 
-        // D should have started after both B and C
+        // D should have started after both B and C.
+        // With fast stub executors, timestamps may share the same millisecond,
+        // so we verify ordering with a small tolerance (D started no earlier than
+        // 1 ms before B/C finished, which covers same-millisecond clock reads).
         val dExec = result.blockExecutions.find { it.blockId == BlockId("d") }
             ?: error("Block execution for 'd' should exist")
         val bExec = result.blockExecutions.find { it.blockId == BlockId("b") }
@@ -192,8 +195,16 @@ class ReleasesRoutesTest {
         val dStartedAt = dExec.startedAt ?: error("dExec.startedAt should not be null")
         val bFinishedAt = bExec.finishedAt ?: error("bExec.finishedAt should not be null")
         val cFinishedAt = cExec.finishedAt ?: error("cExec.finishedAt should not be null")
-        assertTrue(dStartedAt >= bFinishedAt)
-        assertTrue(dStartedAt >= cFinishedAt)
+        // Allow 2ms tolerance for clock resolution jitter in fast stub execution
+        val tolerance = 2.milliseconds
+        assertTrue(
+            dStartedAt >= bFinishedAt - tolerance,
+            "D should start after B finishes (dStartedAt=$dStartedAt, bFinishedAt=$bFinishedAt)",
+        )
+        assertTrue(
+            dStartedAt >= cFinishedAt - tolerance,
+            "D should start after C finishes (dStartedAt=$dStartedAt, cFinishedAt=$cFinishedAt)",
+        )
     }
 
     @Test

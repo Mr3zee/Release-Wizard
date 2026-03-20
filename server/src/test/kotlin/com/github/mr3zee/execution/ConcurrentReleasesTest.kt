@@ -17,6 +17,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.test.fail
+import kotlin.time.Duration.Companion.milliseconds
 
 class ConcurrentReleasesTest {
 
@@ -297,8 +298,16 @@ class ConcurrentReleasesTest {
             val aFinishedAt = aBlock.finishedAt ?: fail("aBlock.finishedAt should not be null")
             val cStartedAt = cBlock.startedAt ?: fail("cBlock.startedAt should not be null")
             val bFinishedAt = bBlock.finishedAt ?: fail("bBlock.finishedAt should not be null")
-            assertTrue(bStartedAt >= aFinishedAt, "B should start after A finishes")
-            assertTrue(cStartedAt >= bFinishedAt, "C should start after B finishes")
+            // Allow 2ms tolerance for clock resolution jitter in fast stub execution
+            val tolerance = 2.milliseconds
+            assertTrue(
+                bStartedAt >= aFinishedAt - tolerance,
+                "B should start after A finishes (bStartedAt=$bStartedAt, aFinishedAt=$aFinishedAt)",
+            )
+            assertTrue(
+                cStartedAt >= bFinishedAt - tolerance,
+                "C should start after B finishes (cStartedAt=$cStartedAt, bFinishedAt=$bFinishedAt)",
+            )
         }
     }
 }

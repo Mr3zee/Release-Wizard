@@ -17,11 +17,13 @@ import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.testing.*
 import io.ktor.websocket.*
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation as ClientContentNegotiation
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.yield
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -95,6 +97,10 @@ class WebSocketLoadTest {
 
         // Connect all M clients and collect events concurrently
         coroutineScope {
+            // Barrier: wait until all WS clients have received their snapshot before approving
+            val allConnected = CompletableDeferred<Unit>()
+            val connectedCount = AtomicInteger(0)
+
             val eventCollectors = wsClients.map { wsClient ->
                 async {
                     val events = mutableListOf<ReleaseEvent>()
@@ -106,10 +112,10 @@ class WebSocketLoadTest {
                         assertIs<ReleaseEvent.Snapshot>(snapshot)
                         events.add(snapshot)
 
-                        // Now approve the user action (only one client needs to do this,
-                        // but we do it after all WS clients have connected)
-                        // Signal readiness by yielding
-                        yield()
+                        // Signal that this client is connected and ready
+                        if (connectedCount.incrementAndGet() == m) {
+                            allConnected.complete(Unit)
+                        }
 
                         // Collect remaining events until ReleaseCompleted
                         for (frame in incoming) {
@@ -124,9 +130,9 @@ class WebSocketLoadTest {
                 }
             }
 
-            // Wait a bit for all WS connections to be established, then approve
+            // Wait for all WS clients to be connected before approving
+            allConnected.await()
             // Retry approval until the engine reaches WAITING_FOR_INPUT
-            yield()
             withTimeoutOrNull(10_000.milliseconds) {
                 while (true) {
                     val resp = httpClient.post(ApiRoutes.Releases.approveBlock(releaseId.value, "approval")) {
@@ -223,6 +229,8 @@ class WebSocketLoadTest {
                                 val event = receiveEvent(frame.readText())
                                 events.add(event)
                                 if (event is ReleaseEvent.ReleaseCompleted) break
+                                // If snapshot shows terminal state, server will close — break to avoid hanging
+                                if (event is ReleaseEvent.Snapshot && event.release.status.isTerminal) break
                             }
                         }
                     }
@@ -286,6 +294,10 @@ class WebSocketLoadTest {
 
         // Connect all clients and verify they all disconnect cleanly
         coroutineScope {
+            // Barrier: wait until all WS clients have received their snapshot before approving
+            val allConnected = CompletableDeferred<Unit>()
+            val connectedCount = AtomicInteger(0)
+
             val closeCollectors = wsClients.map { wsClient ->
                 async {
                     var reason: CloseReason? = null
@@ -293,7 +305,11 @@ class WebSocketLoadTest {
                         // Receive snapshot
                         val snapshotFrame = incoming.receive()
                         assertIs<Frame.Text>(snapshotFrame)
-                        yield()
+
+                        // Signal that this client is connected and ready
+                        if (connectedCount.incrementAndGet() == m) {
+                            allConnected.complete(Unit)
+                        }
 
                         // Consume remaining events
                         for (frame in incoming) {
@@ -308,8 +324,8 @@ class WebSocketLoadTest {
                 }
             }
 
-            // Approve after WS clients are connected
-            yield()
+            // Wait for all WS clients to be connected before approving
+            allConnected.await()
             withTimeoutOrNull(10_000.milliseconds) {
                 while (true) {
                     val resp = httpClient.post(ApiRoutes.Releases.approveBlock(releaseId.value, "approval")) {
@@ -372,10 +388,24 @@ class WebSocketLoadTest {
         }
 
         coroutineScope {
+            // Barrier: wait until all WS clients have received their snapshot before approving
+            val allConnected = CompletableDeferred<Unit>()
+            val connectedCount = AtomicInteger(0)
+
             val eventCollectors = wsClients.map { wsClient ->
                 async {
                     val events = mutableListOf<ReleaseEvent>()
                     wsClient.webSocket(ApiRoutes.Releases.ws(releaseId.value)) {
+                        // Receive snapshot and signal readiness
+                        val snapshotFrame = incoming.receive()
+                        assertIs<Frame.Text>(snapshotFrame)
+                        val snapshot = receiveEvent(snapshotFrame.readText())
+                        events.add(snapshot)
+
+                        if (connectedCount.incrementAndGet() == m) {
+                            allConnected.complete(Unit)
+                        }
+
                         for (frame in incoming) {
                             if (frame is Frame.Text) {
                                 val event = receiveEvent(frame.readText())
@@ -388,8 +418,8 @@ class WebSocketLoadTest {
                 }
             }
 
-            // Approve the gate after WS clients connect
-            yield()
+            // Wait for all WS clients to be connected before approving the gate
+            allConnected.await()
             withTimeoutOrNull(10_000.milliseconds) {
                 while (true) {
                     val resp = httpClient.post(ApiRoutes.Releases.approveBlock(releaseId.value, "gate")) {
