@@ -42,13 +42,24 @@ val CsrfProtection = createApplicationPlugin(name = "CsrfProtection") {
 
         // Only enforce CSRF if there is an active session
         val session = call.sessions.get<UserSession>() ?: return@onCall
-        if (session.csrfToken.isEmpty()) return@onCall
 
+        // AUTH-H6: Fail closed — reject requests if session has no CSRF token
+        if (session.csrfToken.isEmpty()) {
+            log.warn("CSRF token missing from session for user '{}' — failing closed", session.username)
+            throw ForbiddenException("Session CSRF token not initialized")
+        }
+
+        // INFRA-H2: Constant-time comparison even when header token is null/missing/wrong-length.
+        // Always compare equal-length byte arrays to prevent length-based timing oracle.
+        val sessionBytes = session.csrfToken.toByteArray(Charsets.UTF_8)
         val headerToken = call.request.headers[CSRF_TOKEN_HEADER]
-        if (!java.security.MessageDigest.isEqual(
-                headerToken?.toByteArray(Charsets.UTF_8) ?: ByteArray(0),
-                session.csrfToken.toByteArray(Charsets.UTF_8)
-            )) {
+        val rawHeaderBytes = headerToken?.toByteArray(Charsets.UTF_8) ?: ByteArray(0)
+        // Pad/truncate to session token length for constant-time comparison regardless of input length
+        val headerBytes = ByteArray(sessionBytes.size)
+        rawHeaderBytes.copyInto(headerBytes, 0, 0, minOf(rawHeaderBytes.size, headerBytes.size))
+        // If lengths differ, the padded comparison will fail but in constant time
+        val lengthMatch = rawHeaderBytes.size == sessionBytes.size
+        if (!lengthMatch || !java.security.MessageDigest.isEqual(headerBytes, sessionBytes)) {
             log.warn("CSRF validation failed for {} {} (user={})", call.request.local.method.value, path, session.username)
             throw ForbiddenException("Invalid or missing CSRF token")
         }

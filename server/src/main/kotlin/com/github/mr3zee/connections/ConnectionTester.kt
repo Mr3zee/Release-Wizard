@@ -41,10 +41,16 @@ class ConnectionTester(
 
     private fun testSlack(config: ConnectionConfig.SlackConfig): ConnectionTestResult {
         val url = config.webhookUrl
-        return if (url.startsWith("https://hooks.slack.com/")) {
+        if (!url.startsWith("https://hooks.slack.com/")) {
+            return ConnectionTestResult(success = false, message = "Invalid Slack webhook URL: must start with https://hooks.slack.com/")
+        }
+        // CONN-H2: Also validate against SSRF (DNS rebinding, IP spoofing)
+        return try {
+            validateUrlNotPrivate(url)
             ConnectionTestResult(success = true, message = "Webhook URL format is valid")
-        } else {
-            ConnectionTestResult(success = false, message = "Invalid Slack webhook URL: must start with https://hooks.slack.com/")
+        } catch (e: IllegalArgumentException) {
+            log.warn("Slack webhook URL rejected by SSRF check: {}", e.message)
+            ConnectionTestResult(success = false, message = e.message ?: "Invalid URL")
         }
     }
 
@@ -257,6 +263,14 @@ class ConnectionTester(
             throw RuntimeException("Failed to fetch workflow file $workflowFile (HTTP ${response.status.value})")
         }
         val json = AppJson.decodeFromString<JsonObject>(response.bodyAsText())
+
+        // CONN-C2: Size-cap GitHub YAML fetches to prevent abuse via large files
+        val fileSize = json["size"]?.jsonPrimitive?.content?.toLongOrNull()
+        if (fileSize != null && fileSize > MAX_GITHUB_FILE_SIZE) {
+            log.warn("GitHub workflow file too large ({} bytes > {} limit), skipping", fileSize, MAX_GITHUB_FILE_SIZE)
+            return ExternalConfigParametersResponse(parameters = emptyList())
+        }
+
         val base64Content = json["content"]?.jsonPrimitive?.content
             ?: return ExternalConfigParametersResponse(parameters = emptyList())
 
@@ -275,6 +289,8 @@ class ConnectionTester(
     companion object {
 
         private val TC_METADATA_REGEX = Regex("""(\w+)='([^']*)'""")
+
+        private const val MAX_GITHUB_FILE_SIZE = 512 * 1024L // 512 KB
 
         private val SENSITIVE_KEYWORDS = setOf("password", "secret", "secure", "credential", "token", "private", "passphrase")
 
@@ -323,18 +339,10 @@ class ConnectionTester(
             }
         }
         /**
-         * Validates that the given URL does not point to a private/loopback/link-local address
-         * to prevent SSRF attacks.
+         * CONN-C1: Validates that the given host does not resolve to a private/loopback/link-local
+         * address to prevent SSRF attacks.
          */
-        fun validateUrlNotPrivate(url: String) {
-            val host = try {
-                URI(url).host ?: throw IllegalArgumentException("URL has no host: $url")
-            } catch (e: IllegalArgumentException) {
-                throw e
-            } catch (_: Exception) {
-                throw IllegalArgumentException("Invalid URL: $url")
-            }
-
+        fun validateHostNotPrivate(host: String) {
             val addresses = try {
                 InetAddress.getAllByName(host)
             } catch (_: Exception) {
@@ -347,11 +355,34 @@ class ConnectionTester(
                 if (addr.isLoopbackAddress ||
                     addr.isLinkLocalAddress ||
                     addr.isSiteLocalAddress ||
-                    addr.isAnyLocalAddress
+                    addr.isAnyLocalAddress ||
+                    isIpv6UniqueLocal(addr)
                 ) {
                     throw IllegalArgumentException("Connections to private/internal network addresses are not allowed")
                 }
             }
+        }
+
+        /** Check for IPv6 Unique Local Addresses (fc00::/7) — not covered by isSiteLocalAddress. */
+        private fun isIpv6UniqueLocal(addr: InetAddress): Boolean {
+            if (addr !is java.net.Inet6Address) return false
+            val raw = addr.address
+            return raw.isNotEmpty() && (raw[0].toInt() and 0xFE) == 0xFC
+        }
+
+        /**
+         * Validates that the given URL does not point to a private/loopback/link-local address
+         * to prevent SSRF attacks. Delegates to [validateHostNotPrivate] after extracting the host.
+         */
+        fun validateUrlNotPrivate(url: String) {
+            val host = try {
+                URI(url).host ?: throw IllegalArgumentException("URL has no host: $url")
+            } catch (e: IllegalArgumentException) {
+                throw e
+            } catch (_: Exception) {
+                throw IllegalArgumentException("Invalid URL: $url")
+            }
+            validateHostNotPrivate(host)
         }
 
         /** Percent-encodes a value for use as a single URL path segment (encodes / and other special chars). */

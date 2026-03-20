@@ -2,12 +2,16 @@ package com.github.mr3zee.phase1
 
 import com.github.mr3zee.*
 import com.github.mr3zee.api.*
+import com.github.mr3zee.execution.BlockExecutor
+import com.github.mr3zee.execution.StubBlockExecutor
 import com.github.mr3zee.model.*
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
+import org.koin.dsl.module
+import org.koin.ktor.ext.getKoin
 import kotlin.test.*
 
 /**
@@ -513,18 +517,23 @@ class Phase1CriticalFixesTest {
 
     @Test
     fun `EXEC-C1 failed predecessor marks downstream blocks as failed`() = testApplication {
-        application { testModule() }
+        application {
+            testModule()
+            // Override StubBlockExecutor to fail the "fail" block at execution time
+            getKoin().loadModules(listOf(module {
+                single<BlockExecutor> { StubBlockExecutor(failBlockIds = setOf("fail")) }
+            }), allowOverride = true)
+        }
         val client = jsonClient()
         val teamId = client.loginAndCreateTeam()
 
-        // A -> B, A has a connection that doesn't exist (will cause failure)
+        // A -> B, A is configured to fail at execution time via StubBlockExecutor
         val dagGraph = DagGraph(
             blocks = listOf(
                 Block.ActionBlock(
                     id = BlockId("fail"),
                     name = "WillFail",
                     type = BlockType.TEAMCITY_BUILD,
-                    connectionId = ConnectionId("nonexistent-conn"),
                 ),
                 Block.ActionBlock(id = BlockId("skip"), name = "WillBeSkipped", type = BlockType.TEAMCITY_BUILD),
             ),

@@ -4,7 +4,7 @@
 
 ## High
 
-### AUTH-H1: `/me` outside `authenticate` block — fragile TTL interaction
+### ✅ AUTH-H1: `/me` outside `authenticate` block — fragile TTL interaction
 
 **Files:** `AuthRoutes.kt:107-119`
 
@@ -12,7 +12,7 @@
 
 ---
 
-### AUTH-H2: `requireAdminSession` dead null-check inside authenticated routes
+### ✅ AUTH-H2: `requireAdminSession` dead null-check inside authenticated routes
 
 **Files:** `AuthRoutes.kt:170-181`
 
@@ -20,7 +20,7 @@
 
 ---
 
-### AUTH-H3: Argon2 instance thread-safety unverified
+### ✅ AUTH-H3: Argon2 instance thread-safety unverified
 
 **Files:** `AuthService.kt:37, 41, 59, 64, 81, 90`
 
@@ -28,7 +28,7 @@
 
 ---
 
-### AUTH-H4: No per-username account lockout
+### ✅ AUTH-H4: No per-username account lockout
 
 **Files:** `AuthRoutes.kt`, `Application.kt:146`
 
@@ -38,7 +38,7 @@ IP rate limit only. No defense against distributed credential stuffing.
 
 ---
 
-### AUTH-H5: Argon2 parallelism p=1 (under-configured vs OWASP)
+### ✅ AUTH-H5: Argon2 parallelism p=1 (under-configured vs OWASP)
 
 **Files:** `AuthService.kt:41, 81, 90`
 
@@ -48,7 +48,7 @@ OWASP recommends p=4 minimum.
 
 ---
 
-### AUTH-H6: CSRF plugin fails open when `csrfToken` is empty string
+### ✅ AUTH-H6: CSRF plugin fails open when `csrfToken` is empty string
 
 **Files:** `CsrfPlugin.kt:45`, `UserSession.kt:11`
 
@@ -64,7 +64,7 @@ Empty token permanently bypasses CSRF enforcement.
 ### AUTH-M2: Unsafe `updateUserRole` is public
 ### AUTH-M3: `TeamRepository` injected per-request inside handler lambda
 ### AUTH-M4: Session role cached — 60s demotion lag window
-### AUTH-M5: No absolute session lifetime
+### ✅ AUTH-M5: No absolute session lifetime
 ### AUTH-M6: IP rate limiting may collapse behind reverse proxy
 ### AUTH-M7: `corsConfig()` silently accepts empty origins list
 

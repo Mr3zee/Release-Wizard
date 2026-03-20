@@ -8,8 +8,11 @@ import kotlinx.coroutines.yield
 
 /**
  * Stub executor for tests. Returns simulated outputs based on block type.
+ * Blocks whose ID is in [failBlockIds] will throw to simulate execution failure.
  */
-class StubBlockExecutor : BlockExecutor {
+class StubBlockExecutor(
+    val failBlockIds: Set<String> = emptySet(),
+) : BlockExecutor {
     override suspend fun execute(
         block: Block.ActionBlock,
         parameters: List<Parameter>,
@@ -18,6 +21,9 @@ class StubBlockExecutor : BlockExecutor {
     ): Map<String, String> {
         // Yield to allow other coroutines to run
         yield()
+        if (block.id.value in failBlockIds) {
+            throw RuntimeException("Simulated execution failure for block '${block.id.value}'")
+        }
 
         return when (block.type) {
             BlockType.TEAMCITY_BUILD -> mapOf(

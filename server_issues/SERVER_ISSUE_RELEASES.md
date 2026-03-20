@@ -36,7 +36,7 @@ A hard limit of 1000 rows with no pagination. Recovery silently misses releases 
 
 ---
 
-### REL-H2: `getRelease`/`getBlockExecutions` are authorization-free public methods
+### ✅ REL-H2: `getRelease`/`getBlockExecutions` are authorization-free public methods
 
 **Files:** `ReleasesService.kt:107-113`
 
@@ -96,7 +96,7 @@ Engine cancels the release, but if findTeamId returns null, no audit entry is wr
 
 ---
 
-### REL-M4: No team-role distinction for destructive operations
+### ✅ REL-M4: No team-role distinction for destructive operations
 
 **Files:** `ReleasesService.kt:386-390`
 

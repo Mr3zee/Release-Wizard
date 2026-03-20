@@ -2,6 +2,7 @@ package com.github.mr3zee.notifications
 
 import com.github.mr3zee.AppJson
 import com.github.mr3zee.api.ReleaseEvent
+import com.github.mr3zee.connections.ConnectionTester
 import com.github.mr3zee.execution.ExecutionEngine
 import com.github.mr3zee.model.NotificationConfig
 import com.github.mr3zee.model.ProjectId
@@ -79,6 +80,13 @@ class NotificationListener(
         releaseId: ReleaseId,
         status: ReleaseStatus,
     ) {
+        // NOTIF-H1: Re-validate webhook URL at send time to prevent stored SSRF
+        try {
+            ConnectionTester.validateUrlNotPrivate(config.webhookUrl)
+        } catch (e: IllegalArgumentException) {
+            log.warn("Notification webhook URL failed SSRF check for release {}: {}", releaseId.value, e.message)
+            return
+        }
         val emoji = when (status) {
             ReleaseStatus.SUCCEEDED -> ":white_check_mark:"
             ReleaseStatus.FAILED -> ":x:"
@@ -92,11 +100,15 @@ class NotificationListener(
             channel = config.channel,
         )
 
-        httpClient.post(config.webhookUrl) {
+        val response = httpClient.post(config.webhookUrl) {
             contentType(ContentType.Application.Json)
             setBody(AppJson.encodeToString(payload))
         }
 
+        if (!response.status.isSuccess()) {
+            log.warn("Slack notification failed for release {} (HTTP {})", releaseId.value, response.status)
+            return
+        }
         log.info("Sent Slack notification for release {} to channel {}", releaseId.value, config.channel)
     }
 }

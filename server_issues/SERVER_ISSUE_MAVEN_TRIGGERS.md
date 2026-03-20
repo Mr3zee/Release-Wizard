@@ -26,7 +26,7 @@ Two instances read same snapshot, both fire for same version.
 
 ## High
 
-### MAVEN-H1: SSRF — stored `repoUrl` polled forever without re-validation
+### ✅ MAVEN-H1: SSRF — stored `repoUrl` polled forever without re-validation
 ### MAVEN-H2: No response body size cap on Maven metadata fetches
 ### MAVEN-H3: Webhook timing side-channel in `fireWebhook`
 ### MAVEN-H4: `SecureRandom` instantiated per-call in `generateSecret`

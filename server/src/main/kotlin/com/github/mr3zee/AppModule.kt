@@ -2,6 +2,7 @@ package com.github.mr3zee
 
 import com.github.mr3zee.persistence.dataSource
 import com.github.mr3zee.persistence.initDatabase
+import com.github.mr3zee.plugins.SsrfProtection
 import com.github.mr3zee.security.EncryptionService
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
@@ -29,6 +30,8 @@ fun appModule(
     single { EncryptionService(get()) }
     single {
         HttpClient(CIO) {
+            // CONN-C1: SSRF protection at HTTP client level — validates every outgoing request
+            install(SsrfProtection)
             install(ContentNegotiation) {
                 json(AppJson)
             }

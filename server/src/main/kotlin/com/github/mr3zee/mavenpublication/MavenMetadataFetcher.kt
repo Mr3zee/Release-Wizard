@@ -1,5 +1,6 @@
 package com.github.mr3zee.mavenpublication
 
+import com.github.mr3zee.connections.ConnectionTester
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -13,6 +14,11 @@ import javax.xml.parsers.DocumentBuilderFactory
 class MavenMetadataFetcher(private val httpClient: HttpClient) {
 
     private val logger = LoggerFactory.getLogger(MavenMetadataFetcher::class.java)
+
+    companion object {
+        /** S7: Maximum Maven metadata XML size (512 KB). Prevents memory exhaustion from malicious repos. */
+        const val MAX_METADATA_SIZE = 512 * 1024
+    }
 
     // XXE-safe factory, created once and reused across polls.
     // Thread-safe: newDocumentBuilder() creates a fresh builder per call.
@@ -28,13 +34,26 @@ class MavenMetadataFetcher(private val httpClient: HttpClient) {
 
     suspend fun fetch(repoUrl: String, groupId: String, artifactId: String): Set<String>? {
         val url = buildMetadataUrl(repoUrl, groupId, artifactId)
+        // MAVEN-H1: Re-validate URL at poll time to prevent stored SSRF
+        try {
+            ConnectionTester.validateUrlNotPrivate(url)
+        } catch (e: IllegalArgumentException) {
+            logger.warn("Maven repository URL failed SSRF check for {}: {}", url, e.message)
+            return null
+        }
         return try {
             val response = httpClient.get(url)
             if (!response.status.isSuccess()) {
                 logger.warn("Maven metadata fetch returned HTTP {}: {}", response.status.value, url)
                 return null
             }
-            parseVersions(response.bodyAsText(), url)
+            // S7: Cap response body to prevent memory exhaustion from oversized XML
+            val bodyText = response.bodyAsText()
+            if (bodyText.length > MAX_METADATA_SIZE) {
+                logger.warn("Maven metadata XML too large ({} chars) for {}", bodyText.length, url)
+                return null
+            }
+            parseVersions(bodyText, url)
         } catch (e: Exception) {
             logger.warn("Maven metadata fetch failed for {}: {}", url, e.message)
             null

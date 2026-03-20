@@ -34,12 +34,20 @@ interface AuthService {
 
 class DatabaseAuthService(private val db: Database) : AuthService {
     private val log = LoggerFactory.getLogger(DatabaseAuthService::class.java)
+
+    // AUTH-H3: Argon2 instance is thread-safe — argon2-jvm uses stateless JNI calls
+    // with per-invocation native buffers; no mutable shared state.
     private val argon2 = Argon2Factory.create(Argon2Factory.Argon2Types.ARGON2id)
 
     companion object {
+        // AUTH-H5: Argon2 parallelism p=4 (OWASP minimum recommendation)
+        private const val ARGON2_ITERATIONS = 3
+        private const val ARGON2_MEMORY_KB = 65536
+        private const val ARGON2_PARALLELISM = 4
+
         // Pre-computed Argon2 hash used to normalize timing when user not found
         private val DUMMY_HASH: String = Argon2Factory.create(Argon2Factory.Argon2Types.ARGON2id)
-            .hash(3, 65536, 1, "dummy-password".toCharArray())
+            .hash(ARGON2_ITERATIONS, ARGON2_MEMORY_KB, ARGON2_PARALLELISM, "dummy-password".toCharArray())
     }
 
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
@@ -78,7 +86,7 @@ class DatabaseAuthService(private val db: Database) : AuthService {
                     .singleOrNull()
                 if (existing != null) {
                     // Normalize timing so duplicate-username path takes roughly the same time as success path
-                    argon2.hash(3, 65536, 1, "dummy-timing-normalization".toCharArray())
+                    argon2.hash(ARGON2_ITERATIONS, ARGON2_MEMORY_KB, ARGON2_PARALLELISM, "dummy-timing-normalization".toCharArray())
                     return@suspendTransaction null
                 }
 
@@ -87,7 +95,7 @@ class DatabaseAuthService(private val db: Database) : AuthService {
 
                 val id = UUID.randomUUID()
                 val now = Clock.System.now()
-                val hash = argon2.hash(3, 65536, 1, password.toCharArray())
+                val hash = argon2.hash(ARGON2_ITERATIONS, ARGON2_MEMORY_KB, ARGON2_PARALLELISM, password.toCharArray())
                 UserTable.insert {
                     it[UserTable.id] = id
                     it[UserTable.username] = username

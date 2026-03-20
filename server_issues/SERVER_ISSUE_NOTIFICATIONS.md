@@ -14,7 +14,7 @@ SharedFlow with `replay=0` and `DROP_OLDEST`. No retry on Slack failures. Effect
 
 ---
 
-### NOTIF-H1: SSRF via unvalidated webhook URL
+### ✅ NOTIF-H1: SSRF via unvalidated webhook URL
 
 **Files:** `NotificationListener.kt:95`, `NotificationConfig.kt:11`
 
@@ -28,7 +28,7 @@ Any authenticated team member can register a URL targeting internal services.
 
 ### NOTIF-H2: Ownership bypass when `userId` is empty
 ### NOTIF-H3: `update()` implemented but unguarded — orphaned attack surface
-### NOTIF-H4: Webhook URL (secret credential) returned in API responses
+### ✅ NOTIF-H4: Webhook URL (secret credential) returned in API responses
 ### NOTIF-H5: No HTTP response status validation in `sendSlackNotification`
 ### NOTIF-H6: Listener has no stop/cancel mechanism
 

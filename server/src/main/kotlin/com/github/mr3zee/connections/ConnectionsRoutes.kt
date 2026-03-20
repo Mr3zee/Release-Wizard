@@ -111,14 +111,16 @@ fun Route.connectionRoutes() {
                   catch (e: NotFoundException) { throw e }
                   catch (e: ForbiddenException) { throw e }
                   catch (e: IllegalArgumentException) {
+                    // CONN-M1: Sanitize — IAE from SSRF validation is safe to relay; others get generic message
                     log.warn("Bad request fetching TC build types for connection {}: {}", id.value, e.message)
-                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = e.message ?: "Invalid request", code = "BAD_REQUEST"))
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Invalid request", code = "BAD_REQUEST"))
                 } catch (e: UnsupportedOperationException) {
                     log.warn("Unsupported operation fetching TC build types for connection {}: {}", id.value, e.message)
-                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = e.message ?: "Not supported", code = "BAD_REQUEST"))
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Operation not supported for this connection type", code = "BAD_REQUEST"))
                 } catch (e: Exception) {
+                    // CONN-M1: Log details server-side, return generic message to client
                     log.error("Failed to fetch TC build types for connection {}", id.value, e)
-                    call.respond(HttpStatusCode.BadGateway, ErrorResponse(error = "Failed to fetch build types", code = "BAD_GATEWAY"))
+                    call.respond(HttpStatusCode.BadGateway, ErrorResponse(error = "Failed to communicate with external service", code = "BAD_GATEWAY"))
                 }
             }
 
@@ -132,13 +134,13 @@ fun Route.connectionRoutes() {
                   catch (e: ForbiddenException) { throw e }
                   catch (e: IllegalArgumentException) {
                     log.warn("Bad request fetching GH workflows for connection {}: {}", id.value, e.message)
-                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = e.message ?: "Invalid request", code = "BAD_REQUEST"))
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Invalid request", code = "BAD_REQUEST"))
                 } catch (e: UnsupportedOperationException) {
                     log.warn("Unsupported operation fetching GH workflows for connection {}: {}", id.value, e.message)
-                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = e.message ?: "Not supported", code = "BAD_REQUEST"))
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Operation not supported for this connection type", code = "BAD_REQUEST"))
                 } catch (e: Exception) {
                     log.error("Failed to fetch GH workflows for connection {}", id.value, e)
-                    call.respond(HttpStatusCode.BadGateway, ErrorResponse(error = "Failed to fetch workflows", code = "BAD_GATEWAY"))
+                    call.respond(HttpStatusCode.BadGateway, ErrorResponse(error = "Failed to communicate with external service", code = "BAD_GATEWAY"))
                 }
             }
 
@@ -156,8 +158,9 @@ fun Route.connectionRoutes() {
                   catch (e: NotFoundException) { throw e }
                   catch (e: ForbiddenException) { throw e }
                   catch (e: Exception) {
+                    // CONN-M1: Generic error to client, details in server log
                     log.error("Failed to fetch GH workflow parameters for connection {}, workflow '{}'", id.value, workflowFile, e)
-                    call.respond(HttpStatusCode.BadGateway, ErrorResponse(error = "Failed to fetch workflow parameters", code = "BAD_GATEWAY"))
+                    call.respond(HttpStatusCode.BadGateway, ErrorResponse(error = "Failed to communicate with external service", code = "BAD_GATEWAY"))
                 }
             }
 
@@ -176,13 +179,14 @@ fun Route.connectionRoutes() {
                   catch (e: ForbiddenException) { throw e }
                   catch (e: IllegalArgumentException) {
                     log.warn("Bad request fetching TC parameters for connection {}, buildType '{}': {}", id.value, buildTypeId, e.message)
-                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = e.message ?: "Invalid request", code = "BAD_REQUEST"))
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Invalid request", code = "BAD_REQUEST"))
                 } catch (e: UnsupportedOperationException) {
                     log.warn("Unsupported operation fetching TC parameters for connection {}: {}", id.value, e.message)
-                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = e.message ?: "Not supported", code = "BAD_REQUEST"))
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Operation not supported for this connection type", code = "BAD_REQUEST"))
                 } catch (e: Exception) {
+                    // CONN-M1: Generic error to client, details in server log
                     log.error("Failed to fetch TC parameters for connection {}, buildType '{}'", id.value, buildTypeId, e)
-                    call.respond(HttpStatusCode.BadGateway, ErrorResponse(error = "Failed to fetch parameters", code = "BAD_GATEWAY"))
+                    call.respond(HttpStatusCode.BadGateway, ErrorResponse(error = "Failed to communicate with external service", code = "BAD_GATEWAY"))
                 }
             }
         }

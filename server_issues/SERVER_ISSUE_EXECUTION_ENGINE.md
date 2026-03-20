@@ -76,7 +76,7 @@ After dispatching a workflow, the executor fetches `?per_page=1` (most recent ru
 
 ---
 
-### EXEC-H5: SSRF check missing at execution time — only validated at connection-test time
+### ✅ EXEC-H5: SSRF check missing at execution time — only validated at connection-test time
 
 **Files:** `TeamCityBuildExecutor.kt:113`, `TeamCityArtifactService.kt:58`, `BuildPollingService.kt:157`, `SlackMessageExecutor.kt:57`
 

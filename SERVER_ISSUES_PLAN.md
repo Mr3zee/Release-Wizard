@@ -81,50 +81,59 @@ Reviewed by QA, Backend, Security, and Database experts — all must-fix finding
 
 ---
 
-## Phase 2 — Security Hardening (High Priority)
+## ✅ Phase 2 — Security Hardening (High Priority) (COMPLETE)
 
-SSRF, auth bypass, CSRF, and credential exposure issues. All streams are independent.
+All 20 Phase 2 issues fixed + 4 additional review findings. All 406 tests pass (382 existing + 24 new).
+Reviewed by QA, Backend, Security, and Database experts — all must-fix findings addressed.
 
-### Stream 2A: SSRF Hardening
+### Stream 2A: SSRF Hardening (CONN-C1, CONN-C2, CONN-H2, EXEC-H5, NOTIF-H1, MAVEN-H1)
 
-**Scope:** `ConnectionTester.kt`, all executors, `NotificationListener.kt`, `MavenPollerService.kt`
-**Issues:**
-- CONN-C1: Custom DNS resolver with private-IP re-check on every resolution
-- CONN-H2: Add `validateUrlNotPrivate` to Slack test
-- EXEC-H5: Call `validateUrlNotPrivate` at execution time in all executors
-- NOTIF-H1: Validate notification webhook URLs (require https, reject private IPs)
-- MAVEN-H1: Re-validate resolved IP at poll time
-- CONN-C2: Size-cap GitHub YAML fetches (check `json["size"]`, cap at 512 KB)
+**Scope:** `ConnectionTester.kt`, `SsrfProtectionPlugin.kt` (new), `AppModule.kt`, `NotificationListener.kt`, `NotificationService.kt`, `MavenMetadataFetcher.kt`
+**Changes:**
+- CONN-C1: `SsrfProtection` HttpClient plugin validates every outgoing request; `validateHostNotPrivate` with IPv6 ULA (fc00::/7) support
+- CONN-H2: Slack connection test validates URL against SSRF
+- EXEC-H5: All executors protected via HttpClient plugin (defense-in-depth)
+- NOTIF-H1: Webhook URL validated on create (HTTPS required, no private IPs) + re-validated at send time
+- MAVEN-H1: Maven repo URLs re-validated at poll time
+- CONN-C2: GitHub YAML fetches capped at 512 KB via `json["size"]` check
 
-### Stream 2B: Auth & Session Security
+### Stream 2B: Auth & Session Security (AUTH-H1–H6, AUTH-M5, INFRA-H2)
 
-**Scope:** `AuthService.kt`, `AuthRoutes.kt`, `CsrfPlugin.kt`, `SessionTtlPlugin.kt`, `UserSession.kt`
-**Issues:**
-- AUTH-H6: CSRF fail-closed (reject empty token, remove default `""`)
-- AUTH-H4: Per-username account lockout with exponential backoff
-- AUTH-H5: Increase Argon2 parallelism to p=4
-- AUTH-H3: Verify Argon2 thread safety or add Mutex
-- AUTH-H1: Move `/me` inside `authenticate` block
-- AUTH-H2: Replace `requireAdminSession` with `userSession()` + role check
-- AUTH-M5: Add absolute session lifetime check on `createdAt`
-- INFRA-H2: Fix CSRF null-token constant-time comparison
+**Scope:** `AuthService.kt`, `AuthRoutes.kt`, `AccountLockoutService.kt` (new), `CsrfPlugin.kt`, `SessionTtlPlugin.kt`, `Config.kt`, `AuthModule.kt`
+**Changes:**
+- AUTH-H6: CSRF fails closed on empty session token
+- INFRA-H2: Constant-time CSRF comparison with length-safe padding
+- AUTH-H4: Per-username account lockout (5 attempts → 15s–15min exponential backoff, stale eviction at 10K entries)
+- AUTH-H5: Argon2 parallelism raised to p=4 (OWASP minimum)
+- AUTH-H3: Thread-safety verified and documented (argon2-jvm uses stateless JNI calls)
+- AUTH-H1: `/me` moved inside `authenticate("session-auth")` block
+- AUTH-H2: `requireAdminSession` replaced with `userSession()` + role check; TeamRepository injected at route level
+- AUTH-M5: Absolute session lifetime (7 days default) via `absoluteSessionLifetimeSeconds` config
 
-### Stream 2C: Authorization Gaps
+### Stream 2C: Authorization Gaps (REL-H2, REL-M4, TEAM-H1)
 
-**Scope:** `ConnectionsService.kt`, `ProjectsService.kt`, `ReleasesService.kt`, `ScheduleService.kt`, `TeamAccessService.kt`
-**Issues:**
-- REL-M4: Add role checks for destructive release operations
-- TEAM-H1: Enforce last-lead invariant even for ADMINs
-- REL-H2: Add session parameter to `getRelease`/`getBlockExecutions`
+**Scope:** `ReleasesService.kt`, `ReleasesRoutes.kt`, `ReleaseWebSocketRoutes.kt`
+**Changes:**
+- REL-H2: `getRelease`/`getBlockExecutions` now require session + access check (all callers updated)
+- REL-M4: Cancel/archive/delete require TEAM_LEAD role (via `checkAccessTeamLead`)
+- TEAM-H1: Last-lead invariant enforced via Phase 1 atomic DB operations (verified with tests)
 
-### Stream 2D: Credential Exposure
+### Stream 2D: Credential Exposure (NOTIF-H4, HOOK-M2, CONN-M1, CONN-H4)
 
-**Scope:** `ConnectionsService.kt`, `NotificationService.kt`, `WebhookRoutes.kt`, `ConnectionTester.kt`
-**Issues:**
-- NOTIF-H4: Mask webhook URLs in API responses
-- HOOK-M2: Mask bearer token in log output
-- CONN-M1: Sanitize exception messages in API responses (generic error categories)
-- CONN-H4: Add audit log for `updateConnection`
+**Scope:** `NotificationService.kt`, `WebhookRoutes.kt`, `ConnectionsRoutes.kt`, `ConnectionsService.kt`
+**Changes:**
+- NOTIF-H4: Webhook URLs masked in API responses (first 20 chars + `****`)
+- HOOK-M2: Bearer tokens masked in log output (first 8 chars + `...`)
+- CONN-M1: Exception messages sanitized — generic errors to clients, details in server logs only
+- CONN-H4: Audit log added for `updateConnection` (teamId fetched before update to prevent TOCTOU)
+
+### Additional Review Fixes
+
+- BUG-6: Webhook payload size enforced via `receiveText()` + length check (handles chunked transfer)
+- BUG-7: WebSocket origin check fails closed when Origin present but Host missing
+- S7: Maven metadata response capped at 512 KB
+- S12: Deleted connections detected at release start (`validateConnectionTeamConsistency`)
+- Slack HTTP response status checked in `NotificationListener`
 
 ---
 
@@ -328,7 +337,7 @@ Remaining Medium and Low items. Can be worked as a backlog.
 
 ```
 Phase 1 (Critical)     — 7 parallel streams  — All Critical issues  ✅ COMPLETE
-Phase 2 (Security)     — 4 parallel streams  — Auth, SSRF, AuthZ, Credentials
+Phase 2 (Security)     — 4 parallel streams  — Auth, SSRF, AuthZ, Credentials  ✅ COMPLETE
 Phase 3 (Validation)   — 3 parallel streams  — Input, Transactions, Schema
 Phase 4 (Resources)    — 3 parallel streams  — Rate limits, Bounds, HTTP/TLS
 Phase 5 (Correctness)  — 4 parallel streams  — Audit, WebSocket, Webhooks, Executors

@@ -14,6 +14,8 @@ data class AuthConfig(
     val sessionSignKey: String,
     val sessionTtlSeconds: Long = 86400,
     val sessionRefreshThresholdSeconds: Long = 60,
+    /** AUTH-M5: Absolute session lifetime in seconds (default: 7 days). Sessions older than this are invalidated regardless of activity. */
+    val absoluteSessionLifetimeSeconds: Long = 604800,
 )
 
 data class PasswordPolicyConfig(
@@ -55,11 +57,13 @@ fun ApplicationConfig.authConfig(): AuthConfig {
 
     val sessionTtlSeconds = propertyOrNull("app.auth.sessionTtlSeconds")?.getString()?.toLongOrNull() ?: 86400L
     val sessionRefreshThresholdSeconds = propertyOrNull("app.auth.sessionRefreshThresholdSeconds")?.getString()?.toLongOrNull() ?: 60L
+    val absoluteSessionLifetimeSeconds = propertyOrNull("app.auth.absoluteSessionLifetimeSeconds")?.getString()?.toLongOrNull() ?: 604800L
 
     return AuthConfig(
         sessionSignKey = sessionSignKey,
         sessionTtlSeconds = sessionTtlSeconds,
         sessionRefreshThresholdSeconds = sessionRefreshThresholdSeconds,
+        absoluteSessionLifetimeSeconds = absoluteSessionLifetimeSeconds,
     )
 }
 

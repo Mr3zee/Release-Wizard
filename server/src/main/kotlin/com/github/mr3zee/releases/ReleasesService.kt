@@ -30,8 +30,10 @@ interface ReleasesService {
         projectTemplateId: ProjectId? = null,
         tag: String? = null,
     ): Pair<List<Release>, Long>
-    suspend fun getRelease(id: ReleaseId): Release?
-    suspend fun getBlockExecutions(releaseId: ReleaseId): List<BlockExecution>
+    /** REL-H2: Access-controlled release retrieval. */
+    suspend fun getRelease(id: ReleaseId, session: UserSession): Release?
+    /** REL-H2: Access-controlled block execution retrieval. */
+    suspend fun getBlockExecutions(releaseId: ReleaseId, session: UserSession): List<BlockExecution>
     suspend fun startRelease(request: CreateReleaseRequest, session: UserSession): Release
     suspend fun startScheduledRelease(projectId: ProjectId, parameters: List<Parameter>): Release
     suspend fun rerunRelease(id: ReleaseId, session: UserSession): Release
@@ -104,11 +106,13 @@ class DefaultReleasesService(
         }
     }
 
-    override suspend fun getRelease(id: ReleaseId): Release? {
+    override suspend fun getRelease(id: ReleaseId, session: UserSession): Release? {
+        checkAccess(id, session)
         return repository.findById(id)
     }
 
-    override suspend fun getBlockExecutions(releaseId: ReleaseId): List<BlockExecution> {
+    override suspend fun getBlockExecutions(releaseId: ReleaseId, session: UserSession): List<BlockExecution> {
+        checkAccess(releaseId, session)
         return repository.findBlockExecutions(releaseId)
     }
 
@@ -214,7 +218,8 @@ class DefaultReleasesService(
 
     override suspend fun cancelRelease(id: ReleaseId, session: UserSession): Boolean {
         val release = repository.findById(id) ?: return false
-        checkAccess(id, session)
+        // REL-M4: Destructive operations require TEAM_LEAD
+        checkAccessTeamLead(id, session)
         if (release.status != ReleaseStatus.RUNNING && release.status != ReleaseStatus.PENDING && release.status != ReleaseStatus.STOPPED) {
             return false
         }
@@ -229,7 +234,8 @@ class DefaultReleasesService(
 
     override suspend fun archiveRelease(id: ReleaseId, session: UserSession): Boolean {
         val release = repository.findById(id) ?: return false
-        checkAccess(id, session)
+        // REL-M4: Destructive operations require TEAM_LEAD
+        checkAccessTeamLead(id, session)
         if (!release.status.isTerminal) return false
         cleanupApprovalMutexes(id)
         return repository.updateStatus(id, ReleaseStatus.ARCHIVED)
@@ -237,7 +243,8 @@ class DefaultReleasesService(
 
     override suspend fun deleteRelease(id: ReleaseId, session: UserSession): Boolean {
         val release = repository.findById(id) ?: return false
-        checkAccess(id, session)
+        // REL-M4: Destructive operations require TEAM_LEAD
+        checkAccessTeamLead(id, session)
         if (!release.status.isTerminal) return false
         cleanupApprovalMutexes(id)
         return repository.delete(id)
@@ -409,6 +416,13 @@ class DefaultReleasesService(
         teamAccessService.checkMembership(TeamId(teamId), session)
     }
 
+    /** REL-M4: TEAM_LEAD required for destructive release operations (cancel, archive, delete). */
+    private suspend fun checkAccessTeamLead(id: ReleaseId, session: UserSession) {
+        if (session.role == UserRole.ADMIN) return
+        val teamId = repository.findTeamId(id) ?: throw NotFoundException("Resource not found")
+        teamAccessService.checkTeamLead(TeamId(teamId), session)
+    }
+
     private fun mergeParameters(projectParams: List<Parameter>, requestParams: List<Parameter>): List<Parameter> {
         val merged = projectParams.associateBy { it.key }.toMutableMap()
         for (param in requestParams) {
@@ -425,6 +439,11 @@ class DefaultReleasesService(
         val connectionIds = dagGraph.collectConnectionIds()
         if (connectionIds.isEmpty()) return
         val teamIdMap = connectionsRepository.findTeamIds(connectionIds)
+        // S12: Detect connections that were deleted between project creation and release start
+        val missingIds = connectionIds - teamIdMap.keys
+        if (missingIds.isNotEmpty()) {
+            throw IllegalArgumentException("Connection(s) no longer exist: ${missingIds.joinToString { it.value }}")
+        }
         for ((connId, connTeamId) in teamIdMap) {
             if (connTeamId != expectedTeamId) {
                 throw IllegalArgumentException("Connection ${connId.value} belongs to a different team")

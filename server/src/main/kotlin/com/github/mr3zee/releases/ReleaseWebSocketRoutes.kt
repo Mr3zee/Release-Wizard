@@ -28,10 +28,16 @@ fun Route.releaseWebSocketRoutes() {
 
     route("${ApiRoutes.Releases.BASE}/{id}") {
         webSocket("/ws") {
-            // Validate Origin header to prevent cross-origin WebSocket hijacking
+            // BUG-7: Validate Origin header to prevent cross-origin WebSocket hijacking.
+            // Fail closed: if Origin is present, it MUST match the Host header.
             val origin = call.request.headers["Origin"]
-            val host = call.request.headers["Host"]
-            if (origin != null && host != null) {
+            if (origin != null) {
+                val host = call.request.headers["Host"]
+                if (host == null) {
+                    log.warn("Cross-origin WebSocket rejected: Origin present but Host header missing")
+                    close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Missing Host header"))
+                    return@webSocket
+                }
                 val originHost = try { java.net.URI(origin).host } catch (_: Exception) { null }
                 if (originHost != null && originHost != host.substringBefore(":")) {
                     log.warn("Cross-origin WebSocket rejected: origin={}, host={}", origin, host)
@@ -54,23 +60,24 @@ fun Route.releaseWebSocketRoutes() {
             }
 
             val releaseId = ReleaseId(idParam)
-            val release = service.getRelease(releaseId)
-            if (release == null) {
-                log.warn("WebSocket connection rejected: release {} not found", idParam)
-                close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Release not found"))
-                return@webSocket
-            }
 
             // Check ownership — session is available since WS routes are inside authenticate("session-auth")
             val session = call.sessions.get<UserSession>() ?: run {
                 close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Not authenticated"))
                 return@webSocket
             }
-            try {
-                service.checkAccess(releaseId, session)
+
+            // REL-H2: Access-controlled release retrieval
+            val release = try {
+                service.getRelease(releaseId, session)
             } catch (_: ForbiddenException) {
                 log.warn("WebSocket access denied for release {} by user {}", idParam, session.userId)
                 close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Access denied"))
+                return@webSocket
+            }
+            if (release == null) {
+                log.warn("WebSocket connection rejected: release {} not found", idParam)
+                close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Release not found"))
                 return@webSocket
             }
 
@@ -110,8 +117,8 @@ fun Route.releaseWebSocketRoutes() {
 
             if (!sentSnapshot) {
                 // Full snapshot fallback (original behavior)
-                val executions = service.getBlockExecutions(releaseId)
-                val currentRelease = service.getRelease(releaseId) ?: release
+                val executions = service.getBlockExecutions(releaseId, session)
+                val currentRelease = service.getRelease(releaseId, session) ?: release
                 latestRelease = currentRelease
                 val snapshot = ReleaseEvent.Snapshot(
                     releaseId = releaseId,

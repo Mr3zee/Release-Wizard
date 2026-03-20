@@ -4,7 +4,7 @@
 
 ## Critical
 
-### CONN-C1: SSRF via DNS rebinding — TOCTOU between validation and HTTP request
+### ✅ CONN-C1: SSRF via DNS rebinding — TOCTOU between validation and HTTP request
 
 **Files:** `ConnectionTester.kt:validateUrlNotPrivate`
 
@@ -14,7 +14,7 @@ DNS resolved at check time, HTTP client resolves again. Only called for TeamCity
 
 ---
 
-### CONN-C2: No size cap on fetched GitHub YAML before Base64 decode + SnakeYAML parse
+### ✅ CONN-C2: No size cap on fetched GitHub YAML before Base64 decode + SnakeYAML parse
 
 **Files:** `ConnectionTester.kt:fetchGitHubWorkflowInputs`
 
@@ -25,8 +25,8 @@ DNS resolved at check time, HTTP client resolves again. Only called for TeamCity
 ## High
 
 ### CONN-H1: Encryption key validation mismatch (config: chars >= 32, service: bytes == 32)
-### CONN-H2: SSRF protection missing for Slack — only prefix check
-### CONN-H4: No audit log for `updateConnection`
+### ✅ CONN-H2: SSRF protection missing for Slack — only prefix check
+### ✅ CONN-H4: No audit log for `updateConnection`
 ### CONN-H5: Two DB round-trips per privileged request
 ### CONN-H6: Delete TOCTOU — three non-transactional DB ops
 
@@ -34,7 +34,7 @@ DNS resolved at check time, HTTP client resolves again. Only called for TeamCity
 
 ## Medium
 
-### CONN-M1: Raw exception messages forwarded to API responses
+### ✅ CONN-M1: Raw exception messages forwarded to API responses
 ### CONN-M2: No-op PUT bumps `updatedAt` and returns 200
 ### CONN-M3: Blank-name validation missing from update path
 ### CONN-M4: GitHub workflow list truncated at 100

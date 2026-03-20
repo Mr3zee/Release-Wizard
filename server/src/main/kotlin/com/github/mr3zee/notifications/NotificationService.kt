@@ -5,6 +5,8 @@ import com.github.mr3zee.NotFoundException
 import com.github.mr3zee.api.CreateNotificationConfigRequest
 import com.github.mr3zee.api.NotificationConfigResponse
 import com.github.mr3zee.auth.UserSession
+import com.github.mr3zee.connections.ConnectionTester
+import com.github.mr3zee.model.NotificationConfig
 import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.model.UserRole
@@ -36,6 +38,9 @@ class DefaultNotificationService(
     }
 
     override suspend fun create(request: CreateNotificationConfigRequest, session: UserSession): NotificationConfigResponse {
+        // NOTIF-H1: Validate webhook URL for SSRF before storing
+        validateNotificationConfig(request.config)
+
         // Verify the caller has access to the project's team (or is admin)
         if (session.role != UserRole.ADMIN) {
             val projectTeamId = projectsRepository.findTeamId(request.projectId)
@@ -80,10 +85,28 @@ class DefaultNotificationService(
     }
 }
 
+/** NOTIF-H1: Validates notification config URLs for SSRF. */
+private fun validateNotificationConfig(config: NotificationConfig) {
+    when (config) {
+        is NotificationConfig.SlackNotification -> {
+            require(config.webhookUrl.startsWith("https://")) { "Webhook URL must use HTTPS" }
+            ConnectionTester.validateUrlNotPrivate(config.webhookUrl)
+        }
+    }
+}
+
+// NOTIF-H4: Mask webhook URLs in API responses to avoid credential exposure
 private fun NotificationConfigEntity.toResponse() = NotificationConfigResponse(
     id = id,
     projectId = projectId,
     type = type,
-    config = config,
+    config = config.masked(),
     enabled = enabled,
 )
+
+private fun NotificationConfig.masked(): NotificationConfig = when (this) {
+    is NotificationConfig.SlackNotification -> {
+        val masked = if (webhookUrl.length > 20) webhookUrl.take(20) + "****" else "****"
+        copy(webhookUrl = masked)
+    }
+}

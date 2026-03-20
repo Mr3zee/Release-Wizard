@@ -214,8 +214,8 @@ class MavenPollerServiceTest {
     open class StubReleasesService : ReleasesService {
         override suspend fun startScheduledRelease(projectId: ProjectId, parameters: List<Parameter>): Release = error("override me")
         override suspend fun listReleases(session: UserSession, teamId: TeamId?, offset: Int, limit: Int, search: String?, status: ReleaseStatus?, projectTemplateId: ProjectId?, tag: String?): Pair<List<Release>, Long> = error("stub")
-        override suspend fun getRelease(id: ReleaseId): Release? = error("stub")
-        override suspend fun getBlockExecutions(releaseId: ReleaseId): List<BlockExecution> = error("stub")
+        override suspend fun getRelease(id: ReleaseId, session: UserSession): Release? = error("stub")
+        override suspend fun getBlockExecutions(releaseId: ReleaseId, session: UserSession): List<BlockExecution> = error("stub")
         override suspend fun startRelease(request: CreateReleaseRequest, session: UserSession): Release = error("stub")
         override suspend fun rerunRelease(id: ReleaseId, session: UserSession): Release = error("stub")
         override suspend fun cancelRelease(id: ReleaseId, session: UserSession): Boolean = error("stub")

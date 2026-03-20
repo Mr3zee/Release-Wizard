@@ -84,11 +84,21 @@ class DefaultConnectionsService(
 
     override suspend fun updateConnection(id: ConnectionId, request: UpdateConnectionRequest, session: UserSession): Connection? {
         checkAccess(id, session)
-        return repository.update(
+        // CONN-H4: Fetch teamId before update to avoid TOCTOU if connection is deleted concurrently
+        val teamId = repository.findTeamId(id)
+        val updated = repository.update(
             id = id,
             name = request.name,
             config = request.config,
-        )?.masked()
+        ) ?: return null
+        if (teamId != null) {
+            auditService.log(
+                TeamId(teamId), session,
+                AuditAction.CONNECTION_UPDATED, AuditTargetType.CONNECTION,
+                id.value, "Updated connection '${updated.name}'"
+            )
+        }
+        return updated.masked()
     }
 
     override suspend fun deleteConnection(id: ConnectionId, session: UserSession): Boolean {

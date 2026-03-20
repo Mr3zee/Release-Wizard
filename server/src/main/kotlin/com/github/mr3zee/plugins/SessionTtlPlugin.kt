@@ -31,6 +31,8 @@ val SessionTtl = createApplicationPlugin(name = "SessionTtl") {
     val authService = application.getKoin().get<AuthService>()
     val ttlMillis = authConfig.sessionTtlSeconds.coerceIn(0, 31536000) * 1000  // max 1 year
     val refreshThresholdMillis = authConfig.sessionRefreshThresholdSeconds.coerceIn(0, 31536000) * 1000
+    // AUTH-M5: Absolute session lifetime — sessions older than this are invalidated regardless of activity
+    val absoluteLifetimeMillis = authConfig.absoluteSessionLifetimeSeconds.coerceIn(0, 31536000) * 1000
 
     onCall { call ->
         val session = call.sessions.get<UserSession>() ?: return@onCall
@@ -40,6 +42,13 @@ val SessionTtl = createApplicationPlugin(name = "SessionTtl") {
         // Migrate legacy sessions (created before TTL feature) by setting timestamps now
         if (session.lastAccessedAt == 0L) {
             call.sessions.set(session.copy(lastAccessedAt = nowMillis, createdAt = if (session.createdAt == 0L) nowMillis else session.createdAt))
+            return@onCall
+        }
+
+        // AUTH-M5: Check absolute session lifetime (e.g. 7 days from creation)
+        if (session.createdAt > 0 && nowMillis - session.createdAt > absoluteLifetimeMillis) {
+            log.debug("Session absolute lifetime exceeded for user '{}' (age {}ms > max {}ms)", session.username, nowMillis - session.createdAt, absoluteLifetimeMillis)
+            call.sessions.clear<UserSession>()
             return@onCall
         }
 

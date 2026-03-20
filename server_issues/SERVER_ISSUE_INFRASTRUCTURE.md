@@ -36,7 +36,7 @@ Route handler still executes after 413 response. Chunked bodies bypass entirely.
 
 ---
 
-### INFRA-H2: `CsrfProtection` — non-constant-time null token comparison
+### ✅ INFRA-H2: `CsrfProtection` — non-constant-time null token comparison
 
 **Files:** `CsrfPlugin.kt:48-54`
 

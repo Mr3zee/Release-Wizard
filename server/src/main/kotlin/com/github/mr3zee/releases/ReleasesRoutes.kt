@@ -40,19 +40,20 @@ fun Route.releaseRoutes() {
 
         post {
             val request = call.receive<CreateReleaseRequest>()
-            val release = service.startRelease(request, call.userSession())
+            val session = call.userSession()
+            val release = service.startRelease(request, session)
             log.info("Release created: {} for project {}", release.id.value, request.projectTemplateId.value)
-            val executions = service.getBlockExecutions(release.id)
+            val executions = service.getBlockExecutions(release.id, session)
             call.respond(HttpStatusCode.Created, ReleaseResponse(release, executions))
         }
 
         route("/{id}") {
             get {
                 val id = call.requireReleaseId()
-                service.checkAccess(id, call.userSession())
-                val release = service.getRelease(id)
+                val session = call.userSession()
+                val release = service.getRelease(id, session)
                     ?: throw NotFoundException("Release not found: ${id.value}")
-                val executions = service.getBlockExecutions(id)
+                val executions = service.getBlockExecutions(id, session)
                 call.respond(ReleaseResponse(release, executions))
             }
 
@@ -61,73 +62,78 @@ fun Route.releaseRoutes() {
                 val session = call.userSession()
                 service.checkAccess(id, session)
                 service.awaitRelease(id)
-                val release = service.getRelease(id)
+                val release = service.getRelease(id, session)
                     ?: throw NotFoundException("Release not found: ${id.value}")
-                val executions = service.getBlockExecutions(id)
+                val executions = service.getBlockExecutions(id, session)
                 call.respond(ReleaseResponse(release, executions))
             }
 
             post("/stop") {
                 val id = call.requireReleaseId()
-                val stopped = service.stopRelease(id, call.userSession())
+                val session = call.userSession()
+                val stopped = service.stopRelease(id, session)
                 if (!stopped) {
                     log.warn("Cannot stop release {}", id.value)
                     throw IllegalArgumentException("Cannot stop release: ${id.value}")
                 }
                 log.info("Release stopped: {}", id.value)
-                val release = service.getRelease(id)
+                val release = service.getRelease(id, session)
                     ?: throw NotFoundException("Release not found after stop: ${id.value}")
-                val executions = service.getBlockExecutions(id)
+                val executions = service.getBlockExecutions(id, session)
                 call.respond(ReleaseResponse(release, executions))
             }
 
             post("/resume") {
                 val id = call.requireReleaseId()
-                val resumed = service.resumeRelease(id, call.userSession())
+                val session = call.userSession()
+                val resumed = service.resumeRelease(id, session)
                 if (!resumed) {
                     log.warn("Cannot resume release {}", id.value)
                     throw IllegalArgumentException("Cannot resume release: ${id.value}")
                 }
                 log.info("Release resumed: {}", id.value)
-                val release = service.getRelease(id)
+                val release = service.getRelease(id, session)
                     ?: throw NotFoundException("Release not found after resume: ${id.value}")
-                val executions = service.getBlockExecutions(id)
+                val executions = service.getBlockExecutions(id, session)
                 call.respond(ReleaseResponse(release, executions))
             }
 
             post("/cancel") {
                 val id = call.requireReleaseId()
-                val cancelled = service.cancelRelease(id, call.userSession())
+                val session = call.userSession()
+                val cancelled = service.cancelRelease(id, session)
                 if (!cancelled) {
                     log.warn("Cannot cancel release {}", id.value)
                     throw IllegalArgumentException("Cannot cancel release: ${id.value}")
                 }
                 log.info("Release cancelled: {}", id.value)
-                val release = service.getRelease(id)
+                val release = service.getRelease(id, session)
                     ?: throw NotFoundException("Release not found after cancel: ${id.value}")
-                val executions = service.getBlockExecutions(id)
+                val executions = service.getBlockExecutions(id, session)
                 call.respond(ReleaseResponse(release, executions))
             }
 
             post("/rerun") {
                 val id = call.requireReleaseId()
-                val newRelease = service.rerunRelease(id, call.userSession())
+                val session = call.userSession()
+                val newRelease = service.rerunRelease(id, session)
                 log.info("Release rerun: {} -> new release {}", id.value, newRelease.id.value)
-                val executions = service.getBlockExecutions(newRelease.id)
+                val executions = service.getBlockExecutions(newRelease.id, session)
                 call.respond(HttpStatusCode.Created, ReleaseResponse(newRelease, executions))
             }
 
             post("/archive") {
                 val id = call.requireReleaseId()
-                val archived = service.archiveRelease(id, call.userSession())
+                val session = call.userSession()
+                val archived = service.archiveRelease(id, session)
                 if (!archived) {
                     log.warn("Cannot archive release {}", id.value)
                     throw IllegalArgumentException("Cannot archive release: ${id.value}")
                 }
                 log.info("Release archived: {}", id.value)
-                val release = service.getRelease(id)
+                val release = service.getRelease(id, session)
                     ?: throw NotFoundException("Release not found after archive: ${id.value}")
-                val executions = service.getBlockExecutions(id)
+                val executions = service.getBlockExecutions(id, session)
                 call.respond(ReleaseResponse(release, executions))
             }
 
@@ -146,13 +152,14 @@ fun Route.releaseRoutes() {
                 post("/stop") {
                     val releaseId = call.requireReleaseId()
                     val blockId = call.requireBlockId()
-                    val stopped = service.stopBlock(releaseId, blockId, call.userSession())
+                    val session = call.userSession()
+                    val stopped = service.stopBlock(releaseId, blockId, session)
                     if (!stopped) {
                         throw IllegalArgumentException("Cannot stop block: ${blockId.value}")
                     }
-                    val release = service.getRelease(releaseId)
+                    val release = service.getRelease(releaseId, session)
                         ?: throw NotFoundException("Release not found after block stop: ${releaseId.value}")
-                    val executions = service.getBlockExecutions(releaseId)
+                    val executions = service.getBlockExecutions(releaseId, session)
                     call.respond(ReleaseResponse(release, executions))
                 }
 

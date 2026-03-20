@@ -26,7 +26,7 @@ Three separate transactions. Concurrent accepts create duplicate membership rows
 
 ## High
 
-### TEAM-H1: Admin bypass ignores last-lead mutation guard
+### ✅ TEAM-H1: Admin bypass ignores last-lead mutation guard
 ### TEAM-H2: Invite uniqueness constraint logically broken (includes status)
 ### TEAM-H3: Join request uniqueness has same flaw
 ### TEAM-H4: `approveJoinRequest` missing membership check

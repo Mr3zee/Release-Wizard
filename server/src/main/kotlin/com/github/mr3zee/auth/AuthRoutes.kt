@@ -23,12 +23,30 @@ private val log = LoggerFactory.getLogger("com.github.mr3zee.auth.AuthRoutes")
 fun Route.authRoutes() {
     val authService by inject<AuthService>()
     val passwordValidator by inject<PasswordValidator>()
+    val accountLockout by inject<AccountLockoutService>()
+    val teamRepository by inject<TeamRepository>()
 
     rateLimit(RateLimitName("login")) {
         post(ApiRoutes.Auth.LOGIN) {
             val request = call.receive<LoginRequest>()
+
+            // AUTH-H4: Per-username account lockout with exponential backoff
+            val lockRemaining = accountLockout.checkLocked(request.username)
+            if (lockRemaining != null) {
+                log.warn("Login blocked for '{}': account locked for {}", request.username, lockRemaining)
+                call.respond(
+                    HttpStatusCode.TooManyRequests,
+                    ErrorResponse(
+                        error = "Account temporarily locked. Try again later.",
+                        code = "ACCOUNT_LOCKED",
+                    ),
+                )
+                return@post
+            }
+
             val user = authService.validate(request.username, request.password)
             if (user != null) {
+                accountLockout.recordSuccess(request.username)
                 val now = Clock.System.now().toEpochMilliseconds()
                 val csrfToken = generateCsrfToken()
                 call.sessions.set(
@@ -45,6 +63,7 @@ fun Route.authRoutes() {
                 log.info("User '{}' logged in", user.username)
                 call.respond(UserInfo(username = user.username, id = user.id.value, role = user.role))
             } else {
+                accountLockout.recordFailure(request.username)
                 log.warn("Failed login attempt for username '{}'", request.username)
                 respondUnauthorized(call, "Invalid credentials")
             }
@@ -104,35 +123,33 @@ fun Route.authRoutes() {
         }
     }
 
-    get(ApiRoutes.Auth.ME) {
-        val session = call.sessions.get<UserSession>()
-        if (session != null) {
-            val teamRepository by inject<TeamRepository>()
+    // AUTH-H1: /me moved inside authenticate block to use proper session validation
+    authenticate("session-auth") {
+        get(ApiRoutes.Auth.ME) {
+            val session = call.userSession()
             val userTeams = teamRepository.getUserTeams(session.userId)
             val teamInfos = userTeams.map { (team, role) ->
                 UserTeamInfo(teamId = team.id, teamName = team.name, role = role)
             }
             call.respond(UserInfo(username = session.username, id = session.userId, role = session.role, teams = teamInfos))
-        } else {
-            respondUnauthorized(call, "Not authenticated")
         }
-    }
 
-    // Authenticated endpoints (requires session)
-    authenticate("session-auth") {
         post(ApiRoutes.Auth.LOGOUT) {
             call.sessions.clear<UserSession>()
             call.respond(HttpStatusCode.OK)
         }
 
+        // AUTH-H2: Use userSession() + role check instead of requireAdminSession
         get(ApiRoutes.Auth.USERS) {
-            requireAdminSession(call) ?: return@get
+            val session = call.userSession()
+            requireAdmin(call, session) ?: return@get
             val users = authService.listUsers()
             call.respond(UserListResponse(users))
         }
 
         get(ApiRoutes.Auth.USERS + "/{userId}") {
-            requireAdminSession(call) ?: return@get
+            val session = call.userSession()
+            requireAdmin(call, session) ?: return@get
             val userId = call.parameters["userId"]
                 ?: return@get call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Missing userId", code = "BAD_REQUEST"))
             val user = authService.getUserById(UserId(userId))
@@ -144,7 +161,8 @@ fun Route.authRoutes() {
         }
 
         put(ApiRoutes.Auth.USERS + "/{userId}/role") {
-            requireAdminSession(call) ?: return@put
+            val session = call.userSession()
+            requireAdmin(call, session) ?: return@put
             val userId = call.parameters["userId"] ?: throw IllegalArgumentException("Missing userId")
             val request = call.receive<UpdateUserRoleRequest>()
             val result = authService.safeUpdateUserRole(UserId(userId), request.role)
@@ -167,12 +185,11 @@ fun Route.authRoutes() {
     }
 }
 
-private suspend fun requireAdminSession(call: ApplicationCall): UserSession? {
-    val session = call.sessions.get<UserSession>()
-    if (session == null) {
-        respondUnauthorized(call, "Not authenticated")
-        return null
-    }
+/**
+ * AUTH-H2: Checks that the session has ADMIN role. Returns the session on success, or null
+ * after responding 403. Replaces the old requireAdminSession that had a dead null-check.
+ */
+private suspend fun requireAdmin(call: ApplicationCall, session: UserSession): UserSession? {
     if (session.role != UserRole.ADMIN) {
         call.respond(HttpStatusCode.Forbidden, ErrorResponse(error = "Admin access required", code = "FORBIDDEN"))
         return null

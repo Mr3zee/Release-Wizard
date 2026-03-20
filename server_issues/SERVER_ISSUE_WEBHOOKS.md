@@ -33,7 +33,7 @@ On block retry, both old and new tokens are active simultaneously.
 ## Medium
 
 ### HOOK-M1: No rate limiting on public webhook endpoint
-### HOOK-M2: Raw bearer token written to INFO log
+### ✅ HOOK-M2: Raw bearer token written to INFO log
 ### HOOK-M3: Payload size check bypassable via chunked transfer
 ### HOOK-M4: `(release_id, block_id)` index non-unique
 ### HOOK-M5: Token active-check and write not atomic
