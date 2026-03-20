@@ -162,7 +162,7 @@ val copyFrontend = tasks.register<Sync>("copyFrontendToResources") {
 
 jib {
     from {
-        image = "amazoncorretto:21-alpine"
+        image = "amazoncorretto:21"
     }
     to {
         image = "release-wizard"
