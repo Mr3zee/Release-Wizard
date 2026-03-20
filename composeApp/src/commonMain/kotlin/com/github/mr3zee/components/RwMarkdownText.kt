@@ -1,6 +1,7 @@
 package com.github.mr3zee.components
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
@@ -10,12 +11,15 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.font.FontWeight
+import com.github.mr3zee.i18n.packStringResource
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.LocalAppColors
 import com.mikepenz.markdown.compose.components.markdownComponents
-import com.mikepenz.markdown.m3.Markdown
+import com.mikepenz.markdown.compose.Markdown
 import com.mikepenz.markdown.model.DefaultMarkdownColors
 import com.mikepenz.markdown.model.DefaultMarkdownTypography
+import releasewizard.composeapp.generated.resources.Res
+import releasewizard.composeapp.generated.resources.editor_markdown_images_not_supported
 
 /**
  * Read-only markdown renderer that integrates with the app's design system.
@@ -79,10 +83,17 @@ fun RwMarkdownText(
         )
     }
 
-    // Disable image rendering for security
-    val components = remember {
+    val imageWarning = packStringResource(Res.string.editor_markdown_images_not_supported)
+
+    val components = remember(imageWarning) {
         markdownComponents(
-            image = { /* no-op: images disabled */ },
+            image = {
+                Text(
+                    text = imageWarning,
+                    style = AppTypography.caption,
+                    color = appColors.chromeTextTertiary,
+                )
+            },
         )
     }
 
@@ -93,6 +104,15 @@ fun RwMarkdownText(
             colors = colors,
             typography = typography,
             components = components,
+            error = {
+                // Fallback: show raw text when markdown parsing fails
+                Text(
+                    text = markdown,
+                    style = AppTypography.body,
+                    color = appColors.chromeTextPrimary,
+                    modifier = modifier,
+                )
+            },
         )
     }
 }

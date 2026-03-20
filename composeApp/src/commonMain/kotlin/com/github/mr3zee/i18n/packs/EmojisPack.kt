@@ -222,6 +222,7 @@ object EmojisPack {
             "editor_lock_unknown_user" to "\ud83d\udc64\u2753",
             "editor_markdown_edit" to "\u270f\ufe0f Edit",
             "editor_markdown_preview" to "\ud83d\udc41\ufe0f Preview",
+            "editor_markdown_images_not_supported" to "\ud83d\uddbc\ufe0f\u274c Images not supported",
             "editor_project_description_header" to "\ud83d\udccb Project Description",
             "editor_prop_add_description" to "\u2795 Add description",
             "editor_prop_add_parameter" to "\u2795\ud83c\udd95",

@@ -173,6 +173,7 @@
     <string name="editor_prop_add_description">Add description</string>
     <string name="editor_markdown_edit">Edit</string>
     <string name="editor_markdown_preview">Preview</string>
+    <string name="editor_markdown_images_not_supported">Images are not supported</string>
     <string name="editor_project_description_header">Project Description</string>
     <string name="editor_prop_type">Type</string>
     <string name="editor_prop_container_type">Container block</string>
