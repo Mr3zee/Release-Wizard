@@ -12,18 +12,19 @@ ktor:
 #                  WEBHOOK_BASE_URL, APP_VERSION, DB_MAX_POOL_SIZE, CORS_ALLOWED_ORIGINS,
 #                  BROWSER_SESSION_TTL_SECONDS, DESKTOP_SESSION_TTL_SECONDS,
 #                  BROWSER_ABSOLUTE_LIFETIME_SECONDS, DESKTOP_ABSOLUTE_LIFETIME_SECONDS
-# JB Cloud Console DB env vars (DB0_URL_JDBC, DB0_USERNAME, DB0_PASSWORD) are also supported.
+# JB Cloud Console: map DB0_URL_JDBC → DB_URL, DB0_USERNAME → DB_USER, DB0_PASSWORD → DB_PASSWORD
+# via customEnv in Helm additional params (see DEPLOYMENT.md).
 app:
   version: "$APP_VERSION:dev"
   database:
-    url: "$DB0_URL_JDBC:$DB_URL:jdbc:postgresql://localhost:5432/release_wizard"
-    user: "$DB0_USERNAME:$DB_USER:postgres"
-    password: "$DB0_PASSWORD:$DB_PASSWORD:postgres"
+    url: "$DB_URL:jdbc:postgresql://localhost:5432/release_wizard"
+    user: "$DB_USER:postgres"
+    password: "$DB_PASSWORD:postgres"
     driver: "org.postgresql.Driver"
     maxPoolSize: "$DB_MAX_POOL_SIZE:10"
   auth:
     sessionSignKey: "$AUTH_SESSION_SIGN_KEY"
-    sessionEncryptKey: "$AUTH_SESSION_ENCRYPT_KEY"
+    sessionEncryptKey: "$AUTH_SESSION_ENCRYPT_KEY:"
     browserSessionTtlSeconds: "$BROWSER_SESSION_TTL_SECONDS:2592000"
     desktopSessionTtlSeconds: "$DESKTOP_SESSION_TTL_SECONDS:31536000"
     sessionRefreshThresholdSeconds: "$SESSION_REFRESH_THRESHOLD_SECONDS:60"
