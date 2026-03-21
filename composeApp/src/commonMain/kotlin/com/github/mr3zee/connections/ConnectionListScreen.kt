@@ -8,7 +8,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,7 +17,9 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.github.mr3zee.components.EmptySearchResults
 import com.github.mr3zee.components.ListItemCard
+import com.github.mr3zee.components.SearchBar
 import com.github.mr3zee.components.RefreshErrorBanner
 import com.github.mr3zee.components.RefreshIconButton
 import com.github.mr3zee.components.RwBadge
@@ -180,7 +181,6 @@ fun ConnectionListScreen(
                 .padding(padding),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // todo claude: duplicate 27 lines
             val resolvedRefreshError = refreshError?.resolve()
             if (resolvedRefreshError != null) {
                 RefreshErrorBanner(
@@ -189,24 +189,11 @@ fun ConnectionListScreen(
                 )
             }
 
-            RwTextField(
-                value = searchQuery,
-                onValueChange = { viewModel.setSearchQuery(it) },
+            SearchBar(
+                query = searchQuery,
+                onQueryChange = { viewModel.setSearchQuery(it) },
                 placeholder = packStringResource(Res.string.connections_search_placeholder),
-                singleLine = true,
-                leadingIcon = {
-                    Icon(
-                        Icons.Default.Search,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .widthIn(max = 1200.dp)
-                    .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
-                    .focusRequester(searchFocusRequester)
-                    .testTag("search_field"),
+                focusRequester = searchFocusRequester,
             )
             Row(
                 modifier = Modifier
@@ -254,28 +241,12 @@ fun ConnectionListScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     if (searchQuery.isNotBlank() || typeFilter != null) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            // todo claude: duplicate 13 lines
-                            Icon(
-                                Icons.Default.Search,
-                                contentDescription = null,
-                                modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                            )
-                            Spacer(modifier = Modifier.height(Spacing.md))
-                            Text(
-                                text = packStringResource(Res.string.common_no_search_results),
-                                style = AppTypography.body,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Spacer(modifier = Modifier.height(Spacing.sm))
-                            RwButton(onClick = {
+                        EmptySearchResults(
+                            onClearSearch = {
                                 viewModel.setSearchQuery("")
                                 viewModel.setTypeFilter(null)
-                            }, variant = RwButtonVariant.Ghost) {
-                                Text(packStringResource(Res.string.common_clear_search))
-                            }
-                        }
+                            },
+                        )
                     } else {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(

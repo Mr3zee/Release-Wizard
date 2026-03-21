@@ -486,34 +486,31 @@ class DagEditorViewModel(
     // Undo tracks structural changes (add/remove blocks/edges, moves).
 
     fun updateBlockName(blockId: BlockId, name: String) {
-        // todo claude: duplicate 13 lines
-        if (isReadOnly.value) return
-        val g = _graph.value
-        updateGraphSilent(
-            g.copy(
-                blocks = g.blocks.map { block ->
-                    if (block.id != blockId) return@map block
-                    when (block) {
-                        is Block.ActionBlock -> block.copy(name = name)
-                        is Block.ContainerBlock -> block.copy(name = name)
-                    }
-                }
-            )
-        )
+        updateBlockField(blockId) { block ->
+            when (block) {
+                is Block.ActionBlock -> block.copy(name = name)
+                is Block.ContainerBlock -> block.copy(name = name)
+            }
+        }
     }
 
     fun updateBlockDescription(blockId: BlockId, description: String) {
-        // todo claude: duplicate 13 lines
+        updateBlockField(blockId) { block ->
+            when (block) {
+                is Block.ActionBlock -> block.copy(description = description)
+                is Block.ContainerBlock -> block.copy(description = description)
+            }
+        }
+    }
+
+    private fun updateBlockField(blockId: BlockId, transform: (Block) -> Block) {
         if (isReadOnly.value) return
         val g = _graph.value
         updateGraphSilent(
             g.copy(
                 blocks = g.blocks.map { block ->
                     if (block.id != blockId) return@map block
-                    when (block) {
-                        is Block.ActionBlock -> block.copy(description = description)
-                        is Block.ContainerBlock -> block.copy(description = description)
-                    }
+                    transform(block)
                 }
             )
         )

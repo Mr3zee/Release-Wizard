@@ -6,7 +6,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,7 +16,10 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.api.TeamResponse
+import com.github.mr3zee.components.EmptySearchResults
+import com.github.mr3zee.components.EmptyState
 import com.github.mr3zee.components.ListItemCard
+import com.github.mr3zee.components.SearchBar
 import com.github.mr3zee.components.RefreshErrorBanner
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
@@ -167,24 +169,12 @@ fun TeamListScreen(
                 )
             }
 
-            RwTextField(
-                value = searchQuery,
-                onValueChange = { viewModel.setSearchQuery(it) },
+            SearchBar(
+                query = searchQuery,
+                onQueryChange = { viewModel.setSearchQuery(it) },
                 placeholder = packStringResource(Res.string.teams_search_placeholder),
-                singleLine = true,
-                leadingIcon = {
-                    Icon(
-                        Icons.Default.Search,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .widthIn(max = 1200.dp)
-                    .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
-                    .focusRequester(searchFocusRequester)
-                    .testTag("team_search_field"),
+                focusRequester = searchFocusRequester,
+                testTag = "team_search_field",
             )
 
             val resolvedMessage = message?.resolve()
@@ -231,48 +221,23 @@ fun TeamListScreen(
             } else if (teams.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     if (searchQuery.isNotBlank()) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                Icons.Default.Search,
-                                contentDescription = null,
-                                modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                            )
-                            Spacer(modifier = Modifier.height(Spacing.md))
-                            Text(
-                                packStringResource(Res.string.common_no_search_results),
-                                style = AppTypography.body,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Spacer(modifier = Modifier.height(Spacing.sm))
-                            RwButton(onClick = { viewModel.setSearchQuery("") }, variant = RwButtonVariant.Ghost) {
-                                Text(packStringResource(Res.string.common_clear_search))
-                            }
-                        }
+                        EmptySearchResults(
+                            onClearSearch = { viewModel.setSearchQuery("") },
+                        )
                     } else {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            // todo claude: duplicate 13 lines
-                            Icon(
-                                Icons.Outlined.Group,
-                                contentDescription = null,
-                                modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                            )
-                            Spacer(modifier = Modifier.height(Spacing.md))
-                            Text(
-                                packStringResource(Res.string.teams_empty_state),
-                                style = AppTypography.body,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Spacer(modifier = Modifier.height(Spacing.md))
-                            RwButton(
-                                onClick = { showCreateDialog = true },
-                                variant = RwButtonVariant.Primary,
-                                modifier = Modifier.testTag("empty_state_create_team_button"),
-                            ) {
-                                Text(packStringResource(Res.string.teams_new_team))
-                            }
-                        }
+                        EmptyState(
+                            icon = Icons.Outlined.Group,
+                            message = packStringResource(Res.string.teams_empty_state),
+                            action = {
+                                RwButton(
+                                    onClick = { showCreateDialog = true },
+                                    variant = RwButtonVariant.Primary,
+                                    modifier = Modifier.testTag("empty_state_create_team_button"),
+                                ) {
+                                    Text(packStringResource(Res.string.teams_new_team))
+                                }
+                            },
+                        )
                     }
                 }
             } else {

@@ -11,7 +11,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.RocketLaunch
 import androidx.compose.material3.*
@@ -22,7 +21,9 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.github.mr3zee.components.EmptySearchResults
 import com.github.mr3zee.components.ListItemCard
+import com.github.mr3zee.components.SearchBar
 import com.github.mr3zee.components.RefreshErrorBanner
 import com.github.mr3zee.components.RefreshIconButton
 import com.github.mr3zee.components.RwButton
@@ -223,25 +224,11 @@ fun ReleaseListScreen(
                 onDismiss = { showStartDialog = false },
             )
 
-            // todo claude: duplicate 19 lines
-            RwTextField(
-                value = searchQuery,
-                onValueChange = { viewModel.setSearchQuery(it) },
+            SearchBar(
+                query = searchQuery,
+                onQueryChange = { viewModel.setSearchQuery(it) },
                 placeholder = packStringResource(Res.string.releases_search_placeholder),
-                singleLine = true,
-                leadingIcon = {
-                    Icon(
-                        Icons.Default.Search,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .widthIn(max = 1200.dp)
-                    .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
-                    .focusRequester(searchFocusRequester)
-                    .testTag("search_field"),
+                focusRequester = searchFocusRequester,
             )
             Text(
                 packStringResource(Res.string.releases_filter_status_label),
@@ -364,35 +351,14 @@ fun ReleaseListScreen(
                     contentAlignment = Alignment.TopCenter,
                 ) {
                     if (searchQuery.isNotBlank() || statusFilter != null || projectFilter != null) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
+                        EmptySearchResults(
+                            onClearSearch = {
+                                viewModel.setSearchQuery("")
+                                viewModel.setStatusFilter(null)
+                                viewModel.setProjectFilter(null)
+                            },
                             modifier = Modifier.padding(top = 80.dp),
-                        ) {
-                            // todo claude: duplicate 13 lines
-                            Icon(
-                                Icons.Default.Search,
-                                contentDescription = null,
-                                modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                            )
-                            Spacer(modifier = Modifier.height(Spacing.md))
-                            Text(
-                                text = packStringResource(Res.string.common_no_search_results),
-                                style = AppTypography.body,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Spacer(modifier = Modifier.height(Spacing.sm))
-                            RwButton(
-                                onClick = {
-                                    viewModel.setSearchQuery("")
-                                    viewModel.setStatusFilter(null)
-                                    viewModel.setProjectFilter(null)
-                                },
-                                variant = RwButtonVariant.Ghost,
-                            ) {
-                                Text(packStringResource(Res.string.common_clear_search))
-                            }
-                        }
+                        )
                     } else {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,

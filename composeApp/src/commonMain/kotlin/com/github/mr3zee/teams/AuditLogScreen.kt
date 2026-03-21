@@ -4,23 +4,20 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.github.mr3zee.components.BackRefreshTopBar
+import com.github.mr3zee.components.EmptyState
 import com.github.mr3zee.components.RefreshErrorBanner
-import com.github.mr3zee.components.RefreshIconButton
 import com.github.mr3zee.components.RwBadge
-import com.github.mr3zee.components.RwButton
-import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwCard
 import com.github.mr3zee.components.loadMoreItem
 import com.github.mr3zee.keyboard.ProvideShortcutActions
@@ -74,36 +71,15 @@ fun AuditLogScreen(
     ProvideShortcutActions(shortcutActions) {
 
     Scaffold(
-        // todo claude: duplicate 30 lines
         topBar = {
-            Box {
-                TopAppBar(
-                    title = { Text(packStringResource(Res.string.teams_audit_log_title)) },
-                    navigationIcon = {
-                        RwButton(onClick = onBack, variant = RwButtonVariant.Ghost, modifier = Modifier.testTag("back_button")) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
-                            Text(packStringResource(Res.string.common_back))
-                        }
-                    },
-                    actions = {
-                        RefreshIconButton(
-                            onClick = { viewModel.refresh() },
-                            isRefreshing = isRefreshing,
-                            isManualRefresh = isManualRefresh,
-                        )
-                    },
-                )
-                if (isRefreshing && !isLoading) {
-                    LinearProgressIndicator(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(4.dp)
-                            .align(Alignment.BottomCenter)
-                            .alpha(if (isManualRefresh) 1f else 0.5f)
-                            .testTag("refresh_indicator"),
-                    )
-                }
-            }
+            BackRefreshTopBar(
+                title = packStringResource(Res.string.teams_audit_log_title),
+                onBack = onBack,
+                onRefresh = { viewModel.refresh() },
+                isRefreshing = isRefreshing,
+                isManualRefresh = isManualRefresh,
+                isLoading = isLoading,
+            )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = Modifier.testTag("audit_log_screen"),
@@ -124,27 +100,11 @@ fun AuditLogScreen(
                 }
             } else if (events.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            Icons.Outlined.History,
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        )
-                        // todo claude: duplicate 12 lines
-                        Spacer(modifier = Modifier.height(Spacing.md))
-                        Text(
-                            packStringResource(Res.string.teams_no_audit_events),
-                            style = AppTypography.body,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            packStringResource(Res.string.teams_audit_empty_hint),
-                            style = AppTypography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = Spacing.xs),
-                        )
-                    }
+                    EmptyState(
+                        icon = Icons.Outlined.History,
+                        message = packStringResource(Res.string.teams_no_audit_events),
+                        secondaryMessage = packStringResource(Res.string.teams_audit_empty_hint),
+                    )
                 }
             } else {
                 LazyColumn(

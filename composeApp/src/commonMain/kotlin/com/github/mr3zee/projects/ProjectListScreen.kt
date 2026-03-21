@@ -8,7 +8,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,7 +23,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.github.mr3zee.components.EmptySearchResults
 import com.github.mr3zee.components.ListItemCard
+import com.github.mr3zee.components.SearchBar
 import com.github.mr3zee.components.RefreshErrorBanner
 import com.github.mr3zee.components.RefreshIconButton
 import com.github.mr3zee.components.RwButton
@@ -139,7 +140,6 @@ fun ProjectListScreen(
                 .padding(padding),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // todo claude: duplicate 27 lines
             val resolvedRefreshError = refreshError?.resolve()
             if (resolvedRefreshError != null) {
                 RefreshErrorBanner(
@@ -148,24 +148,11 @@ fun ProjectListScreen(
                 )
             }
 
-            RwTextField(
-                value = searchQuery,
-                onValueChange = { viewModel.setSearchQuery(it) },
+            SearchBar(
+                query = searchQuery,
+                onQueryChange = { viewModel.setSearchQuery(it) },
                 placeholder = packStringResource(Res.string.projects_search_placeholder),
-                singleLine = true,
-                leadingIcon = {
-                    Icon(
-                        Icons.Default.Search,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .widthIn(max = 1200.dp)
-                    .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
-                    .focusRequester(searchFocusRequester)
-                    .testTag("search_field"),
+                focusRequester = searchFocusRequester,
             )
 
             SortDropdown(
@@ -218,25 +205,9 @@ fun ProjectListScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     if (searchQuery.isNotBlank()) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            // todo claude: duplicate 13 lines
-                            Icon(
-                                Icons.Default.Search,
-                                contentDescription = null,
-                                modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                            )
-                            Spacer(modifier = Modifier.height(Spacing.md))
-                            Text(
-                                text = packStringResource(Res.string.common_no_search_results),
-                                style = AppTypography.body,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Spacer(modifier = Modifier.height(Spacing.sm))
-                            RwButton(onClick = { viewModel.setSearchQuery("") }, variant = RwButtonVariant.Ghost) {
-                                Text(packStringResource(Res.string.common_clear_search))
-                            }
-                        }
+                        EmptySearchResults(
+                            onClearSearch = { viewModel.setSearchQuery("") },
+                        )
                     } else {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(

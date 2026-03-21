@@ -2,6 +2,7 @@ package com.github.mr3zee.teams
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -259,30 +260,11 @@ fun TeamManageScreen(
                 }
 
                 // Pending invites section
-                // todo claude: duplicate 23 lines
-                item {
-                    HorizontalDivider(modifier = Modifier.widthIn(max = 1200.dp).padding(vertical = Spacing.sm))
-                }
-                item {
-                    Text(
-                            packStringResource(Res.string.teams_pending_invites_count, invites.size),
-                            style = AppTypography.heading,
-                            modifier = Modifier
-                                .widthIn(max = 1200.dp)
-                                .fillMaxWidth()
-                                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-                        )
-                    }
-                    if (invites.isEmpty()) {
-                        item {
-                            Text(
-                                packStringResource(Res.string.teams_no_pending_invites),
-                                style = AppTypography.body,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.widthIn(max = 1200.dp).fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-                            )
-                        }
-                    }
+                sectionHeader(
+                    title = { packStringResource(Res.string.teams_pending_invites_count, invites.size) },
+                    isEmpty = invites.isEmpty(),
+                    emptyMessage = { packStringResource(Res.string.teams_no_pending_invites) },
+                )
                     items(invites, key = { "invite-${it.id}" }) { invite ->
                         Column(modifier = Modifier.widthIn(max = 1200.dp)) {
                             InviteItem(
@@ -305,30 +287,11 @@ fun TeamManageScreen(
                     }
 
                 // Join requests section
-                // todo claude: duplicate 23 lines
-                item {
-                    HorizontalDivider(modifier = Modifier.widthIn(max = 1200.dp).padding(vertical = Spacing.sm))
-                }
-                item {
-                    Text(
-                        packStringResource(Res.string.teams_join_requests_count, joinRequests.size),
-                        style = AppTypography.heading,
-                        modifier = Modifier
-                            .widthIn(max = 1200.dp)
-                            .fillMaxWidth()
-                            .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-                    )
-                }
-                if (joinRequests.isEmpty()) {
-                    item {
-                        Text(
-                            packStringResource(Res.string.teams_no_join_requests),
-                            style = AppTypography.body,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.widthIn(max = 1200.dp).fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-                        )
-                    }
-                }
+                sectionHeader(
+                    title = { packStringResource(Res.string.teams_join_requests_count, joinRequests.size) },
+                    isEmpty = joinRequests.isEmpty(),
+                    emptyMessage = { packStringResource(Res.string.teams_no_join_requests) },
+                )
                 items(joinRequests, key = { "request-${it.id}" }) { request ->
                     JoinRequestItem(
                         request = request,
@@ -498,6 +461,42 @@ private fun JoinRequestItem(
             RwButton(onClick = onReject, variant = RwButtonVariant.Ghost, contentColor = MaterialTheme.colorScheme.error, modifier = Modifier.testTag("reject_request_${request.id}")) {
                 Text(packStringResource(Res.string.teams_reject))
             }
+        }
+    }
+}
+
+/**
+ * Emits a divider, a section heading, and an optional empty-state message into a LazyColumn.
+ * String providers are used because [packStringResource] is @Composable and can only be called
+ * within a composable scope (such as inside an `item {}` block), not directly from [LazyListScope].
+ */
+private fun LazyListScope.sectionHeader(
+    title: @Composable () -> String,
+    isEmpty: Boolean,
+    emptyMessage: @Composable () -> String,
+) {
+    item { HorizontalDivider(modifier = Modifier.widthIn(max = 1200.dp).padding(vertical = Spacing.sm)) }
+    item {
+        Text(
+            title(),
+            style = AppTypography.heading,
+            modifier = Modifier
+                .widthIn(max = 1200.dp)
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+        )
+    }
+    if (isEmpty) {
+        item {
+            Text(
+                emptyMessage(),
+                style = AppTypography.body,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .widthIn(max = 1200.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+            )
         }
     }
 }

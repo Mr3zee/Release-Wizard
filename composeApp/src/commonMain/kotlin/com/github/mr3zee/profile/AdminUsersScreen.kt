@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -15,18 +16,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -38,12 +36,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.github.mr3zee.components.BackRefreshTopBar
+import com.github.mr3zee.components.EmptyState
 import com.github.mr3zee.components.ListItemCard
-import com.github.mr3zee.components.RefreshIconButton
 import com.github.mr3zee.components.RwBadge
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
-import com.github.mr3zee.components.RwTooltip
 import com.github.mr3zee.i18n.packStringResource
 import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
@@ -93,31 +91,13 @@ fun AdminUsersScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(packStringResource(Res.string.admin_users_title)) },
-                // todo claude: duplicate 15 lines
-                navigationIcon = {
-                    RwTooltip(tooltip = packStringResource(Res.string.common_back)) {
-                        RwButton(
-                            onClick = onBack,
-                            variant = RwButtonVariant.Ghost,
-                            modifier = Modifier.testTag("back_button"),
-                        ) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = packStringResource(Res.string.common_navigate_back),
-                            )
-                            Text(packStringResource(Res.string.common_back))
-                        }
-                    }
-                },
-                actions = {
-                    RefreshIconButton(
-                        onClick = { viewModel.loadUsers() },
-                        isRefreshing = isRefreshing,
-                        isManualRefresh = isManualRefresh,
-                    )
-                },
+            BackRefreshTopBar(
+                title = packStringResource(Res.string.admin_users_title),
+                onBack = onBack,
+                onRefresh = { viewModel.loadUsers() },
+                isRefreshing = isRefreshing,
+                isManualRefresh = isManualRefresh,
+                showTooltipOnBack = true,
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -137,27 +117,11 @@ fun AdminUsersScreen(
                     modifier = Modifier.fillMaxSize().padding(padding),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        // todo claude: duplicate 13 lines
-                        Icon(
-                            Icons.Outlined.Group,
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        )
-                        Spacer(modifier = Modifier.height(Spacing.md))
-                        Text(
-                            packStringResource(Res.string.admin_users_empty),
-                            style = AppTypography.body,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(modifier = Modifier.height(Spacing.xs))
-                        Text(
-                            packStringResource(Res.string.admin_users_empty_hint),
-                            style = AppTypography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                    EmptyState(
+                        icon = Icons.Outlined.Group,
+                        message = packStringResource(Res.string.admin_users_empty),
+                        secondaryMessage = packStringResource(Res.string.admin_users_empty_hint),
+                    )
                 }
             }
             else -> {

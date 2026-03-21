@@ -15,6 +15,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.github.mr3zee.components.EmptyState
 import com.github.mr3zee.components.ListItemCard
 import com.github.mr3zee.components.RefreshErrorBanner
 import com.github.mr3zee.components.RefreshIconButton
@@ -259,21 +260,10 @@ fun TeamDetailScreen(
                                     .padding(Spacing.xl),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    // todo claude: duplicate 12 lines
-                                    Icon(
-                                        Icons.Outlined.Group,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(48.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                    )
-                                    Spacer(modifier = Modifier.height(Spacing.md))
-                                    Text(
-                                        packStringResource(Res.string.teams_no_members),
-                                        style = AppTypography.body,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
+                                EmptyState(
+                                    icon = Icons.Outlined.Group,
+                                    message = packStringResource(Res.string.teams_no_members),
+                                )
                             }
                         }
                     } else {

@@ -252,50 +252,38 @@ internal fun DrawScope.drawPorts(
 
     val inX = transform.toScreenX(position.x)
     val inY = transform.toScreenY(position.y + BLOCK_HEIGHT / 2)
-    // Hover ring (outer glow) on input port
-    // todo claude: duplicate 19 lines
-    if (isInputHovered) {
-        drawCircle(
-            color = colors.portHoverRing,
-            radius = portScreenRadius * 2f,
-            center = Offset(inX, inY),
-        )
-    }
-    // Ring outline on input port
-    drawCircle(
-        color = if (isInputHovered) colors.portHover else colors.portDefault,
-        radius = portScreenRadius,
-        center = Offset(inX, inY),
-        style = Stroke(width = transform.toScreen(1f)),
-    )
-    drawCircle(
-        color = if (isInputHovered) colors.portHover else colors.portDefault,
-        radius = portScreenRadius * 0.5f,
-        center = Offset(inX, inY),
-    )
+    drawPort(transform, portScreenRadius, Offset(inX, inY), isInputHovered, colors)
 
     val outX = transform.toScreenX(position.x + BLOCK_WIDTH)
     val outY = transform.toScreenY(position.y + BLOCK_HEIGHT / 2)
-    // Hover ring (outer glow) on output port
-    // todo claude: duplicate 19 lines
-    if (isOutputHovered) {
+    drawPort(transform, portScreenRadius, Offset(outX, outY), isOutputHovered, colors)
+}
+
+private fun DrawScope.drawPort(
+    transform: CanvasTransform,
+    portScreenRadius: Float,
+    center: Offset,
+    isHovered: Boolean,
+    colors: AppColors,
+) {
+    if (isHovered) {
         drawCircle(
             color = colors.portHoverRing,
             radius = portScreenRadius * 2f,
-            center = Offset(outX, outY),
+            center = center,
         )
     }
-    // Ring outline on output port
+    val portColor = if (isHovered) colors.portHover else colors.portDefault
     drawCircle(
-        color = if (isOutputHovered) colors.portHover else colors.portDefault,
+        color = portColor,
         radius = portScreenRadius,
-        center = Offset(outX, outY),
+        center = center,
         style = Stroke(width = transform.toScreen(1f)),
     )
     drawCircle(
-        color = if (isOutputHovered) colors.portHover else colors.portDefault,
+        color = portColor,
         radius = portScreenRadius * 0.5f,
-        center = Offset(outX, outY),
+        center = center,
     )
 }
 

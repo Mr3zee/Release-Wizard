@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.CircularProgressIndicator
@@ -34,7 +33,6 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -50,6 +48,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.api.UserTeamInfo
+import com.github.mr3zee.components.BackRefreshTopBar
 import com.github.mr3zee.components.RwBadge
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
@@ -198,24 +197,10 @@ fun ProfileScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(packStringResource(Res.string.profile_title)) },
-                // todo claude: duplicate 15 lines
-                navigationIcon = {
-                    RwTooltip(tooltip = packStringResource(Res.string.common_back)) {
-                        RwButton(
-                            onClick = onBack,
-                            variant = RwButtonVariant.Ghost,
-                            modifier = Modifier.testTag("back_button"),
-                        ) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = packStringResource(Res.string.common_navigate_back),
-                            )
-                            Text(packStringResource(Res.string.common_back))
-                        }
-                    }
-                },
+            BackRefreshTopBar(
+                title = packStringResource(Res.string.profile_title),
+                onBack = onBack,
+                showTooltipOnBack = true,
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
