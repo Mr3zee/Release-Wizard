@@ -65,9 +65,11 @@ class TeamCityConnectionTesterIntegrationTest {
     @Test
     fun `unreachable server fails`() = runBlocking {
         val tester = ConnectionTester(client ?: error("HttpClient not initialized"))
+        // Use a non-routable IP (RFC 5737 TEST-NET-1) to avoid SSRF validation rejecting the URL
+        // and to guarantee a connection timeout rather than DNS resolution issues
         val result = tester.test(
             ConnectionConfig.TeamCityConfig(
-                serverUrl = "https://nonexistent-tc-server-${System.currentTimeMillis()}.example.com",
+                serverUrl = "https://192.0.2.1",
                 token = "any-token",
             )
         )

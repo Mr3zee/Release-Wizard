@@ -39,10 +39,10 @@ class StatusWebhookService(
             return StatusWebhookResult.BadRequest("Status must not be empty")
         }
 
-        // HOOK-H1: Atomically find + validate + deactivate in a single transaction.
-        // The token is deactivated inside the same DB transaction to prevent replay attacks
-        // via concurrent requests.
-        val tokenRecord = tokenRepository.findAndDeactivateToken(token, TOKEN_TTL)
+        // Token stays active for multiple status updates during the block's lifetime.
+        // Deactivation happens explicitly when the block executor finishes (deactivateToken)
+        // or when a new token is created for the same (releaseId, blockId) pair.
+        val tokenRecord = tokenRepository.findActiveToken(token, TOKEN_TTL)
             ?: return StatusWebhookResult.NotFound
 
         val truncatedStatus = status.take(MAX_STATUS_LENGTH)

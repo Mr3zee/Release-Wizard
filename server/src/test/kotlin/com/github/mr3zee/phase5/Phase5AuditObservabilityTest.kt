@@ -337,15 +337,20 @@ class Phase5AuditObservabilityTest {
     }
 
     @Test
-    fun `HOOK-H1 -- token deactivated after first successful use`() = withWebhookSetup { service, repo, _, _ ->
+    fun `HOOK-H1 -- token supports multiple status updates while block is running`() = withWebhookSetup { service, repo, _, _ ->
         val releaseId = ReleaseId("h1-r1")
         val blockId = BlockId("h1-a")
         repo.setupRunningBlock(releaseId, blockId)
 
         val token = service.createToken(releaseId, blockId)
         assertIs<StatusWebhookResult.Accepted>(service.processStatusUpdate(token, StatusUpdatePayload(status = "Building")))
-        assertIs<StatusWebhookResult.NotFound>(service.processStatusUpdate(token, StatusUpdatePayload(status = "Testing")),
-            "Token should be deactivated after first successful use")
+        assertIs<StatusWebhookResult.Accepted>(service.processStatusUpdate(token, StatusUpdatePayload(status = "Testing")),
+            "Token should remain active for multiple status updates")
+
+        // Explicit deactivation prevents further use
+        service.deactivateToken(releaseId, blockId)
+        assertIs<StatusWebhookResult.NotFound>(service.processStatusUpdate(token, StatusUpdatePayload(status = "Deploying")),
+            "Token should be rejected after explicit deactivation")
     }
 
     @Test

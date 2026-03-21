@@ -34,8 +34,10 @@ Dependencies flow: `composeApp` → `shared`, `server` → `shared`. No dependen
 ./gradlew :server:run                    # Server (requires PostgreSQL)
 ./gradlew :composeApp:wasmJsBrowserDevelopmentRun  # Web (Wasm)
 ./gradlew :shared:jvmTest               # Shared tests
-./gradlew :server:test                   # Server integration tests (H2)
+./gradlew :server:test                   # Server unit/route tests (H2)
 ./gradlew :composeApp:jvmTest            # Compose UI tests (mock HTTP)
+./gradlew :e2eTest:test                  # E2E tests (embedded server + Compose UI, H2)
+./gradlew :server:integrationTest        # Integration tests (real APIs: Slack, TeamCity, GitHub; requires Docker, ngrok, creds in server/src/integrationTest/resources/test.properties)
 ```
 
 ## Domain Model

@@ -206,6 +206,7 @@ class WebhookStatusIntegrationTest {
                     when (statusService.processStatusUpdate(parsedToken, payload)) {
                         StatusWebhookResult.Accepted -> call.respond(HttpStatusCode.OK, "OK")
                         StatusWebhookResult.NotFound -> call.respond(HttpStatusCode.NotFound, "Not found")
+                        StatusWebhookResult.BlockNotRunning -> call.respond(HttpStatusCode.Gone, "Block is not running")
                         is StatusWebhookResult.BadRequest -> call.respond(HttpStatusCode.BadRequest, "Bad request")
                     }
                 }
@@ -238,12 +239,12 @@ class WebhookStatusIntegrationTest {
         triggeredBuildId = buildId
         println("Triggered TC build: $buildId")
 
-        // 9. Poll for status updates (collect distinct values over ~60 seconds)
+        // 9. Poll for status updates (collect distinct values over ~3 minutes)
         val observedStatuses = mutableSetOf<String>()
         val expectedStatuses = setOf("Step 1: Compiling", "Step 2: Testing", "Step 3: Deploying")
 
         runBlocking {
-            waitUntil(maxAttempts = 120, delayMillis = 1000) {
+            waitUntil(maxAttempts = 180, delayMillis = 1000) {
                 val execution = releasesRepo.findBlockExecution(release.id, blockId)
                 val currentStatus = execution?.webhookStatus?.status
                 if (currentStatus != null) {
