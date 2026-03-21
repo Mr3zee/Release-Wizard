@@ -98,13 +98,18 @@ done
 
 ### Step 3: Start the Compose Desktop App
 
+**Always run in headless mode** to prevent macOS focus stealing and window popups (same approach as `composeApp/build.gradle.kts` uses for UI tests via `systemProperty("java.awt.headless", "true")`). Pass `-Djava.awt.headless=true` via `JAVA_TOOL_OPTIONS`:
+
 ```bash
 COMPOSE_UI_TEST_SERVER_ENABLED=true \
 COMPOSE_UI_TEST_SERVER_PORT=$UI_TEST_PORT \
 SERVER_URL=http://localhost:$SERVER_PORT \
 SERVER_WS_URL=ws://localhost:$SERVER_PORT \
+JAVA_TOOL_OPTIONS="-Djava.awt.headless=true" \
 nohup ./gradlew :composeApp:run > /tmp/rw_compose_${SERVER_PORT}.log 2>&1 &
 ```
+
+> **Why headless?** Without it, the Compose window steals focus, blocks the terminal, and interferes with other agents. Headless mode renders the UI offscreen — screenshots via compose-ui-test-server still work normally.
 
 Wait for the compose-ui-test-server:
 ```bash
