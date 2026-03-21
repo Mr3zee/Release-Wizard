@@ -255,6 +255,7 @@ fun Application.module() {
     val resolvedOAuthConfig = getKoin().get<OAuthConfig>()
     val resolvedHttpClient = getKoin().get<HttpClient>()
     val resolvedWebhookConfig = getKoin().get<WebhookConfig>()
+    val resolvedAuthConfig = getKoin().get<AuthConfig>()
 
     install(Authentication) {
         session<UserSession>("session-auth") {
@@ -273,6 +274,14 @@ fun Application.module() {
         }
 
         if (resolvedOAuthConfig.isGoogleConfigured) {
+            // HMAC-based stateless nonce manager for OAuth state parameter validation.
+            // Cryptographic verification works across replicas without shared storage.
+            // Uses the session signing key as the HMAC secret.
+            val oauthNonceManager = io.ktor.util.StatelessHmacNonceManager(
+                key = hex(resolvedAuthConfig.sessionSignKey),
+                timeoutMillis = 600_000, // 10 minutes — generous for slow OAuth flows
+            )
+
             oauth("auth-oauth-google") {
                 urlProvider = {
                     "${resolvedWebhookConfig.baseUrl.trimEnd('/')}/api/v1/auth/oauth/google/callback"
@@ -288,6 +297,7 @@ fun Application.module() {
                             ?: error("Google OAuth client secret not configured"),
                         defaultScopes = listOf("openid", "email", "profile"),
                         requestMethod = HttpMethod.Post,
+                        nonceManager = oauthNonceManager,
                     )
                 }
                 client = resolvedHttpClient
