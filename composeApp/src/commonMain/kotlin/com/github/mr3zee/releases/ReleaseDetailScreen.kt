@@ -1,7 +1,9 @@
 package com.github.mr3zee.releases
 
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -319,10 +321,12 @@ fun ReleaseDetailScreen(
                                 .fillMaxWidth()
                                 .testTag("block_detail_panel"),
                         ) {
+                            val noExecScrollState = rememberScrollState()
+                            Box(modifier = Modifier.heightIn(max = 350.dp)) {
                             Column(
                                 modifier = Modifier
-                                    .heightIn(max = 350.dp)
-                                    .verticalScroll(rememberScrollState())
+                                    .fillMaxWidth()
+                                    .verticalScroll(noExecScrollState)
                                     .padding(Spacing.lg),
                             ) {
                                 Row(
@@ -369,6 +373,11 @@ fun ReleaseDetailScreen(
                                     modifier = Modifier.testTag("block_waiting_info"),
                                 )
                             }
+                            VerticalScrollbar(
+                                modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+                                adapter = rememberScrollbarAdapter(noExecScrollState),
+                            )
+                            }
                         }
                     }
                 }
@@ -398,10 +407,12 @@ private fun BlockDetailPanel(
             .fillMaxWidth()
             .testTag("block_detail_panel"),
     ) {
+        val execScrollState = rememberScrollState()
+        Box(modifier = Modifier.heightIn(max = 350.dp)) {
         Column(
             modifier = Modifier
-                .heightIn(max = 350.dp)
-                .verticalScroll(rememberScrollState())
+                .fillMaxWidth()
+                .verticalScroll(execScrollState)
                 .padding(Spacing.lg),
         ) {
             Row(
@@ -685,6 +696,11 @@ private fun BlockDetailPanel(
                     Text(packStringResource(Res.string.releases_stop))
                 }
             }
+        }
+        VerticalScrollbar(
+            modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+            adapter = rememberScrollbarAdapter(execScrollState),
+        )
         }
     }
 }

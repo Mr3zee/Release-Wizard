@@ -1,8 +1,11 @@
 package com.github.mr3zee.projects
 
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
@@ -16,8 +19,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.testTag
 import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
@@ -32,6 +33,7 @@ import com.github.mr3zee.components.RefreshErrorBanner
 import com.github.mr3zee.components.RefreshIconButton
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
+import com.github.mr3zee.components.RwDropdownMenuItem
 import com.github.mr3zee.components.RwFab
 import com.github.mr3zee.components.RwInlineConfirmation
 import com.github.mr3zee.components.RwInlineForm
@@ -236,7 +238,10 @@ fun ProjectListScreen(
                     }
                 }
             } else {
+                val listState = rememberLazyListState()
+                Box(modifier = Modifier.fillMaxSize()) {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier
                         .fillMaxSize()
                         .testTag("project_list"),
@@ -266,6 +271,11 @@ fun ProjectListScreen(
                         }
                     }
                     loadMoreItem(pagination, isLoadingMore, onLoadMore = { viewModel.loadMore() })
+                }
+                VerticalScrollbar(
+                    modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+                    adapter = rememberScrollbarAdapter(listState),
+                )
                 }
             }
         }
@@ -323,14 +333,13 @@ private fun ProjectListItem(
                     expanded = showMenu,
                     onDismissRequest = { showMenu = false },
                 ) {
-                    DropdownMenuItem(
+                    RwDropdownMenuItem(
                         text = { Text(packStringResource(Res.string.common_delete), color = MaterialTheme.colorScheme.error) },
                         onClick = {
                             showMenu = false
                             onDelete()
                         },
-                        modifier = Modifier.testTag("delete_menu_item")
-                            .pointerHoverIcon(PointerIcon.Hand),
+                        modifier = Modifier.testTag("delete_menu_item"),
                     )
                 }
             }
@@ -437,14 +446,13 @@ private fun SortDropdown(
                 onDismissRequest = { expanded = false },
             ) {
                 ProjectSortOrder.entries.forEach { order ->
-                    DropdownMenuItem(
+                    RwDropdownMenuItem(
                         text = { Text(order.label()) },
                         onClick = {
                             onSortOrderChange(order)
                             expanded = false
                         },
-                        modifier = Modifier.testTag("sort_option_${order.name}")
-                            .pointerHoverIcon(PointerIcon.Hand),
+                        modifier = Modifier.testTag("sort_option_${order.name}"),
                     )
                 }
             }

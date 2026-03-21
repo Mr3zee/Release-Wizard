@@ -33,7 +33,6 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -55,6 +54,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import com.composeunstyled.UnstyledButton
+import com.github.mr3zee.components.RwDropdownMenuItem
 import com.github.mr3zee.components.focusRing
 import com.github.mr3zee.theme.AppShapes
 import com.github.mr3zee.api.UserTeamInfo
@@ -197,7 +197,7 @@ private fun TeamDropdown(
                 .verticalScroll(rememberScrollState()),
         ) {
             userTeams.forEach { teamInfo ->
-                DropdownMenuItem(
+                RwDropdownMenuItem(
                     text = {
                         Text(
                             teamInfo.teamName,
@@ -206,8 +206,7 @@ private fun TeamDropdown(
                         )
                     },
                     onClick = { onTeamChanged(teamInfo.teamId) },
-                    modifier = Modifier.testTag("sidebar_team_picker_${teamInfo.teamId.value}")
-                        .pointerHoverIcon(PointerIcon.Hand),
+                    modifier = Modifier.testTag("sidebar_team_picker_${teamInfo.teamId.value}"),
                 )
             }
         }
@@ -369,7 +368,7 @@ fun SidebarSettingsContent(
                                     .verticalScroll(rememberScrollState()),
                             ) {
                                 LanguagePack.entries.forEach { pack ->
-                                    DropdownMenuItem(
+                                    RwDropdownMenuItem(
                                         text = {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
                                                 RwRadioButton(
@@ -394,8 +393,7 @@ fun SidebarSettingsContent(
                                             onLanguagePackChange(pack)
                                             showLanguagePicker = false
                                         },
-                                        modifier = Modifier.testTag("sidebar_language_${pack.name}")
-                                            .pointerHoverIcon(PointerIcon.Hand),
+                                        modifier = Modifier.testTag("sidebar_language_${pack.name}"),
                                     )
                                 }
                             }
@@ -428,7 +426,7 @@ private fun SettingsMenuItems(
         ThemePreference.LIGHT -> packStringResource(Res.string.settings_theme_light)
         ThemePreference.DARK -> packStringResource(Res.string.settings_theme_dark)
     }
-    DropdownMenuItem(
+    RwDropdownMenuItem(
         text = { Text(themeLabel) },
         onClick = {
             val next = when (themePreference) {
@@ -438,12 +436,11 @@ private fun SettingsMenuItems(
             }
             onThemeChange(next)
         },
-        modifier = Modifier.testTag("sidebar_settings_theme")
-            .pointerHoverIcon(PointerIcon.Hand),
+        modifier = Modifier.testTag("sidebar_settings_theme"),
     )
     // Language picker (also available in collapsed popup per UX review)
     LanguagePack.entries.forEach { pack ->
-        DropdownMenuItem(
+        RwDropdownMenuItem(
             text = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     RwRadioButton(
@@ -460,16 +457,14 @@ private fun SettingsMenuItems(
                 }
             },
             onClick = { onLanguagePackChange(pack) },
-            modifier = Modifier.testTag("sidebar_language_${pack.name}")
-                .pointerHoverIcon(PointerIcon.Hand),
+            modifier = Modifier.testTag("sidebar_language_${pack.name}"),
         )
     }
     HorizontalDivider()
-    DropdownMenuItem(
+    RwDropdownMenuItem(
         text = { Text(packStringResource(Res.string.shortcuts_menu_item)) },
         onClick = onShowShortcuts,
-        modifier = Modifier.testTag("sidebar_settings_shortcuts")
-            .pointerHoverIcon(PointerIcon.Hand),
+        modifier = Modifier.testTag("sidebar_settings_shortcuts"),
     )
 }
 

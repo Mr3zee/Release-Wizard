@@ -7,9 +7,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.testTag
+import com.github.mr3zee.components.RwDropdownMenuItem
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.theme.AppTypography
@@ -108,7 +107,7 @@ private fun TemplateDropdownItem(
     description: String? = null,
     onClick: () -> Unit,
 ) {
-    DropdownMenuItem(
+    RwDropdownMenuItem(
         text = {
             Column(modifier = Modifier.padding(vertical = Spacing.xs)) {
                 Text(label, style = AppTypography.body)
@@ -127,7 +126,6 @@ private fun TemplateDropdownItem(
             }
         },
         onClick = onClick,
-        modifier = Modifier.testTag("template_item_$label")
-            .pointerHoverIcon(PointerIcon.Hand),
+        modifier = Modifier.testTag("template_item_$label"),
     )
 }

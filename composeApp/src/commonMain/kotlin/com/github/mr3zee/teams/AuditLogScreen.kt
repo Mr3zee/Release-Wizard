@@ -1,8 +1,11 @@
 package com.github.mr3zee.teams
 
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.*
@@ -107,8 +110,11 @@ fun AuditLogScreen(
                     )
                 }
             } else {
+                val listState = rememberLazyListState()
+                Box(modifier = Modifier.fillMaxSize().weight(1f)) {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize().weight(1f).testTag("audit_event_list"),
+                    state = listState,
+                    modifier = Modifier.fillMaxSize().testTag("audit_event_list"),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     contentPadding = PaddingValues(bottom = Spacing.xl),
                 ) {
@@ -119,6 +125,11 @@ fun AuditLogScreen(
                         )
                     }
                     loadMoreItem(pagination, isLoadingMore, onLoadMore = { viewModel.loadMore() })
+                }
+                VerticalScrollbar(
+                    modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+                    adapter = rememberScrollbarAdapter(listState),
+                )
                 }
             }
         }

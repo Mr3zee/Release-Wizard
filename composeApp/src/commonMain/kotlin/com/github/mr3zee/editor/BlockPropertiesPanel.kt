@@ -2,8 +2,10 @@ package com.github.mr3zee.editor
 
 import androidx.compose.foundation.interaction.FocusInteraction
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -13,14 +15,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.api.ExternalConfig
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
+import com.github.mr3zee.components.RwDropdownMenuItem
 import com.github.mr3zee.components.RwCheckbox
 import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwMarkdownField
@@ -61,11 +62,16 @@ fun BlockPropertiesPanel(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    Column(
+    val scrollState = rememberScrollState()
+    Box(
         modifier = modifier
             .width(340.dp)
-            .fillMaxHeight()
-            .verticalScroll(rememberScrollState())
+            .fillMaxHeight(),
+    ) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(scrollState)
             .padding(Spacing.md),
     ) {
         Text(
@@ -164,6 +170,11 @@ fun BlockPropertiesPanel(
             enabled = enabled,
             onUpdateDescription = onUpdateDescription,
         )
+    }
+    VerticalScrollbar(
+        modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+        adapter = rememberScrollbarAdapter(scrollState),
+    )
     }
 }
 
@@ -266,13 +277,12 @@ private fun ActionBlockProperties(
             onDismissRequest = { typeExpanded = false },
         ) {
             BlockType.entries.forEach { type ->
-                DropdownMenuItem(
+                RwDropdownMenuItem(
                     text = { Text(type.displayName()) },
                     onClick = {
                         onUpdateType(block.id, type)
                         typeExpanded = false
                     },
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                 )
             }
         }
@@ -313,22 +323,20 @@ private fun ActionBlockProperties(
                         .heightIn(max = 240.dp)
                         .verticalScroll(rememberScrollState()),
                 ) {
-                    DropdownMenuItem(
+                    RwDropdownMenuItem(
                         text = { Text(packStringResource(Res.string.editor_prop_connection_none)) },
                         onClick = {
                             onUpdateConnectionId(block.id, null)
                             connExpanded = false
                         },
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     )
                     filteredConnections.forEach { conn ->
-                        DropdownMenuItem(
+                        RwDropdownMenuItem(
                             text = { Text(conn.name) },
                             onClick = {
                                 onUpdateConnectionId(block.id, conn.id)
                                 connExpanded = false
                             },
-                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                         )
                     }
                 }
@@ -581,7 +589,7 @@ private fun ExternalConfigSelector(
                             .verticalScroll(rememberScrollState()),
                     ) {
                         filtered.forEach { config ->
-                            DropdownMenuItem(
+                            RwDropdownMenuItem(
                                 text = {
                                     Column {
                                         Text(config.name, style = AppTypography.label, maxLines = 1)
@@ -598,7 +606,6 @@ private fun ExternalConfigSelector(
                                     dropdownExpanded = false
                                     onSelect(config.id)
                                 },
-                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                             )
                         }
                     }

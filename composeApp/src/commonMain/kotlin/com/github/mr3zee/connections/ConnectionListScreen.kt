@@ -1,8 +1,11 @@
 package com.github.mr3zee.connections
 
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -14,8 +17,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -28,6 +29,7 @@ import com.github.mr3zee.components.RwBadge
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwChip
+import com.github.mr3zee.components.RwDropdownMenuItem
 import com.github.mr3zee.components.RwFab
 import com.github.mr3zee.components.RwInlineConfirmation
 import com.github.mr3zee.components.RwTextField
@@ -275,7 +277,10 @@ fun ConnectionListScreen(
                     }
                 }
             } else {
+                val listState = rememberLazyListState()
+                Box(modifier = Modifier.fillMaxSize()) {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier
                         .fillMaxSize()
                         .testTag("connection_list"),
@@ -307,6 +312,11 @@ fun ConnectionListScreen(
                         }
                     }
                     loadMoreItem(pagination, isLoadingMore, onLoadMore = { viewModel.loadMore() })
+                }
+                VerticalScrollbar(
+                    modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+                    adapter = rememberScrollbarAdapter(listState),
+                )
                 }
             }
         }
@@ -422,14 +432,13 @@ private fun ConnectionSortDropdown(
                 onDismissRequest = { expanded = false },
             ) {
                 ConnectionSortOrder.entries.forEach { order ->
-                    DropdownMenuItem(
+                    RwDropdownMenuItem(
                         text = { Text(order.label()) },
                         onClick = {
                             onSortOrderChange(order)
                             expanded = false
                         },
-                        modifier = Modifier.testTag("sort_option_${order.name}")
-                            .pointerHoverIcon(PointerIcon.Hand),
+                        modifier = Modifier.testTag("sort_option_${order.name}"),
                     )
                 }
             }

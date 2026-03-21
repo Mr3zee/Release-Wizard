@@ -1,7 +1,9 @@
 package com.github.mr3zee.editor
 
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Undo
@@ -11,6 +13,7 @@ import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -49,11 +52,16 @@ fun EditorToolbar(
     val appColors = LocalAppColors.current
     val mod = if (currentHostOS() == HostOS.MACOS) "\u2318" else "Ctrl"
 
-    Column(
+    val scrollState = rememberScrollState()
+    Box(
         modifier = modifier
             .width(240.dp)
-            .fillMaxHeight()
-            .verticalScroll(rememberScrollState())
+            .fillMaxHeight(),
+    ) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(scrollState)
             .padding(Spacing.sm),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
@@ -192,6 +200,11 @@ fun EditorToolbar(
                 Text(packStringResource(Res.string.editor_toolbar_delete))
             }
         }
+    }
+    VerticalScrollbar(
+        modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+        adapter = rememberScrollbarAdapter(scrollState),
+    )
     }
 }
 

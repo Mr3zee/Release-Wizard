@@ -1,9 +1,12 @@
 package com.github.mr3zee.teams
 
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
@@ -144,8 +147,11 @@ fun TeamManageScreen(
                     modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
                 )
 
+                val listState = rememberLazyListState()
+                Box(modifier = Modifier.fillMaxSize().weight(1f)) {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize().weight(1f),
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     contentPadding = PaddingValues(bottom = 80.dp),
                 ) {
@@ -342,6 +348,11 @@ fun TeamManageScreen(
                     )
                     Spacer(modifier = Modifier.height(Spacing.lg))
                 }
+                }
+                VerticalScrollbar(
+                    modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+                    adapter = rememberScrollbarAdapter(listState),
+                )
                 }
             }
         }

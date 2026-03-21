@@ -1,8 +1,10 @@
 package com.github.mr3zee.connections
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -17,8 +19,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwCard
+import com.github.mr3zee.components.RwDropdownMenuItem
 import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwInlineConfirmation
 import com.github.mr3zee.components.RwTextField
@@ -263,6 +264,7 @@ fun ConnectionFormScreen(
                 }
             }
 
+            val scrollState = rememberScrollState()
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -273,7 +275,7 @@ fun ConnectionFormScreen(
                     modifier = Modifier
                         .widthIn(max = 800.dp)
                         .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
+                        .verticalScroll(scrollState)
                         .padding(Spacing.lg),
                     verticalArrangement = Arrangement.spacedBy(Spacing.md),
                 ) {
@@ -322,13 +324,12 @@ fun ConnectionFormScreen(
                     onDismissRequest = { expanded = false },
                 ) {
                     ConnectionType.entries.forEach { type ->
-                        DropdownMenuItem(
+                        RwDropdownMenuItem(
                             text = { Text(type.displayName()) },
                             onClick = {
                                 selectedType = type
                                 expanded = false
                             },
-                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                         )
                     }
                 }
@@ -528,6 +529,10 @@ fun ConnectionFormScreen(
             }
 
             }
+                VerticalScrollbar(
+                    modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+                    adapter = rememberScrollbarAdapter(scrollState),
+                )
             }
         }
     }

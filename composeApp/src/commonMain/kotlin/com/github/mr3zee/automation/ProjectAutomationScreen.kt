@@ -1,8 +1,10 @@
 package com.github.mr3zee.automation
 
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -18,8 +20,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.PointerIcon
-import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -33,6 +33,7 @@ import com.github.mr3zee.api.CreateTriggerRequest
 import com.github.mr3zee.api.TriggerResponse
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
+import com.github.mr3zee.components.RwDropdownMenuItem
 import com.github.mr3zee.components.RwCard
 import com.github.mr3zee.components.RwCheckbox
 import com.github.mr3zee.components.RwIconButton
@@ -200,6 +201,7 @@ fun ProjectAutomationScreen(
                 CircularProgressIndicator(modifier = Modifier.semantics { contentDescription = loadingDesc })
             }
         } else {
+            val scrollState = rememberScrollState()
             Box(
                 modifier = Modifier.fillMaxSize().padding(padding),
                 contentAlignment = Alignment.TopCenter,
@@ -208,7 +210,7 @@ fun ProjectAutomationScreen(
                 modifier = Modifier
                     .widthIn(max = 720.dp)
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(scrollState)
                     .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
                 verticalArrangement = Arrangement.spacedBy(Spacing.xl),
             ) {
@@ -384,6 +386,10 @@ fun ProjectAutomationScreen(
                     }
                 }
             }
+            VerticalScrollbar(
+                modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+                adapter = rememberScrollbarAdapter(scrollState),
+            )
             } // Box
         }
     }
@@ -580,14 +586,13 @@ private fun CreateScheduleInlineForm(
                 onDismissRequest = { presetsExpanded = false },
             ) {
                 presets.forEach { (label, cron) ->
-                    DropdownMenuItem(
+                    RwDropdownMenuItem(
                         text = { Text(label) },
                         onClick = {
                             cronExpression = cron
                             selectedPresetLabel = label
                             presetsExpanded = false
                         },
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     )
                 }
             }

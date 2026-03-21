@@ -1,8 +1,11 @@
 package com.github.mr3zee.teams
 
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mail
 import androidx.compose.material3.*
@@ -109,8 +112,11 @@ fun MyInvitesScreen(
                     )
                 }
             } else {
+                val listState = rememberLazyListState()
+                Box(modifier = Modifier.fillMaxSize().weight(1f)) {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize().weight(1f),
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     contentPadding = PaddingValues(bottom = Spacing.xl),
                 ) {
@@ -157,6 +163,11 @@ fun MyInvitesScreen(
                             )
                         }
                     }
+                }
+                VerticalScrollbar(
+                    modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+                    adapter = rememberScrollbarAdapter(listState),
+                )
                 }
             }
         }
