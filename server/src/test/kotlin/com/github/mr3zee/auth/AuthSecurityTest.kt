@@ -181,7 +181,8 @@ private fun Application.testModuleWithLowRateLimit() {
         slf4jLogger()
         allowOverride(true)
         modules(
-            appModule(dbConfig, testEncryptionConfig(), authConfig, testWebhookConfig(), testPasswordPolicyConfig()),
+            appModule(dbConfig, testEncryptionConfig(), authConfig, testWebhookConfig(), testPasswordPolicyConfig(), useFlyway = false),
+            com.github.mr3zee.audit.auditModule,
             authModule,
             com.github.mr3zee.projects.projectsModule,
             com.github.mr3zee.projects.projectLockModule,

@@ -7,6 +7,7 @@ composeMultiplatform = "1.10.0"
 composeUnstyled = "1.49.6"
 composeUiTestServer = "0.2.0"
 exposed = "1.1.1"
+flyway = "11.5.0"
 h2 = "2.3.232"
 snakeyaml = "2.3"
 argon2 = "2.11"
@@ -21,7 +22,7 @@ ktor = "3.3.3"
 logback = "1.5.24"
 material3 = "1.10.0-alpha05"
 postgresql = "42.7.5"
-testcontainers = "1.20.4"
+testcontainers = "2.0.4"
 multiplatformMarkdown = "0.39.2"
 
 [libraries]
@@ -74,13 +75,16 @@ ktor-clientMock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
 # Database
 exposed-core = { module = "org.jetbrains.exposed:exposed-core", version.ref = "exposed" }
 exposed-jdbc = { module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "exposed" }
+exposed-migration-jdbc = { module = "org.jetbrains.exposed:exposed-migration-jdbc", version.ref = "exposed" }
 exposed-json = { module = "org.jetbrains.exposed:exposed-json", version.ref = "exposed" }
 exposed-kotlinDatetime = { module = "org.jetbrains.exposed:exposed-kotlin-datetime", version.ref = "exposed" }
 postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
 hikaricp = { module = "com.zaxxer:HikariCP", version.ref = "hikaricp" }
+flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }
+flyway-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
 h2 = { module = "com.h2database:h2", version.ref = "h2" }
 testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "testcontainers" }
-testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "testcontainers" }
+testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgresql", version.ref = "testcontainers" }
 cronUtils = { module = "com.cronutils:cron-utils", version.ref = "cronUtils" }
 snakeyaml = { module = "org.yaml:snakeyaml", version.ref = "snakeyaml" }
 argon2 = { module = "de.mkammerer:argon2-jvm", version.ref = "argon2" }

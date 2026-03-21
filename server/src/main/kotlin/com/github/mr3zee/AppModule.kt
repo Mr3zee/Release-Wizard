@@ -19,6 +19,7 @@ fun appModule(
     authConfig: AuthConfig,
     webhookConfig: WebhookConfig,
     passwordPolicyConfig: PasswordPolicyConfig = PasswordPolicyConfig(),
+    useFlyway: Boolean = true,
 ) = module {
     single { dbConfig }
     single { encryptionConfig }
@@ -26,7 +27,7 @@ fun appModule(
     single { webhookConfig }
     single { passwordPolicyConfig }
     single<DataSource> { dataSource(get()) }
-    single<Database> { initDatabase(get()) }
+    single<Database> { initDatabase(get(), useFlyway) }
     single { EncryptionService(get()) }
     single {
         HttpClient(CIO) {

@@ -13,5 +13,6 @@ object ReleaseTagTable : Table("release_tags") {
     init {
         index(false, tag)
         index(false, teamId)
+        index("idx_release_tags_team_tag", false, teamId, tag)
     }
 }

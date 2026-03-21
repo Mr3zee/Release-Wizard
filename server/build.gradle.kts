@@ -46,10 +46,13 @@ dependencies {
     // Database
     implementation(libs.exposed.core)
     implementation(libs.exposed.jdbc)
+    implementation(libs.exposed.migration.jdbc)
     implementation(libs.exposed.json)
     implementation(libs.exposed.kotlinDatetime)
     implementation(libs.postgresql)
     implementation(libs.hikaricp)
+    implementation(libs.flyway.core)
+    implementation(libs.flyway.postgresql)
 
     // Security
     implementation(libs.argon2)
@@ -85,6 +88,7 @@ dependencies {
     testImplementation(libs.h2)
     testImplementation(libs.testcontainers)
     testImplementation(libs.testcontainers.postgresql)
+    testImplementation(libs.exposed.migration.jdbc)
 }
 
 sourceSets {

@@ -3,13 +3,38 @@ package com.github.mr3zee.persistence
 import com.github.mr3zee.DatabaseConfig
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
+import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.SchemaUtils
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.migration.jdbc.MigrationUtils
 import org.slf4j.LoggerFactory
 import javax.sql.DataSource
 
 private val log = LoggerFactory.getLogger("com.github.mr3zee.persistence.DatabaseFactory")
+
+/** All table definitions — used by SchemaUtils (tests) and drift detection. */
+val ALL_TABLES = arrayOf(
+    UserTable,
+    TeamTable,
+    TeamMembershipTable,
+    TeamInviteTable,
+    JoinRequestTable,
+    AuditEventTable,
+    ProjectTemplateTable,
+    ConnectionTable,
+    ReleaseTable,
+    BlockExecutionTable,
+    NotificationConfigTable,
+    ScheduleTable,
+    TriggerTable,
+    MavenTriggerTable,
+    ReleaseTagTable,
+    ProjectLockTable,
+    StatusWebhookTokenTable,
+    AccountLockoutTable,
+    PasswordResetTokenTable,
+)
 
 fun dataSource(config: DatabaseConfig): DataSource {
     val hikariConfig = HikariConfig().apply {
@@ -27,33 +52,41 @@ fun dataSource(config: DatabaseConfig): DataSource {
     return HikariDataSource(hikariConfig)
 }
 
-fun initDatabase(ds: DataSource): Database {
-    val database = Database.connect(ds)
-    transaction(database) {
-        // Create tables that don't exist. No ALTER of existing columns — avoids FK conflicts
-        // when column types change between versions. Safe because there is no production data.
-        SchemaUtils.create(
-            UserTable,
-            TeamTable,
-            TeamMembershipTable,
-            TeamInviteTable,
-            JoinRequestTable,
-            AuditEventTable,
-            ProjectTemplateTable,
-            ConnectionTable,
-            ReleaseTable,
-            BlockExecutionTable,
-            NotificationConfigTable,
-            ScheduleTable,
-            TriggerTable,
-            MavenTriggerTable,
-            ReleaseTagTable,
-            ProjectLockTable,
-            StatusWebhookTokenTable,
-            AccountLockoutTable,
-            PasswordResetTokenTable,
-        )
+/**
+ * Initializes the database schema.
+ *
+ * @param useFlyway true (default) for production — runs Flyway SQL migrations against PostgreSQL.
+ *                  false for tests — uses Exposed SchemaUtils.create() against H2 for speed.
+ */
+fun initDatabase(ds: DataSource, useFlyway: Boolean = true): Database {
+    if (useFlyway) {
+        Flyway.configure()
+            .dataSource(ds)
+            .locations("classpath:db/migration")
+            .cleanDisabled(true)
+            .validateOnMigrate(true)
+            .load()
+            .migrate()
     }
+
+    val database = Database.connect(ds)
+
+    if (useFlyway) {
+        // After Flyway applies migrations, verify the schema matches Exposed Table definitions.
+        // Fails fast on startup if a migration was forgotten or is out of sync.
+        val drift = transaction(database) {
+            MigrationUtils.statementsRequiredForDatabaseMigration(*ALL_TABLES)
+        }
+        if (drift.isNotEmpty()) {
+            log.error("Schema drift detected after Flyway migration. Missing statements:\n{}", drift.joinToString("\n"))
+            error("Database schema does not match Exposed Table definitions. ${drift.size} statements required.")
+        }
+    } else {
+        transaction(database) {
+            SchemaUtils.create(*ALL_TABLES)
+        }
+    }
+
     // TEAM-H2, TEAM-H3, HOOK-M4: Create partial unique indexes (PostgreSQL only, graceful skip on H2)
     createPartialIndexes(ds)
     return database
@@ -63,26 +96,11 @@ fun initDatabase(ds: DataSource): Database {
  * Creates partial unique indexes for defense-in-depth.
  * These ensure only one PENDING invite/request per (team, user) and only one active webhook token per (release, block).
  * PostgreSQL supports partial indexes; H2 does not — failures are logged and ignored.
+ *
+ * Note: Regular indexes (including idx_release_tags_team_tag) are managed by Flyway migrations.
+ * Only partial indexes with WHERE clauses remain here because H2 does not support them.
  */
 private fun createPartialIndexes(ds: DataSource) {
-    // TAG-L3: Create composite index on (team_id, tag) for efficient team-scoped tag queries
-    val regularIndexes = listOf(
-        """CREATE INDEX IF NOT EXISTS idx_release_tags_team_tag
-           ON release_tags (team_id, tag)""",
-    )
-    ds.connection.use { conn ->
-        conn.autoCommit = true
-        for (sql in regularIndexes) {
-            try {
-                conn.createStatement().use { stmt ->
-                    stmt.execute(sql.trimIndent())
-                }
-            } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-                log.warn("Index creation skipped: {}", e.message)
-            }
-        }
-    }
-
     val partialIndexes = listOf(
         // TEAM-H2: Only one PENDING invite per (team, user)
         """CREATE UNIQUE INDEX IF NOT EXISTS uq_invite_pending_team_user

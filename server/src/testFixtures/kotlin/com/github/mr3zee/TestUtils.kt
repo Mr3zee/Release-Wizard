@@ -115,7 +115,7 @@ fun Application.testModule(
         slf4jLogger()
         allowOverride(true)
         modules(
-            appModule(dbConfig, testEncryptionConfig(), authConfig, testWebhookConfig(), passwordPolicyConfig),
+            appModule(dbConfig, testEncryptionConfig(), authConfig, testWebhookConfig(), passwordPolicyConfig, useFlyway = false),
             auditModule,
             authModule,
             projectsModule,
