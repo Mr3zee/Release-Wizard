@@ -16,8 +16,7 @@ dependencies {
     testImplementation(project(":shared"))
 
     // Compose UI test framework
-    @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
-    testImplementation(compose.uiTest)
+    testImplementation(libs.compose.ui.test)
     testImplementation(compose.desktop.currentOs)
 
     // Embedded server engines

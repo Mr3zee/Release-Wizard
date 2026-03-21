@@ -32,7 +32,7 @@ kotlin {
             implementation(libs.compose.components.resources)
             implementation(libs.compose.unstyled)
             implementation(libs.compose.uiToolingPreview)
-            implementation(compose.materialIconsExtended)
+            implementation(libs.compose.material.icons.extended)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(projects.shared)
@@ -50,29 +50,20 @@ kotlin {
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
-        val jvmTest by getting {
-            dependencies {
-                @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
-                implementation(compose.uiTest)
-                implementation(compose.desktop.currentOs)
-                implementation(libs.ktor.clientMock)
-            }
-        }
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
             implementation(libs.ktor.clientCio)
             implementation(libs.compose.uiTestServer)
-            @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
-            implementation(compose.uiTest)
+            implementation(libs.compose.ui.test)
+        }
+        jvmTest.dependencies {
+            implementation(libs.compose.ui.test)
+            implementation(compose.desktop.currentOs)
+            implementation(libs.ktor.clientMock)
         }
         jsMain.dependencies {
             implementation(libs.ktor.clientJs)
-        }
-        val wasmJsMain by getting {
-            dependencies {
-                // wasmJs uses fetch-based engine bundled with ktor-client-core
-            }
         }
     }
 }
