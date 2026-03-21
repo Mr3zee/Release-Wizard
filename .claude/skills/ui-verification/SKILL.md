@@ -75,16 +75,27 @@ done
 
 ### Step 2: Start the Ktor Server
 
-Source `.env` for secrets, override ports and password policy for testing:
+Source `.env` for secrets (from repo root — worktrees don't have their own `.env`), override ports and password policy for testing:
 
 ```bash
-source .env
+# Source .env from the git toplevel (repo root), not the worktree cwd
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo .)"
+ENV_FILE="${REPO_ROOT}/.env"
+if [ ! -f "$ENV_FILE" ]; then
+  # Worktree: .env lives in the original repo, not the worktree
+  ORIG_ROOT="$(git -C "$REPO_ROOT" rev-parse --path-format=absolute --git-common-dir 2>/dev/null | sed 's|/.git$||')"
+  [ -f "${ORIG_ROOT}/.env" ] && ENV_FILE="${ORIG_ROOT}/.env"
+fi
+[ -f "$ENV_FILE" ] && source "$ENV_FILE"
+
 PORT=$SERVER_PORT \
 DB_URL="jdbc:postgresql://localhost:$DB_PORT/release_wizard" \
 PASSWORD_MIN_LENGTH=4 \
 PASSWORD_REQUIRE_UPPERCASE=false \
 PASSWORD_REQUIRE_DIGIT=false \
 PASSWORD_REQUIRE_SPECIAL=false \
+GOOGLE_OAUTH_CLIENT_ID="${GOOGLE_OAUTH_CLIENT_ID:-}" \
+GOOGLE_OAUTH_CLIENT_SECRET="${GOOGLE_OAUTH_CLIENT_SECRET:-}" \
 nohup ./gradlew :server:run > /tmp/rw_server_${SERVER_PORT}.log 2>&1 &
 ```
 

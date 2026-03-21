@@ -1,10 +1,12 @@
 package com.github.mr3zee.auth
 
+import com.github.mr3zee.api.OAuthProvider
 import com.github.mr3zee.model.TeamRole
 import com.github.mr3zee.model.User
 import com.github.mr3zee.model.UserId
 import com.github.mr3zee.model.UserRole
 import com.github.mr3zee.persistence.AccountLockoutTable
+import com.github.mr3zee.persistence.OAuthAccountTable
 import com.github.mr3zee.persistence.TeamMembershipTable
 import com.github.mr3zee.persistence.UserTable
 import de.mkammerer.argon2.Argon2Factory
@@ -35,30 +37,23 @@ interface AuthService {
     suspend fun safeUpdateUserRole(id: UserId, role: UserRole): Result<Boolean>
 
     /**
-     * Change the username for a user. Validates the current password first.
-     * Returns:
-     * - [Result.success] with updated [User] on success
-     * - [Result.failure] with [IllegalArgumentException] for validation errors (INVALID_PASSWORD, USERNAME_TAKEN, VALIDATION_ERROR)
+     * Change the username for a user. If [currentPassword] is non-null, validates it first.
+     * If null, the user must have no password (OAuth-only).
      */
-    suspend fun changeUsername(userId: UserId, newUsername: String, currentPassword: String): Result<User>
+    suspend fun changeUsername(userId: UserId, newUsername: String, currentPassword: String?): Result<User>
 
     /**
-     * Change the password for a user. Validates the current password first.
-     * Returns:
-     * - [Result.success] with `true` on success
-     * - [Result.failure] with [IllegalArgumentException] for INVALID_PASSWORD
+     * Change or set the password for a user. If [currentPassword] is non-null, validates it first.
+     * If null, the user must have no password (OAuth-only "set password" flow).
      */
-    suspend fun changePassword(userId: UserId, currentPassword: String, newPassword: String): Result<Boolean>
+    suspend fun changePassword(userId: UserId, currentPassword: String?, newPassword: String): Result<Boolean>
 
     /**
-     * Safely delete a user account. Validates current password and confirmation username.
+     * Safely delete a user account. Validates confirmation username.
+     * If [currentPassword] is non-null, validates it. If null, the user must have no password (OAuth-only).
      * Checks that the user is not the last admin or last team lead in any team.
-     * Returns:
-     * - [Result.success] with `true` on success
-     * - [Result.failure] with [IllegalStateException] for LAST_ADMIN, LAST_TEAM_LEAD
-     * - [Result.failure] with [IllegalArgumentException] for INVALID_PASSWORD, USERNAME_MISMATCH
      */
-    suspend fun deleteAccountSafe(userId: UserId, confirmUsername: String, currentPassword: String): Result<Boolean>
+    suspend fun deleteAccountSafe(userId: UserId, confirmUsername: String, currentPassword: String?): Result<Boolean>
 
     /**
      * Hash a password using the configured Argon2 parameters.
@@ -105,6 +100,7 @@ class DatabaseAuthService(private val db: Database) : AuthService {
         username = this[UserTable.username],
         role = this[UserTable.role],
         createdAt = this[UserTable.createdAt].toEpochMilliseconds(),
+        hasPassword = this[UserTable.passwordHash] != null,
     )
 
     override suspend fun validate(username: String, password: String): User? {
@@ -123,6 +119,12 @@ class DatabaseAuthService(private val db: Database) : AuthService {
             return null
         }
         val hash = row[UserTable.passwordHash]
+        if (hash == null) {
+            // OAuth-only user — cannot authenticate with password. Perform dummy hash for timing.
+            withContext(Dispatchers.IO) { argon2.verify(DUMMY_HASH, password.toCharArray()) }
+            log.warn("Login failed for user '{}'", username)
+            return null
+        }
         val valid = withContext(Dispatchers.IO) { argon2.verify(hash, password.toCharArray()) }
         return if (valid) {
             log.info("Login succeeded for user '{}'", username)
@@ -198,9 +200,25 @@ class DatabaseAuthService(private val db: Database) : AuthService {
     }
 
     override suspend fun listUsers(): List<User> = dbQuery {
-        UserTable.selectAll()
+        val users = UserTable.selectAll()
             .orderBy(UserTable.createdAt, SortOrder.ASC)
             .map { it.toUser() }
+
+        // Fetch OAuth providers for all users in one query
+        val oauthByUserId = OAuthAccountTable.selectAll()
+            .groupBy { it[OAuthAccountTable.userId].value.toString() }
+            .mapValues { (_, rows) ->
+                rows.mapNotNull { row ->
+                    when (row[OAuthAccountTable.provider]) {
+                        OAuthProvider.GOOGLE.name.lowercase() -> OAuthProvider.GOOGLE
+                        else -> null
+                    }
+                }
+            }
+
+        users.map { user ->
+            user.copy(oauthProviders = oauthByUserId[user.id.value].orEmpty())
+        }
     }
 
     override suspend fun updateUserRole(id: UserId, role: UserRole): Boolean = dbQuery {
@@ -241,9 +259,10 @@ class DatabaseAuthService(private val db: Database) : AuthService {
 
     /**
      * Fetches a user row by ID and verifies the password outside a transaction.
-     * Returns the ResultRow on success, or a failure Result for not-found / wrong password.
+     * If the user has no password (OAuth-only) and [password] is null, verification is skipped.
+     * If the user has a password, [password] must be non-null and correct.
      */
-    private suspend fun fetchUserAndVerifyPassword(userId: UserId, password: String): Result<ResultRow> {
+    private suspend fun fetchUserAndVerifyPassword(userId: UserId, password: String?): Result<ResultRow> {
         val userRow = dbQuery {
             UserTable.selectAll()
                 .where { UserTable.id eq UUID.fromString(userId.value) }
@@ -251,16 +270,23 @@ class DatabaseAuthService(private val db: Database) : AuthService {
         } ?: return Result.failure(IllegalArgumentException("User not found"))
 
         val storedHash = userRow[UserTable.passwordHash]
-        val passwordValid = withContext(Dispatchers.IO) {
-            argon2.verify(storedHash, password.toCharArray())
+        if (storedHash != null) {
+            // User has a password — must verify it
+            if (password == null) {
+                return Result.failure(IllegalArgumentException("INVALID_PASSWORD"))
+            }
+            val passwordValid = withContext(Dispatchers.IO) {
+                argon2.verify(storedHash, password.toCharArray())
+            }
+            if (!passwordValid) {
+                return Result.failure(IllegalArgumentException("INVALID_PASSWORD"))
+            }
         }
-        if (!passwordValid) {
-            return Result.failure(IllegalArgumentException("INVALID_PASSWORD"))
-        }
+        // OAuth-only users (storedHash == null) skip password verification
         return Result.success(userRow)
     }
 
-    override suspend fun changeUsername(userId: UserId, newUsername: String, currentPassword: String): Result<User> {
+    override suspend fun changeUsername(userId: UserId, newUsername: String, currentPassword: String?): Result<User> {
         fetchUserAndVerifyPassword(userId, currentPassword)
             .getOrElse { return Result.failure(it) }
 
@@ -310,7 +336,7 @@ class DatabaseAuthService(private val db: Database) : AuthService {
         }
     }
 
-    override suspend fun changePassword(userId: UserId, currentPassword: String, newPassword: String): Result<Boolean> {
+    override suspend fun changePassword(userId: UserId, currentPassword: String?, newPassword: String): Result<Boolean> {
         val userRow = fetchUserAndVerifyPassword(userId, currentPassword)
             .getOrElse { return Result.failure(it) }
         val storedHash = userRow[UserTable.passwordHash]
@@ -324,12 +350,23 @@ class DatabaseAuthService(private val db: Database) : AuthService {
         // hasn't been changed by another concurrent request (e.g., password reset).
         val updated = dbQuery {
             val now = Clock.System.now()
-            UserTable.update({
-                (UserTable.id eq UUID.fromString(userId.value)) and
-                    (UserTable.passwordHash eq storedHash)
-            }) {
-                it[UserTable.passwordHash] = newHash
-                it[UserTable.passwordChangedAt] = now
+            if (storedHash != null) {
+                UserTable.update({
+                    (UserTable.id eq UUID.fromString(userId.value)) and
+                        (UserTable.passwordHash eq storedHash)
+                }) {
+                    it[UserTable.passwordHash] = newHash
+                    it[UserTable.passwordChangedAt] = now
+                }
+            } else {
+                // OAuth-only user setting password for the first time (passwordHash IS NULL)
+                UserTable.update({
+                    (UserTable.id eq UUID.fromString(userId.value)) and
+                        (UserTable.passwordHash.isNull())
+                }) {
+                    it[UserTable.passwordHash] = newHash
+                    it[UserTable.passwordChangedAt] = now
+                }
             }
         }
         if (updated == 0) {
@@ -343,7 +380,7 @@ class DatabaseAuthService(private val db: Database) : AuthService {
     override suspend fun deleteAccountSafe(
         userId: UserId,
         confirmUsername: String,
-        currentPassword: String,
+        currentPassword: String?,
     ): Result<Boolean> {
         val userRow = fetchUserAndVerifyPassword(userId, currentPassword)
             .getOrElse { return Result.failure(it) }

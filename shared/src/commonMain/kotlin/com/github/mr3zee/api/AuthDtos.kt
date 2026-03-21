@@ -8,6 +8,11 @@ import com.github.mr3zee.model.UserRole
 import kotlinx.serialization.Serializable
 
 @Serializable
+enum class OAuthProvider {
+    GOOGLE,
+}
+
+@Serializable
 data class LoginRequest(
     val username: String,
     val password: String,
@@ -32,6 +37,8 @@ data class UserInfo(
     val role: UserRole? = null,
     val teams: List<UserTeamInfo> = emptyList(),
     val createdAt: Long? = null,
+    val hasPassword: Boolean = true,
+    val oauthProviders: List<OAuthProvider> = emptyList(),
 )
 
 @Serializable
@@ -54,14 +61,14 @@ data class UserListResponse(
 @Serializable
 data class ChangeUsernameRequest(
     val newUsername: String,
-    val currentPassword: String,
+    val currentPassword: String? = null,
 ) {
     override fun toString() = "ChangeUsernameRequest(newUsername=$newUsername, password=****)"
 }
 
 @Serializable
 data class ChangePasswordRequest(
-    val currentPassword: String,
+    val currentPassword: String? = null,
     val newPassword: String,
 ) {
     override fun toString() = "ChangePasswordRequest(password=****)"
@@ -70,7 +77,7 @@ data class ChangePasswordRequest(
 @Serializable
 data class DeleteAccountRequest(
     val confirmUsername: String,
-    val currentPassword: String,
+    val currentPassword: String? = null,
 ) {
     override fun toString() = "DeleteAccountRequest(confirmUsername=$confirmUsername, password=****)"
 }
@@ -109,4 +116,5 @@ data class PasswordPolicyResponse(
     val requireUppercase: Boolean,
     val requireDigit: Boolean,
     val requireSpecial: Boolean,
+    val oauthProviders: List<OAuthProvider> = emptyList(),
 )

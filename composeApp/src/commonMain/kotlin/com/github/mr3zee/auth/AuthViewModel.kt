@@ -6,6 +6,7 @@ import com.github.mr3zee.api.AuthApiClient
 import com.github.mr3zee.api.UserInfo
 import com.github.mr3zee.api.toUiMessage
 import com.github.mr3zee.util.UiMessage
+import com.github.mr3zee.util.navigateToExternalUrl
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -86,8 +87,16 @@ class AuthViewModel(
         _error.value = UiMessage.SessionExpired
     }
 
+    fun setError(message: UiMessage) {
+        _error.value = message
+    }
+
     fun dismissError() {
         _error.value = null
+    }
+
+    fun loginWithGoogle() {
+        navigateToExternalUrl(apiClient.googleOAuthBrowserUrl())
     }
 
     fun updateUser(userInfo: UserInfo) {

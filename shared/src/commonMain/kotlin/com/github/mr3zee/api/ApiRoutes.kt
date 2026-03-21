@@ -41,6 +41,11 @@ object ApiRoutes {
         const val PASSWORD_POLICY = "$API_V1/auth/password-policy"
         fun userRole(id: String) = "$USERS/$id/role"
 
+        object OAuth {
+            const val GOOGLE = "$API_V1/auth/oauth/google"
+            const val GOOGLE_CALLBACK = "$API_V1/auth/oauth/google/callback"
+        }
+
         object MyInvites {
             const val BASE = "$API_V1/auth/me/invites"
             fun byId(id: String) = "$BASE/$id"

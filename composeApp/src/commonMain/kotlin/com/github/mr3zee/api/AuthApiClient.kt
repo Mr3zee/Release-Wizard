@@ -46,7 +46,9 @@ class AuthApiClient(private val client: HttpClient) {
         }
     }
 
-    suspend fun changeUsername(newUsername: String, currentPassword: String): UserInfo {
+    fun googleOAuthBrowserUrl(): String = serverUrl(ApiRoutes.Auth.OAuth.GOOGLE)
+
+    suspend fun changeUsername(newUsername: String, currentPassword: String?): UserInfo {
         val response = client.put(serverUrl(ApiRoutes.Auth.CHANGE_USERNAME)) {
             contentType(ContentType.Application.Json)
             setBody(ChangeUsernameRequest(newUsername = newUsername, currentPassword = currentPassword))
@@ -54,14 +56,14 @@ class AuthApiClient(private val client: HttpClient) {
         return response.body()
     }
 
-    suspend fun changePassword(currentPassword: String, newPassword: String) {
+    suspend fun changePassword(currentPassword: String?, newPassword: String) {
         client.put(serverUrl(ApiRoutes.Auth.CHANGE_PASSWORD)) {
             contentType(ContentType.Application.Json)
             setBody(ChangePasswordRequest(currentPassword = currentPassword, newPassword = newPassword))
         }
     }
 
-    suspend fun deleteAccount(confirmUsername: String, currentPassword: String) {
+    suspend fun deleteAccount(confirmUsername: String, currentPassword: String?) {
         client.delete(serverUrl(ApiRoutes.Auth.DELETE_ACCOUNT)) {
             contentType(ContentType.Application.Json)
             setBody(DeleteAccountRequest(confirmUsername = confirmUsername, currentPassword = currentPassword))

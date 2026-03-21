@@ -1,5 +1,6 @@
 package com.github.mr3zee.model
 
+import com.github.mr3zee.api.OAuthProvider
 import kotlinx.serialization.Serializable
 import kotlin.jvm.JvmInline
 
@@ -13,4 +14,6 @@ data class User(
     val username: String,
     val role: UserRole,
     val createdAt: Long? = null,
+    val hasPassword: Boolean = true,
+    val oauthProviders: List<OAuthProvider> = emptyList(),
 )

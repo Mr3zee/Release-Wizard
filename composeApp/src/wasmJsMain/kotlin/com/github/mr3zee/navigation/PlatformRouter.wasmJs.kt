@@ -15,6 +15,8 @@ actual fun createPlatformRouter(): PlatformRouter = object : PlatformRouter {
 
     override fun currentPath(): String = window.location.pathname
 
+    override fun currentQuery(): String = window.location.search.removePrefix("?")
+
     override fun onPopState(listener: (path: String) -> Unit): () -> Unit {
         // Store a stable reference for both addEventListener and removeEventListener
         val handler: (Event) -> Unit = { listener(window.location.pathname) }

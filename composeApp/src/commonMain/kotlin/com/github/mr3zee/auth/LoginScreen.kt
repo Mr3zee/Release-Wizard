@@ -9,9 +9,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.ui.graphics.Color
+import org.jetbrains.compose.resources.painterResource
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,11 +44,15 @@ import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.resolve
 import com.github.mr3zee.i18n.packStringResource
+import com.github.mr3zee.util.RuntimeContext
+import com.github.mr3zee.util.currentRuntimeContext
 import releasewizard.composeapp.generated.resources.*
 
 @Composable
 fun LoginScreen(
     viewModel: AuthViewModel,
+    showGoogleLogin: Boolean = currentRuntimeContext() == RuntimeContext.BROWSER,
+    onGoogleSignIn: () -> Unit = { viewModel.loginWithGoogle() },
 ) {
     val passwordPolicyHint = LocalPasswordPolicyHint.current
     val isLoading by viewModel.isLoading.collectAsState()
@@ -244,6 +251,39 @@ fun LoginScreen(
                         )
                     } else {
                         Text(if (isRegisterMode) packStringResource(Res.string.auth_create_account_button) else packStringResource(Res.string.auth_sign_in_button))
+                    }
+                }
+
+                if (showGoogleLogin && !isRegisterMode) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().testTag("login_divider_or"),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        HorizontalDivider(modifier = Modifier.weight(1f))
+                        Text(
+                            text = packStringResource(Res.string.auth_or_divider),
+                            style = AppTypography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = Spacing.md),
+                        )
+                        HorizontalDivider(modifier = Modifier.weight(1f))
+                    }
+
+                    RwButton(
+                        onClick = onGoogleSignIn,
+                        variant = RwButtonVariant.Secondary,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("login_google_button"),
+                    ) {
+                        Icon(
+                            painter = painterResource(Res.drawable.ic_google),
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = Color.Unspecified,
+                        )
+                        Spacer(modifier = Modifier.width(Spacing.sm))
+                        Text(packStringResource(Res.string.auth_sign_in_google))
                     }
                 }
 

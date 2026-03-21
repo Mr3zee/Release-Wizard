@@ -8,4 +8,5 @@ val authModule = module {
     single { PasswordValidator(get()) }
     single { AccountLockoutRepository(get()) }
     single { AccountLockoutService(get()) }
+    single<OAuthService> { DatabaseOAuthService(get()) }
 }

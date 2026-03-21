@@ -5,6 +5,7 @@ import com.github.mr3zee.auth.AccountLockoutRepository
 import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.auth.authModule
 import com.github.mr3zee.auth.authRoutes
+import com.github.mr3zee.auth.oauthRoutes
 import com.github.mr3zee.connections.connectionRoutes
 import com.github.mr3zee.connections.connectionsModule
 import com.github.mr3zee.execution.ExecutionEngine
@@ -87,6 +88,7 @@ fun Application.module() {
     val webhookConfig = environment.config.webhookConfig()
     val passwordPolicyConfig = environment.config.passwordPolicyConfig()
     val corsConfig = environment.config.corsConfig()
+    val oauthConfig = environment.config.oauthConfig()
 
     val appVersion = environment.config.propertyOrNull("app.version")?.getString() ?: "dev"
 
@@ -95,7 +97,7 @@ fun Application.module() {
     install(Koin) {
         slf4jLogger()
         modules(
-            appModule(dbConfig, encryptionConfig, authConfig, webhookConfig, passwordPolicyConfig),
+            appModule(dbConfig, encryptionConfig, authConfig, webhookConfig, passwordPolicyConfig, oauthConfig = oauthConfig),
             auditModule,
             authModule,
             projectsModule,
@@ -248,6 +250,12 @@ fun Application.module() {
         }
     }
 
+    // Resolve Koin deps before install(Authentication) — AuthenticationConfig receiver
+    // doesn't expose application, so getKoin() is not available inside the block.
+    val resolvedOAuthConfig = getKoin().get<OAuthConfig>()
+    val resolvedHttpClient = getKoin().get<HttpClient>()
+    val resolvedWebhookConfig = getKoin().get<WebhookConfig>()
+
     install(Authentication) {
         session<UserSession>("session-auth") {
             validate { it }
@@ -261,6 +269,28 @@ fun Application.module() {
                         correlationId = correlationId,
                     ),
                 )
+            }
+        }
+
+        if (resolvedOAuthConfig.isGoogleConfigured) {
+            oauth("auth-oauth-google") {
+                urlProvider = {
+                    "${resolvedWebhookConfig.baseUrl.trimEnd('/')}/api/v1/auth/oauth/google/callback"
+                }
+                providerLookup = {
+                    OAuthServerSettings.OAuth2ServerSettings(
+                        name = "google",
+                        authorizeUrl = "https://accounts.google.com/o/oauth2/v2/auth",
+                        accessTokenUrl = "https://oauth2.googleapis.com/token",
+                        clientId = resolvedOAuthConfig.googleClientId
+                            ?: error("Google OAuth client ID not configured"),
+                        clientSecret = resolvedOAuthConfig.googleClientSecret
+                            ?: error("Google OAuth client secret not configured"),
+                        defaultScopes = listOf("openid", "email", "profile"),
+                        requestMethod = HttpMethod.Post,
+                    )
+                }
+                client = resolvedHttpClient
             }
         }
     }
@@ -477,6 +507,9 @@ fun Application.configureRouting(
     routing {
         healthRoute(appVersion)
         authRoutes()
+        rateLimit(RateLimitName("login")) {
+            oauthRoutes()
+        }
         webhookRoutes()
         triggerWebhookRoutes()
         authenticate("session-auth") {

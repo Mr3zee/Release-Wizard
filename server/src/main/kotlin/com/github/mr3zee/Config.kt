@@ -35,6 +35,16 @@ data class WebhookConfig(
     val baseUrl: String,
 )
 
+data class OAuthConfig(
+    val googleClientId: String?,
+    val googleClientSecret: String?,
+) {
+    val isGoogleConfigured: Boolean
+        get() = !googleClientId.isNullOrBlank() && !googleClientSecret.isNullOrBlank()
+
+    override fun toString() = "OAuthConfig(googleClientId=$googleClientId, googleClientSecret=****)"
+}
+
 data class CorsConfig(
     val allowedOrigins: List<String>,
 )
@@ -114,13 +124,36 @@ fun ApplicationConfig.webhookConfig(): WebhookConfig {
     )
 }
 
-private val corsLog = org.slf4j.LoggerFactory.getLogger("com.github.mr3zee.Config")
+private val configLog = org.slf4j.LoggerFactory.getLogger("com.github.mr3zee.Config")
+
+fun ApplicationConfig.oauthConfig(): OAuthConfig {
+    val clientId = propertyOrNull("app.auth.oauth.google.clientId")?.getString()?.ifBlank { null }
+    val clientSecret = propertyOrNull("app.auth.oauth.google.clientSecret")?.getString()?.ifBlank { null }
+
+    val setFields = listOfNotNull(
+        clientId?.let { "clientId" },
+        clientSecret?.let { "clientSecret" },
+    )
+    if (setFields.isNotEmpty() && setFields.size < 2) {
+        configLog.warn(
+            "Partial Google OAuth config detected (only {} set). " +
+                "Both clientId and clientSecret are required for OAuth to work. " +
+                "Set GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET.",
+            setFields.joinToString(),
+        )
+    }
+
+    return OAuthConfig(
+        googleClientId = clientId,
+        googleClientSecret = clientSecret,
+    )
+}
 
 fun ApplicationConfig.corsConfig(): CorsConfig {
     val origins = propertyOrNull("app.cors.allowedOrigins")?.getList()
         ?.filter { origin ->
             if (origin.isBlank()) {
-                corsLog.warn("Blank CORS origin filtered — verify CORS_ALLOWED_ORIGIN env vars if cross-origin access is needed")
+                configLog.warn("Blank CORS origin filtered — verify CORS_ALLOWED_ORIGIN env vars if cross-origin access is needed")
                 false
             } else true
         }

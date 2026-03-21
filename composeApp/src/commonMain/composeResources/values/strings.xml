@@ -56,6 +56,12 @@
     <string name="auth_sign_in_button">Sign in</string>
     <string name="auth_toggle_to_signin">Already have an account? Sign in</string>
     <string name="auth_toggle_to_register">Don\u0027t have an account? Create account</string>
+    <string name="auth_or_divider">or</string>
+    <string name="auth_sign_in_google">Sign in with Google</string>
+    <string name="auth_oauth_error">Google sign-in failed. Please try again.</string>
+    <string name="auth_oauth_cancelled">Google sign-in was cancelled.</string>
+    <string name="auth_oauth_only_account">This account uses Google sign-in. Please use the Google button below.</string>
+    <string name="profile_set_password">Set Password</string>
     <string name="auth_confirm_password">Confirm Password</string>
     <string name="auth_password_mismatch">Passwords do not match</string>
     <string name="auth_password_requirements">At least 16 characters, including an uppercase letter, a number, and a special character</string>
@@ -649,6 +655,9 @@
     <string name="admin_users_empty">No registered users yet</string>
     <string name="admin_users_empty_hint">Users will appear here once they register.</string>
     <string name="admin_users_generate_reset_link">Generate Reset Link</string>
+    <string name="admin_users_generate_set_password_link">Generate Set Password Link</string>
+    <string name="admin_users_oauth_badge">Google</string>
+    <string name="admin_users_no_password_badge">No Password</string>
     <string name="admin_users_copy_link">Copy Link</string>
     <string name="admin_users_copied">Copied to clipboard</string>
     <string name="admin_users_reset_link_label">Reset link:</string>

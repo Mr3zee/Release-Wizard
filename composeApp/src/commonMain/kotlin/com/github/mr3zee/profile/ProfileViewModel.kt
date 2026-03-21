@@ -58,7 +58,7 @@ class ProfileViewModel(
         }
     }
 
-    fun changeUsername(newUsername: String, currentPassword: String) {
+    fun changeUsername(newUsername: String, currentPassword: String?) {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
@@ -76,7 +76,7 @@ class ProfileViewModel(
         }
     }
 
-    fun changePassword(currentPassword: String, newPassword: String) {
+    fun changePassword(currentPassword: String?, newPassword: String) {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
@@ -92,7 +92,7 @@ class ProfileViewModel(
         }
     }
 
-    fun deleteAccount(confirmUsername: String, currentPassword: String) {
+    fun deleteAccount(confirmUsername: String, currentPassword: String?) {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null

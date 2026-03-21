@@ -162,6 +162,18 @@ fun AdminUsersScreen(
                                             LocalAppColors.current.chromeTextMetadata
                                         },
                                     )
+                                    if (user.oauthProviders.isNotEmpty()) {
+                                        RwBadge(
+                                            text = packStringResource(Res.string.admin_users_oauth_badge),
+                                            color = MaterialTheme.colorScheme.tertiary,
+                                        )
+                                    }
+                                    if (!user.hasPassword) {
+                                        RwBadge(
+                                            text = packStringResource(Res.string.admin_users_no_password_badge),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
                                 }
 
                                 if (generatedLink != null) {
@@ -209,7 +221,10 @@ fun AdminUsersScreen(
                                 variant = RwButtonVariant.Secondary,
                                 modifier = Modifier.testTag("admin_generate_reset_link_$userId"),
                             ) {
-                                Text(packStringResource(Res.string.admin_users_generate_reset_link))
+                                Text(
+                                    if (user.hasPassword) packStringResource(Res.string.admin_users_generate_reset_link)
+                                    else packStringResource(Res.string.admin_users_generate_set_password_link)
+                                )
                             }
                         }
                     }

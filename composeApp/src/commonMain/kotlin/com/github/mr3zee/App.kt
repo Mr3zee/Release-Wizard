@@ -28,6 +28,9 @@ import com.github.mr3zee.auth.AuthEventBus
 import com.github.mr3zee.auth.AuthEvent
 import com.github.mr3zee.auth.AuthViewModel
 import com.github.mr3zee.auth.LoginScreen
+import com.github.mr3zee.util.RuntimeContext
+import com.github.mr3zee.util.UiMessage
+import com.github.mr3zee.util.currentRuntimeContext
 import com.github.mr3zee.connections.ConnectionsViewModel
 import com.github.mr3zee.profile.ProfileViewModel
 import com.github.mr3zee.profile.ResetPasswordScreen
@@ -174,6 +177,22 @@ fun App() {
         authViewModel.checkSession()
     }
 
+    // Parse OAuth redirect error from query string (e.g., /?error=google_auth_failed)
+    LaunchedEffect(Unit) {
+        val query = router.currentQuery()
+        val errorParam = query.split("&")
+            .firstOrNull { it.startsWith("error=") }
+            ?.removePrefix("error=")
+        when (errorParam) {
+            "google_auth_failed" -> authViewModel.setError(UiMessage.GoogleAuthFailed)
+            "google_auth_cancelled" -> authViewModel.setError(UiMessage.GoogleAuthCancelled)
+        }
+        // Clean the error param from the URL so it doesn't persist on refresh
+        if (errorParam != null) {
+            router.replacePath(router.currentPath())
+        }
+    }
+
     // Handle browser back/forward button
     DisposableEffect(router) {
         val dispose = router.onPopState { path ->
@@ -265,7 +284,12 @@ fun App() {
                         }
                     }
                     user == null -> {
-                        LoginScreen(viewModel = authViewModel)
+                        val isGoogleAvailable = passwordPolicy?.oauthProviders
+                            ?.contains(com.github.mr3zee.api.OAuthProvider.GOOGLE) == true
+                        LoginScreen(
+                            viewModel = authViewModel,
+                            showGoogleLogin = currentRuntimeContext() == RuntimeContext.BROWSER && isGoogleAvailable,
+                        )
                     }
                     else -> {
                         val currentUserTeams = user?.teams ?: emptyList()

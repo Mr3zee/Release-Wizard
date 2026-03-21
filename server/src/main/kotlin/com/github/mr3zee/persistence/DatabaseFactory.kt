@@ -34,6 +34,7 @@ val ALL_TABLES = arrayOf(
     StatusWebhookTokenTable,
     AccountLockoutTable,
     PasswordResetTokenTable,
+    OAuthAccountTable,
 )
 
 fun dataSource(config: DatabaseConfig): DataSource {

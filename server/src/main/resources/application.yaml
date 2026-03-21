@@ -11,7 +11,8 @@ ktor:
 # Env var mapping: PORT, HOST, DB_URL, DB_USER, DB_PASSWORD, AUTH_SESSION_SIGN_KEY, ENCRYPTION_KEY,
 #                  WEBHOOK_BASE_URL, APP_VERSION, DB_MAX_POOL_SIZE, CORS_ALLOWED_ORIGINS,
 #                  BROWSER_SESSION_TTL_SECONDS, DESKTOP_SESSION_TTL_SECONDS,
-#                  BROWSER_ABSOLUTE_LIFETIME_SECONDS, DESKTOP_ABSOLUTE_LIFETIME_SECONDS
+#                  BROWSER_ABSOLUTE_LIFETIME_SECONDS, DESKTOP_ABSOLUTE_LIFETIME_SECONDS,
+#                  GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET
 # JB Cloud Console: map DB0_URL_JDBC → DB_URL, DB0_USERNAME → DB_USER, DB0_PASSWORD → DB_PASSWORD
 # via customEnv in Helm additional params (see DEPLOYMENT.md).
 app:
@@ -36,6 +37,10 @@ app:
       requireUppercase: "$PASSWORD_REQUIRE_UPPERCASE:true"
       requireDigit: "$PASSWORD_REQUIRE_DIGIT:true"
       requireSpecial: "$PASSWORD_REQUIRE_SPECIAL:false"
+    oauth:
+      google:
+        clientId: "$GOOGLE_OAUTH_CLIENT_ID:"
+        clientSecret: "$GOOGLE_OAUTH_CLIENT_SECRET:"
   encryption:
     key: "$ENCRYPTION_KEY"
   webhook:

@@ -76,9 +76,57 @@ Production runs on JetBrains Cloud Console (GKE). Infrastructure details (URLs, 
 
 **Ktor 3.x `SessionTransportTransformerEncrypt` AES-256 IV bug.** The init block calls `ivGenerator(encryptionKeySize)` instead of `ivGenerator(blockSize)`. With AES-256 (32-byte key), this generates a 32-byte IV instead of 16-byte, crashing with "Wrong IV length". Workaround: provide a custom `ivGenerator` that always produces 16 bytes. See `Application.kt` session setup. Tracked as [KTOR-661](https://youtrack.jetbrains.com/issue/KTOR-661), still present in Ktor 3.4.1.
 
-## OAuth2 Setup (Future)
+## Google OAuth Setup
 
-The app currently relies on its own authentication (Argon2 passwords, encrypted sessions, CSRF, rate limiting). OAuth2 via nginx ingress annotations can be added as an additional layer. Architecture requires three ingress objects: main (with OAuth), callback handler, and webhook bypass (no auth). Infrastructure details maintained separately.
+Google OAuth provides "Sign in with Google" for browser (WasmJS) clients. Optional — without credentials, the Google button is hidden.
+
+### Google Cloud Console
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials
+2. Create OAuth 2.0 Client ID (type: Web application)
+3. Add **Authorized redirect URIs**:
+   - Local: `http://localhost:8080/api/v1/auth/oauth/google/callback`
+   - Prod: `https://release-wizard-prod.labs.jb.gg/api/v1/auth/oauth/google/callback`
+
+### Local
+
+Add to `.env` (already gitignored):
+```bash
+GOOGLE_OAUTH_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_OAUTH_CLIENT_SECRET=your-client-secret
+```
+
+The callback URL is auto-constructed from `WEBHOOK_BASE_URL` (defaults to `http://localhost:8080`).
+
+### Production (GKE)
+
+Add to the `rw-secrets` Kubernetes secret:
+```bash
+kubectl -n release-wizard patch secret rw-secrets -p '{"stringData":{
+  "GOOGLE_OAUTH_CLIENT_ID":"your-client-id.apps.googleusercontent.com",
+  "GOOGLE_OAUTH_CLIENT_SECRET":"your-client-secret"
+}}'
+```
+
+Callback URL is constructed from `WEBHOOK_BASE_URL` (`https://release-wizard-prod.labs.jb.gg`).
+
+If the oauth2-proxy ingress is deployed later, add the OAuth callback to the webhook bypass ingress:
+```yaml
+- path: /api/v1/auth/oauth
+  pathType: Prefix
+  backend:
+    service:
+      name: release-wizard-prod
+      port:
+        number: 80
+```
+
+### OAuth-Only Users
+
+OAuth users created via Google sign-in have no password. They can:
+- Set a password later (profile → "Set Password")
+- Be given a password via admin "Generate Set Password Link"
+- Change username / delete account without password verification
 
 ## Environment Variables
 
@@ -97,6 +145,8 @@ The app currently relies on its own authentication (Argon2 passwords, encrypted 
 | `CORS_ALLOWED_ORIGIN_1` | — | No | Allowed CORS origin (for split-mode dev) |
 | `SECURE_COOKIE` | `false` | No | Must be `true` in production (TLS terminated at ingress). Defaults to `false` for local dev convenience |
 | `APP_VERSION` | `dev` | No | Version string |
+| `GOOGLE_OAUTH_CLIENT_ID` | — | No | Google OAuth client ID. Leave blank to disable Google sign-in |
+| `GOOGLE_OAUTH_CLIENT_SECRET` | — | No | Google OAuth client secret |
 
 ## Container Image
 

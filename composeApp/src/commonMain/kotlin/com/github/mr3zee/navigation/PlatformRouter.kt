@@ -15,6 +15,9 @@ interface PlatformRouter {
     /** Read the current URL path. Returns "/" on non-browser platforms. */
     fun currentPath(): String
 
+    /** Read the current URL query string (e.g., "error=google_auth_failed"). Returns "" on non-browser platforms. */
+    fun currentQuery(): String
+
     /**
      * Register a listener for browser back/forward (popstate) events.
      * Returns a dispose function to unregister the listener.

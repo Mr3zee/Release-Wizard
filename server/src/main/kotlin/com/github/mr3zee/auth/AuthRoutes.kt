@@ -17,7 +17,6 @@ import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import org.koin.ktor.ext.inject
 import org.slf4j.LoggerFactory
-import java.security.SecureRandom
 import kotlin.time.Clock
 
 private val log = LoggerFactory.getLogger("com.github.mr3zee.auth.AuthRoutes")
@@ -30,11 +29,16 @@ fun Route.authRoutes() {
     val passwordResetService by inject<PasswordResetService>()
     val passwordPolicyConfig by inject<PasswordPolicyConfig>()
     val webhookConfig by inject<WebhookConfig>()
+    val oauthService by inject<OAuthService>()
+    val oauthConfig by inject<com.github.mr3zee.OAuthConfig>()
 
-    // Public: password policy (no auth needed, clients render requirements dynamically)
+    // Public: password policy + available OAuth providers (no auth needed)
     rateLimit(RateLimitName("authenticated-api")) {
         get(ApiRoutes.Auth.PASSWORD_POLICY) {
             call.response.header(HttpHeaders.CacheControl, "public, max-age=3600")
+            val availableProviders = buildList {
+                if (oauthConfig.isGoogleConfigured) add(OAuthProvider.GOOGLE)
+            }
             call.respond(
                 PasswordPolicyResponse(
                     minLength = passwordPolicyConfig.minLength,
@@ -42,6 +46,7 @@ fun Route.authRoutes() {
                     requireUppercase = passwordPolicyConfig.requireUppercase,
                     requireDigit = passwordPolicyConfig.requireDigit,
                     requireSpecial = passwordPolicyConfig.requireSpecial,
+                    oauthProviders = availableProviders,
                 )
             )
         }
@@ -86,9 +91,23 @@ fun Route.authRoutes() {
                 log.info("User '{}' logged in", user.username)
                 call.respond(UserInfo(username = user.username, id = user.id.value, role = user.role))
             } else {
-                accountLockout.recordFailure(request.username)
-                log.warn("Failed login attempt for username '{}'", request.username)
-                respondUnauthorized(call, "Invalid credentials")
+                // Check if this is an OAuth-only account (no password set)
+                val existingUser = authService.getUserByUsername(request.username)
+                if (existingUser != null && !oauthService.hasPassword(existingUser.id)) {
+                    accountLockout.recordFailure(request.username)
+                    log.warn("OAuth-only login attempt for username '{}'", request.username)
+                    call.respond(
+                        HttpStatusCode.BadRequest,
+                        ErrorResponse(
+                            error = "This account uses Google sign-in",
+                            code = "OAUTH_ONLY_ACCOUNT",
+                        ),
+                    )
+                } else {
+                    accountLockout.recordFailure(request.username)
+                    log.warn("Failed login attempt for username '{}'", request.username)
+                    respondUnauthorized(call, "Invalid credentials")
+                }
             }
         }
 
@@ -158,6 +177,9 @@ fun Route.authRoutes() {
             val teamInfos = userTeams.map { (team, role) ->
                 UserTeamInfo(teamId = team.id, teamName = team.name, role = role)
             }
+            val userId = UserId(session.userId)
+            val hasPassword = oauthService.hasPassword(userId)
+            val oauthProviders = oauthService.getOAuthProviders(userId)
             call.respond(
                 UserInfo(
                     username = session.username,
@@ -165,6 +187,8 @@ fun Route.authRoutes() {
                     role = session.role,
                     teams = teamInfos,
                     createdAt = user?.createdAt,
+                    hasPassword = hasPassword,
+                    oauthProviders = oauthProviders,
                 )
             )
         }
@@ -208,6 +232,9 @@ fun Route.authRoutes() {
                     val teamInfos = userTeams.map { (team, role) ->
                         UserTeamInfo(teamId = team.id, teamName = team.name, role = role)
                     }
+                    val userId = UserId(session.userId)
+                    val hasPassword = oauthService.hasPassword(userId)
+                    val oauthProviders = oauthService.getOAuthProviders(userId)
                     call.respond(
                         UserInfo(
                             username = updatedUser.username,
@@ -215,6 +242,8 @@ fun Route.authRoutes() {
                             role = updatedUser.role,
                             teams = teamInfos,
                             createdAt = updatedUser.createdAt,
+                            hasPassword = hasPassword,
+                            oauthProviders = oauthProviders,
                         )
                     )
                 },
@@ -490,10 +519,3 @@ private suspend fun respondUnauthorized(call: ApplicationCall, message: String) 
     )
 }
 
-private val csrfRandom = SecureRandom()
-
-private fun generateCsrfToken(): String {
-    val bytes = ByteArray(32)
-    csrfRandom.nextBytes(bytes)
-    return bytes.joinToString("") { "%02x".format(it) }
-}

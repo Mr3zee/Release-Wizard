@@ -326,8 +326,12 @@ fun ProfileScreen(
                         onTogglePassword = { showUsernamePassword = !showUsernamePassword },
                         isSubmitting = isLoading,
                         onSubmit = {
-                            viewModel.changeUsername(newUsername.trim(), usernamePassword)
+                            viewModel.changeUsername(
+                                newUsername.trim(),
+                                usernamePassword.ifBlank { null },
+                            )
                         },
+                        hasPassword = userInfo?.hasPassword != false,
                         onDismiss = {
                             showChangeUsername = false
                             newUsername = ""
@@ -359,7 +363,10 @@ fun ProfileScreen(
                         variant = RwButtonVariant.Secondary,
                         modifier = Modifier.testTag("profile_change_password_button"),
                     ) {
-                        Text(packStringResource(Res.string.profile_change_password))
+                        Text(
+                            if (userInfo?.hasPassword != false) packStringResource(Res.string.profile_change_password)
+                            else packStringResource(Res.string.profile_set_password)
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(Spacing.xs))
@@ -380,7 +387,10 @@ fun ProfileScreen(
                         onToggleConfirmNewPassword = { showConfirmNewPassword = !showConfirmNewPassword },
                         isSubmitting = isLoading,
                         onSubmit = {
-                            viewModel.changePassword(currentPassword, newPassword)
+                            viewModel.changePassword(
+                                currentPassword.ifBlank { null },
+                                newPassword,
+                            )
                         },
                         onDismiss = {
                             showChangePassword = false
@@ -388,6 +398,7 @@ fun ProfileScreen(
                             newPassword = ""
                             confirmNewPassword = ""
                         },
+                        hasPassword = userInfo?.hasPassword != false,
                     )
                 }
 
@@ -488,13 +499,17 @@ fun ProfileScreen(
                         expectedUsername = userInfo?.username ?: "",
                         onSubmit = {
                             deleteState = DeleteState.Deleting
-                            viewModel.deleteAccount(deleteUsername.trim(), deletePassword)
+                            viewModel.deleteAccount(
+                                deleteUsername.trim(),
+                                deletePassword.ifBlank { null },
+                            )
                         },
                         onDismiss = {
                             deleteState = DeleteState.Idle
                             deleteUsername = ""
                             deletePassword = ""
                         },
+                        hasPassword = userInfo?.hasPassword != false,
                     )
 
                     // Deleting state: spinner
@@ -588,8 +603,9 @@ private fun ChangeUsernameForm(
     isSubmitting: Boolean,
     onSubmit: () -> Unit,
     onDismiss: () -> Unit,
+    hasPassword: Boolean = true,
 ) {
-    val canSubmit = newUsername.isNotBlank() && password.isNotBlank() && !isSubmitting
+    val canSubmit = newUsername.isNotBlank() && (password.isNotBlank() || !hasPassword) && !isSubmitting
 
     RwInlineForm(
         visible = visible,
@@ -620,21 +636,23 @@ private fun ChangeUsernameForm(
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
-        RwTextField(
-            value = password,
-            onValueChange = onPasswordChange,
-            label = packStringResource(Res.string.profile_current_password),
-            singleLine = true,
-            visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
-            trailingIcon = {
-                PasswordVisibilityToggle(
-                    showPassword = showPassword,
-                    onToggle = onTogglePassword,
-                    testTag = "profile_change_username_password_toggle",
-                )
-            },
-            modifier = Modifier.fillMaxWidth(),
-        )
+        if (hasPassword) {
+            RwTextField(
+                value = password,
+                onValueChange = onPasswordChange,
+                label = packStringResource(Res.string.profile_current_password),
+                singleLine = true,
+                visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    PasswordVisibilityToggle(
+                        showPassword = showPassword,
+                        onToggle = onTogglePassword,
+                        testTag = "profile_change_username_password_toggle",
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }
 
@@ -656,15 +674,17 @@ private fun ChangePasswordForm(
     isSubmitting: Boolean,
     onSubmit: () -> Unit,
     onDismiss: () -> Unit,
+    hasPassword: Boolean = true,
 ) {
     val passwordPolicyHint = LocalPasswordPolicyHint.current
     val passwordMismatch = confirmNewPassword.isNotEmpty() && newPassword != confirmNewPassword
-    val canSubmit = currentPassword.isNotBlank() && newPassword.isNotBlank() &&
+    val canSubmit = (currentPassword.isNotBlank() || !hasPassword) && newPassword.isNotBlank() &&
         confirmNewPassword.isNotBlank() && !passwordMismatch && !isSubmitting
 
     RwInlineForm(
         visible = visible,
-        title = packStringResource(Res.string.profile_change_password_title),
+        title = if (hasPassword) packStringResource(Res.string.profile_change_password_title)
+            else packStringResource(Res.string.profile_set_password),
         onDismiss = onDismiss,
         dismissEnabled = !isSubmitting,
         onSubmit = if (canSubmit) onSubmit else null,
@@ -684,21 +704,23 @@ private fun ChangePasswordForm(
             }
         },
     ) {
-        RwTextField(
-            value = currentPassword,
-            onValueChange = onCurrentPasswordChange,
-            label = packStringResource(Res.string.profile_current_password),
-            singleLine = true,
-            visualTransformation = if (showCurrentPassword) VisualTransformation.None else PasswordVisualTransformation(),
-            trailingIcon = {
-                PasswordVisibilityToggle(
-                    showPassword = showCurrentPassword,
-                    onToggle = onToggleCurrentPassword,
-                    testTag = "profile_change_password_current_toggle",
-                )
-            },
-            modifier = Modifier.fillMaxWidth(),
-        )
+        if (hasPassword) {
+            RwTextField(
+                value = currentPassword,
+                onValueChange = onCurrentPasswordChange,
+                label = packStringResource(Res.string.profile_current_password),
+                singleLine = true,
+                visualTransformation = if (showCurrentPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    PasswordVisibilityToggle(
+                        showPassword = showCurrentPassword,
+                        onToggle = onToggleCurrentPassword,
+                        testTag = "profile_change_password_current_toggle",
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
         RwTextField(
             value = newPassword,
             onValueChange = onNewPasswordChange,
@@ -751,8 +773,9 @@ private fun DeleteCredentialsForm(
     expectedUsername: String,
     onSubmit: () -> Unit,
     onDismiss: () -> Unit,
+    hasPassword: Boolean = true,
 ) {
-    val canSubmit = username.trim() == expectedUsername && password.isNotBlank()
+    val canSubmit = username.trim() == expectedUsername && (password.isNotBlank() || !hasPassword)
 
     RwInlineForm(
         visible = visible,
@@ -784,20 +807,22 @@ private fun DeleteCredentialsForm(
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
-        RwTextField(
-            value = password,
-            onValueChange = onPasswordChange,
-            label = packStringResource(Res.string.profile_current_password),
-            singleLine = true,
-            visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
-            trailingIcon = {
-                PasswordVisibilityToggle(
-                    showPassword = showPassword,
-                    onToggle = onTogglePassword,
-                    testTag = "profile_delete_password_toggle",
-                )
-            },
-            modifier = Modifier.fillMaxWidth(),
-        )
+        if (hasPassword) {
+            RwTextField(
+                value = password,
+                onValueChange = onPasswordChange,
+                label = packStringResource(Res.string.profile_current_password),
+                singleLine = true,
+                visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    PasswordVisibilityToggle(
+                        showPassword = showPassword,
+                        onToggle = onTogglePassword,
+                        testTag = "profile_delete_password_toggle",
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }
