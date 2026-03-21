@@ -50,7 +50,19 @@ CONTAINER_NAME="rw-postgres-${SERVER_PORT}"
 
 ### Step 1: Start PostgreSQL and generate env
 
+**IMPORTANT: Kill any native PostgreSQL first.** A native (brew) PostgreSQL on `localhost:5432` shadows Docker containers — the JVM connects to the native instance even when Docker binds `0.0.0.0:5432`. Always use Docker exclusively.
+
 ```bash
+# Kill native PostgreSQL if running (brew-installed) — it shadows Docker on localhost:5432
+if lsof -i :$DB_PORT 2>/dev/null | grep -v docker | grep -q LISTEN; then
+  echo "WARNING: Native PostgreSQL detected on port $DB_PORT — killing it"
+  brew services stop postgresql@14 2>/dev/null
+  brew services stop postgresql 2>/dev/null
+  # Force-kill if brew stop didn't work
+  lsof -ti :$DB_PORT | xargs kill 2>/dev/null
+  sleep 1
+fi
+
 # Start a dedicated PostgreSQL container for this agent
 docker ps --filter name=$CONTAINER_NAME --format '{{.Status}}' | grep -q Up && echo "Already running" || \
 docker run -d \
@@ -71,6 +83,11 @@ for i in $(seq 1 30); do
   docker exec $CONTAINER_NAME pg_isready -U postgres -d release_wizard 2>/dev/null && break
   sleep 1
 done
+```
+
+To reset the database (e.g., after schema changes):
+```bash
+docker exec -i $CONTAINER_NAME psql -U postgres -c "DROP DATABASE IF EXISTS release_wizard; CREATE DATABASE release_wizard OWNER postgres;"
 ```
 
 ### Step 2: Start the Ktor Server
