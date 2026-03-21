@@ -13,6 +13,7 @@ import com.github.mr3zee.model.BlockType
 import com.github.mr3zee.model.ProjectId
 import io.ktor.http.*
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlin.test.assertFalse
@@ -1126,6 +1127,7 @@ class DagEditorScreenTest {
     // --- QA-EDITOR-6: Back blocked while saving ---
     @Test
     fun `QA-EDITOR-6 back button is no-op while isSaving`() = runComposeUiTest {
+        // todo claude: unused
         var navigated = false
         // Create a client that responds slowly to save (PUT) by using a normal response
         // but the isSaving state will be true during the call
@@ -1555,7 +1557,7 @@ class DagEditorScreenTest {
 
         // Both blocks should be selected — delete button should be enabled
         onNodeWithTag("delete_button").assertIsEnabled()
-        assertTrue(vm.selectedBlockIds.value.size == 2, "All blocks should be selected")
+        assertEquals(2, vm.selectedBlockIds.value.size, "All blocks should be selected")
     }
 
     // --- QA-EDITOR-18: Changing block type marks graph dirty ---
@@ -1640,7 +1642,7 @@ class DagEditorScreenTest {
 
         // Remove parameter via ViewModel (compose-unstyled UnstyledButton's onClick
         // is not reliably triggered by performClick in compose-ui-test)
-        vm.updateBlockParameters((blockBefore as Block.ActionBlock).id, emptyList())
+        vm.updateBlockParameters(blockBefore.id, emptyList())
         waitForIdle()
 
         // Parameter row should be gone — verify in VM state
@@ -1749,7 +1751,7 @@ class DagEditorScreenTest {
         val positionAfter = vm.graph.value.positions.values.firstOrNull()
 
         // Position should not have changed (read-only)
-        assertTrue(positionBefore == positionAfter, "Block position should not change in read-only mode")
+        assertEquals(positionBefore, positionAfter, "Block position should not change in read-only mode")
     }
 
     // --- QA-EDITOR-23: Canvas read-only prevents edge creation ---
@@ -1791,7 +1793,7 @@ class DagEditorScreenTest {
         waitForIdle()
 
         val edgeCountAfter = vm.graph.value.edges.size
-        assertTrue(edgeCountBefore == edgeCountAfter, "Edge should not be created in read-only mode")
+        assertEquals(edgeCountBefore, edgeCountAfter, "Edge should not be created in read-only mode")
     }
 
     // =====================================================================
@@ -2013,7 +2015,7 @@ class DagEditorScreenTest {
         waitForIdle()
 
         val blockCountAfter = vm.graph.value.blocks.size
-        assertTrue(blockCountBefore == blockCountAfter, "Delete should be suppressed while confirmation is visible")
+        assertEquals(blockCountBefore, blockCountAfter, "Delete should be suppressed while confirmation is visible")
     }
 
     // --- QA-EDITOR-30: Force-unlock confirm dismiss without calling forceUnlock ---
@@ -2078,7 +2080,7 @@ class DagEditorScreenTest {
         // Lock state should be LockedByOther with null info
         val state = vm.lockState.value
         assertIs<LockState.LockedByOther>(state)
-        assertTrue(state.info == null, "Lock info should be null for network error")
+        assertEquals(null, state.info, "Lock info should be null for network error")
     }
 
     // --- QA-EDITOR-32: Left sidebar collapse/expand ---

@@ -1400,25 +1400,30 @@ class TeamScreensTest {
             val path = request.url.encodedPath
             val method = request.method
             val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-            when {
-                method == HttpMethod.Put && path == "/api/v1/teams/t1" -> {
+            when (method) {
+                HttpMethod.Put if path == "/api/v1/teams/t1" -> {
                     updateCalled.set(true)
                     // After a successful update, subsequent GETs return updated description
                     updatedDetailJson.set("""{"team":{"id":"t1","name":"Alpha Team","description":"First team updated","createdAt":0},"members":[
-                        {"teamId":"t1","userId":"u1","username":"alice","role":"TEAM_LEAD","joinedAt":0},
-                        {"teamId":"t1","userId":"u2","username":"bob","role":"COLLABORATOR","joinedAt":0}
-                    ]}""")
+                                {"teamId":"t1","userId":"u1","username":"alice","role":"TEAM_LEAD","joinedAt":0},
+                                {"teamId":"t1","userId":"u2","username":"bob","role":"COLLABORATOR","joinedAt":0}
+                            ]}""")
                     respond("""{"team":{"id":"t1","name":"Alpha Team","description":"First team updated","createdAt":0},"memberCount":2}""",
                         status = HttpStatusCode.OK, headers = jsonHeaders)
                 }
-                method == HttpMethod.Get && path == "/api/v1/teams/t1" ->
+
+                HttpMethod.Get if path == "/api/v1/teams/t1" ->
                     respond(updatedDetailJson.get(), status = HttpStatusCode.OK, headers = jsonHeaders)
-                method == HttpMethod.Get && path == "/api/v1/teams/t1/members" ->
+
+                HttpMethod.Get if path == "/api/v1/teams/t1/members" ->
                     respond(membersJsonForManage, status = HttpStatusCode.OK, headers = jsonHeaders)
-                method == HttpMethod.Get && path == "/api/v1/teams/t1/invites" ->
+
+                HttpMethod.Get if path == "/api/v1/teams/t1/invites" ->
                     respond(invitesJsonForManage, status = HttpStatusCode.OK, headers = jsonHeaders)
-                method == HttpMethod.Get && path == "/api/v1/teams/t1/join-requests" ->
+
+                HttpMethod.Get if path == "/api/v1/teams/t1/join-requests" ->
                     respond(joinRequestsJsonForManage, status = HttpStatusCode.OK, headers = jsonHeaders)
+
                 else -> respond("{}", status = HttpStatusCode.OK, headers = jsonHeaders)
             }
         }) {
@@ -1828,19 +1833,24 @@ class TeamScreensTest {
             val path = request.url.encodedPath
             val method = request.method
             val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-            when {
-                method == HttpMethod.Put && path.startsWith("/api/v1/teams/t1/members/") -> {
+            when (method) {
+                HttpMethod.Put if path.startsWith("/api/v1/teams/t1/members/") -> {
                     updateRoleCalled.set(true)
                     respond("{}", status = HttpStatusCode.OK, headers = jsonHeaders)
                 }
-                method == HttpMethod.Get && path == "/api/v1/teams/t1" ->
+
+                HttpMethod.Get if path == "/api/v1/teams/t1" ->
                     respond(teamDetailJsonForManage, status = HttpStatusCode.OK, headers = jsonHeaders)
-                method == HttpMethod.Get && path == "/api/v1/teams/t1/members" ->
+
+                HttpMethod.Get if path == "/api/v1/teams/t1/members" ->
                     respond(membersJsonForManage, status = HttpStatusCode.OK, headers = jsonHeaders)
-                method == HttpMethod.Get && path == "/api/v1/teams/t1/invites" ->
+
+                HttpMethod.Get if path == "/api/v1/teams/t1/invites" ->
                     respond(invitesJsonForManage, status = HttpStatusCode.OK, headers = jsonHeaders)
-                method == HttpMethod.Get && path == "/api/v1/teams/t1/join-requests" ->
+
+                HttpMethod.Get if path == "/api/v1/teams/t1/join-requests" ->
                     respond(joinRequestsJsonForManage, status = HttpStatusCode.OK, headers = jsonHeaders)
+
                 else -> respond("{}", status = HttpStatusCode.OK, headers = jsonHeaders)
             }
         }) {
@@ -1867,19 +1877,24 @@ class TeamScreensTest {
             val path = request.url.encodedPath
             val method = request.method
             val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-            when {
-                method == HttpMethod.Post && path.contains("/join-requests/") && path.endsWith("/approve") -> {
+            when (method) {
+                HttpMethod.Post if path.contains("/join-requests/") && path.endsWith("/approve") -> {
                     approveCalled.set(true)
                     respond("{}", status = HttpStatusCode.OK, headers = jsonHeaders)
                 }
-                method == HttpMethod.Get && path == "/api/v1/teams/t1" ->
+
+                HttpMethod.Get if path == "/api/v1/teams/t1" ->
                     respond(teamDetailJsonForManage, status = HttpStatusCode.OK, headers = jsonHeaders)
-                method == HttpMethod.Get && path == "/api/v1/teams/t1/members" ->
+
+                HttpMethod.Get if path == "/api/v1/teams/t1/members" ->
                     respond(membersJsonForManage, status = HttpStatusCode.OK, headers = jsonHeaders)
-                method == HttpMethod.Get && path == "/api/v1/teams/t1/invites" ->
+
+                HttpMethod.Get if path == "/api/v1/teams/t1/invites" ->
                     respond(invitesJsonForManage, status = HttpStatusCode.OK, headers = jsonHeaders)
-                method == HttpMethod.Get && path == "/api/v1/teams/t1/join-requests" ->
+
+                HttpMethod.Get if path == "/api/v1/teams/t1/join-requests" ->
                     respond(joinRequestsJsonForManage, status = HttpStatusCode.OK, headers = jsonHeaders)
+
                 else -> respond("{}", status = HttpStatusCode.OK, headers = jsonHeaders)
             }
         }) {
@@ -1906,19 +1921,24 @@ class TeamScreensTest {
             val path = request.url.encodedPath
             val method = request.method
             val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-            when {
-                method == HttpMethod.Post && path.contains("/join-requests/") && path.endsWith("/reject") -> {
+            when (method) {
+                HttpMethod.Post if path.contains("/join-requests/") && path.endsWith("/reject") -> {
                     rejectCalled.set(true)
                     respond("{}", status = HttpStatusCode.OK, headers = jsonHeaders)
                 }
-                method == HttpMethod.Get && path == "/api/v1/teams/t1" ->
+
+                HttpMethod.Get if path == "/api/v1/teams/t1" ->
                     respond(teamDetailJsonForManage, status = HttpStatusCode.OK, headers = jsonHeaders)
-                method == HttpMethod.Get && path == "/api/v1/teams/t1/members" ->
+
+                HttpMethod.Get if path == "/api/v1/teams/t1/members" ->
                     respond(membersJsonForManage, status = HttpStatusCode.OK, headers = jsonHeaders)
-                method == HttpMethod.Get && path == "/api/v1/teams/t1/invites" ->
+
+                HttpMethod.Get if path == "/api/v1/teams/t1/invites" ->
                     respond(invitesJsonForManage, status = HttpStatusCode.OK, headers = jsonHeaders)
-                method == HttpMethod.Get && path == "/api/v1/teams/t1/join-requests" ->
+
+                HttpMethod.Get if path == "/api/v1/teams/t1/join-requests" ->
                     respond(joinRequestsJsonForManage, status = HttpStatusCode.OK, headers = jsonHeaders)
+
                 else -> respond("{}", status = HttpStatusCode.OK, headers = jsonHeaders)
             }
         }) {
@@ -1943,15 +1963,19 @@ class TeamScreensTest {
         val client = HttpClient(MockEngine { request ->
             val path = request.url.encodedPath
             val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-            when {
-                path == "/api/v1/teams/t1" ->
+            when (path) {
+                "/api/v1/teams/t1" ->
                     respond(teamDetailJsonForManage, status = HttpStatusCode.OK, headers = jsonHeaders)
-                path == "/api/v1/teams/t1/members" ->
+
+                "/api/v1/teams/t1/members" ->
                     respond(membersJsonForManage, status = HttpStatusCode.OK, headers = jsonHeaders)
-                path == "/api/v1/teams/t1/invites" ->
+
+                "/api/v1/teams/t1/invites" ->
                     respond("""{"invites":[]}""", status = HttpStatusCode.OK, headers = jsonHeaders)
-                path == "/api/v1/teams/t1/join-requests" ->
+
+                "/api/v1/teams/t1/join-requests" ->
                     respond("""{"requests":[]}""", status = HttpStatusCode.OK, headers = jsonHeaders)
+
                 else -> respond("{}", status = HttpStatusCode.OK, headers = jsonHeaders)
             }
         }) {

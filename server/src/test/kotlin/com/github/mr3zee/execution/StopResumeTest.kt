@@ -21,7 +21,6 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.seconds
 
 class StopResumeTest {
 
@@ -394,7 +393,7 @@ class StopResumeTest {
             // A must still be SUCCEEDED with its original outputs preserved — resume must NOT clear SUCCEEDED blocks
             val aFinal = releasesRepo.findBlockExecution(release.id, BlockId("a")) ?: fail("Block A must exist")
             assertEquals(BlockStatus.SUCCEEDED, aFinal.status)
-            assertEquals(emptyMap<String, String>(), aFinal.outputs, "Block A outputs must be preserved across stop/resume")
+            assertEquals(emptyMap(), aFinal.outputs, "Block A outputs must be preserved across stop/resume")
 
             val bFinal = releasesRepo.findBlockExecution(release.id, BlockId("b")) ?: fail("Block B must exist")
             assertEquals(BlockStatus.SUCCEEDED, bFinal.status)

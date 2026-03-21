@@ -309,7 +309,7 @@ class WritingAuditTest {
     fun `project list loading spinner has accessible content description`() = runComposeUiTest {
         // Use a client that hangs so we stay in loading state
         val neverComplete = kotlinx.coroutines.CompletableDeferred<Unit>()
-        val hangingClient = HttpClient(MockEngine { request ->
+        val hangingClient = HttpClient(MockEngine {
             neverComplete.await()
             respond(
                 content = """{"projects":[]}""",

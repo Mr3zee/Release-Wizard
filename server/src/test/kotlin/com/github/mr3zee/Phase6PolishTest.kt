@@ -6,7 +6,6 @@ import com.github.mr3zee.auth.PasswordValidator
 import com.github.mr3zee.model.AuditAction
 import com.github.mr3zee.model.AuditTargetType
 import com.github.mr3zee.model.ConnectionType
-import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.schedules.CronUtils
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -141,7 +140,7 @@ class Phase6PolishTest {
             CronUtils.validateMinimumInterval("* * * * *") // Every minute
             throw AssertionError("Should have thrown IAE for too-frequent schedule")
         } catch (e: IllegalArgumentException) {
-            assertTrue(e.message?.contains("at least") == true)
+            assertEquals(true, e.message?.contains("at least"))
         }
     }
 

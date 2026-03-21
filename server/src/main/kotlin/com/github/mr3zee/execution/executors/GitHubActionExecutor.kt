@@ -13,7 +13,9 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -157,7 +159,9 @@ class GitHubActionExecutor(
     ): String? {
         // GitHub API accepts ISO 8601 dates for the created filter
         val createdFilter = dispatchedAt.toString()
-        val encodedRef = URLEncoder.encode(ref, "UTF-8")
+        val encodedRef = withContext(Dispatchers.IO) {
+            URLEncoder.encode(ref, "UTF-8")
+        }
         repeat(RUN_DISCOVERY_RETRIES) { attempt ->
             if (attempt > 0) {
                 delay(RUN_DISCOVERY_DELAY_MS.milliseconds)

@@ -1403,9 +1403,7 @@ class ProjectAutomationScreenTest {
         }
 
         // Confirmation message should contain the artifact identity (also appears in item card)
-        onAllNodesWithText("com.example:my-lib", substring = true, useUnmergedTree = true).fetchSemanticsNodes().let {
-            assert(it.size >= 2) { "Artifact identity should appear in item and confirmation" }
-        }
+        assert(onAllNodesWithText("com.example:my-lib", substring = true, useUnmergedTree = true).fetchSemanticsNodes().size >= 2) { "Artifact identity should appear in item and confirmation" }
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -1602,9 +1600,7 @@ class ProjectAutomationScreenTest {
         }
 
         // The confirmation message includes the cron expression (also shown in the schedule item)
-        onAllNodesWithText("0 9 * * *", substring = true, useUnmergedTree = true).fetchSemanticsNodes().let {
-            assert(it.size >= 2) { "Cron expression should appear in item and confirmation" }
-        }
+        assert(onAllNodesWithText("0 9 * * *", substring = true, useUnmergedTree = true).fetchSemanticsNodes().size >= 2) { "Cron expression should appear in item and confirmation" }
     }
 
     @Test

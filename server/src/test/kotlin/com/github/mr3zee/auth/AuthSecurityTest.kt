@@ -346,7 +346,7 @@ private fun Application.testModuleWithThrowingRoute() {
                 throw IllegalArgumentException("Invalid entity with id 550e8400-e29b-41d4-a716-446655440000")
             }
             get("/api/test-bad-request-stacktrace") {
-                throw IllegalArgumentException("Error occurred\n\tat com.example.Foo\$Bar.method(Foo.kt:42)")
+                throw IllegalArgumentException($$"Error occurred\n\tat com.example.Foo$Bar.method(Foo.kt:42)")
             }
         }
     }

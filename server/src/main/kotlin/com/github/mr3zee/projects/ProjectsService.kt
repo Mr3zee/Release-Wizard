@@ -8,6 +8,7 @@ import com.github.mr3zee.template.TemplateEngine
 import com.github.mr3zee.NotFoundException
 import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.connections.ConnectionsRepository
+import com.github.mr3zee.dag.ValidationError
 import com.github.mr3zee.model.*
 import com.github.mr3zee.model.collectConnectionIds
 import com.github.mr3zee.releases.ReleasesRepository
@@ -28,6 +29,7 @@ class DefaultProjectsService(
     private val teamAccessService: TeamAccessService,
     private val auditService: AuditService,
     private val connectionsRepository: ConnectionsRepository,
+    // todo claude: unused
     private val lockRepository: ProjectLockRepository,
     private val releasesRepository: ReleasesRepository,
 ) : ProjectsService {
@@ -66,7 +68,7 @@ class DefaultProjectsService(
         require(name.length <= MAX_NAME_LENGTH) { "Project name must not exceed $MAX_NAME_LENGTH characters" }
         require(name.none { it.isISOControl() || it.category == CharCategory.FORMAT }) { "Project name contains invalid characters" }
         require(request.description.length <= MAX_DESCRIPTION_LENGTH) { "Project description must not exceed $MAX_DESCRIPTION_LENGTH characters" }
-        require(!request.description.contains("\${")) { "Project description must not contain template expressions" }
+        require(!request.description.contains($$"${")) { "Project description must not contain template expressions" }
         require(request.description.none { it.isISOControl() && it != '\n' && it != '\r' && it != '\t' }) { "Project description contains invalid control characters" }
         teamAccessService.checkMembership(request.teamId, session)
         // PROJ-H2: Validate DAG structure on create
@@ -95,7 +97,7 @@ class DefaultProjectsService(
         }
         request.description?.let {
             require(it.length <= MAX_DESCRIPTION_LENGTH) { "Project description must not exceed $MAX_DESCRIPTION_LENGTH characters" }
-            require(!it.contains("\${")) { "Project description must not contain template expressions" }
+            require(!it.contains($$"${")) { "Project description must not contain template expressions" }
             require(it.none { ch -> ch.isISOControl() && ch != '\n' && ch != '\r' && ch != '\t' }) { "Project description contains invalid control characters" }
         }
         checkAccess(id, session)
@@ -172,7 +174,7 @@ class DefaultProjectsService(
 
         // Validate parameter keys and descriptions don't contain template injection characters
         for (block in allBlocks) {
-            require(!block.description.contains("\${")) {
+            require(!block.description.contains($$"${")) {
                 "Block '${block.id.value}' description must not contain template expressions"
             }
             require(block.description.none { it.isISOControl() && it != '\n' && it != '\r' && it != '\t' }) {
@@ -181,7 +183,7 @@ class DefaultProjectsService(
             if (block is Block.ActionBlock) {
                 for (param in block.parameters) {
                     require(TemplateEngine.validateParameterKey(param.key)) {
-                        "Block parameter key contains invalid characters (\$, {, })"
+                        "Block parameter key contains invalid characters ($, {, })"
                     }
                 }
             }
@@ -191,18 +193,18 @@ class DefaultProjectsService(
         if (errors.isNotEmpty()) {
             val messages = errors.joinToString("; ") { error ->
                 when (error) {
-                    is com.github.mr3zee.dag.ValidationError.DuplicateBlockId -> "Duplicate block ID: ${error.blockId.value}"
-                    is com.github.mr3zee.dag.ValidationError.SelfLoop -> "Self-loop on block: ${error.edge.fromBlockId.value}"
-                    is com.github.mr3zee.dag.ValidationError.InvalidEdgeReference -> "Invalid edge reference: ${error.missingBlockId.value}"
-                    is com.github.mr3zee.dag.ValidationError.CycleDetected -> "Cycle detected involving: ${error.involvedBlockIds.joinToString { it.value }}"
-                    is com.github.mr3zee.dag.ValidationError.TooManyBlocks -> "Too many blocks: ${error.count} (max ${error.max})"
-                    is com.github.mr3zee.dag.ValidationError.TooManyEdges -> "Too many edges: ${error.count} (max ${error.max})"
-                    is com.github.mr3zee.dag.ValidationError.NestingTooDeep -> "Nesting too deep: ${error.depth} (max ${error.max})"
-                    is com.github.mr3zee.dag.ValidationError.BlockNameTooLong -> "Block name too long: ${error.blockId.value}"
-                    is com.github.mr3zee.dag.ValidationError.TooManyParameters -> "Too many parameters on block: ${error.blockId.value}"
-                    is com.github.mr3zee.dag.ValidationError.ParameterKeyTooLong -> "Parameter key too long on block: ${error.blockId.value}"
-                    is com.github.mr3zee.dag.ValidationError.ParameterValueTooLong -> "Parameter value too long on block: ${error.blockId.value}"
-                    is com.github.mr3zee.dag.ValidationError.BlockDescriptionTooLong -> "Block description too long: ${error.blockId.value} (${error.length}/${error.max})"
+                    is ValidationError.DuplicateBlockId -> "Duplicate block ID: ${error.blockId.value}"
+                    is ValidationError.SelfLoop -> "Self-loop on block: ${error.edge.fromBlockId.value}"
+                    is ValidationError.InvalidEdgeReference -> "Invalid edge reference: ${error.missingBlockId.value}"
+                    is ValidationError.CycleDetected -> "Cycle detected involving: ${error.involvedBlockIds.joinToString { it.value }}"
+                    is ValidationError.TooManyBlocks -> "Too many blocks: ${error.count} (max ${error.max})"
+                    is ValidationError.TooManyEdges -> "Too many edges: ${error.count} (max ${error.max})"
+                    is ValidationError.NestingTooDeep -> "Nesting too deep: ${error.depth} (max ${error.max})"
+                    is ValidationError.BlockNameTooLong -> "Block name too long: ${error.blockId.value}"
+                    is ValidationError.TooManyParameters -> "Too many parameters on block: ${error.blockId.value}"
+                    is ValidationError.ParameterKeyTooLong -> "Parameter key too long on block: ${error.blockId.value}"
+                    is ValidationError.ParameterValueTooLong -> "Parameter value too long on block: ${error.blockId.value}"
+                    is ValidationError.BlockDescriptionTooLong -> "Block description too long: ${error.blockId.value} (${error.length}/${error.max})"
                 }
             }
             throw IllegalArgumentException("Invalid DAG: $messages")
@@ -223,6 +225,7 @@ class DefaultProjectsService(
         return result
     }
 
+    // todo claude: unused
     private fun computeMaxNestingDepth(dagGraph: DagGraph): Int {
         fun depth(blocks: List<Block>, currentDepth: Int): Int {
             var maxDepth = currentDepth

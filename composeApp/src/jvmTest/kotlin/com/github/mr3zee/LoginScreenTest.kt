@@ -204,7 +204,7 @@ class LoginScreenTest {
     // --- Helper: creates a client whose /auth/login response never completes (hangs) ---
     private fun hangingLoginClient(): HttpClient {
         val neverComplete = CompletableDeferred<Unit>()
-        return HttpClient(MockEngine { request ->
+        return HttpClient(MockEngine {
             // Block forever so the ViewModel stays in loading state
             neverComplete.await()
             respond(

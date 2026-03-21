@@ -344,6 +344,7 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
     }
 
     override suspend fun updateMemberRoleAtomic(teamId: TeamId, userId: String, newRole: TeamRole): Boolean = dbQuery {
+        // todo claude: duplicate 14 lines
         val teamUuid = UUID.fromString(teamId.value)
         val userUuid = UUID.fromString(userId)
 
@@ -372,6 +373,7 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
     }
 
     override suspend fun removeMemberAtomic(teamId: TeamId, userId: String): Boolean = dbQuery {
+        // todo claude: duplicate 14 lines
         val teamUuid = UUID.fromString(teamId.value)
         val userUuid = UUID.fromString(userId)
 
@@ -441,6 +443,7 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
         }
 
         // Add member — catch duplicate key as conflict
+        // todo claude: duplicate 13 lines
         try {
             TeamMembershipTable.insert {
                 it[TeamMembershipTable.teamId] = teamUuid
@@ -499,6 +502,7 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
         }
 
         // Add member — catch duplicate key as conflict
+        // todo claude: duplicate 13 lines
         try {
             TeamMembershipTable.insert {
                 it[TeamMembershipTable.teamId] = teamUuid

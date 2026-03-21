@@ -312,7 +312,7 @@ class ExecutionEngine(
             BlockStatus.RUNNING -> {
                 // Was running when server died -- call resume(), then check for post-gate
                 // EXEC-H4: Pass persisted startedAt to preserve duration metrics
-                resumeAction(release, block, statusMap, outputsMap, persistedExec?.startedAt)
+                resumeAction(release, block, statusMap, outputsMap, persistedExec.startedAt)
             }
             BlockStatus.WAITING_FOR_INPUT -> {
                 val startTime = persistedExec.startedAt ?: Clock.System.now()

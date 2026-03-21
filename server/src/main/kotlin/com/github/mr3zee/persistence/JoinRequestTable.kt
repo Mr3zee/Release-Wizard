@@ -13,8 +13,6 @@ object JoinRequestTable : UUIDTable("join_requests") {
     val createdAt = timestamp("created_at")
     val reviewedAt = timestamp("reviewed_at").nullable()
 
-    init {
-        // TEAM-H3: The old uniqueIndex(teamId, userId, status) over-constrained
-        // historical records. Pending uniqueness is enforced by a partial index in DatabaseFactory.
-    }
+    // TEAM-H3: The old uniqueIndex(teamId, userId, status) over-constrained
+    // historical records. Pending uniqueness is enforced by a partial index in DatabaseFactory.
 }

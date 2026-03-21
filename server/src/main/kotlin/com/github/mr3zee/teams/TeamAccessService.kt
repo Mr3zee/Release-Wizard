@@ -37,6 +37,7 @@ class TeamAccessService(private val teamRepository: TeamRepository) {
         return teamRepository.findMembership(teamId, userId) != null
     }
 
+    // todo claude: unused
     suspend fun getMembership(teamId: TeamId, userId: String): TeamMembership? {
         return teamRepository.findMembership(teamId, userId)
     }

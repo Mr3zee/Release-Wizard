@@ -118,7 +118,7 @@ class AppNavigationTest {
         httpClient: HttpClient,
         navController: NavigationController = remember { NavigationController() },
         userTeams: List<UserTeamInfo> = emptyList(),
-        activeTeamId: MutableStateFlow<TeamId?> = remember { MutableStateFlow<TeamId?>(TeamId("test-team")) },
+        activeTeamId: MutableStateFlow<TeamId?> = remember { MutableStateFlow(TeamId("test-team")) },
         onTeamChanged: (TeamId) -> Unit = {},
         onLogoutOverride: (() -> Unit)? = null,
     ) {

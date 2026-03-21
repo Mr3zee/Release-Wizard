@@ -241,6 +241,7 @@ class DatabaseAuthService(private val db: Database) : AuthService {
 
     override suspend fun changeUsername(userId: UserId, newUsername: String, currentPassword: String): Result<User> {
         // Validate password outside the transaction (timing-safe)
+        // todo claude: duplicate 13 lines
         val userRow = dbQuery {
             UserTable.selectAll()
                 .where { UserTable.id eq UUID.fromString(userId.value) }
@@ -303,6 +304,7 @@ class DatabaseAuthService(private val db: Database) : AuthService {
 
     override suspend fun changePassword(userId: UserId, currentPassword: String, newPassword: String): Result<Boolean> {
         // Validate current password outside the transaction
+        // todo claude: duplicate 13 lines
         val userRow = dbQuery {
             UserTable.selectAll()
                 .where { UserTable.id eq UUID.fromString(userId.value) }
@@ -348,6 +350,7 @@ class DatabaseAuthService(private val db: Database) : AuthService {
         currentPassword: String,
     ): Result<Boolean> {
         // Validate password outside the transaction
+        // todo claude: duplicate 13 lines
         val userRow = dbQuery {
             UserTable.selectAll()
                 .where { UserTable.id eq UUID.fromString(userId.value) }

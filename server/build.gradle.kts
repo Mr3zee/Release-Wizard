@@ -136,7 +136,7 @@ val ngrokBinaryName: String by lazy {
 }
 
 // Ngrok binary resolved as a Gradle dependency via the Ivy repo defined in settings.gradle.kts
-val ngrok by configurations.creating {
+val ngrok: Configuration by configurations.creating {
     isTransitive = false
 }
 

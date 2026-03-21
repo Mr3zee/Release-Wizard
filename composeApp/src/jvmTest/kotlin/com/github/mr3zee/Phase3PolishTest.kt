@@ -16,7 +16,6 @@ import com.github.mr3zee.releases.ReleaseListScreen
 import com.github.mr3zee.releases.ReleaseListViewModel
 import com.github.mr3zee.teams.TeamListScreen
 import com.github.mr3zee.teams.TeamListViewModel
-import io.ktor.http.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.test.Test
 

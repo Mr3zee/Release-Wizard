@@ -166,6 +166,7 @@ class ExposedProjectsRepository(private val db: Database) : ProjectsRepository {
     ): ProjectTemplate? = dbQuery {
         val uuid = UUID.fromString(id.value)
         val now = Clock.System.now()
+        // todo claude: duplicate 16 lines
         val updated = ProjectTemplateTable.update({ ProjectTemplateTable.id eq uuid }) { stmt ->
             name?.let { stmt[ProjectTemplateTable.name] = it }
             description?.let { stmt[ProjectTemplateTable.description] = it }
@@ -221,6 +222,7 @@ class ExposedProjectsRepository(private val db: Database) : ProjectsRepository {
             )
         }
 
+        // todo claude: duplicate 16 lines
         val updated = ProjectTemplateTable.update({ ProjectTemplateTable.id eq uuid }) { stmt ->
             name?.let { stmt[ProjectTemplateTable.name] = it }
             description?.let { stmt[ProjectTemplateTable.description] = it }

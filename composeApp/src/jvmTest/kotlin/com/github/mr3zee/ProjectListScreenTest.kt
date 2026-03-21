@@ -540,7 +540,7 @@ class ProjectListScreenTest {
             when {
                 path.endsWith("/projects") -> {
                     val query = request.url.parameters["q"]
-                    val body = if (query != null && query.isNotBlank()) filteredJson else allProjectsJson
+                    val body = if (!query.isNullOrBlank()) filteredJson else allProjectsJson
                     respond(body, status = HttpStatusCode.OK, headers = jsonHeaders)
                 }
                 else -> respond("{}", status = HttpStatusCode.OK, headers = jsonHeaders)
@@ -585,7 +585,7 @@ class ProjectListScreenTest {
             when {
                 path.endsWith("/projects") -> {
                     val query = request.url.parameters["q"]
-                    val body = if (query != null && query.isNotBlank()) emptySearchJson else allProjectsJson
+                    val body = if (!query.isNullOrBlank()) emptySearchJson else allProjectsJson
                     respond(body, status = HttpStatusCode.OK, headers = jsonHeaders)
                 }
                 else -> respond("{}", status = HttpStatusCode.OK, headers = jsonHeaders)
@@ -627,7 +627,7 @@ class ProjectListScreenTest {
             when {
                 path.endsWith("/projects") -> {
                     val query = request.url.parameters["q"]
-                    val body = if (query != null && query.isNotBlank()) emptySearchJson else allProjectsJson
+                    val body = if (!query.isNullOrBlank()) emptySearchJson else allProjectsJson
                     respond(body, status = HttpStatusCode.OK, headers = jsonHeaders)
                 }
                 else -> respond("{}", status = HttpStatusCode.OK, headers = jsonHeaders)

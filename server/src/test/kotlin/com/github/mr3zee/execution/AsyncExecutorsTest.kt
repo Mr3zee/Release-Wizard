@@ -661,7 +661,7 @@ class AsyncExecutorsTest {
     // --- Resume: webhook token deactivation ---
 
     @Test
-    fun `teamcity executor deactivates webhook token after resume with persisted build ID`() = runBlocking<Unit> {
+    fun `teamcity executor deactivates webhook token after resume with persisted build ID`() = runBlocking {
         val client = mockClient { request ->
             val url = request.url.toString()
             when {

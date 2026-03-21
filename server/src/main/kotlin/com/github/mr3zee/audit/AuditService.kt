@@ -54,6 +54,7 @@ class AuditService(
         )
     }
 
+    // todo claude: unused
     suspend fun logSync(
         teamId: TeamId?,
         session: UserSession,

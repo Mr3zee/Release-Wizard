@@ -12,7 +12,6 @@ import com.github.mr3zee.projects.ProjectListScreen
 import com.github.mr3zee.projects.ProjectListViewModel
 import com.github.mr3zee.releases.ReleaseListScreen
 import com.github.mr3zee.releases.ReleaseListViewModel
-import io.ktor.http.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.test.Test
 

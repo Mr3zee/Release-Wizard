@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -106,7 +105,7 @@ class Phase1ComponentsTest {
                         variant = RwButtonVariant.Danger,
                         modifier = Modifier.testTag("danger_button"),
                     ) {
-                        androidx.compose.material3.Text("Delete")
+                        Text("Delete")
                     }
                 }
             }
@@ -123,7 +122,7 @@ class Phase1ComponentsTest {
         setContent {
             AppTheme {
                 RwDangerZone(testTag = "custom_danger") {
-                    androidx.compose.material3.Text("Content")
+                    Text("Content")
                 }
             }
         }

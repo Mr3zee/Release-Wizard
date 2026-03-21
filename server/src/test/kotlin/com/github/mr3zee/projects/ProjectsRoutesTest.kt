@@ -245,7 +245,7 @@ class ProjectsRoutesTest {
                 Block.ActionBlock(
                     id = BlockId("b1"),
                     name = "Build",
-                    description = "Use \${param.secret} here",
+                    description = $$"Use ${param.secret} here",
                     type = BlockType.TEAMCITY_BUILD,
                 ),
             ),
@@ -270,7 +270,7 @@ class ProjectsRoutesTest {
                 CreateProjectRequest(
                     name = "Template Inject",
                     teamId = teamId,
-                    description = "Check \${param.key}",
+                    description = $$"Check ${param.key}",
                 )
             )
         }
@@ -332,7 +332,7 @@ class ProjectsRoutesTest {
 
         val updateResponse = client.put(ApiRoutes.Projects.byId(projectId)) {
             contentType(ContentType.Application.Json)
-            setBody(UpdateProjectRequest(description = "Check \${param.key}"))
+            setBody(UpdateProjectRequest(description = $$"Check ${param.key}"))
         }
         assertEquals(HttpStatusCode.BadRequest, updateResponse.status)
     }
@@ -355,7 +355,7 @@ class ProjectsRoutesTest {
                 Block.ActionBlock(
                     id = BlockId("b1"),
                     name = "Build",
-                    description = "Use \${param.secret} here",
+                    description = $$"Use ${param.secret} here",
                     type = BlockType.TEAMCITY_BUILD,
                 ),
             ),

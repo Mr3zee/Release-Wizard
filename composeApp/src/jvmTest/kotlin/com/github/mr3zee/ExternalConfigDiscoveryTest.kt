@@ -201,6 +201,7 @@ class ExternalConfigDiscoveryTest {
             {"name":"env.NEW_PARAM","value":"default","type":"text","label":"New","description":"Brand new param"}
         ]}"""
 
+        // todo claude: unused
         var fetchCount = 0
         val client = mockHttpClient(
             mapOf(

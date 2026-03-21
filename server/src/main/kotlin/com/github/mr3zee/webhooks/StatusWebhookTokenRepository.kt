@@ -10,6 +10,7 @@ import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 import java.util.UUID
 import kotlin.time.Clock
+import kotlin.time.Duration
 import kotlin.time.Instant
 
 data class StatusWebhookToken(
@@ -24,13 +25,13 @@ interface StatusWebhookTokenRepository {
     suspend fun create(releaseId: ReleaseId, blockId: BlockId): UUID
     suspend fun findByToken(token: UUID): StatusWebhookToken?
     /** HOOK-M5: Atomically find token, validate active + TTL, deactivate if expired — single transaction */
-    suspend fun findActiveToken(token: UUID, ttl: kotlin.time.Duration): StatusWebhookToken?
+    suspend fun findActiveToken(token: UUID, ttl: Duration): StatusWebhookToken?
     /**
      * HOOK-H1: Atomically find active token within TTL AND deactivate it in the same transaction.
      * Prevents replay attacks — the token can only be used once.
      * Returns the token record (with active=false) if it was valid, null if not found/expired/already used.
      */
-    suspend fun findAndDeactivateToken(token: UUID, ttl: kotlin.time.Duration): StatusWebhookToken?
+    suspend fun findAndDeactivateToken(token: UUID, ttl: Duration): StatusWebhookToken?
     suspend fun deactivate(releaseId: ReleaseId, blockId: BlockId)
     suspend fun deactivateExpiredBefore(cutoff: Instant): Int
     suspend fun deleteInactiveBefore(cutoff: Instant): Int
@@ -83,7 +84,8 @@ class ExposedStatusWebhookTokenRepository(
      * HOOK-M5: Atomically find, validate, and deactivate-if-expired in a single transaction.
      * Returns the token record if active and within TTL, null otherwise.
      */
-    override suspend fun findActiveToken(token: UUID, ttl: kotlin.time.Duration): StatusWebhookToken? = dbQuery {
+    override suspend fun findActiveToken(token: UUID, ttl: Duration): StatusWebhookToken? = dbQuery {
+        // todo claude: duplicate 18 lines
         val row = StatusWebhookTokenTable.selectAll()
             .where { StatusWebhookTokenTable.id eq token }
             .forUpdate()
@@ -116,7 +118,8 @@ class ExposedStatusWebhookTokenRepository(
      * HOOK-H1: Atomically find + validate + deactivate in a single transaction.
      * Uses FOR UPDATE to prevent concurrent use of the same token.
      */
-    override suspend fun findAndDeactivateToken(token: UUID, ttl: kotlin.time.Duration): StatusWebhookToken? = dbQuery {
+    override suspend fun findAndDeactivateToken(token: UUID, ttl: Duration): StatusWebhookToken? = dbQuery {
+        // todo claude: duplicate 18 lines
         val row = StatusWebhookTokenTable.selectAll()
             .where { StatusWebhookTokenTable.id eq token }
             .forUpdate()

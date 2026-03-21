@@ -3,9 +3,7 @@ package com.github.mr3zee.auth
 import com.github.mr3zee.*
 import com.github.mr3zee.api.*
 import com.github.mr3zee.model.TeamInvite
-import com.github.mr3zee.model.TeamMembership
 import com.github.mr3zee.model.TeamRole
-import com.github.mr3zee.model.UserRole
 import com.github.mr3zee.persistence.PasswordResetTokenTable
 import io.ktor.client.HttpClient
 import io.ktor.client.call.*
@@ -630,7 +628,7 @@ class ProfileRoutesTest {
         assertEquals(false, policy.requireSpecial)
 
         // Verify Cache-Control header
-        val cacheControl = response.headers[io.ktor.http.HttpHeaders.CacheControl]
+        val cacheControl = response.headers[HttpHeaders.CacheControl]
         assertNotNull(cacheControl, "Expected Cache-Control header")
         assertTrue(cacheControl.contains("max-age=3600"), "Expected max-age=3600 in Cache-Control header")
     }

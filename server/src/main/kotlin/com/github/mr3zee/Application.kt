@@ -77,6 +77,7 @@ import org.koin.dsl.module
 import org.koin.java.KoinJavaComponent.getKoin
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 fun Application.module() {
@@ -446,7 +447,7 @@ fun Application.module() {
                         } catch (e: Exception) {
                             environment.log.warn("Lockout cleanup failed", e)
                         }
-                        delay(60_000L)
+                        delay(60_000L.milliseconds)
                     }
                 }
             }
@@ -468,7 +469,10 @@ fun Application.module() {
     }
 }
 
-fun Application.configureRouting(appVersion: String = "dev") {
+fun Application.configureRouting(
+    // todo claude: unused
+    appVersion: String = "dev",
+) {
     val hasFrontend = this::class.java.classLoader.getResource("static/index.html") != null
 
     routing {

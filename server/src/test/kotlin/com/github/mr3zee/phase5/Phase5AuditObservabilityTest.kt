@@ -364,7 +364,7 @@ class Phase5AuditObservabilityTest {
     }
 
     @Test
-    fun `HOOK-M6 -- webhookUrl normalizes trailing slash`() = withWebhookSetup { service, repo, _, scope ->
+    fun `HOOK-M6 -- webhookUrl normalizes trailing slash`() = withWebhookSetup { _, repo, _, scope ->
         val svcSlash = StatusWebhookService(InMemoryStatusWebhookTokenRepository(), repo, lazyOf(ExecutionEngine(repo, StubBlockExecutor(), FakeConnectionsRepository(), scope)), WebhookConfig(baseUrl = "https://example.com/"))
         val svcNoSlash = StatusWebhookService(InMemoryStatusWebhookTokenRepository(), repo, lazyOf(ExecutionEngine(repo, StubBlockExecutor(), FakeConnectionsRepository(), scope)), WebhookConfig(baseUrl = "https://example.com"))
 

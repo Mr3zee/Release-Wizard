@@ -6,7 +6,6 @@ import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.minutes
-import kotlin.time.Duration.Companion.seconds
 
 class MavenPollerService(
     private val repository: MavenTriggerRepository,

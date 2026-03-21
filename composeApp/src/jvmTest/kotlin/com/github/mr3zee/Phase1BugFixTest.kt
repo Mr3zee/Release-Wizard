@@ -21,7 +21,6 @@ import com.github.mr3zee.teams.AuditLogViewModel
 import com.github.mr3zee.teams.TeamManageScreen
 import com.github.mr3zee.teams.TeamManageViewModel
 import io.ktor.client.*
-import io.ktor.http.*
 import kotlin.test.Test
 
 @OptIn(ExperimentalTestApi::class)

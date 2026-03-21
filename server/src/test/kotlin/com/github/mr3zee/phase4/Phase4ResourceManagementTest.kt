@@ -66,8 +66,11 @@ class Phase4ResourceManagementTest {
             )
         }
 
-        assertTrue(exception.message?.contains("maximum poll duration") == true,
-            "Expected max poll duration error, got: ${exception.message}")
+        assertEquals(
+            true,
+            exception.message?.contains("maximum poll duration"),
+            "Expected max poll duration error, got: ${exception.message}"
+        )
     }
 
     @Test
@@ -93,8 +96,11 @@ class Phase4ResourceManagementTest {
             )
         }
 
-        assertTrue(exception.message?.contains("maximum poll duration") == true,
-            "Expected max poll duration error, got: ${exception.message}")
+        assertEquals(
+            true,
+            exception.message?.contains("maximum poll duration"),
+            "Expected max poll duration error, got: ${exception.message}"
+        )
     }
 
     // ── EXEC-M2: CancellationException re-throw in artifact fetcher ─────

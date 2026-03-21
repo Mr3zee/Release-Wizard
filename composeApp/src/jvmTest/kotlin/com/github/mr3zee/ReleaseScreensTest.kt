@@ -2627,6 +2627,7 @@ class ReleaseScreensTest {
     @Test
     fun `error snackbar shown when error prop is non-null`() = runComposeUiTest {
         val release = runningRelease()
+        // todo claude: unused
         var errorDismissed = false
 
         setReleaseDetailContent(
