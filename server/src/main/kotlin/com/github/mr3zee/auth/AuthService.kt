@@ -16,8 +16,12 @@ import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 import org.slf4j.LoggerFactory
+import java.nio.CharBuffer
 import java.sql.Connection
+import java.util.Base64
 import java.util.UUID
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
 import kotlin.time.Clock
 
 interface AuthService {
@@ -74,7 +78,11 @@ data class SessionRefreshInfo(
     val passwordChangedAtMillis: Long?,
 )
 
-class DatabaseAuthService(private val db: Database) : AuthService {
+class DatabaseAuthService(
+    private val db: Database,
+    private val pepperSecret: ByteArray? = null,
+    private val pepperSecretOld: ByteArray? = null,
+) : AuthService {
     private val log = LoggerFactory.getLogger(DatabaseAuthService::class.java)
 
     // AUTH-H3: Argon2 instance is thread-safe — argon2-jvm uses stateless JNI calls
@@ -86,10 +94,79 @@ class DatabaseAuthService(private val db: Database) : AuthService {
         private const val ARGON2_ITERATIONS = 3
         private const val ARGON2_MEMORY_KB = 65536
         private const val ARGON2_PARALLELISM = 4
+    }
 
-        // Pre-computed Argon2 hash used to normalize timing when user not found
-        private val DUMMY_HASH: String = Argon2Factory.create(Argon2Factory.Argon2Types.ARGON2id)
-            .hash(ARGON2_ITERATIONS, ARGON2_MEMORY_KB, ARGON2_PARALLELISM, "dummy-password".toCharArray())
+    // Pre-computed Argon2 hash used to normalize timing when user not found.
+    // Instance-level lazy (not companion) because the hash must incorporate the pepper.
+    private val dummyHash: String by lazy {
+        argon2.hash(ARGON2_ITERATIONS, ARGON2_MEMORY_KB, ARGON2_PARALLELISM,
+            preparePassword("dummy-password".toCharArray()))
+    }
+
+    init {
+        // Eagerly compute to avoid first-request latency spike (~400ms Argon2)
+        dummyHash
+    }
+
+    /**
+     * Apply HMAC-SHA256 peppering to a password before Argon2 hashing/verification.
+     * Uses CharBuffer.wrap to avoid creating an intermediate String from the password.
+     */
+    private fun pepperPassword(password: CharArray, secret: ByteArray): CharArray {
+        val mac = Mac.getInstance("HmacSHA256")
+        mac.init(SecretKeySpec(secret, "HmacSHA256"))
+        val passwordBytes = Charsets.UTF_8.encode(CharBuffer.wrap(password)).let { buf ->
+            ByteArray(buf.remaining()).also { buf.get(it) }
+        }
+        try {
+            val hmacBytes = mac.doFinal(passwordBytes)
+            return Base64.getEncoder().encodeToString(hmacBytes).toCharArray()
+        } finally {
+            passwordBytes.fill(0)
+        }
+    }
+
+    private fun preparePassword(password: CharArray): CharArray {
+        val secret = pepperSecret ?: return password
+        return pepperPassword(password, secret)
+    }
+
+    /**
+     * Verify a password against a stored hash, with fallback to old pepper for rotation.
+     * If the old pepper matches, transparently re-hashes with the current pepper.
+     */
+    private suspend fun verifyPasswordWithRotation(storedHash: String, password: String, userId: UserId): Boolean {
+        val prepared = preparePassword(password.toCharArray())
+        try {
+            val valid = withContext(Dispatchers.IO) { argon2.verify(storedHash, prepared) }
+            if (valid) return true
+
+            if (pepperSecretOld != null) {
+                val preparedOld = pepperPassword(password.toCharArray(), pepperSecretOld)
+                try {
+                    val validOld = withContext(Dispatchers.IO) { argon2.verify(storedHash, preparedOld) }
+                    if (validOld) {
+                        // Transparently re-hash with current pepper
+                        val newHash = withContext(Dispatchers.IO) {
+                            argon2.hash(ARGON2_ITERATIONS, ARGON2_MEMORY_KB, ARGON2_PARALLELISM, prepared)
+                        }
+                        dbQuery {
+                            UserTable.update({ UserTable.id eq UUID.fromString(userId.value) }) {
+                                it[UserTable.passwordHash] = newHash
+                            }
+                        }
+                        log.info("Password hash upgraded to current pepper for user '{}'", userId.value)
+                        return true
+                    }
+                } finally {
+                    preparedOld.fill(0.toChar())
+                }
+            }
+
+            return false
+        } finally {
+            prepared.fill(0.toChar())
+        }
     }
 
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
@@ -113,7 +190,7 @@ class DatabaseAuthService(private val db: Database) : AuthService {
         }
         if (row == null) {
             // Prevent timing-based user enumeration by performing a dummy verification
-            withContext(Dispatchers.IO) { argon2.verify(DUMMY_HASH, password.toCharArray()) }
+            withContext(Dispatchers.IO) { argon2.verify(dummyHash, preparePassword(password.toCharArray())) }
             // AUTH-L2: Uniform log message for all login failures to prevent user enumeration via logs
             log.warn("Login failed for user '{}'", username)
             return null
@@ -121,11 +198,12 @@ class DatabaseAuthService(private val db: Database) : AuthService {
         val hash = row[UserTable.passwordHash]
         if (hash == null) {
             // OAuth-only user — cannot authenticate with password. Perform dummy hash for timing.
-            withContext(Dispatchers.IO) { argon2.verify(DUMMY_HASH, password.toCharArray()) }
+            withContext(Dispatchers.IO) { argon2.verify(dummyHash, preparePassword(password.toCharArray())) }
             log.warn("Login failed for user '{}'", username)
             return null
         }
-        val valid = withContext(Dispatchers.IO) { argon2.verify(hash, password.toCharArray()) }
+        val userId = UserId(row[UserTable.id].value.toString())
+        val valid = verifyPasswordWithRotation(hash, password, userId)
         return if (valid) {
             log.info("Login succeeded for user '{}'", username)
             row.toUser()
@@ -140,7 +218,7 @@ class DatabaseAuthService(private val db: Database) : AuthService {
         // AUTH-M1: Pre-compute the password hash OUTSIDE the SERIALIZABLE transaction
         // to avoid holding the DB lock during the ~400ms Argon2 computation.
         val hash = withContext(Dispatchers.IO) {
-            argon2.hash(ARGON2_ITERATIONS, ARGON2_MEMORY_KB, ARGON2_PARALLELISM, password.toCharArray())
+            argon2.hash(ARGON2_ITERATIONS, ARGON2_MEMORY_KB, ARGON2_PARALLELISM, preparePassword(password.toCharArray()))
         }
         return withContext(Dispatchers.IO) {
             try {
@@ -275,10 +353,7 @@ class DatabaseAuthService(private val db: Database) : AuthService {
             if (password == null) {
                 return Result.failure(IllegalArgumentException("INVALID_PASSWORD"))
             }
-            val passwordValid = withContext(Dispatchers.IO) {
-                argon2.verify(storedHash, password.toCharArray())
-            }
-            if (!passwordValid) {
+            if (!verifyPasswordWithRotation(storedHash, password, userId)) {
                 return Result.failure(IllegalArgumentException("INVALID_PASSWORD"))
             }
         }
@@ -341,19 +416,31 @@ class DatabaseAuthService(private val db: Database) : AuthService {
             .getOrElse { return Result.failure(it) }
         val storedHash = userRow[UserTable.passwordHash]
 
+        // Re-read current hash after verification — rotation may have updated it
+        val currentHash = if (storedHash != null) {
+            dbQuery {
+                UserTable.selectAll()
+                    .where { UserTable.id eq UUID.fromString(userId.value) }
+                    .singleOrNull()
+                    ?.get(UserTable.passwordHash)
+            }
+        } else {
+            null
+        }
+
         // Hash new password outside the transaction
         val newHash = withContext(Dispatchers.IO) {
-            argon2.hash(ARGON2_ITERATIONS, ARGON2_MEMORY_KB, ARGON2_PARALLELISM, newPassword.toCharArray())
+            argon2.hash(ARGON2_ITERATIONS, ARGON2_MEMORY_KB, ARGON2_PARALLELISM, preparePassword(newPassword.toCharArray()))
         }
 
         // DB-H2: Use conditional UPDATE to prevent TOCTOU race — only update if the hash
         // hasn't been changed by another concurrent request (e.g., password reset).
         val updated = dbQuery {
             val now = Clock.System.now()
-            if (storedHash != null) {
+            if (currentHash != null) {
                 UserTable.update({
                     (UserTable.id eq UUID.fromString(userId.value)) and
-                        (UserTable.passwordHash eq storedHash)
+                        (UserTable.passwordHash eq currentHash)
                 }) {
                     it[UserTable.passwordHash] = newHash
                     it[UserTable.passwordChangedAt] = now
@@ -445,7 +532,7 @@ class DatabaseAuthService(private val db: Database) : AuthService {
 
     override suspend fun hashPassword(password: String): String =
         withContext(Dispatchers.IO) {
-            argon2.hash(ARGON2_ITERATIONS, ARGON2_MEMORY_KB, ARGON2_PARALLELISM, password.toCharArray())
+            argon2.hash(ARGON2_ITERATIONS, ARGON2_MEMORY_KB, ARGON2_PARALLELISM, preparePassword(password.toCharArray()))
         }
 
     override suspend fun getSessionRefreshInfo(id: UserId): SessionRefreshInfo? = dbQuery {

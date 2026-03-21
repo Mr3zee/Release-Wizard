@@ -12,6 +12,7 @@ ktor:
 #                  WEBHOOK_BASE_URL, APP_VERSION, DB_MAX_POOL_SIZE, CORS_ALLOWED_ORIGINS,
 #                  BROWSER_SESSION_TTL_SECONDS, DESKTOP_SESSION_TTL_SECONDS,
 #                  BROWSER_ABSOLUTE_LIFETIME_SECONDS, DESKTOP_ABSOLUTE_LIFETIME_SECONDS,
+#                  PASSWORD_PEPPER, PASSWORD_PEPPER_OLD,
 #                  GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET
 # JB Cloud Console: map DB0_URL_JDBC → DB_URL, DB0_USERNAME → DB_USER, DB0_PASSWORD → DB_PASSWORD
 # via customEnv in Helm additional params (see DEPLOYMENT.md).
@@ -32,6 +33,8 @@ app:
     browserAbsoluteLifetimeSeconds: "$BROWSER_ABSOLUTE_LIFETIME_SECONDS:7776000"
     desktopAbsoluteLifetimeSeconds: "$DESKTOP_ABSOLUTE_LIFETIME_SECONDS:63072000"
     secureCookie: "$SECURE_COOKIE:false"
+    pepper: "$PASSWORD_PEPPER:"
+    pepperOld: "$PASSWORD_PEPPER_OLD:"
     password:
       minLength: "$PASSWORD_MIN_LENGTH:12"
       requireUppercase: "$PASSWORD_REQUIRE_UPPERCASE:true"

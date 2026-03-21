@@ -143,6 +143,8 @@ OAuth users created via Google sign-in have no password. They can:
 | `ENCRYPTION_KEY` | — | **Yes** | AES-256 key for stored credentials (Base64, 32 bytes). Generate: `openssl rand -base64 32` |
 | `WEBHOOK_BASE_URL` | `http://localhost:8080` | No | Base URL for webhook callbacks. Set to public URL in production |
 | `CORS_ALLOWED_ORIGIN_1` | — | No | Allowed CORS origin (for split-mode dev) |
+| `PASSWORD_PEPPER` | — | Recommended | HMAC-SHA256 password pepper (Base64, 32 bytes). Generate: `openssl rand -base64 32`. When set, passwords are HMAC'd before Argon2 hashing |
+| `PASSWORD_PEPPER_OLD` | — | No | Previous pepper for rotation. Set when rotating to a new `PASSWORD_PEPPER` value |
 | `SECURE_COOKIE` | `false` | No | Must be `true` in production (TLS terminated at ingress). Defaults to `false` for local dev convenience |
 | `APP_VERSION` | `dev` | No | Version string |
 | `GOOGLE_OAUTH_CLIENT_ID` | — | No | Google OAuth client ID. Leave blank to disable Google sign-in |

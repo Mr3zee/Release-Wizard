@@ -416,6 +416,13 @@ fun Application.module() {
             "This should only be used for local development.")
     }
 
+    if (authConfig.pepperSecret != null) {
+        environment.log.info("Password peppering is enabled (HMAC-SHA256)")
+    } else {
+        environment.log.warn("PASSWORD_PEPPER not set — password peppering is disabled. " +
+            "This is acceptable for development but not recommended for production.")
+    }
+
     monitor.subscribe(ApplicationStarted) {
         try {
             val koin = getKoin()

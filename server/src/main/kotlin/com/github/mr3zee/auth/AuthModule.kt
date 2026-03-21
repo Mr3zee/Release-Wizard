@@ -1,9 +1,13 @@
 package com.github.mr3zee.auth
 
+import com.github.mr3zee.AuthConfig
 import org.koin.dsl.module
 
 val authModule = module {
-    single<AuthService> { DatabaseAuthService(get()) }
+    single<AuthService> {
+        val authConfig = get<AuthConfig>()
+        DatabaseAuthService(get(), authConfig.pepperSecret, authConfig.pepperSecretOld)
+    }
     single<PasswordResetService> { DatabasePasswordResetService(get()) }
     single { PasswordValidator(get()) }
     single { AccountLockoutRepository(get()) }

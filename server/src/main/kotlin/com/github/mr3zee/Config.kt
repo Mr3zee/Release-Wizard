@@ -18,6 +18,8 @@ data class AuthConfig(
     val sessionRefreshThresholdSeconds: Long = 60,
     val browserAbsoluteLifetimeSeconds: Long = 7_776_000, // 90 days
     val desktopAbsoluteLifetimeSeconds: Long = 63_072_000, // 2 years
+    val pepperSecret: ByteArray? = null,
+    val pepperSecretOld: ByteArray? = null,
 )
 
 data class PasswordPolicyConfig(
@@ -81,6 +83,25 @@ fun ApplicationConfig.authConfig(): AuthConfig {
     val browserAbsoluteLifetimeSeconds = propertyOrNull("app.auth.browserAbsoluteLifetimeSeconds")?.getString()?.toLongOrNull() ?: 7_776_000L
     val desktopAbsoluteLifetimeSeconds = propertyOrNull("app.auth.desktopAbsoluteLifetimeSeconds")?.getString()?.toLongOrNull() ?: 63_072_000L
 
+    val pepperSecret = decodePepperKey(
+        propertyOrNull("app.auth.pepper")?.getString(),
+        envName = "PASSWORD_PEPPER",
+    )
+    val pepperSecretOld = decodePepperKey(
+        propertyOrNull("app.auth.pepperOld")?.getString(),
+        envName = "PASSWORD_PEPPER_OLD",
+    )
+
+    require(pepperSecretOld == null || pepperSecret != null) {
+        "PASSWORD_PEPPER_OLD is set but PASSWORD_PEPPER is not. " +
+            "Cannot use an old pepper without a current pepper."
+    }
+    if (pepperSecret != null && pepperSecretOld != null) {
+        require(!pepperSecret.contentEquals(pepperSecretOld)) {
+            "PASSWORD_PEPPER and PASSWORD_PEPPER_OLD must be different values."
+        }
+    }
+
     return AuthConfig(
         sessionSignKey = sessionSignKey,
         sessionEncryptKey = sessionEncryptKey,
@@ -89,7 +110,22 @@ fun ApplicationConfig.authConfig(): AuthConfig {
         sessionRefreshThresholdSeconds = sessionRefreshThresholdSeconds,
         browserAbsoluteLifetimeSeconds = browserAbsoluteLifetimeSeconds,
         desktopAbsoluteLifetimeSeconds = desktopAbsoluteLifetimeSeconds,
+        pepperSecret = pepperSecret,
+        pepperSecretOld = pepperSecretOld,
     )
+}
+
+private fun decodePepperKey(raw: String?, envName: String): ByteArray? {
+    if (raw.isNullOrBlank()) return null
+    val bytes = try {
+        java.util.Base64.getDecoder().decode(raw)
+    } catch (_: IllegalArgumentException) {
+        error("$envName must be a valid Base64-encoded string.")
+    }
+    require(bytes.size == 32) {
+        "$envName must decode to exactly 32 bytes (256-bit HMAC key). Got ${bytes.size} bytes."
+    }
+    return bytes
 }
 
 fun ApplicationConfig.passwordPolicyConfig(): PasswordPolicyConfig {

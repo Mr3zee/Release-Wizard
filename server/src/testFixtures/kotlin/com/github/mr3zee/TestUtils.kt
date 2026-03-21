@@ -65,9 +65,18 @@ fun testDbConfig() = DatabaseConfig(
     driver = "org.h2.Driver",
 )
 
-fun testAuthConfig() = AuthConfig(
+// Base64-encoded 32-byte test pepper keys
+val TEST_PEPPER: ByteArray = java.util.Base64.getDecoder().decode("YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY=")
+val TEST_PEPPER_ALT: ByteArray = java.util.Base64.getDecoder().decode("NjU0MzIxenl4d3Z1dHNycXBvbm1sa2ppaGdmZWRjYmE=")
+
+fun testAuthConfig(
+    pepperSecret: ByteArray? = null,
+    pepperSecretOld: ByteArray? = null,
+) = AuthConfig(
     sessionSignKey = "6162636465666768696a6b6c6d6e6f707172737475767778797a313233343536",
     sessionEncryptKey = "31323334353637383930616263646566",
+    pepperSecret = pepperSecret,
+    pepperSecretOld = pepperSecretOld,
 )
 
 fun testEncryptionConfig() = EncryptionConfig(
