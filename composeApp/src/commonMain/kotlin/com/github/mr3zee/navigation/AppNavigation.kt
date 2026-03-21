@@ -27,9 +27,6 @@ import com.github.mr3zee.projects.ProjectListScreen
 import com.github.mr3zee.projects.ProjectListViewModel
 import com.github.mr3zee.releases.*
 import com.github.mr3zee.teams.*
-import com.github.mr3zee.i18n.LanguagePack
-import com.github.mr3zee.theme.ThemePreference
-import kotlinx.coroutines.flow.StateFlow
 
 @Composable
 fun AppNavigation(
@@ -46,24 +43,12 @@ fun AppNavigation(
     scheduleApiClient: ScheduleApiClient,
     webhookTriggerApiClient: WebhookTriggerApiClient,
     mavenTriggerApiClient: MavenTriggerApiClient,
-    // todo claude: unused
-    activeTeamId: StateFlow<TeamId?>,
     userTeams: List<UserTeamInfo>,
     currentUserId: String? = null,
     currentUserRole: com.github.mr3zee.model.UserRole? = null,
     onLogout: () -> Unit,
     onTeamChanged: (TeamId) -> Unit,
     onRefreshUser: () -> Unit,
-    // todo claude: unused
-    themePreference: ThemePreference = ThemePreference.SYSTEM,
-    // todo claude: unused
-    onThemeChange: (ThemePreference) -> Unit = {},
-    // todo claude: unused
-    languagePack: LanguagePack = LanguagePack.ENGLISH,
-    // todo claude: unused
-    onLanguagePackChange: (LanguagePack) -> Unit = {},
-    // todo claude: unused
-    onShowShortcuts: () -> Unit = {},
     profileViewModel: ProfileViewModel? = null,
     authApiClient: AuthApiClient? = null,
 ) {

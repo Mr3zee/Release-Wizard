@@ -79,62 +79,34 @@ class NavigationController(
         Snapshot.withMutableSnapshot {
             suppressUrlSync = true
             _backStack.clear()
+
+            // ResetPassword is a standalone screen with no parent chain
+            if (screen is Screen.ResetPassword) {
+                _backStack.add(screen)
+                return@withMutableSnapshot
+            }
+
+            // 1. Always start with home
             _backStack.add(Screen.ProjectList)
 
-            // Reconstruct the full parent chain for the target screen
+            // 2. Add the section's top-level screen (if different from home and target)
+            val sectionScreen = screen.parentSection()?.toScreen()
+            if (sectionScreen != null && sectionScreen != Screen.ProjectList && sectionScreen != screen) {
+                _backStack.add(sectionScreen)
+            }
+
+            // 3. Add intermediate parent for deep screens
             when (screen) {
-                // Top-level screens: just add them after ProjectList
-                Screen.ProjectList -> { /* already in stack */ }
-                Screen.ReleaseList -> _backStack.add(Screen.ReleaseList)
-                Screen.ConnectionList -> _backStack.add(Screen.ConnectionList)
-                Screen.TeamList -> _backStack.add(Screen.TeamList)
+                is Screen.TeamManage -> _backStack.add(Screen.TeamDetail(screen.teamId))
+                is Screen.AuditLog -> _backStack.add(Screen.TeamDetail(screen.teamId))
+                is Screen.ProjectAutomation -> _backStack.add(Screen.ProjectEditor(screen.projectId))
+                is Screen.AdminUsers -> _backStack.add(Screen.Profile)
+                else -> {}
+            }
 
-                // Direct children of a section
-                is Screen.ProjectEditor -> _backStack.add(screen)
-                is Screen.ReleaseView -> {
-                    _backStack.add(Screen.ReleaseList)
-                    _backStack.add(screen)
-                }
-                is Screen.ConnectionForm -> {
-                    _backStack.add(Screen.ConnectionList)
-                    _backStack.add(screen)
-                }
-                is Screen.TeamDetail -> {
-                    _backStack.add(Screen.TeamList)
-                    _backStack.add(screen)
-                }
-                Screen.MyInvites -> {
-                    _backStack.add(Screen.TeamList)
-                    _backStack.add(screen)
-                }
-
-                // Deep detail screens — include intermediate parent
-                is Screen.TeamManage -> {
-                    _backStack.add(Screen.TeamList)
-                    _backStack.add(Screen.TeamDetail(screen.teamId))
-                    _backStack.add(screen)
-                }
-                is Screen.AuditLog -> {
-                    _backStack.add(Screen.TeamList)
-                    _backStack.add(Screen.TeamDetail(screen.teamId))
-                    _backStack.add(screen)
-                }
-                is Screen.ProjectAutomation -> {
-                    _backStack.add(Screen.ProjectEditor(screen.projectId))
-                    _backStack.add(screen)
-                }
-
-                Screen.Profile -> {
-                    _backStack.add(Screen.Profile)
-                }
-                Screen.AdminUsers -> {
-                    _backStack.add(Screen.Profile)
-                    _backStack.add(Screen.AdminUsers)
-                }
-                is Screen.ResetPassword -> {
-                    _backStack.clear()
-                    _backStack.add(screen)
-                }
+            // 4. Add target screen (home is already in the stack)
+            if (screen !is Screen.ProjectList) {
+                _backStack.add(screen)
             }
         }
     }

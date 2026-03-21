@@ -98,7 +98,6 @@ class AppNavigationTest {
                         scheduleApiClient = scheduleApiClient,
                         webhookTriggerApiClient = webhookTriggerApiClient,
                         mavenTriggerApiClient = mavenTriggerApiClient,
-                        activeTeamId = activeTeamId,
                         userTeams = emptyList(),
                         onLogout = { authViewModel.logout(); navController.resetTo(Screen.ProjectList) },
                         onTeamChanged = {},
@@ -192,15 +191,10 @@ class AppNavigationTest {
                             scheduleApiClient = scheduleApiClient,
                             webhookTriggerApiClient = webhookTriggerApiClient,
                             mavenTriggerApiClient = mavenTriggerApiClient,
-                            activeTeamId = activeTeamId,
                             userTeams = userTeams,
                             onLogout = logout,
                             onTeamChanged = onTeamChanged,
                             onRefreshUser = {},
-                            themePreference = themePreference,
-                            onThemeChange = { themePreference = it },
-                            languagePack = languagePack,
-                            onLanguagePackChange = { languagePack = it },
                         )
                     }
                 }

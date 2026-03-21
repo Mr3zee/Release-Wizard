@@ -320,7 +320,6 @@ fun App() {
                                 scheduleApiClient = scheduleApiClient,
                                 webhookTriggerApiClient = webhookTriggerApiClient,
                                 mavenTriggerApiClient = mavenTriggerApiClient,
-                                activeTeamId = activeTeamId,
                                 userTeams = currentUserTeams,
                                 currentUserId = user?.id,
                                 currentUserRole = user?.role,
@@ -329,17 +328,6 @@ fun App() {
                                     activeTeamId.value = teamId
                                 },
                                 onRefreshUser = { authViewModel.checkSession() },
-                                themePreference = themePreference,
-                                onThemeChange = {
-                                    themePreference = it
-                                    saveThemePreference(it)
-                                },
-                                languagePack = languagePack,
-                                onLanguagePackChange = {
-                                    languagePack = it
-                                    saveLanguagePack(it)
-                                },
-                                onShowShortcuts = { showShortcutsOverlay = true },
                                 profileViewModel = profileViewModel,
                                 authApiClient = authApiClient,
                             )
