@@ -156,7 +156,7 @@ fun LoginScreen(
                             contentDescription = if (showPassword) packStringResource(Res.string.common_hide_password)
                                 else packStringResource(Res.string.common_show_password),
                             modifier = Modifier
-                                .size(20.dp)
+                                .size(16.dp)
                                 .focusProperties { canFocus = false }
                                 .testTag("login_password_toggle_visibility")
                                 .pointerHoverIcon(PointerIcon.Hand)
@@ -201,7 +201,7 @@ fun LoginScreen(
                                 contentDescription = if (showConfirmPassword) packStringResource(Res.string.common_hide_password)
                                     else packStringResource(Res.string.common_show_password),
                                 modifier = Modifier
-                                    .size(20.dp)
+                                    .size(16.dp)
                                     .focusProperties { canFocus = false }
                                     .testTag("login_confirm_password_toggle_visibility")
                                     .pointerHoverIcon(PointerIcon.Hand)

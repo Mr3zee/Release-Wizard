@@ -587,7 +587,7 @@ private fun PasswordVisibilityToggle(
             packStringResource(Res.string.common_show_password)
         },
         modifier = Modifier
-            .size(20.dp)
+            .size(16.dp)
             .focusProperties { canFocus = false }
             .testTag(testTag)
             .pointerHoverIcon(PointerIcon.Hand)
