@@ -195,12 +195,55 @@ jib {
     }
 }
 
+// Load .env file from project root (if present) so the Gradle daemon — which may have
+// started before env vars were exported — can forward them to the server JVM.
+// Env vars from the shell take precedence over .env values.
+val dotEnv: Map<String, String> = rootProject.file(".env").let { file ->
+    if (!file.exists()) return@let emptyMap()
+    file.readLines()
+        .filter { it.isNotBlank() && !it.startsWith("#") && '=' in it }
+        .associate { line ->
+            val key = line.substringBefore('=').trim()
+            val value = line.substringAfter('=').trim()
+            key to value
+        }
+}
+
+// All env vars referenced by application.yaml.
+val serverEnvVars = listOf(
+    "PORT", "HOST", "APP_VERSION",
+    "DB_URL", "DB_USER", "DB_PASSWORD", "DB_MAX_POOL_SIZE",
+    "AUTH_SESSION_SIGN_KEY", "AUTH_SESSION_ENCRYPT_KEY", "ENCRYPTION_KEY",
+    "WEBHOOK_BASE_URL", "CORS_ALLOWED_ORIGIN_1", "SECURE_COOKIE",
+    "BROWSER_SESSION_TTL_SECONDS", "DESKTOP_SESSION_TTL_SECONDS",
+    "SESSION_REFRESH_THRESHOLD_SECONDS",
+    "BROWSER_ABSOLUTE_LIFETIME_SECONDS", "DESKTOP_ABSOLUTE_LIFETIME_SECONDS",
+    "PASSWORD_PEPPER", "PASSWORD_PEPPER_OLD",
+    "PASSWORD_MIN_LENGTH", "PASSWORD_REQUIRE_UPPERCASE",
+    "PASSWORD_REQUIRE_DIGIT", "PASSWORD_REQUIRE_SPECIAL",
+    "GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET",
+)
+
+fun JavaExec.forwardServerEnvVars() {
+    serverEnvVars.forEach { name ->
+        // Shell env (via daemon) wins; fall back to .env file
+        val value = providers.environmentVariable(name).orNull ?: dotEnv[name]
+        if (value != null) environment(name, value)
+    }
+}
+
+// Forward env vars to the application plugin's :run task
+tasks.named<JavaExec>("run") {
+    forwardServerEnvVars()
+}
+
 // runApp = bundled local mode (builds frontend, then runs server)
 tasks.register<JavaExec>("runApp") {
     dependsOn(copyFrontend, "classes")
     classpath = sourceSets["main"].runtimeClasspath + files(layout.buildDirectory.dir("generated-resources"))
     mainClass.set("io.ktor.server.netty.EngineMain")
     jvmArgs = application.applicationDefaultJvmArgs.toList()
+    forwardServerEnvVars()
 }
 
 // Jib tasks also need frontend

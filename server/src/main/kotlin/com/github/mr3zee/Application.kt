@@ -2,6 +2,7 @@ package com.github.mr3zee
 
 import com.github.mr3zee.api.ErrorResponse
 import com.github.mr3zee.auth.AccountLockoutRepository
+import com.github.mr3zee.auth.AuthService
 import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.auth.authModule
 import com.github.mr3zee.auth.authRoutes
@@ -439,9 +440,33 @@ fun Application.module() {
             "This is acceptable for development but not recommended for production.")
     }
 
+    // Seed admin user on first run (for local development)
+    val seedUsername = environment.config.propertyOrNull("app.seed.adminUsername")?.getString()?.takeIf { it.isNotBlank() }
+    val seedPassword = environment.config.propertyOrNull("app.seed.adminPassword")?.getString()?.takeIf { it.isNotBlank() }
+
     monitor.subscribe(ApplicationStarted) {
         try {
             val koin = getKoin()
+
+            // Auto-create seed admin user if configured and no users exist
+            if (seedUsername != null && seedPassword != null) {
+                val authService = koin.get<AuthService>()
+                val scope0 = koin.getOrNull<CoroutineScope>()
+                scope0?.launch {
+                    try {
+                        if (authService.listUsers().isEmpty()) {
+                            val user = authService.register(seedUsername, seedPassword)
+                            if (user != null) {
+                                environment.log.info("Seed admin user '$seedUsername' created (first user = auto-approved ADMIN)")
+                            } else {
+                                environment.log.warn("Failed to create seed admin user '$seedUsername'")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        environment.log.warn("Seed admin user creation failed", e)
+                    }
+                }
+            }
 
             // INFRA-H4: Critical services — failures are logged and flagged
             val listener = koin.getOrNull<NotificationListener>()

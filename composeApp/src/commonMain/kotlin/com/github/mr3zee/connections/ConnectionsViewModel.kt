@@ -166,6 +166,9 @@ class ConnectionsViewModel(
     }
 
     private suspend fun loadConnectionsInternal(reset: Boolean, silent: Boolean = false) {
+        // Skip loading when no team is selected (e.g., before login or on Teams screen)
+        if (activeTeamId.value == null) return
+
         if (silent) {
             _isRefreshing.value = true
         } else if (reset) {

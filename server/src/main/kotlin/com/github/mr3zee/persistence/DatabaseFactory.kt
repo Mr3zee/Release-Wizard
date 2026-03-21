@@ -72,15 +72,24 @@ fun initDatabase(ds: DataSource, useFlyway: Boolean = true): Database {
 
     val database = Database.connect(ds)
 
+    // Create partial indexes before drift detection so they exist on every run.
+    // Must happen after Flyway (tables must exist) but before MigrationUtils check.
+    createPartialIndexes(ds)
+
     if (useFlyway) {
         // After Flyway applies migrations, verify the schema matches Exposed Table definitions.
         // Fails fast on startup if a migration was forgotten or is out of sync.
+        // Partial indexes (WITH WHERE clause) are intentionally outside Exposed's model,
+        // so MigrationUtils sees them as "extra" and emits DROP INDEX statements — filter those out.
         val drift = transaction(database) {
             MigrationUtils.statementsRequiredForDatabaseMigration(*ALL_TABLES)
         }
-        if (drift.isNotEmpty()) {
-            log.error("Schema drift detected after Flyway migration. Missing statements:\n{}", drift.joinToString("\n"))
-            error("Database schema does not match Exposed Table definitions. ${drift.size} statements required.")
+        val realDrift = drift.filter { stmt ->
+            PARTIAL_INDEX_NAMES.none { name -> stmt.contains(name, ignoreCase = true) }
+        }
+        if (realDrift.isNotEmpty()) {
+            log.error("Schema drift detected after Flyway migration. Missing statements:\n{}", realDrift.joinToString("\n"))
+            error("Database schema does not match Exposed Table definitions. ${realDrift.size} statements required.")
         }
     } else {
         transaction(database) {
@@ -88,10 +97,16 @@ fun initDatabase(ds: DataSource, useFlyway: Boolean = true): Database {
         }
     }
 
-    // TEAM-H2, TEAM-H3, HOOK-M4: Create partial unique indexes (PostgreSQL only, graceful skip on H2)
-    createPartialIndexes(ds)
     return database
 }
+
+/** Names of partial indexes managed by [createPartialIndexes] — used by drift detection to ignore expected extras. */
+private val PARTIAL_INDEX_NAMES = setOf(
+    "uq_invite_pending_team_user",
+    "uq_join_request_pending_team_user",
+    "uq_swt_active_release_block",
+    "idx_users_pending_approval",
+)
 
 /**
  * Creates partial unique indexes for defense-in-depth.
@@ -100,6 +115,7 @@ fun initDatabase(ds: DataSource, useFlyway: Boolean = true): Database {
  *
  * Note: Regular indexes (including idx_release_tags_team_tag) are managed by Flyway migrations.
  * Only partial indexes with WHERE clauses remain here because H2 does not support them.
+ * When adding a new partial index, also add its name to [PARTIAL_INDEX_NAMES].
  */
 private fun createPartialIndexes(ds: DataSource) {
     val partialIndexes = listOf(

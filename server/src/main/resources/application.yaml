@@ -48,6 +48,9 @@ app:
     key: "$ENCRYPTION_KEY"
   webhook:
     baseUrl: "$WEBHOOK_BASE_URL:http://localhost:8080"
+  seed:
+    adminUsername: "$SEED_ADMIN_USERNAME:"
+    adminPassword: "$SEED_ADMIN_PASSWORD:"
   cors:
     allowedOrigins:
       - "$CORS_ALLOWED_ORIGIN_1:"

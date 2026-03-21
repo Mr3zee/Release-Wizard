@@ -37,11 +37,14 @@ class AuthViewModel(
             try {
                 val userInfo = apiClient.me()
                 _user.value = userInfo
-                hadSession = true
+                if (userInfo != null) {
+                    hadSession = true
+                }
             } catch (_: Exception) {
                 _user.value = null
             } finally {
                 _isCheckingSession.value = false
+                AuthEventBus.initialAuthCheckComplete = true
             }
         }
     }

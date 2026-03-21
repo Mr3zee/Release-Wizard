@@ -12,7 +12,16 @@ object AuthEventBus {
     private val _events = MutableSharedFlow<AuthEvent>(extraBufferCapacity = 1)
     val events: SharedFlow<AuthEvent> = _events.asSharedFlow()
 
+    /**
+     * Set to true once the initial auth check completes (regardless of result).
+     * Prevents spurious "session expired" events from API calls that race
+     * ahead of the auth check on first app load.
+     */
+    var initialAuthCheckComplete = false
+
     fun emitSessionExpired() {
-        _events.tryEmit(AuthEvent.SessionExpired)
+        if (initialAuthCheckComplete) {
+            _events.tryEmit(AuthEvent.SessionExpired)
+        }
     }
 }

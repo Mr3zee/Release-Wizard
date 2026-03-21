@@ -4,6 +4,7 @@ import kotlinx.browser.window
 import org.w3c.dom.events.Event
 
 /** Browser-based router using the History API for WasmJS target. */
+@OptIn(ExperimentalWasmJsInterop::class)
 actual fun createPlatformRouter(): PlatformRouter = object : PlatformRouter {
     override fun pushPath(path: String) {
         window.history.pushState(null, "", path)

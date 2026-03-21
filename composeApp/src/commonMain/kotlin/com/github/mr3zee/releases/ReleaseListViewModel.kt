@@ -182,6 +182,9 @@ class ReleaseListViewModel(
     }
 
     private suspend fun loadReleasesInternal(reset: Boolean, silent: Boolean = false) {
+        // Skip loading when no team is selected (e.g., before login or on Teams screen)
+        if (activeTeamId.value == null) return
+
         if (silent) {
             _isRefreshing.value = true
         } else if (reset) {

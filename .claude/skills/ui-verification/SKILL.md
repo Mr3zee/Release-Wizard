@@ -54,12 +54,13 @@ CONTAINER_NAME="rw-postgres-${SERVER_PORT}"
 
 ```bash
 # Kill native PostgreSQL if running (brew-installed) — it shadows Docker on localhost:5432
-if lsof -i :$DB_PORT 2>/dev/null | grep -v docker | grep -q LISTEN; then
-  echo "WARNING: Native PostgreSQL detected on port $DB_PORT — killing it"
+# Check for 'postgres' process (native) vs 'com.docke' (Docker Desktop) on the port
+if lsof -i :$DB_PORT 2>/dev/null | grep -w postgres | grep -q LISTEN; then
+  echo "WARNING: Native PostgreSQL detected on port $DB_PORT — stopping it"
   brew services stop postgresql@14 2>/dev/null
   brew services stop postgresql 2>/dev/null
-  # Force-kill if brew stop didn't work
-  lsof -ti :$DB_PORT | xargs kill 2>/dev/null
+  # Force-kill only postgres processes if brew stop didn't work
+  lsof -i :$DB_PORT 2>/dev/null | grep -w postgres | awk '{print $2}' | sort -u | xargs kill 2>/dev/null
   sleep 1
 fi
 
@@ -114,6 +115,8 @@ PASSWORD_MIN_LENGTH=4 \
 PASSWORD_REQUIRE_UPPERCASE=false \
 PASSWORD_REQUIRE_DIGIT=false \
 PASSWORD_REQUIRE_SPECIAL=false \
+SEED_ADMIN_USERNAME=admin \
+SEED_ADMIN_PASSWORD=admin \
 GOOGLE_OAUTH_CLIENT_ID="${GOOGLE_OAUTH_CLIENT_ID:-}" \
 GOOGLE_OAUTH_CLIENT_SECRET="${GOOGLE_OAUTH_CLIENT_SECRET:-}" \
 nohup ./gradlew :server:run > /tmp/rw_server_${SERVER_PORT}.log 2>&1 &
@@ -150,25 +153,21 @@ for i in $(seq 1 90); do
 done
 ```
 
-### Step 4: Register Test User and Create Team
+### Step 4: Log In and Create Team
 
-The app starts on the login screen. Register and set up test data:
+The server auto-seeds an `admin`/`admin` user on first run (via `SEED_ADMIN_USERNAME`/`SEED_ADMIN_PASSWORD` env vars). Log in and set up test data:
 
 ```bash
-# Switch to register mode
-curl -s "http://localhost:$UI_TEST_PORT/onNodeWithText/Don't%20have%20an%20account%3F%20Register/performClick"
+# Log in with the seeded admin user
+curl -s "http://localhost:$UI_TEST_PORT/onNodeWithTag/login_username/performTextInput?text=admin"
 curl -s "http://localhost:$UI_TEST_PORT/waitForIdle"
-
-# Fill registration
-curl -s "http://localhost:$UI_TEST_PORT/onNodeWithTag/login_username/performTextInput?text=testuser"
+curl -s "http://localhost:$UI_TEST_PORT/onNodeWithTag/login_password/performTextInput?text=admin"
 curl -s "http://localhost:$UI_TEST_PORT/waitForIdle"
-curl -s "http://localhost:$UI_TEST_PORT/onNodeWithTag/login_password/performTextInput?text=test"
-curl -s "http://localhost:$UI_TEST_PORT/waitForIdle"
-curl -s "http://localhost:$UI_TEST_PORT/onNodeWithTag/register_button/performClick"
+curl -s "http://localhost:$UI_TEST_PORT/onNodeWithTag/login_button/performClick"
 sleep 3
 curl -s "http://localhost:$UI_TEST_PORT/waitForIdle"
 
-# Create a team (arrives at Teams screen after registration)
+# Create a team (arrives at Teams screen after first login)
 # The FAB opens an inline form (not a dialog) at the top of the list
 curl -s "http://localhost:$UI_TEST_PORT/onNodeWithTag/create_team_fab/performClick"
 sleep 1
@@ -179,17 +178,6 @@ curl -s "http://localhost:$UI_TEST_PORT/onNodeWithTag/create_team_confirm/perfor
 sleep 2
 curl -s "http://localhost:$UI_TEST_PORT/waitForIdle"
 # Now on Project List screen for "Test Team"
-```
-
-If the user already exists (registration fails), log in instead:
-```bash
-curl -s "http://localhost:$UI_TEST_PORT/onNodeWithTag/login_username/performTextInput?text=testuser"
-curl -s "http://localhost:$UI_TEST_PORT/waitForIdle"
-curl -s "http://localhost:$UI_TEST_PORT/onNodeWithTag/login_password/performTextInput?text=test"
-curl -s "http://localhost:$UI_TEST_PORT/waitForIdle"
-curl -s "http://localhost:$UI_TEST_PORT/onNodeWithTag/login_button/performClick"
-sleep 3
-curl -s "http://localhost:$UI_TEST_PORT/waitForIdle"
 ```
 
 ## Interacting With the UI
