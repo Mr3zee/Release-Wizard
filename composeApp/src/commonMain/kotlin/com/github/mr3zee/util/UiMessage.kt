@@ -30,6 +30,7 @@ sealed interface UiMessage {
     data class LockReacquireFailed(val detail: String) : UiMessage
 
     // Profile
+    data object UsernameTaken : UiMessage
     data object UsernameChanged : UiMessage
     data object PasswordChanged : UiMessage
     data object PasswordsMismatch : UiMessage
@@ -54,6 +55,7 @@ fun UiMessage.resolve(): String = when (this) {
     is UiMessage.ConnectionTestFailed -> packStringResource(Res.string.connections_test_failed, detail)
     is UiMessage.JoinRequestSubmitted -> packStringResource(Res.string.teams_join_request_submitted)
     is UiMessage.LockReacquireFailed -> packStringResource(Res.string.editor_lock_reacquire_failed, detail)
+    is UiMessage.UsernameTaken -> packStringResource(Res.string.error_username_taken)
     is UiMessage.UsernameChanged -> packStringResource(Res.string.profile_username_changed)
     is UiMessage.PasswordChanged -> packStringResource(Res.string.profile_password_changed)
     is UiMessage.PasswordsMismatch -> packStringResource(Res.string.profile_passwords_mismatch)

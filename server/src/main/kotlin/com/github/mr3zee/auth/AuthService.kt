@@ -107,18 +107,24 @@ class DatabaseAuthService(private val db: Database) : AuthService {
         createdAt = this[UserTable.createdAt].toEpochMilliseconds(),
     )
 
-    override suspend fun validate(username: String, password: String): User? = dbQuery {
-        val row = UserTable.selectAll()
-            .where { UserTable.username eq username }
-            .singleOrNull() ?: run {
+    override suspend fun validate(username: String, password: String): User? {
+        // DB-H1: Read user row in a short transaction, then verify hash outside to avoid
+        // holding a DB connection during the ~400ms Argon2 computation.
+        val row = dbQuery {
+            UserTable.selectAll()
+                .where { UserTable.username eq username }
+                .singleOrNull()
+        }
+        if (row == null) {
             // Prevent timing-based user enumeration by performing a dummy verification
-            argon2.verify(DUMMY_HASH, password.toCharArray())
+            withContext(Dispatchers.IO) { argon2.verify(DUMMY_HASH, password.toCharArray()) }
             // AUTH-L2: Uniform log message for all login failures to prevent user enumeration via logs
             log.warn("Login failed for user '{}'", username)
-            return@dbQuery null
+            return null
         }
         val hash = row[UserTable.passwordHash]
-        if (argon2.verify(hash, password.toCharArray())) {
+        val valid = withContext(Dispatchers.IO) { argon2.verify(hash, password.toCharArray()) }
+        return if (valid) {
             log.info("Login succeeded for user '{}'", username)
             row.toUser()
         } else {
@@ -316,12 +322,20 @@ class DatabaseAuthService(private val db: Database) : AuthService {
             argon2.hash(ARGON2_ITERATIONS, ARGON2_MEMORY_KB, ARGON2_PARALLELISM, newPassword.toCharArray())
         }
 
-        dbQuery {
+        // DB-H2: Use conditional UPDATE to prevent TOCTOU race — only update if the hash
+        // hasn't been changed by another concurrent request (e.g., password reset).
+        val updated = dbQuery {
             val now = Clock.System.now()
-            UserTable.update({ UserTable.id eq UUID.fromString(userId.value) }) {
+            UserTable.update({
+                (UserTable.id eq UUID.fromString(userId.value)) and
+                    (UserTable.passwordHash eq storedHash)
+            }) {
                 it[UserTable.passwordHash] = newHash
                 it[UserTable.passwordChangedAt] = now
             }
+        }
+        if (updated == 0) {
+            return Result.failure(IllegalArgumentException("INVALID_PASSWORD"))
         }
 
         log.info("Password changed for user '{}'", userId.value)

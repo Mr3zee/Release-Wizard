@@ -13,7 +13,9 @@ import com.github.mr3zee.keyboard.KeyboardShortcutsOverlay
 import com.github.mr3zee.keyboard.LocalShortcutActionsSetter
 import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.keyboard.handleGlobalKeyEvent
+import com.github.mr3zee.i18n.packStringResource
 import com.github.mr3zee.api.AuthApiClient
+import releasewizard.composeapp.generated.resources.*
 import com.github.mr3zee.api.ConnectionApiClient
 import com.github.mr3zee.api.MavenTriggerApiClient
 import com.github.mr3zee.api.ProjectApiClient
@@ -80,27 +82,29 @@ fun App() {
     val connectionsViewModel = remember { ConnectionsViewModel(connectionApiClient, activeTeamId) }
     val releaseListViewModel = remember { ReleaseListViewModel(releaseApiClient, projectApiClient, activeTeamId) }
 
-    var passwordPolicyHint by remember { mutableStateOf<String?>(null) }
+    // Fetch password policy from server, build localized hint in composable context
+    var passwordPolicy by remember { mutableStateOf<com.github.mr3zee.api.PasswordPolicyResponse?>(null) }
     LaunchedEffect(Unit) {
         try {
-            val policy = authApiClient.getPasswordPolicy()
-            val parts = mutableListOf("At least ${policy.minLength} characters")
-            val requirements = mutableListOf<String>()
-            if (policy.requireUppercase) requirements += "an uppercase letter"
-            if (policy.requireDigit) requirements += "a number"
-            if (policy.requireSpecial) requirements += "a special character"
-            val reqText = when (requirements.size) {
-                0 -> ""
-                1 -> requirements[0]
-                else -> requirements.dropLast(1).joinToString(", ") + ", and " + requirements.last()
-            }
-            if (reqText.isNotEmpty()) parts += "including $reqText"
-            passwordPolicyHint = parts.joinToString(", ")
-        } catch (e: Exception) {
-            // Fallback if server unreachable — log for debugging
-            println("Failed to fetch password policy: ${e.message}")
-            passwordPolicyHint = null
+            passwordPolicy = authApiClient.getPasswordPolicy()
+        } catch (_: Exception) {
+            // Fallback to static string resource if server unreachable
+            passwordPolicy = null
         }
+    }
+    val passwordPolicyHint = passwordPolicy?.let { policy ->
+        val parts = mutableListOf(packStringResource(Res.string.auth_policy_min_length, policy.minLength))
+        val requirements = mutableListOf<String>()
+        if (policy.requireUppercase) requirements += packStringResource(Res.string.auth_policy_require_uppercase)
+        if (policy.requireDigit) requirements += packStringResource(Res.string.auth_policy_require_digit)
+        if (policy.requireSpecial) requirements += packStringResource(Res.string.auth_policy_require_special)
+        val reqText = when (requirements.size) {
+            0 -> ""
+            1 -> requirements[0]
+            else -> requirements.dropLast(1).joinToString(", ") + ", and " + requirements.last()
+        }
+        if (reqText.isNotEmpty()) parts += packStringResource(Res.string.auth_policy_including, reqText)
+        parts.joinToString(", ")
     }
 
     val profileViewModel = remember { ProfileViewModel(authApiClient) }
@@ -268,6 +272,7 @@ fun App() {
                         AppShell(
                             sidebarVisible = currentScreen.isTopLevel(),
                             currentSection = currentScreen.toNavSection(),
+                            isProfileActive = currentScreen is Screen.Profile || currentScreen is Screen.AdminUsers,
                             onSectionClick = { section ->
                                 if (!shortcutActionsState.value.hasDialogOpen) {
                                     navController.navigateToSection(section)

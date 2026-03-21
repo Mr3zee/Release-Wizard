@@ -1,6 +1,7 @@
 package com.github.mr3zee.auth
 
 import com.github.mr3zee.PasswordPolicyConfig
+import com.github.mr3zee.WebhookConfig
 import com.github.mr3zee.api.*
 import com.github.mr3zee.model.UserRole
 import com.github.mr3zee.model.UserId
@@ -18,7 +19,6 @@ import org.koin.ktor.ext.inject
 import org.slf4j.LoggerFactory
 import java.security.SecureRandom
 import kotlin.time.Clock
-import kotlin.time.Duration.Companion.hours
 
 private val log = LoggerFactory.getLogger("com.github.mr3zee.auth.AuthRoutes")
 
@@ -29,6 +29,7 @@ fun Route.authRoutes() {
     val teamRepository by inject<TeamRepository>()
     val passwordResetService by inject<PasswordResetService>()
     val passwordPolicyConfig by inject<PasswordPolicyConfig>()
+    val webhookConfig by inject<WebhookConfig>()
 
     // Public: password policy (no auth needed, clients render requirements dynamically)
     rateLimit(RateLimitName("authenticated-api")) {
@@ -54,6 +55,7 @@ fun Route.authRoutes() {
             val lockRemaining = accountLockout.checkLocked(request.username)
             if (lockRemaining != null) {
                 log.warn("Login blocked for '{}': account locked for {}", request.username, lockRemaining)
+                call.response.header(HttpHeaders.RetryAfter, lockRemaining.inWholeSeconds.toString())
                 call.respond(
                     HttpStatusCode.TooManyRequests,
                     ErrorResponse(
@@ -92,7 +94,8 @@ fun Route.authRoutes() {
 
         post(ApiRoutes.Auth.REGISTER) {
             val request = call.receive<RegisterRequest>()
-            if (request.username.isBlank()) {
+            val trimmedUsername = request.username.trim()
+            if (trimmedUsername.isBlank()) {
                 log.warn("Registration rejected: blank username")
                 call.respond(
                     HttpStatusCode.BadRequest,
@@ -100,7 +103,7 @@ fun Route.authRoutes() {
                 )
                 return@post
             }
-            if (request.username.length > 64) {
+            if (trimmedUsername.length > 64) {
                 log.warn("Registration rejected: username too long")
                 call.respond(
                     HttpStatusCode.BadRequest,
@@ -110,14 +113,14 @@ fun Route.authRoutes() {
             }
             val passwordErrors = passwordValidator.validate(request.password)
             if (passwordErrors.isNotEmpty()) {
-                log.warn("Registration rejected for '{}': password validation failed", request.username)
+                log.warn("Registration rejected for '{}': password validation failed", trimmedUsername)
                 call.respond(
                     HttpStatusCode.BadRequest,
                     ErrorResponse(error = passwordErrors.joinToString("; "), code = "VALIDATION_ERROR"),
                 )
                 return@post
             }
-            val user = authService.register(request.username, request.password)
+            val user = authService.register(trimmedUsername, request.password)
             if (user != null) {
                 val now = Clock.System.now().toEpochMilliseconds()
                 val csrfToken = generateCsrfToken()
@@ -136,7 +139,7 @@ fun Route.authRoutes() {
                 log.info("User '{}' registered with role {}", user.username, user.role)
                 call.respond(HttpStatusCode.Created, UserInfo(username = user.username, id = user.id.value, role = user.role))
             } else {
-                log.warn("Registration rejected: username '{}' already taken", request.username)
+                log.warn("Registration rejected: username '{}' already taken", trimmedUsername)
                 call.respond(
                     HttpStatusCode.BadRequest,
                     ErrorResponse(error = "Registration failed", code = "REGISTRATION_FAILED"),
@@ -264,6 +267,15 @@ fun Route.authRoutes() {
                 return@put
             }
 
+            // Reject same-password change — avoids unnecessary hashing and misleading passwordChangedAt update
+            if (request.currentPassword == request.newPassword) {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse(error = "New password must be different from current password", code = "SAME_PASSWORD"),
+                )
+                return@put
+            }
+
             val result = authService.changePassword(
                 UserId(session.userId),
                 request.currentPassword,
@@ -343,9 +355,9 @@ fun Route.authRoutes() {
             )
             result.fold(
                 onSuccess = { generated ->
-                    val origin = call.request.headers["Origin"]
-                        ?: "${call.request.local.scheme}://${call.request.local.serverHost}:${call.request.local.serverPort}"
-                    val resetUrl = "$origin/reset-password/${generated.rawToken}"
+                    // SEC-M1: Use server-side configured base URL instead of attacker-controllable Origin header
+                    val baseUrl = webhookConfig.baseUrl.trimEnd('/')
+                    val resetUrl = "$baseUrl/reset-password/${generated.rawToken}"
                     call.respond(PasswordResetLinkResponse(token = generated.rawToken, resetUrl = resetUrl, expiresAt = generated.expiresAtMillis))
                 },
                 onFailure = { error ->
@@ -381,7 +393,8 @@ fun Route.authRoutes() {
         put(ApiRoutes.Auth.USERS + "/{userId}/role") {
             val session = call.userSession()
             requireAdmin(call, session) ?: return@put
-            val userId = call.parameters["userId"] ?: throw IllegalArgumentException("Missing userId")
+            val userId = call.parameters["userId"]
+                ?: return@put call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Missing userId", code = "BAD_REQUEST"))
             val request = call.receive<UpdateUserRoleRequest>()
             val result = authService.safeUpdateUserRole(UserId(userId), request.role)
             result.fold(

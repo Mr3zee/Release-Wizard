@@ -182,7 +182,6 @@ fun LoginScreen(
                         value = confirmPassword,
                         onValueChange = { confirmPassword = it; viewModel.dismissError() },
                         label = packStringResource(Res.string.auth_confirm_password),
-                        placeholder = packStringResource(Res.string.auth_confirm_password),
                         singleLine = true,
                         isError = confirmPasswordMismatch,
                         visualTransformation = if (showConfirmPassword) VisualTransformation.None else PasswordVisualTransformation(),

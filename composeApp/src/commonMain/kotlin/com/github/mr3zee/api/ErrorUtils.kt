@@ -46,6 +46,7 @@ suspend fun Exception.toUiMessage(): UiMessage {
                 when (errorResponse.code) {
                     "INVALID_CREDENTIALS" -> UiMessage.InvalidCredentials
                     "REGISTRATION_FAILED" -> UiMessage.RegistrationFailed
+                    "USERNAME_TAKEN" -> UiMessage.UsernameTaken
                     else -> if (errorResponse.error.isNotBlank()) {
                         UiMessage.Raw(errorResponse.error)
                     } else {

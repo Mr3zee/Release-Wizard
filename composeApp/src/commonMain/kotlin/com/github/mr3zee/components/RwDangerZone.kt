@@ -38,8 +38,8 @@ fun RwDangerZone(
             .fillMaxWidth()
             .testTag(testTag)
             .clip(AppShapes.md)
-            .background(errorColor.copy(alpha = 0.08f), AppShapes.md)
-            .border(1.dp, errorColor.copy(alpha = 0.3f), AppShapes.md)
+            .background(errorColor.copy(alpha = 0.12f), AppShapes.md)
+            .border(1.dp, errorColor.copy(alpha = 0.4f), AppShapes.md)
             .padding(Spacing.lg),
     ) {
         Text(

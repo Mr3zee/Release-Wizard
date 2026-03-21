@@ -77,7 +77,15 @@ fun ResetPasswordScreen(
         when {
             // Validating token
             isValidating -> {
-                CircularProgressIndicator()
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator()
+                    Spacer(modifier = Modifier.height(Spacing.md))
+                    Text(
+                        packStringResource(Res.string.reset_password_validating),
+                        style = AppTypography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
 
             // Token invalid
@@ -85,7 +93,8 @@ fun ResetPasswordScreen(
                 RwCard(
                     modifier = Modifier
                         .widthIn(max = 400.dp)
-                        .padding(Spacing.lg),
+                        .padding(Spacing.lg)
+                        .testTag("reset_password_invalid"),
                 ) {
                     Column(
                         modifier = Modifier.padding(Spacing.xxl),
@@ -192,7 +201,8 @@ fun ResetPasswordScreen(
                                 ) {
                                     RwIconButton(
                                         onClick = { showNewPassword = !showNewPassword },
-                                        modifier = Modifier.focusProperties { canFocus = false },
+                                        modifier = Modifier.focusProperties { canFocus = false }
+                                            .testTag("reset_password_new_toggle"),
                                     ) {
                                         Icon(
                                             if (showNewPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
@@ -228,7 +238,8 @@ fun ResetPasswordScreen(
                                 ) {
                                     RwIconButton(
                                         onClick = { showConfirmPassword = !showConfirmPassword },
-                                        modifier = Modifier.focusProperties { canFocus = false },
+                                        modifier = Modifier.focusProperties { canFocus = false }
+                                            .testTag("reset_password_confirm_toggle"),
                                     ) {
                                         Icon(
                                             if (showConfirmPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,

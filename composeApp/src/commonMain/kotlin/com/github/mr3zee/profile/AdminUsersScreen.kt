@@ -201,24 +201,22 @@ fun AdminUsersScreen(
 
                                 if (generatedLink != null) {
                                     Spacer(modifier = Modifier.height(Spacing.sm))
+                                    Text(
+                                        packStringResource(Res.string.admin_users_reset_link_label),
+                                        style = AppTypography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
                                     ) {
-                                        Text(
-                                            packStringResource(Res.string.admin_users_reset_link_label),
-                                            style = AppTypography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                        SelectionContainer {
+                                        SelectionContainer(modifier = Modifier.weight(1f)) {
                                             Text(
                                                 generatedLink,
                                                 style = AppTypography.bodySmall,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis,
-                                                modifier = Modifier
-                                                    .weight(1f, fill = false)
-                                                    .testTag("admin_reset_link_value_$userId"),
+                                                modifier = Modifier.testTag("admin_reset_link_value_$userId"),
                                             )
                                         }
                                         RwButton(

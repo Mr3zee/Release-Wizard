@@ -135,35 +135,38 @@ class DatabasePasswordResetService(private val db: Database) : PasswordResetServ
         val tokenHash = hashToken(rawToken)
         val now = Clock.System.now()
 
-        return dbQuery {
-            // Find and validate the token
-            val row = PasswordResetTokenTable.selectAll()
-                .where {
-                    (PasswordResetTokenTable.tokenHash eq tokenHash) and
-                        PasswordResetTokenTable.usedAt.isNull() and
-                        (PasswordResetTokenTable.expiresAt greater now)
+        // DB-H3: Use SERIALIZABLE isolation to atomically consume token + update password
+        return withContext(Dispatchers.IO) {
+            suspendTransaction(db, transactionIsolation = java.sql.Connection.TRANSACTION_SERIALIZABLE) {
+                // Find and validate the token
+                val row = PasswordResetTokenTable.selectAll()
+                    .where {
+                        (PasswordResetTokenTable.tokenHash eq tokenHash) and
+                            PasswordResetTokenTable.usedAt.isNull() and
+                            (PasswordResetTokenTable.expiresAt greater now)
+                    }
+                    .forUpdate()
+                    .singleOrNull()
+                    ?: return@suspendTransaction Result.failure(IllegalArgumentException("Invalid or expired token"))
+
+                val targetUserId = row[PasswordResetTokenTable.userId].value
+
+                // Mark token as used
+                PasswordResetTokenTable.update(
+                    where = { PasswordResetTokenTable.id eq row[PasswordResetTokenTable.id].value }
+                ) {
+                    it[PasswordResetTokenTable.usedAt] = now
                 }
-                .forUpdate()
-                .singleOrNull()
-                ?: return@dbQuery Result.failure(IllegalArgumentException("Invalid or expired token"))
 
-            val targetUserId = row[PasswordResetTokenTable.userId].value
+                // Update user's password and passwordChangedAt
+                UserTable.update({ UserTable.id eq targetUserId }) {
+                    it[UserTable.passwordHash] = newPasswordHash
+                    it[UserTable.passwordChangedAt] = now
+                }
 
-            // Mark token as used
-            PasswordResetTokenTable.update(
-                where = { PasswordResetTokenTable.id eq row[PasswordResetTokenTable.id].value }
-            ) {
-                it[PasswordResetTokenTable.usedAt] = now
+                log.info("Password reset token consumed for user '{}'", targetUserId)
+                Result.success(UserId(targetUserId.toString()))
             }
-
-            // Update user's password and passwordChangedAt
-            UserTable.update({ UserTable.id eq targetUserId }) {
-                it[UserTable.passwordHash] = newPasswordHash
-                it[UserTable.passwordChangedAt] = now
-            }
-
-            log.info("Password reset token consumed for user '{}'", targetUserId)
-            Result.success(UserId(targetUserId.toString()))
         }
     }
 }

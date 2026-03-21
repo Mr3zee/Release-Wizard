@@ -635,6 +635,89 @@ class ProfileRoutesTest {
         assertTrue(cacheControl.contains("max-age=3600"), "Expected max-age=3600 in Cache-Control header")
     }
 
+    // ── Session Invalidation After Password Change ─────────────────────
+
+    @Test
+    fun `session invalidated after password change`() = testApplication {
+        // Use refresh threshold of 0 so every request triggers session refresh
+        application { testModule(authConfig = testAuthConfig().copy(sessionRefreshThresholdSeconds = 0)) }
+        val client1 = jsonClient()
+        val client2 = jsonClient()
+
+        // Both clients login as the same user
+        client1.login("admin", "adminpass")
+        client2.login("admin", "adminpass")
+
+        // Verify client2 has a valid session
+        val meResp1 = client2.get(ApiRoutes.Auth.ME)
+        assertEquals(HttpStatusCode.OK, meResp1.status)
+
+        // Client1 changes the password
+        val changeResp = client1.put(ApiRoutes.Auth.CHANGE_PASSWORD) {
+            contentType(ContentType.Application.Json)
+            setBody(ChangePasswordRequest(currentPassword = "adminpass", newPassword = "newadminpass"))
+        }
+        assertEquals(HttpStatusCode.OK, changeResp.status)
+
+        // Client2's session should be invalidated (predates password change)
+        val meResp2 = client2.get(ApiRoutes.Auth.ME)
+        assertEquals(HttpStatusCode.Unauthorized, meResp2.status)
+    }
+
+    @Test
+    fun `session invalidated after password reset`() = testApplication {
+        // Use refresh threshold of 0 so every request triggers session refresh
+        application { testModule(authConfig = testAuthConfig().copy(sessionRefreshThresholdSeconds = 0)) }
+        val adminClient = jsonClient()
+        val userClient = jsonClient()
+
+        // Admin and user login
+        adminClient.login("admin", "adminpass")
+        userClient.login("user1", "userpass")
+
+        // Verify user has a valid session
+        val meResp1 = userClient.get(ApiRoutes.Auth.ME)
+        assertEquals(HttpStatusCode.OK, meResp1.status)
+
+        // Admin generates a reset token for the user
+        val userId = userClient.getUserId()
+        val resetResp = adminClient.post(ApiRoutes.Auth.GENERATE_PASSWORD_RESET) {
+            contentType(ContentType.Application.Json)
+            setBody(GeneratePasswordResetRequest(userId = userId))
+        }
+        assertEquals(HttpStatusCode.OK, resetResp.status)
+        val resetLink = resetResp.body<PasswordResetLinkResponse>()
+
+        // Use the reset token to change the user's password (unauthenticated)
+        val unauthClient = jsonClient()
+        val consumeResp = unauthClient.post(ApiRoutes.Auth.RESET_PASSWORD) {
+            contentType(ContentType.Application.Json)
+            setBody(ResetPasswordRequest(token = resetLink.token, newPassword = "resetpassword"))
+        }
+        assertEquals(HttpStatusCode.OK, consumeResp.status)
+
+        // User's old session should be invalidated
+        val meResp2 = userClient.get(ApiRoutes.Auth.ME)
+        assertEquals(HttpStatusCode.Unauthorized, meResp2.status)
+    }
+
+    // ── Same Password Rejected ──────────────────────────────────────────
+
+    @Test
+    fun `change password to same value returns SAME_PASSWORD`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        client.login("admin", "adminpass")
+
+        val response = client.put(ApiRoutes.Auth.CHANGE_PASSWORD) {
+            contentType(ContentType.Application.Json)
+            setBody(ChangePasswordRequest(currentPassword = "adminpass", newPassword = "adminpass"))
+        }
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        val error = response.body<ErrorResponse>()
+        assertEquals("SAME_PASSWORD", error.code)
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────
 
     /**

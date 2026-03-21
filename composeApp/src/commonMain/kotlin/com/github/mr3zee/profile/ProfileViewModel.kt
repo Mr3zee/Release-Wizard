@@ -32,6 +32,9 @@ class ProfileViewModel(
     private val _passwordChangeSuccess = MutableStateFlow(false)
     val passwordChangeSuccess: StateFlow<Boolean> = _passwordChangeSuccess
 
+    private val _accountDeleteSuccess = MutableStateFlow(false)
+    val accountDeleteSuccess: StateFlow<Boolean> = _accountDeleteSuccess
+
     /** Callback set from App.kt to propagate username changes to AuthViewModel. */
     var onUsernameChanged: ((UserInfo) -> Unit)? = null
 
@@ -89,13 +92,13 @@ class ProfileViewModel(
         }
     }
 
-    fun deleteAccount(confirmUsername: String, currentPassword: String, onDeleted: () -> Unit) {
+    fun deleteAccount(confirmUsername: String, currentPassword: String) {
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
             try {
                 authApiClient.deleteAccount(confirmUsername, currentPassword)
-                onDeleted()
+                _accountDeleteSuccess.value = true
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -118,5 +121,9 @@ class ProfileViewModel(
 
     fun consumePasswordChangeSuccess() {
         _passwordChangeSuccess.value = false
+    }
+
+    fun consumeAccountDeleteSuccess() {
+        _accountDeleteSuccess.value = false
     }
 }

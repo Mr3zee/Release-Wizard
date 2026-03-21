@@ -91,7 +91,6 @@ fun ProfileScreen(
     onNavigateToAdminUsers: () -> Unit,
     onAccountDeleted: () -> Unit,
 ) {
-    val passwordPolicyHint = LocalPasswordPolicyHint.current
     val userInfo by viewModel.userInfo.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
@@ -167,6 +166,23 @@ fun ProfileScreen(
             showNewPassword = false
             showConfirmNewPassword = false
             viewModel.consumePasswordChangeSuccess()
+        }
+    }
+
+    // Handle delete account success via StateFlow (lifecycle-safe)
+    val accountDeleteSuccess by viewModel.accountDeleteSuccess.collectAsState()
+    LaunchedEffect(accountDeleteSuccess) {
+        if (accountDeleteSuccess) {
+            deleteState = DeleteState.Idle
+            viewModel.consumeAccountDeleteSuccess()
+            onAccountDeleted()
+        }
+    }
+
+    // Reset delete state on error (so user can try again) — hoisted outside conditional composition
+    LaunchedEffect(error) {
+        if (error != null && deleteState is DeleteState.Deleting) {
+            deleteState = DeleteState.EnteringCredentials
         }
     }
 
@@ -445,7 +461,7 @@ fun ProfileScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                packStringResource(Res.string.profile_delete_account),
+                                packStringResource(Res.string.profile_delete_account_description),
                                 style = AppTypography.body,
                             )
                             RwButton(
@@ -486,10 +502,7 @@ fun ProfileScreen(
                         expectedUsername = userInfo?.username ?: "",
                         onSubmit = {
                             deleteState = DeleteState.Deleting
-                            viewModel.deleteAccount(deleteUsername.trim(), deletePassword) {
-                                deleteState = DeleteState.Idle
-                                onAccountDeleted()
-                            }
+                            viewModel.deleteAccount(deleteUsername.trim(), deletePassword)
                         },
                         onDismiss = {
                             deleteState = DeleteState.Idle
@@ -510,13 +523,6 @@ fun ProfileScreen(
                         ) {
                             CircularProgressIndicator(modifier = Modifier.size(24.dp))
                         }
-                    }
-                }
-
-                // Reset delete state on error (so user can try again)
-                LaunchedEffect(error) {
-                    if (error != null && deleteState is DeleteState.Deleting) {
-                        deleteState = DeleteState.EnteringCredentials
                     }
                 }
 
@@ -616,7 +622,7 @@ private fun ChangeUsernameForm(
                 if (isSubmitting) {
                     CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                 } else {
-                    Text(packStringResource(Res.string.profile_submit))
+                    Text(packStringResource(Res.string.profile_submit_username))
                 }
             }
         },
@@ -687,7 +693,7 @@ private fun ChangePasswordForm(
                 if (isSubmitting) {
                     CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                 } else {
-                    Text(packStringResource(Res.string.profile_submit))
+                    Text(packStringResource(Res.string.profile_submit_password))
                 }
             }
         },
@@ -779,6 +785,11 @@ private fun DeleteCredentialsForm(
             }
         },
     ) {
+        Text(
+            packStringResource(Res.string.profile_delete_warning_brief),
+            style = AppTypography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+        )
         RwTextField(
             value = username,
             onValueChange = onUsernameChange,
