@@ -25,6 +25,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.api.CreateMavenTriggerRequest
@@ -578,6 +580,7 @@ private fun CreateScheduleInlineForm(
             Box(
                 modifier = Modifier
                     .matchParentSize()
+                    .pointerHoverIcon(PointerIcon.Hand)
                     .testTag("schedule_preset_selector_click")
                     .clickable { presetsExpanded = !presetsExpanded },
             )

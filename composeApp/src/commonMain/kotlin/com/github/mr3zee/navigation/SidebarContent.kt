@@ -11,8 +11,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -45,6 +45,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -270,12 +272,17 @@ fun SidebarSettingsContent(
             animationSpec = tween(200),
         )
 
-        val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+        val focusManager = LocalFocusManager.current
         Column(modifier = Modifier.padding(horizontal = Spacing.xs)) {
             // Settings header — single clickable row with chevron inside
             val settingsInteractionSource = remember { MutableInteractionSource() }
             val settingsHovered by settingsInteractionSource.collectIsHoveredAsState()
-            val settingsBgColor = if (settingsHovered) colors.buttonGhostHover else Color.Transparent
+            val settingsPressed by settingsInteractionSource.collectIsPressedAsState()
+            val settingsBgColor = when {
+                settingsPressed -> colors.buttonGhostPress
+                settingsHovered -> colors.buttonGhostHover
+                else -> Color.Transparent
+            }
 
             UnstyledButton(
                 onClick = {
@@ -313,7 +320,8 @@ fun SidebarSettingsContent(
                     )
                     Icon(
                         Icons.Default.ExpandMore,
-                        contentDescription = null,
+                        contentDescription = if (expanded) packStringResource(Res.string.sidebar_settings_collapse)
+                            else packStringResource(Res.string.sidebar_settings_expand),
                         tint = colors.chromeTextTertiary,
                         modifier = Modifier
                             .size(18.dp)
@@ -482,6 +490,7 @@ private fun SettingsSubItem(
     UnstyledButton(
         onClick = onClick,
         interactionSource = interactionSource,
+        role = Role.Button,
         modifier = Modifier
             .fillMaxWidth()
             .pointerHoverIcon(PointerIcon.Hand, overrideDescendants = true)

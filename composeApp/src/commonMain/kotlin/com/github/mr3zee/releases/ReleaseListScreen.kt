@@ -46,6 +46,8 @@ import com.github.mr3zee.model.ReleaseStatus
 import com.github.mr3zee.model.isTerminal
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.github.mr3zee.model.ProjectTemplate
@@ -523,6 +525,7 @@ private fun StartReleaseInlineForm(
                 Box(
                     modifier = Modifier
                         .matchParentSize()
+                        .pointerHoverIcon(PointerIcon.Hand)
                         .clickable { expanded = !expanded },
                 )
                 DropdownMenu(

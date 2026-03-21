@@ -39,7 +39,7 @@ fun RwDropdownMenuItem(
         text = text,
         onClick = onClick,
         modifier = modifier
-            .pointerHoverIcon(PointerIcon.Hand, overrideDescendants = true)
+            .then(if (enabled) Modifier.pointerHoverIcon(PointerIcon.Hand, overrideDescendants = true) else Modifier)
             .background(bg),
         leadingIcon = leadingIcon,
         trailingIcon = trailingIcon,

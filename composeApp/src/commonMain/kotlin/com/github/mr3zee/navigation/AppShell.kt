@@ -40,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
@@ -99,6 +100,7 @@ fun AppShell(
                     modifier = Modifier
                         .width(sidebarWidth)
                         .fillMaxHeight()
+                        .clipToBounds()
                         .background(colors.chromeSurface)
                         .drawBehind {
                             // Right border
@@ -134,7 +136,7 @@ fun AppShell(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = Spacing.md),
+                                .padding(vertical = Spacing.sm),
                             contentAlignment = Alignment.Center,
                         ) {
                             AppLogo(modifier = Modifier.size(24.dp))
@@ -233,7 +235,7 @@ fun AppShell(
                             } else {
                                 packStringResource(Res.string.sidebar_collapse)
                             }
-                            val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+                            val focusManager = LocalFocusManager.current
                             RwTooltip(tooltip = tooltipText) {
                                 RwIconButton(
                                     onClick = {

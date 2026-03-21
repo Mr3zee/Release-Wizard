@@ -312,8 +312,8 @@ val DarkAppColors = AppColors(
     statusStopped = Color(0xFF5EEAD4),
 
     // Sidebar — opaque tokens tuned for dark theme, WCAG AA compliant
-    // Tooltip — dark bg in dark theme (not inverted)
-    tooltipBg = Color(0xFF2D3140),
+    // Tooltip — brighter than sidebar bg (#1E2230) for visual distinction
+    tooltipBg = Color(0xFF3A3F50),
     tooltipText = Color(0xFFE5E7EB),
 
     sidebarActiveBg = Color(0xFF1D3A5C),       // darker to increase contrast

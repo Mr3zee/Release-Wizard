@@ -301,6 +301,13 @@ fun App() {
                     }
                     user != null && user?.teams?.isNotEmpty() == true && currentTeamId == null -> {
                         // Waiting for team auto-selection from LaunchedEffect(user)
+                        LaunchedEffect(Unit) {
+                            kotlinx.coroutines.delay(3000L)
+                            // If still no team selected after 3s, something went wrong — show teams list
+                            if (activeTeamId.value == null) {
+                                navController.resetTo(Screen.TeamList)
+                            }
+                        }
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center,

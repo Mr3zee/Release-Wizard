@@ -105,7 +105,7 @@ fun RwButton(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier
-            .pointerHoverIcon(PointerIcon.Hand, overrideDescendants = true)
+            .then(if (enabled) Modifier.pointerHoverIcon(PointerIcon.Hand, overrideDescendants = true) else Modifier)
             .focusRing(cornerRadius = 8.dp, ringColor = focusRingColor, interactionSource = interactionSource)
             .scale(scale)
             .alpha(if (enabled || variant == RwButtonVariant.Primary) 1f else 0.6f),
@@ -156,7 +156,7 @@ fun RwIconButton(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier
-            .pointerHoverIcon(PointerIcon.Hand, overrideDescendants = true)
+            .then(if (enabled) Modifier.pointerHoverIcon(PointerIcon.Hand, overrideDescendants = true) else Modifier)
             .focusRing(cornerRadius = 8.dp, interactionSource = interactionSource)
             .size(44.dp)
             .alpha(if (enabled) 1f else 0.6f),

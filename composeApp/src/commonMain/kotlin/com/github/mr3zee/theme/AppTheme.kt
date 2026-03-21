@@ -1,6 +1,9 @@
 package com.github.mr3zee.theme
 
+import androidx.compose.foundation.LocalScrollbarStyle
+import androidx.compose.foundation.ScrollbarStyle
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.MaterialTheme
@@ -10,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import com.github.mr3zee.i18n.LanguagePack
 import com.github.mr3zee.i18n.LanguagePackRegistry
 import com.github.mr3zee.i18n.LocalLanguagePackData
@@ -101,9 +105,21 @@ fun AppTheme(
     val colorScheme = if (isDark) AppDarkColorScheme else AppLightColorScheme
     val packData = remember(languagePack) { LanguagePackRegistry.getData(languagePack) }
 
+    val scrollbarStyle = remember(appColors) {
+        ScrollbarStyle(
+            minimalHeight = 48.dp,
+            thickness = 8.dp,
+            shape = RoundedCornerShape(4.dp),
+            hoverDurationMillis = 300,
+            unhoverColor = appColors.chromeTextTertiary.copy(alpha = 0.3f),
+            hoverColor = appColors.chromeTextTertiary.copy(alpha = 0.6f),
+        )
+    }
+
     CompositionLocalProvider(
         LocalAppColors provides appColors,
         LocalLanguagePackData provides packData,
+        LocalScrollbarStyle provides scrollbarStyle,
         // Suppress M3 ripple globally — Rw* components use custom hover/press indication
         LocalRippleConfiguration provides null,
     ) {
