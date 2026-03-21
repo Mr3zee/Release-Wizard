@@ -529,6 +529,7 @@ object HelldiversPack {
             "teams_remove" to "Discharge",
             "teams_remove_member_confirmation" to $$"Discharge %1$s from active duty? They will lose access to all battalion campaigns and will need new enlistment papers to rejoin.",
             "teams_request_to_join" to "Volunteer for Duty",
+            "teams_accept_invite" to "Report for Duty",
             "teams_revoke_invite" to "Revoke Orders",
             "teams_revoke_invite_confirmation" to $$"Revoke enlistment orders for %1$s?",
             "teams_role_collaborator" to "Helldiver",

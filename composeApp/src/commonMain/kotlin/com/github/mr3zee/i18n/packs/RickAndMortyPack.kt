@@ -527,6 +527,7 @@ object RickAndMortyPack {
             "teams_remove" to "Remove",
             "teams_remove_member_confirmation" to $$"Remove %1$s, Morty? They'll *burp* lose access to the team's projects. Harsh.",
             "teams_request_to_join" to "Request to Join, *burp*",
+            "teams_accept_invite" to "Accept, Morty",
             "teams_revoke_invite" to "Revoke",
             "teams_revoke_invite_confirmation" to $$"Revoke invite for %1$s? Cold, *burp* Morty.",
             "teams_role_collaborator" to "Collaborator",

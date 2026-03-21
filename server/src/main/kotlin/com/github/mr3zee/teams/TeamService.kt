@@ -140,18 +140,18 @@ class DefaultTeamService(
     override suspend fun inviteUser(teamId: TeamId, request: CreateInviteRequest, session: UserSession): TeamInvite {
         teamAccessService.checkTeamLead(teamId, session)
         teamRepository.findById(teamId) ?: throw NotFoundException("Team not found")
-        // TEAM-L2: Use generic error message to prevent username enumeration via invite flow
         val user = authService.getUserByUsername(request.username)
-            ?: throw NotFoundException("Unable to invite user")
+            ?: throw NotFoundException("User not found")
         val userId = user.id.value
-        // TEAM-L2: Use generic message to prevent username enumeration
-        if (teamAccessService.isMember(teamId, userId)) {
-            throw IllegalArgumentException("Unable to invite user")
+        if (userId == session.userId) {
+            throw IllegalArgumentException("Cannot invite yourself")
         }
-        // Check no existing pending invite
+        if (teamAccessService.isMember(teamId, userId)) {
+            throw IllegalArgumentException("User is already a member")
+        }
         val existing = teamRepository.findExistingPendingInvite(teamId, userId)
         if (existing != null) {
-            throw IllegalArgumentException("User already has a pending invite")
+            throw IllegalArgumentException("Invite already sent")
         }
         val invite = teamRepository.createInvite(teamId, userId, session.userId)
         auditService.log(teamId, session, AuditAction.INVITE_SENT, AuditTargetType.USER, userId, "Invited user '${request.username}' to team")

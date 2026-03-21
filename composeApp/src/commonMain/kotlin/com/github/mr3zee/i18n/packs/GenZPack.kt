@@ -527,6 +527,7 @@ object GenZPack {
             "teams_remove" to "Remove",
             "teams_remove_member_confirmation" to $$"Fr fr you wanna remove %1$s? They'll lose access to the squad's projects bestie.",
             "teams_request_to_join" to "Request to Join",
+            "teams_accept_invite" to "Accept invite no cap",
             "teams_revoke_invite" to "Revoke",
             "teams_revoke_invite_confirmation" to $$"Revoke invite for %1$s? That's lowkey harsh bestie",
             "teams_role_collaborator" to "Collaborator",

@@ -525,6 +525,7 @@ object EmojisPack {
             "teams_remove" to "\ud83d\udc65\u274c",
             "teams_remove_member_confirmation" to $$"\ud83d\udc65\u274c %1$s \ud83d\udcc1\u274c\ud83d\udd11\ud83c\udd95\u2753",
             "teams_request_to_join" to "\ud83d\udce8\ud83d\udc65",
+            "teams_accept_invite" to "\u2709\ufe0f\u2705",
             "teams_revoke_invite" to "\u2709\ufe0f\u274c",
             "teams_revoke_invite_confirmation" to $$"\u2709\ufe0f\u274c %1$s \u2753",
             "teams_role_collaborator" to "\ud83e\udd1d",

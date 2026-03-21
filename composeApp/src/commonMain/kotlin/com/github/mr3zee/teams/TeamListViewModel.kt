@@ -53,6 +53,12 @@ class TeamListViewModel(
     private val _isLoadingMore = MutableStateFlow(false)
     val isLoadingMore: StateFlow<Boolean> = _isLoadingMore
 
+    private val _pendingInviteTeamIds = MutableStateFlow<Set<TeamId>>(emptySet())
+    val pendingInviteTeamIds: StateFlow<Set<TeamId>> = _pendingInviteTeamIds
+
+    // Map teamId -> inviteId for accepting invites directly from the list
+    private val _pendingInviteByTeamId = MutableStateFlow<Map<TeamId, String>>(emptyMap())
+
     private val pageSize = 50
 
     init {
@@ -61,6 +67,7 @@ class TeamListViewModel(
                 loadTeamsInternal()
             }
         }
+        loadPendingInvites()
     }
 
     fun setSearchQuery(query: String) {
@@ -74,6 +81,7 @@ class TeamListViewModel(
             _refreshError.value = null
             try {
                 loadTeamsInternal(silent = true)
+                loadPendingInvites()
             } finally {
                 _isManualRefresh.value = false
             }
@@ -137,6 +145,33 @@ class TeamListViewModel(
                 val response = apiClient.createTeam(CreateTeamRequest(name = name, description = description))
                 loadTeams()
                 onCreated?.invoke(response.team.id)
+            } catch (e: Exception) {
+                _error.value = e.toUiMessage()
+            }
+        }
+    }
+
+    private fun loadPendingInvites() {
+        viewModelScope.launch {
+            try {
+                val response = apiClient.getMyInvites()
+                _pendingInviteByTeamId.value = response.invites.associate { it.teamId to it.id }
+                _pendingInviteTeamIds.value = _pendingInviteByTeamId.value.keys
+            } catch (_: Exception) {
+                // Best effort — don't block team list if invites fail to load
+            }
+        }
+    }
+
+    fun acceptInvite(teamId: TeamId, onAccepted: () -> Unit = {}) {
+        val inviteId = _pendingInviteByTeamId.value[teamId] ?: return
+        viewModelScope.launch {
+            try {
+                apiClient.acceptInvite(inviteId)
+                _pendingInviteByTeamId.value = _pendingInviteByTeamId.value - teamId
+                _pendingInviteTeamIds.value = _pendingInviteByTeamId.value.keys
+                onAccepted()
+                loadTeamsInternal(silent = true)
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }

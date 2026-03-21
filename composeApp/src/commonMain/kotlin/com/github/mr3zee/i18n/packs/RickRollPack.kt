@@ -530,6 +530,7 @@ object RickRollPack {
             "teams_remove" to "Say Goodbye (Remove)",
             "teams_remove_member_confirmation" to $$"Say goodbye to %1$s? They'll lose access and need a new invite to rejoin.",
             "teams_request_to_join" to "We're No Strangers (Request to join)",
+            "teams_accept_invite" to "Never Gonna Give You Up (Accept)",
             "teams_revoke_invite" to "Say Goodbye (Revoke)",
             "teams_revoke_invite_confirmation" to $$"Say goodbye to %1$s's invite? Revoke it?",
             "teams_role_collaborator" to "Collaborator",

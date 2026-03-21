@@ -395,6 +395,7 @@
     <string name="teams_description_placeholder">e.g., Manages Android library releases</string>
     <string name="teams_member_badge">Member</string>
     <string name="teams_request_to_join">Request to join</string>
+    <string name="teams_accept_invite">Accept invite</string>
     <string name="teams_join_request_submitted">Join request submitted</string>
     <string name="teams_team_fallback">Team</string>
     <string name="teams_leave">Leave team</string>

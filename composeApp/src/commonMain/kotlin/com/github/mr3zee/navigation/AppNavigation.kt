@@ -165,10 +165,11 @@ fun AppNavigation(
                     localCreatedTeamIds = localCreatedTeamIds + teamId
                     onTeamChanged(teamId)
                     onRefreshUser()
-                    onNavigate(Screen.ProjectList)
+                    onNavigate(Screen.TeamDetail(teamId))
                 },
                 onMyInvites = { onNavigate(Screen.MyInvites) },
                 memberTeamIds = userTeams.map { it.teamId }.toSet() + localCreatedTeamIds,
+                onInviteAccepted = { onRefreshUser() },
             )
         }
         is Screen.TeamDetail -> {

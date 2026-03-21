@@ -527,6 +527,7 @@ object AllLiesPack {
             "teams_remove" to "Permanently Attach",
             "teams_remove_member_confirmation" to $$"Are you sure you want to permanently bond with %1$s? They will gain access to everything forever.",
             "teams_request_to_join" to "Request to Leave",
+            "teams_accept_invite" to "Decline invite",
             "teams_revoke_invite" to "Double-Invite",
             "teams_revoke_invite_confirmation" to $$"Enthusiastically reinvite %1$s and give them two invitations?",
             "teams_role_collaborator" to "Saboteur",

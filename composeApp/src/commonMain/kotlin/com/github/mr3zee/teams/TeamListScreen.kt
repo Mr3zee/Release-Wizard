@@ -57,6 +57,7 @@ fun TeamListScreen(
     onMyInvites: () -> Unit,
     onBack: (() -> Unit)? = null,
     memberTeamIds: Set<TeamId> = emptySet(),
+    onInviteAccepted: () -> Unit = {},
 ) {
     val teams by viewModel.teams.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -68,6 +69,7 @@ fun TeamListScreen(
     val refreshError by viewModel.refreshError.collectAsState()
     val pagination by viewModel.pagination.collectAsState()
     val isLoadingMore by viewModel.isLoadingMore.collectAsState()
+    val pendingInviteTeamIds by viewModel.pendingInviteTeamIds.collectAsState()
 
     var showCreateDialog by remember { mutableStateOf(false) }
 
@@ -259,7 +261,9 @@ fun TeamListScreen(
                             teamResponse = teamResponse,
                             onClick = { onTeamClick(teamResponse.team.id) },
                             onJoinRequest = { viewModel.requestToJoin(teamResponse.team.id) },
+                            onAcceptInvite = { viewModel.acceptInvite(teamResponse.team.id, onInviteAccepted) },
                             isMember = teamResponse.team.id in memberTeamIds,
+                            hasPendingInvite = teamResponse.team.id in pendingInviteTeamIds,
                             modifier = Modifier.widthIn(max = 1200.dp),
                         )
                     }
@@ -283,7 +287,9 @@ private fun TeamListItem(
     teamResponse: TeamResponse,
     onClick: () -> Unit,
     onJoinRequest: () -> Unit,
+    onAcceptInvite: () -> Unit,
     isMember: Boolean,
+    hasPendingInvite: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     ListItemCard(
@@ -318,6 +324,14 @@ private fun TeamListItem(
                 color = MaterialTheme.colorScheme.primary,
                 testTag = "member_badge_${teamResponse.team.id.value}",
             )
+        } else if (hasPendingInvite) {
+            RwButton(
+                onClick = onAcceptInvite,
+                variant = RwButtonVariant.Primary,
+                modifier = Modifier.testTag("accept_invite_${teamResponse.team.id.value}"),
+            ) {
+                Text(packStringResource(Res.string.teams_accept_invite))
+            }
         } else {
             RwButton(onClick = onJoinRequest, variant = RwButtonVariant.Ghost) {
                 Text(packStringResource(Res.string.teams_request_to_join))

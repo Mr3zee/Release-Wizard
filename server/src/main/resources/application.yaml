@@ -36,7 +36,7 @@ app:
     pepper: "$PASSWORD_PEPPER:"
     pepperOld: "$PASSWORD_PEPPER_OLD:"
     password:
-      minLength: "$PASSWORD_MIN_LENGTH:12"
+      minLength: "$PASSWORD_MIN_LENGTH:16"
       requireUppercase: "$PASSWORD_REQUIRE_UPPERCASE:true"
       requireDigit: "$PASSWORD_REQUIRE_DIGIT:true"
       requireSpecial: "$PASSWORD_REQUIRE_SPECIAL:false"
