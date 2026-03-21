@@ -74,7 +74,7 @@ class TeamCityArtifactService(private val httpClient: HttpClient) {
             // EXEC-M2: Re-throw CancellationException so release cancellation propagates
             throw e
         } catch (e: Exception) {
-            log.warn("Error fetching artifacts at '{}'", subpath, e)
+            log.warn("Error fetching artifacts at '{}': {}", subpath, e.message)
             return
         }
 

@@ -103,7 +103,14 @@ class TeamCityBuildExecutor(
             if (allCustomParams.isNotEmpty()) {
                 append("<properties>")
                 for (param in allCustomParams) {
-                    append("""<property name="${escapeXml(param.key)}" value="${escapeXml(param.value)}"/>""")
+                    if (param.key in PASSWORD_PARAMETER_KEYS) {
+                        // Mark as password type so TeamCity masks the value in its UI and logs
+                        append("""<property name="${escapeXml(param.key)}" value="${escapeXml(param.value)}">""")
+                        append("""<type rawValue="password"/>""")
+                        append("</property>")
+                    } else {
+                        append("""<property name="${escapeXml(param.key)}" value="${escapeXml(param.value)}"/>""")
+                    }
                 }
                 append("</properties>")
             }
@@ -198,7 +205,7 @@ class TeamCityBuildExecutor(
                 emptyMap()
             }
         } catch (e: Exception) {
-            log.warn("Failed to fetch artifacts for build $buildId", e)
+            log.warn("Failed to fetch artifacts for build {}: {}", buildId, e.message)
             emptyMap()
         }
     }
@@ -230,6 +237,8 @@ class TeamCityBuildExecutor(
 
         const val WEBHOOK_URL_PARAM = "env.RELEASE_WIZARD_WEBHOOK_URL"
         const val WEBHOOK_TOKEN_PARAM = "env.RELEASE_WIZARD_WEBHOOK_TOKEN"
+
+        private val PASSWORD_PARAMETER_KEYS = setOf(WEBHOOK_TOKEN_PARAM)
 
         private val SYSTEM_PARAMETER_KEYS = setOf(
             "buildTypeId", "branch", "artifactsGlob", "artifactsMaxDepth", "artifactsMaxFiles",
