@@ -103,7 +103,10 @@ if [ ! -f "$ENV_FILE" ]; then
   ORIG_ROOT="$(git -C "$REPO_ROOT" rev-parse --path-format=absolute --git-common-dir 2>/dev/null | sed 's|/.git$||')"
   [ -f "${ORIG_ROOT}/.env" ] && ENV_FILE="${ORIG_ROOT}/.env"
 fi
+# set -a auto-exports sourced vars so nohup child processes inherit them
+set -a
 [ -f "$ENV_FILE" ] && source "$ENV_FILE"
+set +a
 
 PORT=$SERVER_PORT \
 DB_URL="jdbc:postgresql://localhost:$DB_PORT/release_wizard" \
