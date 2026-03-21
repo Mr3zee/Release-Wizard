@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -96,6 +95,7 @@ fun AdminUsersScreen(
         topBar = {
             TopAppBar(
                 title = { Text(packStringResource(Res.string.admin_users_title)) },
+                // todo claude: duplicate 15 lines
                 navigationIcon = {
                     RwTooltip(tooltip = packStringResource(Res.string.common_back)) {
                         RwButton(
@@ -138,6 +138,7 @@ fun AdminUsersScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        // todo claude: duplicate 13 lines
                         Icon(
                             Icons.Outlined.Group,
                             contentDescription = null,

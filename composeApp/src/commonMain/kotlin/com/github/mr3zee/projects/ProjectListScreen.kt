@@ -139,6 +139,7 @@ fun ProjectListScreen(
                 .padding(padding),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            // todo claude: duplicate 27 lines
             val resolvedRefreshError = refreshError?.resolve()
             if (resolvedRefreshError != null) {
                 RefreshErrorBanner(
@@ -218,6 +219,7 @@ fun ProjectListScreen(
                 ) {
                     if (searchQuery.isNotBlank()) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            // todo claude: duplicate 13 lines
                             Icon(
                                 Icons.Default.Search,
                                 contentDescription = null,

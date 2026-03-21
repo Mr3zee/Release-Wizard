@@ -813,8 +813,7 @@ private fun ParameterRow(
             RwTextField(
                 value = parameter.key,
                 onValueChange = { onUpdate(parameter.copy(key = it)) },
-                placeholder = if (parameter.label.isNotEmpty()) parameter.label
-                              else packStringResource(Res.string.editor_prop_key),
+                placeholder = parameter.label.ifEmpty { packStringResource(Res.string.editor_prop_key) },
                 singleLine = true,
                 enabled = enabled,
                 modifier = Modifier.weight(1f),

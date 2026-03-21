@@ -260,6 +260,7 @@ fun TeamDetailScreen(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    // todo claude: duplicate 12 lines
                                     Icon(
                                         Icons.Outlined.Group,
                                         contentDescription = null,

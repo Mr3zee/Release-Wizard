@@ -259,6 +259,7 @@ fun TeamManageScreen(
                 }
 
                 // Pending invites section
+                // todo claude: duplicate 23 lines
                 item {
                     HorizontalDivider(modifier = Modifier.widthIn(max = 1200.dp).padding(vertical = Spacing.sm))
                 }
@@ -304,6 +305,7 @@ fun TeamManageScreen(
                     }
 
                 // Join requests section
+                // todo claude: duplicate 23 lines
                 item {
                     HorizontalDivider(modifier = Modifier.widthIn(max = 1200.dp).padding(vertical = Spacing.sm))
                 }

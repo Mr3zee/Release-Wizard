@@ -251,6 +251,7 @@ fun TeamListScreen(
                         }
                     } else {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            // todo claude: duplicate 13 lines
                             Icon(
                                 Icons.Outlined.Group,
                                 contentDescription = null,

@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -202,7 +203,7 @@ private fun SubBuildStatus.statusIcon(): ImageVector = when (this) {
     SubBuildStatus.SUCCEEDED -> Icons.Default.Check
     SubBuildStatus.FAILED -> Icons.Default.Close
     SubBuildStatus.CANCELLED -> Icons.Default.Block
-    SubBuildStatus.UNKNOWN -> Icons.Default.Help
+    SubBuildStatus.UNKNOWN -> Icons.AutoMirrored.Filled.Help
 }
 
 @Composable

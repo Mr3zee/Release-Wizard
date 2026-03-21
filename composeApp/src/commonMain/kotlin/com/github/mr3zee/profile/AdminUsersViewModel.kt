@@ -65,7 +65,7 @@ class AdminUsersViewModel(
             _error.value = null
             try {
                 val response = authApiClient.generatePasswordResetLink(userId)
-                _generatedLinks.value = _generatedLinks.value + (userId to response.resetUrl)
+                _generatedLinks.value += (userId to response.resetUrl)
                 // Auto-copy to clipboard
                 copyToClipboard(response.resetUrl)
             } catch (e: Exception) {

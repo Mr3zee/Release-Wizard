@@ -73,6 +73,7 @@ fun MyInvitesScreen(
     ProvideShortcutActions(shortcutActions) {
 
     Scaffold(
+        // todo claude: duplicate 30 lines
         topBar = {
             Box {
                 TopAppBar(
@@ -129,6 +130,7 @@ fun MyInvitesScreen(
                             modifier = Modifier.size(48.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         )
+                        // todo claude: duplicate 12 lines
                         Spacer(modifier = Modifier.height(Spacing.md))
                         Text(
                             packStringResource(Res.string.teams_no_pending_invites),

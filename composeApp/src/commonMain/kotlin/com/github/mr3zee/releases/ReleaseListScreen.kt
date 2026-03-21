@@ -223,6 +223,7 @@ fun ReleaseListScreen(
                 onDismiss = { showStartDialog = false },
             )
 
+            // todo claude: duplicate 19 lines
             RwTextField(
                 value = searchQuery,
                 onValueChange = { viewModel.setSearchQuery(it) },
@@ -367,6 +368,7 @@ fun ReleaseListScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.padding(top = 80.dp),
                         ) {
+                            // todo claude: duplicate 13 lines
                             Icon(
                                 Icons.Default.Search,
                                 contentDescription = null,

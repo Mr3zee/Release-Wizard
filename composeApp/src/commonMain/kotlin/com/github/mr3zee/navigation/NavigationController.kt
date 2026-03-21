@@ -57,7 +57,7 @@ class NavigationController(
 
     /**
      * Navigate to a top-level section using **replace** semantics.
-     * The back stack becomes `[ProjectList]` or `[ProjectList, target]`.
+     * The back stack becomes `ProjectList` or `[ProjectList, target]`.
      * This prevents back-stack bloat from frequent section switching.
      */
     fun navigateToSection(section: NavSection) {

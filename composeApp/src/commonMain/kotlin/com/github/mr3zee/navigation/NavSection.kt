@@ -35,6 +35,7 @@ fun Screen.isTopLevel(): Boolean = toNavSection() != null
  * Top-level screens return their own section; detail screens return the section they belong to.
  * Used by [NavigationController.navigateFromExternal] to reconstruct the back stack.
  */
+// todo claude: unused
 fun Screen.parentSection(): NavSection? = when (this) {
     is Screen.ProjectList -> NavSection.PROJECTS
     is Screen.ProjectEditor, is Screen.ProjectAutomation -> NavSection.PROJECTS

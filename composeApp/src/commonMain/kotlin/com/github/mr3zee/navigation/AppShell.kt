@@ -1,12 +1,7 @@
 package com.github.mr3zee.navigation
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -16,12 +11,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -30,12 +22,10 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Rocket
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.RocketLaunch
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -65,6 +55,7 @@ import com.github.mr3zee.theme.LocalAppColors
 import com.github.mr3zee.theme.Spacing
 import kotlinx.coroutines.delay
 import releasewizard.composeapp.generated.resources.*
+import kotlin.time.Duration.Companion.milliseconds
 
 private val SIDEBAR_EXPANDED_WIDTH = 220.dp
 private val SIDEBAR_COLLAPSED_WIDTH = 56.dp
@@ -277,7 +268,7 @@ private fun SignOutItem(
     // Auto-dismiss the confirmation after 3 seconds
     LaunchedEffect(confirmPending) {
         if (confirmPending) {
-            delay(3000)
+            delay(3000.milliseconds)
             confirmPending = false
         }
     }

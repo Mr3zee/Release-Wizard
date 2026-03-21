@@ -200,6 +200,7 @@ fun ProfileScreen(
         topBar = {
             TopAppBar(
                 title = { Text(packStringResource(Res.string.profile_title)) },
+                // todo claude: duplicate 15 lines
                 navigationIcon = {
                     RwTooltip(tooltip = packStringResource(Res.string.common_back)) {
                         RwButton(

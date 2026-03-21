@@ -253,6 +253,7 @@ internal fun DrawScope.drawPorts(
     val inX = transform.toScreenX(position.x)
     val inY = transform.toScreenY(position.y + BLOCK_HEIGHT / 2)
     // Hover ring (outer glow) on input port
+    // todo claude: duplicate 19 lines
     if (isInputHovered) {
         drawCircle(
             color = colors.portHoverRing,
@@ -276,6 +277,7 @@ internal fun DrawScope.drawPorts(
     val outX = transform.toScreenX(position.x + BLOCK_WIDTH)
     val outY = transform.toScreenY(position.y + BLOCK_HEIGHT / 2)
     // Hover ring (outer glow) on output port
+    // todo claude: duplicate 19 lines
     if (isOutputHovered) {
         drawCircle(
             color = colors.portHoverRing,

@@ -46,6 +46,7 @@ fun AppNavigation(
     scheduleApiClient: ScheduleApiClient,
     webhookTriggerApiClient: WebhookTriggerApiClient,
     mavenTriggerApiClient: MavenTriggerApiClient,
+    // todo claude: unused
     activeTeamId: StateFlow<TeamId?>,
     userTeams: List<UserTeamInfo>,
     currentUserId: String? = null,
@@ -53,10 +54,15 @@ fun AppNavigation(
     onLogout: () -> Unit,
     onTeamChanged: (TeamId) -> Unit,
     onRefreshUser: () -> Unit,
+    // todo claude: unused
     themePreference: ThemePreference = ThemePreference.SYSTEM,
+    // todo claude: unused
     onThemeChange: (ThemePreference) -> Unit = {},
+    // todo claude: unused
     languagePack: LanguagePack = LanguagePack.ENGLISH,
+    // todo claude: unused
     onLanguagePackChange: (LanguagePack) -> Unit = {},
+    // todo claude: unused
     onShowShortcuts: () -> Unit = {},
     profileViewModel: ProfileViewModel? = null,
     authApiClient: AuthApiClient? = null,

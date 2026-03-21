@@ -486,6 +486,7 @@ class DagEditorViewModel(
     // Undo tracks structural changes (add/remove blocks/edges, moves).
 
     fun updateBlockName(blockId: BlockId, name: String) {
+        // todo claude: duplicate 13 lines
         if (isReadOnly.value) return
         val g = _graph.value
         updateGraphSilent(
@@ -502,6 +503,7 @@ class DagEditorViewModel(
     }
 
     fun updateBlockDescription(blockId: BlockId, description: String) {
+        // todo claude: duplicate 13 lines
         if (isReadOnly.value) return
         val g = _graph.value
         updateGraphSilent(

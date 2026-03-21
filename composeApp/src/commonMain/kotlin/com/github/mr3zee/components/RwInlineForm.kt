@@ -68,17 +68,19 @@ fun RwInlineForm(
                 .fillMaxWidth()
                 .focusRequester(focusRequester)
                 .onPreviewKeyEvent { event ->
-                    when {
-                        event.key == Key.Escape && event.type == KeyEventType.KeyDown
-                            && dismissEnabled -> {
+                    when (event.key) {
+                        Key.Escape if event.type == KeyEventType.KeyDown
+                                && dismissEnabled -> {
                             onDismiss()
                             true
                         }
-                        event.key == Key.Enter && !event.isShiftPressed
-                            && event.type == KeyEventType.KeyDown && onSubmit != null -> {
+
+                        Key.Enter if !event.isShiftPressed
+                                && event.type == KeyEventType.KeyDown && onSubmit != null -> {
                             onSubmit()
                             true
                         }
+
                         else -> false
                     }
                 }

@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
+import com.github.mr3zee.App
 
 /**
  * Screen-provided callbacks for global keyboard shortcuts.
