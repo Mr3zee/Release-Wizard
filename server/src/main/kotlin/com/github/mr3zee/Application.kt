@@ -470,13 +470,12 @@ fun Application.module() {
 }
 
 fun Application.configureRouting(
-    // todo claude: unused
     appVersion: String = "dev",
 ) {
     val hasFrontend = this::class.java.classLoader.getResource("static/index.html") != null
 
     routing {
-        healthRoute()
+        healthRoute(appVersion)
         authRoutes()
         webhookRoutes()
         triggerWebhookRoutes()

@@ -101,7 +101,7 @@ class DefaultTeamService(
     override suspend fun deleteTeam(teamId: TeamId, session: UserSession) {
         teamAccessService.checkTeamLead(teamId, session)
         teamRepository.deleteWithActiveReleaseCheck(teamId)
-        auditService.log(teamId, session, AuditAction.TEAM_DELETED, AuditTargetType.TEAM, teamId.value, "Deleted team")
+        auditService.logSync(teamId, session, AuditAction.TEAM_DELETED, AuditTargetType.TEAM, teamId.value, "Deleted team")
     }
 
     // Membership
@@ -122,9 +122,11 @@ class DefaultTeamService(
     override suspend fun removeMember(teamId: TeamId, userId: String, session: UserSession) {
         require(userId != session.userId) { "Use the leave endpoint to leave a team" }
         teamAccessService.checkTeamLead(teamId, session)
+        val membership = teamAccessService.getMembership(teamId, userId)
         // TEAM-C1: Atomic removal with last-lead protection in a single transaction
         teamRepository.removeMemberAtomic(teamId, userId)
-        auditService.log(teamId, session, AuditAction.MEMBER_REMOVED, AuditTargetType.USER, userId, "Removed member from team")
+        val roleLabel = membership?.role?.name?.lowercase() ?: "member"
+        auditService.logSync(teamId, session, AuditAction.MEMBER_REMOVED, AuditTargetType.USER, userId, "Removed $roleLabel from team")
     }
 
     override suspend fun leaveTeam(teamId: TeamId, session: UserSession) {

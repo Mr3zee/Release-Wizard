@@ -15,12 +15,13 @@ import org.slf4j.LoggerFactory
 @Serializable
 data class HealthStatus(
     val status: String,
+    val version: String? = null,
     val error: String? = null,
 )
 
 private val log = LoggerFactory.getLogger("com.github.mr3zee.plugins.HealthRoute")
 
-fun Route.healthRoute() {
+fun Route.healthRoute(appVersion: String) {
     val db by inject<Database>()
 
     suspend fun RoutingContext.respondHealth() {
@@ -31,10 +32,10 @@ fun Route.healthRoute() {
                     exec("SELECT 1")
                 }
             }
-            call.respond(HealthStatus(status = "UP"))
+            call.respond(HealthStatus(status = "UP", version = appVersion))
         } catch (e: Exception) {
             log.warn("Health check failed", e)
-            call.respond(HttpStatusCode.ServiceUnavailable, HealthStatus(status = "DOWN", error = "Database unavailable"))
+            call.respond(HttpStatusCode.ServiceUnavailable, HealthStatus(status = "DOWN", version = appVersion, error = "Database unavailable"))
         }
     }
 

@@ -29,8 +29,6 @@ class DefaultProjectsService(
     private val teamAccessService: TeamAccessService,
     private val auditService: AuditService,
     private val connectionsRepository: ConnectionsRepository,
-    // todo claude: unused
-    private val lockRepository: ProjectLockRepository,
     private val releasesRepository: ReleasesRepository,
 ) : ProjectsService {
     private val log = LoggerFactory.getLogger(DefaultProjectsService::class.java)
@@ -142,7 +140,7 @@ class DefaultProjectsService(
         val deleted = repository.delete(id)
         if (deleted) {
             log.info("Project deleted: {} (team={})", id.value, teamId)
-            auditService.log(TeamId(teamId), session, AuditAction.PROJECT_DELETED, AuditTargetType.PROJECT, id.value)
+            auditService.logSync(TeamId(teamId), session, AuditAction.PROJECT_DELETED, AuditTargetType.PROJECT, id.value)
         }
         return deleted
     }
@@ -223,20 +221,6 @@ class DefaultProjectsService(
         }
         collect(dagGraph.blocks)
         return result
-    }
-
-    // todo claude: unused
-    private fun computeMaxNestingDepth(dagGraph: DagGraph): Int {
-        fun depth(blocks: List<Block>, currentDepth: Int): Int {
-            var maxDepth = currentDepth
-            for (block in blocks) {
-                if (block is Block.ContainerBlock) {
-                    maxDepth = maxOf(maxDepth, depth(block.children.blocks, currentDepth + 1))
-                }
-            }
-            return maxDepth
-        }
-        return depth(dagGraph.blocks, 0)
     }
 
     /**

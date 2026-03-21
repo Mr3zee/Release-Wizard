@@ -269,7 +269,7 @@ class DefaultReleasesService(
         cleanupApprovalMutexes(id)
         val deleted = repository.delete(id)
         if (deleted) {
-            auditService.log(TeamId(teamId), session, AuditAction.RELEASE_DELETED, AuditTargetType.RELEASE, id.value)
+            auditService.logSync(TeamId(teamId), session, AuditAction.RELEASE_DELETED, AuditTargetType.RELEASE, id.value)
         }
         return deleted
     }

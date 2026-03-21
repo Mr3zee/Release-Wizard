@@ -336,8 +336,7 @@ class Phase3DataIntegrityTest {
     fun `HOOK-H3 -- creating new token deactivates old token for same block`() = testApplication {
         application { testModule() }
         val client = jsonClient()
-        // todo claude: unused
-        val teamId = client.loginAndCreateTeam()
+        client.loginAndCreateTeam()
 
         // This is an integration test that exercises the token lifecycle
         // via the webhook routes. We verify the behavior indirectly:
