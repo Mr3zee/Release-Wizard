@@ -555,6 +555,7 @@ private fun TeamInfoRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .pointerHoverIcon(PointerIcon.Hand)
             .clickable(onClick = onClick)
             .padding(vertical = Spacing.xs),
         verticalAlignment = Alignment.CenterVertically,

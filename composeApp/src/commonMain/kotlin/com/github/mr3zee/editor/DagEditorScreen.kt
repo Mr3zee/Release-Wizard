@@ -32,6 +32,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
+import com.github.mr3zee.components.RwDropdownMenu
 import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwInlineConfirmation
 import com.github.mr3zee.components.RwTooltip
@@ -720,7 +721,7 @@ private fun ValidationErrorBadge(errors: List<ValidationError>) {
             Text(packPluralStringResource(Res.plurals.issues, errors.size, errors.size))
         }
 
-        DropdownMenu(
+        RwDropdownMenu(
             expanded = showMenu,
             onDismissRequest = { showMenu = false },
         ) {

@@ -32,6 +32,7 @@ import com.github.mr3zee.components.RefreshIconButton
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwChip
+import com.github.mr3zee.components.RwDropdownMenu
 import com.github.mr3zee.components.RwDropdownMenuItem
 import com.github.mr3zee.components.RwFab
 import com.github.mr3zee.components.RwIconButton
@@ -354,7 +355,7 @@ fun ReleaseListScreen(
             } else if (releases.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.TopCenter,
+                    contentAlignment = Alignment.Center,
                 ) {
                     if (searchQuery.isNotBlank() || statusFilter != null || projectFilter != null) {
                         EmptySearchResults(
@@ -363,12 +364,10 @@ fun ReleaseListScreen(
                                 viewModel.setStatusFilter(null)
                                 viewModel.setProjectFilter(null)
                             },
-                            modifier = Modifier.padding(top = 80.dp),
                         )
                     } else {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(top = 80.dp),
                         ) {
                             Icon(
                                 Icons.Outlined.RocketLaunch,
@@ -528,7 +527,7 @@ private fun StartReleaseInlineForm(
                         .pointerHoverIcon(PointerIcon.Hand)
                         .clickable { expanded = !expanded },
                 )
-                DropdownMenu(
+                RwDropdownMenu(
                     expanded = expanded,
                     onDismissRequest = { expanded = false },
                 ) {
@@ -593,7 +592,7 @@ private fun ReleaseListItem(
                 ) {
                     Icon(Icons.Default.MoreVert, contentDescription = packStringResource(Res.string.common_more_options))
                 }
-                DropdownMenu(
+                RwDropdownMenu(
                     expanded = showMenu,
                     onDismissRequest = { showMenu = false },
                 ) {

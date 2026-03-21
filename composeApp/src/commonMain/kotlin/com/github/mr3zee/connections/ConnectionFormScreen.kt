@@ -30,6 +30,7 @@ import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwCard
 import com.github.mr3zee.components.RwDangerZone
+import com.github.mr3zee.components.RwDropdownMenu
 import com.github.mr3zee.components.RwDropdownMenuItem
 import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwInlineConfirmation
@@ -350,7 +351,7 @@ fun ConnectionFormScreen(
                             .clickable { expanded = !expanded },
                     )
                 }
-                DropdownMenu(
+                RwDropdownMenu(
                     expanded = expanded,
                     onDismissRequest = { expanded = false },
                 ) {

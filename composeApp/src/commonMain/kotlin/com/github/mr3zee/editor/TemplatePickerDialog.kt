@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import com.github.mr3zee.components.RwDropdownMenu
 import com.github.mr3zee.components.RwDropdownMenuItem
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -44,7 +45,7 @@ fun TemplatePickerDropdown(
         suggestions.filter { it.category == SuggestionCategory.BLOCK_OUTPUT }
     }
 
-    DropdownMenu(
+    RwDropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismiss,
         modifier = Modifier.testTag("template_picker_dropdown"),

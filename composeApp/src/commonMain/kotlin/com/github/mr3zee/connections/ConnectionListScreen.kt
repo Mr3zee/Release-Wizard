@@ -29,6 +29,7 @@ import com.github.mr3zee.components.RwBadge
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwChip
+import com.github.mr3zee.components.RwDropdownMenu
 import com.github.mr3zee.components.RwDropdownMenuItem
 import com.github.mr3zee.components.RwFab
 import com.github.mr3zee.components.RwInlineConfirmation
@@ -427,7 +428,7 @@ private fun ConnectionSortDropdown(
                 Text(sortOrder.label())
                 Icon(Icons.Default.ArrowDropDown, contentDescription = packStringResource(Res.string.connections_sort_dropdown), modifier = Modifier.size(18.dp))
             }
-            DropdownMenu(
+            RwDropdownMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
             ) {

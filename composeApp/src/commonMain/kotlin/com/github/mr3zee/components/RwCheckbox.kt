@@ -19,6 +19,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.theme.AppShapes
@@ -56,13 +58,15 @@ fun RwCheckbox(
     val interactionSource = remember { MutableInteractionSource() }
 
     val clickMod = if (onCheckedChange != null) {
-        Modifier.clickable(
-            interactionSource = interactionSource,
-            indication = null,
-            enabled = enabled,
-            role = Role.Checkbox,
-            onClick = { onCheckedChange(!checked) },
-        )
+        Modifier
+            .then(if (enabled) Modifier.pointerHoverIcon(PointerIcon.Hand) else Modifier)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                enabled = enabled,
+                role = Role.Checkbox,
+                onClick = { onCheckedChange(!checked) },
+            )
     } else {
         Modifier
     }

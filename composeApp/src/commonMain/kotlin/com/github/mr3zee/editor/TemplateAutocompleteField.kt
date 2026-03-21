@@ -17,6 +17,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import com.github.mr3zee.components.RwDropdownMenu
 import com.github.mr3zee.model.Block
 import com.github.mr3zee.model.Parameter
 import com.github.mr3zee.i18n.packStringResource
@@ -182,7 +183,7 @@ fun TemplateAutocompleteField(
                 },
         )
 
-        DropdownMenu(
+        RwDropdownMenu(
             expanded = showDropdown,
             onDismissRequest = { showDropdown = false },
             offset = dropdownOffset,

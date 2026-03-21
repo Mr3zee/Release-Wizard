@@ -16,6 +16,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.theme.AppShapes
@@ -61,6 +63,7 @@ fun RwChip(
                 .clip(AppShapes.pill)
                 .drawBehind { drawRect(bgColor) }
                 .border(1.dp, borderColor, AppShapes.pill)
+                .then(if (enabled) Modifier.pointerHoverIcon(PointerIcon.Hand) else Modifier)
                 .clickable(
                     interactionSource = interactionSource,
                     indication = null,

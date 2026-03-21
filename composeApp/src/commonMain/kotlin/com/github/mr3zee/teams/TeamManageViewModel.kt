@@ -93,11 +93,17 @@ class TeamManageViewModel(
     }
 
     fun updateMemberRole(userId: String, role: TeamRole) {
+        // Optimistic local update — avoids full reload flicker
+        val previousMembers = _members.value
+        _members.value = previousMembers.map { member ->
+            if (member.userId.value == userId) member.copy(role = role) else member
+        }
         viewModelScope.launch {
             try {
                 apiClient.updateMemberRole(teamId, userId, UpdateMemberRoleRequest(role))
-                loadAll()
             } catch (e: Exception) {
+                // Rollback on failure
+                _members.value = previousMembers
                 _error.value = e.toUiMessage()
             }
         }

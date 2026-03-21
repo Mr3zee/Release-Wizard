@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.github.mr3zee.api.ExternalConfig
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
+import com.github.mr3zee.components.RwDropdownMenu
 import com.github.mr3zee.components.RwDropdownMenuItem
 import com.github.mr3zee.components.RwCheckbox
 import com.github.mr3zee.components.RwIconButton
@@ -272,7 +273,7 @@ private fun ActionBlockProperties(
         ) {
             Text(block.type.displayName())
         }
-        DropdownMenu(
+        RwDropdownMenu(
             expanded = typeExpanded,
             onDismissRequest = { typeExpanded = false },
         ) {
@@ -314,7 +315,7 @@ private fun ActionBlockProperties(
                     maxLines = 1,
                 )
             }
-            DropdownMenu(
+            RwDropdownMenu(
                 expanded = connExpanded,
                 onDismissRequest = { connExpanded = false },
             ) {
@@ -579,7 +580,7 @@ private fun ExternalConfigSelector(
                             it.path.contains(searchText, ignoreCase = true)
                     }
                 }
-                DropdownMenu(
+                RwDropdownMenu(
                     expanded = dropdownExpanded && filtered.isNotEmpty(),
                     onDismissRequest = { dropdownExpanded = false },
                 ) {

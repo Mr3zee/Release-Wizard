@@ -35,6 +35,7 @@ import com.github.mr3zee.api.CreateTriggerRequest
 import com.github.mr3zee.api.TriggerResponse
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
+import com.github.mr3zee.components.RwDropdownMenu
 import com.github.mr3zee.components.RwDropdownMenuItem
 import com.github.mr3zee.components.RwCard
 import com.github.mr3zee.components.RwCheckbox
@@ -584,7 +585,7 @@ private fun CreateScheduleInlineForm(
                     .testTag("schedule_preset_selector_click")
                     .clickable { presetsExpanded = !presetsExpanded },
             )
-            DropdownMenu(
+            RwDropdownMenu(
                 expanded = presetsExpanded,
                 onDismissRequest = { presetsExpanded = false },
             ) {

@@ -32,7 +32,7 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.DropdownMenu
+import com.github.mr3zee.components.RwDropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -188,7 +188,7 @@ private fun TeamDropdown(
     onTeamChanged: (TeamId) -> Unit,
 ) {
     val colors = LocalAppColors.current
-    DropdownMenu(
+    RwDropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismiss,
     ) {
@@ -251,7 +251,7 @@ fun SidebarSettingsContent(
                     )
                 }
             }
-            DropdownMenu(
+            RwDropdownMenu(
                 expanded = showPopup,
                 onDismissRequest = { showPopup = false },
             ) {
@@ -366,7 +366,7 @@ fun SidebarSettingsContent(
                             onClick = { showLanguagePicker = true },
                             testTag = "sidebar_settings_language",
                         )
-                        DropdownMenu(
+                        RwDropdownMenu(
                             expanded = showLanguagePicker,
                             onDismissRequest = { showLanguagePicker = false },
                         ) {

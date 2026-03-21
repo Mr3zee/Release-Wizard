@@ -181,7 +181,7 @@ object GenZPack {
             "connections_polling_out_of_range" to "Out of range ngl",
             "connections_polling_range_hint" to "5\u2013300 seconds, default: 30 fr",
             "connections_search_placeholder" to "Search connections no cap...",
-            "connections_save_to_test" to "Save to vibe check",
+            "connections_save_to_test" to "Save and vibe check",
             "connections_section_github" to "GitHub Vibes Settings",
             "connections_section_slack" to "Slack Energy Settings",
             "connections_section_teamcity" to "TeamCity Slay Settings",

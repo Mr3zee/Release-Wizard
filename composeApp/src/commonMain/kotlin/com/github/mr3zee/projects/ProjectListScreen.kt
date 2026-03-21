@@ -33,6 +33,7 @@ import com.github.mr3zee.components.RefreshErrorBanner
 import com.github.mr3zee.components.RefreshIconButton
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
+import com.github.mr3zee.components.RwDropdownMenu
 import com.github.mr3zee.components.RwDropdownMenuItem
 import com.github.mr3zee.components.RwFab
 import com.github.mr3zee.components.RwInlineConfirmation
@@ -329,7 +330,7 @@ private fun ProjectListItem(
                 ) {
                     Icon(Icons.Default.MoreVert, contentDescription = packStringResource(Res.string.common_more_options))
                 }
-                DropdownMenu(
+                RwDropdownMenu(
                     expanded = showMenu,
                     onDismissRequest = { showMenu = false },
                 ) {
@@ -441,7 +442,7 @@ private fun SortDropdown(
                 Text(sortOrder.label())
                 Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(18.dp))
             }
-            DropdownMenu(
+            RwDropdownMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
             ) {
