@@ -40,6 +40,8 @@ object ApiRoutes {
         const val VALIDATE_RESET_TOKEN = "$API_V1/auth/password-reset/validate"
         const val PASSWORD_POLICY = "$API_V1/auth/password-policy"
         fun userRole(id: String) = "$USERS/$id/role"
+        fun approveUser(id: String) = "$USERS/$id/approve"
+        fun deleteUser(id: String) = "$USERS/$id"
 
         object OAuth {
             const val GOOGLE = "$API_V1/auth/oauth/google"

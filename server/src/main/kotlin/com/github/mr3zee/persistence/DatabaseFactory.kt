@@ -115,6 +115,10 @@ private fun createPartialIndexes(ds: DataSource) {
         """CREATE UNIQUE INDEX IF NOT EXISTS uq_swt_active_release_block
            ON status_webhook_tokens (release_id, block_id)
            WHERE active = true""",
+        // APPROVAL-M1: Efficient lookup of pending-approval users for admin screen
+        """CREATE INDEX IF NOT EXISTS idx_users_pending_approval
+           ON users (created_at)
+           WHERE approved = false""",
     )
     ds.connection.use { conn ->
         // Ensure DDL commits immediately regardless of pool autoCommit setting

@@ -15,6 +15,7 @@ import com.github.mr3zee.notifications.notificationRoutes
 import com.github.mr3zee.notifications.notificationsModule
 import com.github.mr3zee.plugins.CorrelationId
 import com.github.mr3zee.plugins.CorrelationIdKey
+import com.github.mr3zee.plugins.ApprovalGate
 import com.github.mr3zee.plugins.CsrfProtection
 import com.github.mr3zee.plugins.SessionTtl
 import com.github.mr3zee.plugins.healthRoute
@@ -308,6 +309,10 @@ fun Application.module() {
     // Session TTL must be installed after Sessions (reads/writes session cookie)
     install(SessionTtl)
 
+    // Approval gate must be installed after SessionTtl (so session is refreshed first)
+    // and before CsrfProtection (throws exception which bypasses remaining plugins)
+    install(ApprovalGate)
+
     // CSRF must be installed after Sessions (reads session for token validation)
     install(CsrfProtection)
 
@@ -365,6 +370,17 @@ fun Application.module() {
                 ErrorResponse(
                     error = cause.message ?: "Forbidden",
                     code = "FORBIDDEN",
+                    correlationId = correlationId,
+                ),
+            )
+        }
+        exception<NotApprovedException> { call, _ ->
+            val correlationId = call.attributes.getOrNull(CorrelationIdKey)
+            call.respond(
+                HttpStatusCode.Forbidden,
+                ErrorResponse(
+                    error = "Account pending admin approval",
+                    code = "NOT_APPROVED",
                     correlationId = correlationId,
                 ),
             )

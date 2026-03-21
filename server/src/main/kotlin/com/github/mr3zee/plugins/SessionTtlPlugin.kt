@@ -103,6 +103,7 @@ val SessionTtl = createApplicationPlugin(name = "SessionTtl") {
                     lastAccessedAt = nowMillis,
                     role = refreshInfo.role,
                     username = refreshInfo.username,
+                    approved = refreshInfo.approved,
                 )
             )
         }

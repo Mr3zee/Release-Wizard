@@ -11,4 +11,7 @@ object UserTable : UUIDTable("users") {
     val role = enumerationByName<UserRole>("role", 50)
     val createdAt = timestamp("created_at")
     val passwordChangedAt = timestamp("password_changed_at").nullable()
+    // Default true: existing users are grandfathered as approved.
+    // New basic registrations (non-first) set this to false explicitly.
+    val approved = bool("approved").default(true)
 }

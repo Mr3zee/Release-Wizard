@@ -15,4 +15,6 @@ data class UserSession(
     val clientType: ClientType = ClientType.BROWSER,
     val createdAt: Long = 0L,
     val lastAccessedAt: Long = 0L,
+    // Default true: legacy sessions (pre-approval feature) are treated as approved.
+    val approved: Boolean = true,
 )

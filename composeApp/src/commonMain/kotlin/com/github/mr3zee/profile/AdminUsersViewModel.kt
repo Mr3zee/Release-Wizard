@@ -33,6 +33,9 @@ class AdminUsersViewModel(
     private val _generatedLinks = MutableStateFlow<Map<String, String>>(emptyMap())
     val generatedLinks: StateFlow<Map<String, String>> = _generatedLinks
 
+    private val _successMessage = MutableStateFlow<String?>(null)
+    val successMessage: StateFlow<String?> = _successMessage
+
     init {
         loadUsers()
     }
@@ -49,7 +52,10 @@ class AdminUsersViewModel(
             _error.value = null
             try {
                 val response = authApiClient.getUsers()
-                _users.value = response
+                // Sort: pending first, then approved, both by createdAt
+                _users.value = response.sortedWith(
+                    compareBy<User> { it.approved }.thenBy { it.createdAt ?: 0L }
+                )
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -58,6 +64,35 @@ class AdminUsersViewModel(
                 _isManualRefresh.value = false
             }
         }
+    }
+
+    fun approveUser(userId: String, username: String) {
+        viewModelScope.launch {
+            _error.value = null
+            try {
+                authApiClient.approveUser(userId)
+                _successMessage.value = username
+                loadUsers()
+            } catch (e: Exception) {
+                _error.value = e.toUiMessage()
+            }
+        }
+    }
+
+    fun rejectUser(userId: String) {
+        viewModelScope.launch {
+            _error.value = null
+            try {
+                authApiClient.rejectUser(userId)
+                loadUsers()
+            } catch (e: Exception) {
+                _error.value = e.toUiMessage()
+            }
+        }
+    }
+
+    fun dismissSuccess() {
+        _successMessage.value = null
     }
 
     fun generateResetLink(userId: String) {

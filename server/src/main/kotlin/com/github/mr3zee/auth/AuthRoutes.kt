@@ -86,11 +86,12 @@ fun Route.authRoutes() {
                             clientType = request.clientType,
                             createdAt = now,
                             lastAccessedAt = now,
+                            approved = user.approved,
                         )
                     )
 
-                    log.info("User '{}' logged in", user.username)
-                    call.respond(UserInfo(username = user.username, id = user.id.value, role = user.role))
+                    log.info("User '{}' logged in (approved={})", user.username, user.approved)
+                    call.respond(UserInfo(username = user.username, id = user.id.value, role = user.role, approved = user.approved))
                 }
                 is LoginResult.OAuthOnly -> {
                     // SEC-L1: Same HTTP status and error code as invalid credentials
@@ -148,11 +149,12 @@ fun Route.authRoutes() {
                         clientType = request.clientType,
                         createdAt = now,
                         lastAccessedAt = now,
+                        approved = user.approved,
                     )
                 )
 
-                log.info("User '{}' registered with role {}", user.username, user.role)
-                call.respond(HttpStatusCode.Created, UserInfo(username = user.username, id = user.id.value, role = user.role))
+                log.info("User '{}' registered with role {} (approved={})", user.username, user.role, user.approved)
+                call.respond(HttpStatusCode.Created, UserInfo(username = user.username, id = user.id.value, role = user.role, approved = user.approved))
             } else {
                 log.warn("Registration rejected: username '{}' already taken", trimmedUsername)
                 call.respond(
@@ -185,6 +187,7 @@ fun Route.authRoutes() {
                     createdAt = user?.createdAt,
                     hasPassword = hasPassword,
                     oauthProviders = oauthProviders,
+                    approved = user?.approved ?: session.approved,
                 )
             )
         }
@@ -240,6 +243,7 @@ fun Route.authRoutes() {
                             createdAt = updatedUser.createdAt,
                             hasPassword = hasPassword,
                             oauthProviders = oauthProviders,
+                            approved = updatedUser.approved,
                         )
                     )
                 },
@@ -409,7 +413,7 @@ fun Route.authRoutes() {
                 ?: return@get call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Missing userId", code = "BAD_REQUEST"))
             val user = authService.getUserById(UserId(userId))
             if (user != null) {
-                call.respond(UserInfo(username = user.username, id = user.id.value, role = user.role))
+                call.respond(UserInfo(username = user.username, id = user.id.value, role = user.role, approved = user.approved))
             } else {
                 call.respond(HttpStatusCode.NotFound, ErrorResponse(error = "User not found", code = "NOT_FOUND"))
             }
@@ -435,6 +439,60 @@ fun Route.authRoutes() {
                 onFailure = {
                     log.warn("Role update rejected for user {}: cannot demote last admin", userId)
                     call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Cannot demote the last admin", code = "LAST_ADMIN"))
+                },
+            )
+        }
+
+        // Admin-only: approve a pending user
+        post(ApiRoutes.Auth.USERS + "/{userId}/approve") {
+            val session = call.userSession()
+            requireAdmin(call, session) ?: return@post
+            val userId = call.parameters["userId"]
+                ?: return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Missing userId", code = "BAD_REQUEST"))
+            val updated = authService.approveUser(UserId(userId))
+            if (updated) {
+                log.info("Admin '{}' approved user '{}'", session.userId, userId)
+                call.respond(HttpStatusCode.OK, mapOf("status" to "approved"))
+            } else {
+                call.respond(HttpStatusCode.NotFound, ErrorResponse(error = "User not found", code = "NOT_FOUND"))
+            }
+        }
+
+        // Admin-only: delete (reject) a user
+        delete(ApiRoutes.Auth.USERS + "/{userId}") {
+            val session = call.userSession()
+            requireAdmin(call, session) ?: return@delete
+            val userId = call.parameters["userId"]
+                ?: return@delete call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Missing userId", code = "BAD_REQUEST"))
+            val result = authService.adminDeleteUser(UserId(userId), UserId(session.userId))
+            result.fold(
+                onSuccess = { deleted ->
+                    if (deleted) {
+                        log.info("Admin '{}' deleted user '{}'", session.userId, userId)
+                        call.respond(HttpStatusCode.OK, mapOf("status" to "deleted"))
+                    } else {
+                        call.respond(HttpStatusCode.NotFound, ErrorResponse(error = "User not found", code = "NOT_FOUND"))
+                    }
+                },
+                onFailure = { error ->
+                    val message = error.message ?: "Deletion failed"
+                    val code = when (message) {
+                        "LAST_ADMIN" -> "LAST_ADMIN"
+                        "LAST_TEAM_LEAD" -> "LAST_TEAM_LEAD"
+                        "CANNOT_DELETE_SELF" -> "CANNOT_DELETE_SELF"
+                        else -> "BAD_REQUEST"
+                    }
+                    val humanMessage = when (message) {
+                        "LAST_ADMIN" -> "Cannot delete the last admin account"
+                        "LAST_TEAM_LEAD" -> "Cannot delete: user is the last lead in one or more teams"
+                        "CANNOT_DELETE_SELF" -> "Cannot delete your own account via admin panel"
+                        else -> message
+                    }
+                    val status = when (code) {
+                        "LAST_ADMIN", "LAST_TEAM_LEAD" -> HttpStatusCode.Conflict
+                        else -> HttpStatusCode.BadRequest
+                    }
+                    call.respond(status, ErrorResponse(error = humanMessage, code = code))
                 },
             )
         }

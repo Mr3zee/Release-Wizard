@@ -661,6 +661,21 @@
     <string name="admin_users_copy_link">Copy Link</string>
     <string name="admin_users_copied">Copied to clipboard</string>
     <string name="admin_users_reset_link_label">Reset link:</string>
+    <string name="admin_users_pending_section">Pending Approval</string>
+    <string name="admin_users_active_section">Active Users</string>
+    <string name="admin_users_pending_badge">Pending Approval</string>
+    <string name="admin_users_approve">Approve</string>
+    <string name="admin_users_reject">Reject</string>
+    <string name="admin_users_reject_confirm">This will permanently delete %1$s\u0027s account. They will need to register again.</string>
+    <string name="admin_users_approved_success">%1$s has been approved</string>
+
+    <!-- ==================== Pending Approval Screen ==================== -->
+    <string name="pending_approval_title">Registration Pending</string>
+    <string name="pending_approval_message">Your account was created but is not yet active. An administrator must approve your account before you can access Release Wizard.</string>
+    <string name="pending_approval_hint">Check back later or click below to see if you\u0027ve been approved.</string>
+    <string name="pending_approval_check_status">Check Status</string>
+    <string name="pending_approval_sign_out">Sign Out</string>
+    <string name="pending_approval_still_pending">Still waiting for admin approval.</string>
 
     <!-- ==================== Loading Accessibility ==================== -->
     <string name="loading_projects">Loading projects</string>

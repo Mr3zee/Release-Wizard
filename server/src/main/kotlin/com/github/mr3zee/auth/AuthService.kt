@@ -72,16 +72,35 @@ interface AuthService {
     suspend fun hashPassword(password: String): String
 
     /**
-     * Lightweight query for session refresh: returns role, username, and passwordChangedAt
+     * Lightweight query for session refresh: returns role, username, passwordChangedAt, and approved
      * without constructing a full User object. Returns null if user not found (deleted).
      */
     suspend fun getSessionRefreshInfo(id: UserId): SessionRefreshInfo?
+
+    /**
+     * Approve a user account (admin action). Sets approved = true.
+     * Returns false if user not found.
+     */
+    suspend fun approveUser(id: UserId): Boolean
+
+    /**
+     * Admin-initiated user deletion (rejection). Applies LAST_ADMIN and last-team-lead guards.
+     * Does not require password confirmation (admin is already authenticated).
+     */
+    suspend fun adminDeleteUser(id: UserId, adminUserId: UserId): Result<Boolean>
+
+    /**
+     * Lightweight check of a user's approval status from DB.
+     * Used by ApprovalGate plugin to re-read on the rejection path.
+     */
+    suspend fun isApproved(id: UserId): Boolean
 }
 
 data class SessionRefreshInfo(
     val role: UserRole,
     val username: String,
     val passwordChangedAtMillis: Long?,
+    val approved: Boolean,
 )
 
 class DatabaseAuthService(
@@ -184,6 +203,7 @@ class DatabaseAuthService(
         role = this[UserTable.role],
         createdAt = this[UserTable.createdAt].toEpochMilliseconds(),
         hasPassword = this[UserTable.passwordHash] != null,
+        approved = this[UserTable.approved],
     )
 
     override suspend fun validate(username: String, password: String): LoginResult {
@@ -241,15 +261,19 @@ class DatabaseAuthService(
 
                     val id = UUID.randomUUID()
                     val now = Clock.System.now()
+                    // First user (admin) is auto-approved; subsequent basic registrations require admin approval
+                    val approved = isFirstUser
+
                     UserTable.insert {
                         it[UserTable.id] = id
                         it[UserTable.username] = username
                         it[UserTable.passwordHash] = hash
                         it[UserTable.role] = role
                         it[UserTable.createdAt] = now
+                        it[UserTable.approved] = approved
                     }
 
-                    User(id = UserId(id.toString()), username = username, role = role)
+                    User(id = UserId(id.toString()), username = username, role = role, approved = approved)
                 }
             } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
                 // AUTH-M1: Catch unique constraint violation from concurrent registrations.
@@ -550,7 +574,82 @@ class DatabaseAuthService(
                     role = row[UserTable.role],
                     username = row[UserTable.username],
                     passwordChangedAtMillis = row[UserTable.passwordChangedAt]?.toEpochMilliseconds(),
+                    approved = row[UserTable.approved],
                 )
             }
+    }
+
+    override suspend fun approveUser(id: UserId): Boolean = dbQuery {
+        val updated = UserTable.update({ UserTable.id eq UUID.fromString(id.value) }) {
+            it[UserTable.approved] = true
+        }
+        if (updated > 0) {
+            log.info("User '{}' approved by admin", id.value)
+        }
+        updated > 0
+    }
+
+    override suspend fun adminDeleteUser(id: UserId, adminUserId: UserId): Result<Boolean> {
+        if (id == adminUserId) {
+            return Result.failure(IllegalArgumentException("CANNOT_DELETE_SELF"))
+        }
+        return withContext(Dispatchers.IO) {
+            suspendTransaction(db, transactionIsolation = Connection.TRANSACTION_SERIALIZABLE) {
+                val uuid = UUID.fromString(id.value)
+                val currentRow = UserTable.selectAll()
+                    .where { UserTable.id eq uuid }
+                    .singleOrNull()
+                    ?: return@suspendTransaction Result.success(false)
+
+                val isAdmin = currentRow[UserTable.role] == UserRole.ADMIN
+                if (isAdmin) {
+                    val adminCount = UserTable.selectAll()
+                        .where { UserTable.role eq UserRole.ADMIN }
+                        .count()
+                    if (adminCount <= 1) {
+                        return@suspendTransaction Result.failure(
+                            IllegalStateException("LAST_ADMIN")
+                        )
+                    }
+                }
+
+                // Check last team lead constraint per team
+                val userTeamLeaderships = TeamMembershipTable.selectAll()
+                    .where {
+                        (TeamMembershipTable.userId eq uuid) and
+                            (TeamMembershipTable.role eq TeamRole.TEAM_LEAD)
+                    }
+                    .map { it[TeamMembershipTable.teamId].value }
+
+                for (teamId in userTeamLeaderships) {
+                    val leadCount = TeamMembershipTable.selectAll()
+                        .where {
+                            (TeamMembershipTable.teamId eq teamId) and
+                                (TeamMembershipTable.role eq TeamRole.TEAM_LEAD)
+                        }
+                        .count()
+                    if (leadCount <= 1) {
+                        return@suspendTransaction Result.failure(
+                            IllegalStateException("LAST_TEAM_LEAD")
+                        )
+                    }
+                }
+
+                val username = currentRow[UserTable.username]
+                UserTable.deleteWhere { UserTable.id eq uuid }
+                AccountLockoutTable.deleteWhere { AccountLockoutTable.username eq username }
+
+                log.info("User '{}' ({}) deleted by admin", username, id.value)
+                Result.success(true)
+            }
+        }
+    }
+
+    override suspend fun isApproved(id: UserId): Boolean = dbQuery {
+        UserTable.select(UserTable.approved)
+            .where { UserTable.id eq UUID.fromString(id.value) }
+            .singleOrNull()
+            ?.let { it[UserTable.approved] }
+            ?: false
     }
 }

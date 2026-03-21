@@ -28,6 +28,7 @@ import com.github.mr3zee.auth.AuthEventBus
 import com.github.mr3zee.auth.AuthEvent
 import com.github.mr3zee.auth.AuthViewModel
 import com.github.mr3zee.auth.LoginScreen
+import com.github.mr3zee.auth.PendingApprovalScreen
 import com.github.mr3zee.util.RuntimeContext
 import com.github.mr3zee.util.UiMessage
 import com.github.mr3zee.util.currentRuntimeContext
@@ -289,6 +290,12 @@ fun App() {
                         LoginScreen(
                             viewModel = authViewModel,
                             showGoogleLogin = currentRuntimeContext() == RuntimeContext.BROWSER && isGoogleAvailable,
+                        )
+                    }
+                    user?.approved == false -> {
+                        PendingApprovalScreen(
+                            onCheckStatus = { authViewModel.checkSession() },
+                            onSignOut = logout,
                         )
                     }
                     else -> {

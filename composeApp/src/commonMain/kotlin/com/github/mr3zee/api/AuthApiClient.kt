@@ -97,6 +97,16 @@ class AuthApiClient(private val client: HttpClient) {
         }
     }
 
+    suspend fun approveUser(userId: String) {
+        client.post(serverUrl(ApiRoutes.Auth.approveUser(userId))) {
+            contentType(ContentType.Application.Json)
+        }
+    }
+
+    suspend fun rejectUser(userId: String) {
+        client.delete(serverUrl(ApiRoutes.Auth.deleteUser(userId)))
+    }
+
     suspend fun getUsers(): List<User> {
         val response = client.get(serverUrl(ApiRoutes.Auth.USERS))
         val body: UserListResponse = response.body()

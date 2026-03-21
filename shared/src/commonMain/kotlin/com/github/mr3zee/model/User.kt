@@ -16,4 +16,5 @@ data class User(
     val createdAt: Long? = null,
     val hasPassword: Boolean = true,
     val oauthProviders: List<OAuthProvider> = emptyList(),
+    val approved: Boolean = true,
 )

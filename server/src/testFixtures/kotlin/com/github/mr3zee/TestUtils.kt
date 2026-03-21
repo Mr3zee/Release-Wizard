@@ -7,6 +7,7 @@ import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.audit.auditModule
 import com.github.mr3zee.auth.authModule
 import com.github.mr3zee.connections.connectionsModule
+import com.github.mr3zee.plugins.ApprovalGate
 import com.github.mr3zee.plugins.CorrelationId
 import com.github.mr3zee.plugins.CorrelationIdKey
 import com.github.mr3zee.plugins.CsrfProtection
@@ -111,12 +112,14 @@ val testOverrideModule = module {
 fun Application.testModuleWithPasswordPolicy(
     passwordPolicyConfig: PasswordPolicyConfig,
     dbConfig: DatabaseConfig = testDbConfig(),
-) = testModule(dbConfig, passwordPolicyConfig)
+    enableApprovalGate: Boolean = false,
+) = testModule(dbConfig, passwordPolicyConfig, enableApprovalGate = enableApprovalGate)
 
 fun Application.testModule(
     dbConfig: DatabaseConfig = testDbConfig(),
     passwordPolicyConfig: PasswordPolicyConfig = testPasswordPolicyConfig(),
     authConfig: AuthConfig = testAuthConfig(),
+    enableApprovalGate: Boolean = false,
 ) {
     val executionScope = CoroutineScope(SupervisorJob(coroutineContext.job) + Dispatchers.Default)
 
@@ -218,6 +221,9 @@ fun Application.testModule(
         }
     }
     install(SessionTtl)
+    if (enableApprovalGate) {
+        install(ApprovalGate)
+    }
     install(CsrfProtection)
     install(WebSockets) {
         pingPeriod = 15.seconds
@@ -271,6 +277,17 @@ fun Application.testModule(
                 ErrorResponse(
                     error = cause.message ?: "Forbidden",
                     code = "FORBIDDEN",
+                    correlationId = correlationId,
+                ),
+            )
+        }
+        exception<NotApprovedException> { call, _ ->
+            val correlationId = call.attributes.getOrNull(CorrelationIdKey)
+            call.respond(
+                HttpStatusCode.Forbidden,
+                ErrorResponse(
+                    error = "Account pending admin approval",
+                    code = "NOT_APPROVED",
                     correlationId = correlationId,
                 ),
             )
@@ -353,8 +370,9 @@ fun ApplicationTestBuilder.jsonClient() = createClient {
 }
 
 /**
- * Registers and logs in a test user. First user in a fresh DB is auto-promoted to ADMIN.
- * Also creates a default team so that team-scoped operations work.
+ * Registers and logs in a test user. First user in a fresh DB is auto-promoted to ADMIN
+ * and auto-approved. Subsequent users are NOT approved by default.
+ * Use [registerAndApproveUser] to register and auto-approve a second user via an admin client.
  */
 suspend fun HttpClient.login(
     username: String = "admin",
@@ -367,6 +385,36 @@ suspend fun HttpClient.login(
         setBody(RegisterRequest(username = username, password = password, clientType = clientType))
     }
     // Login to get a session cookie
+    post(ApiRoutes.Auth.LOGIN) {
+        contentType(ContentType.Application.Json)
+        setBody(LoginRequest(username = username, password = password, clientType = clientType))
+    }
+}
+
+/**
+ * Registers a second user and has the admin approve them.
+ * Must be called from a client that is already logged in as admin.
+ */
+suspend fun HttpClient.registerAndApproveUser(
+    adminClient: HttpClient,
+    username: String,
+    password: String = "testpass",
+    clientType: ClientType = ClientType.BROWSER,
+) {
+    // Register the user
+    val registerResponse = post(ApiRoutes.Auth.REGISTER) {
+        contentType(ContentType.Application.Json)
+        setBody(RegisterRequest(username = username, password = password, clientType = clientType))
+    }
+    val userInfo = registerResponse.body<UserInfo>()
+    val userId = userInfo.id ?: error("Expected user ID in register response")
+
+    // Admin approves the user
+    adminClient.post(ApiRoutes.Auth.approveUser(userId)) {
+        contentType(ContentType.Application.Json)
+    }
+
+    // Log in again to get an approved session
     post(ApiRoutes.Auth.LOGIN) {
         contentType(ContentType.Application.Json)
         setBody(LoginRequest(username = username, password = password, clientType = clientType))

@@ -29,8 +29,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -42,9 +44,12 @@ import com.github.mr3zee.components.ListItemCard
 import com.github.mr3zee.components.RwBadge
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
+import com.github.mr3zee.components.RwInlineConfirmation
+import com.github.mr3zee.components.RwTooltip
 import com.github.mr3zee.i18n.packStringResource
 import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
+import com.github.mr3zee.model.User
 import com.github.mr3zee.model.UserRole
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.LocalAppColors
@@ -66,11 +71,13 @@ fun AdminUsersScreen(
     val generatedLinks by viewModel.generatedLinks.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val isManualRefresh by viewModel.isManualRefresh.collectAsState()
+    val successUsername by viewModel.successMessage.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val dismissLabel = packStringResource(Res.string.common_dismiss)
     val copiedMessage = packStringResource(Res.string.admin_users_copied)
+    val approvedTemplate = packStringResource(Res.string.admin_users_approved_success, successUsername ?: "")
 
     val resolvedError = error?.resolve()
     LaunchedEffect(error) {
@@ -81,6 +88,15 @@ fun AdminUsersScreen(
             duration = SnackbarDuration.Long,
         )
         viewModel.dismissError()
+    }
+
+    LaunchedEffect(successUsername) {
+        successUsername ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(
+            message = approvedTemplate,
+            duration = SnackbarDuration.Short,
+        )
+        viewModel.dismissSuccess()
     }
 
     val shortcutActions = remember {
@@ -125,6 +141,11 @@ fun AdminUsersScreen(
                 }
             }
             else -> {
+                val allUsers = users ?: emptyList()
+                val pendingUsers = allUsers.filter { !it.approved }
+                val activeUsers = allUsers.filter { it.approved }
+                var confirmingRejectUserId by remember { mutableStateOf<String?>(null) }
+
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -132,100 +153,61 @@ fun AdminUsersScreen(
                         .verticalScroll(rememberScrollState()),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    users?.forEach { user ->
-                        val userId = user.id.value
-                        val generatedLink = generatedLinks[userId]
+                    // Pending Approval section
+                    if (pendingUsers.isNotEmpty()) {
+                        Text(
+                            packStringResource(Res.string.admin_users_pending_section) + " (${pendingUsers.size})",
+                            style = AppTypography.label,
+                            color = LocalAppColors.current.blockStatusWaitingForInput,
+                            modifier = Modifier
+                                .widthIn(max = 1200.dp)
+                                .fillMaxWidth()
+                                .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
+                                .testTag("admin_users_pending_section_header"),
+                        )
+                        pendingUsers.forEach { user ->
+                            PendingUserItem(
+                                user = user,
+                                isConfirmingReject = confirmingRejectUserId == user.id.value,
+                                onApprove = { viewModel.approveUser(user.id.value, user.username) },
+                                onRejectClick = { confirmingRejectUserId = user.id.value },
+                                onRejectConfirm = {
+                                    viewModel.rejectUser(user.id.value)
+                                    confirmingRejectUserId = null
+                                },
+                                onRejectDismiss = { confirmingRejectUserId = null },
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(Spacing.lg))
+                    }
 
-                        ListItemCard(
-                            testTag = "admin_user_item_$userId",
-                            modifier = Modifier.widthIn(max = 1200.dp),
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-                                ) {
-                                    Text(
-                                        user.username,
-                                        style = AppTypography.subheading,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                    RwBadge(
-                                        text = when (user.role) {
-                                            UserRole.ADMIN -> packStringResource(Res.string.profile_role_admin)
-                                            UserRole.USER -> packStringResource(Res.string.profile_role_user)
-                                        },
-                                        color = if (user.role == UserRole.ADMIN) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            LocalAppColors.current.chromeTextMetadata
-                                        },
-                                    )
-                                    if (user.oauthProviders.isNotEmpty()) {
-                                        RwBadge(
-                                            text = packStringResource(Res.string.admin_users_oauth_badge),
-                                            color = MaterialTheme.colorScheme.tertiary,
+                    // Active Users section
+                    if (activeUsers.isNotEmpty()) {
+                        Text(
+                            packStringResource(Res.string.admin_users_active_section),
+                            style = AppTypography.label,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier
+                                .widthIn(max = 1200.dp)
+                                .fillMaxWidth()
+                                .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
+                                .testTag("admin_users_active_section_header"),
+                        )
+                        activeUsers.forEach { user ->
+                            ActiveUserItem(
+                                user = user,
+                                generatedLink = generatedLinks[user.id.value],
+                                onGenerateResetLink = { viewModel.generateResetLink(user.id.value) },
+                                onCopyLink = { link ->
+                                    copyToClipboard(link)
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar(
+                                            message = copiedMessage,
+                                            duration = SnackbarDuration.Short,
                                         )
                                     }
-                                    if (!user.hasPassword) {
-                                        RwBadge(
-                                            text = packStringResource(Res.string.admin_users_no_password_badge),
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                }
-
-                                if (generatedLink != null) {
-                                    Spacer(modifier = Modifier.height(Spacing.sm))
-                                    Text(
-                                        packStringResource(Res.string.admin_users_reset_link_label),
-                                        style = AppTypography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                                    ) {
-                                        SelectionContainer(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                generatedLink,
-                                                style = AppTypography.bodySmall,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                                modifier = Modifier.testTag("admin_reset_link_value_$userId"),
-                                            )
-                                        }
-                                        RwButton(
-                                            onClick = {
-                                                copyToClipboard(generatedLink)
-                                                scope.launch {
-                                                    snackbarHostState.showSnackbar(
-                                                        message = copiedMessage,
-                                                        duration = SnackbarDuration.Short,
-                                                    )
-                                                }
-                                            },
-                                            variant = RwButtonVariant.Ghost,
-                                        ) {
-                                            Text(packStringResource(Res.string.admin_users_copy_link))
-                                        }
-                                    }
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.width(Spacing.sm))
-
-                            RwButton(
-                                onClick = { viewModel.generateResetLink(userId) },
-                                variant = RwButtonVariant.Secondary,
-                                modifier = Modifier.testTag("admin_generate_reset_link_$userId"),
-                            ) {
-                                Text(
-                                    if (user.hasPassword) packStringResource(Res.string.admin_users_generate_reset_link)
-                                    else packStringResource(Res.string.admin_users_generate_set_password_link)
-                                )
-                            }
+                                },
+                            )
                         }
                     }
 
@@ -236,4 +218,163 @@ fun AdminUsersScreen(
     }
 
     } // ProvideShortcutActions
+}
+
+@Composable
+private fun PendingUserItem(
+    user: User,
+    isConfirmingReject: Boolean,
+    onApprove: () -> Unit,
+    onRejectClick: () -> Unit,
+    onRejectConfirm: () -> Unit,
+    onRejectDismiss: () -> Unit,
+) {
+    val userId = user.id.value
+
+    ListItemCard(
+        testTag = "admin_user_item_$userId",
+        modifier = Modifier.widthIn(max = 1200.dp),
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                Text(
+                    user.username,
+                    style = AppTypography.subheading,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                RwBadge(
+                    text = packStringResource(Res.string.admin_users_pending_badge),
+                    color = LocalAppColors.current.blockStatusWaitingForInput,
+                )
+            }
+
+            RwInlineConfirmation(
+                visible = isConfirmingReject,
+                message = packStringResource(Res.string.admin_users_reject_confirm, user.username),
+                confirmLabel = packStringResource(Res.string.admin_users_reject),
+                onConfirm = onRejectConfirm,
+                onDismiss = onRejectDismiss,
+                isDestructive = true,
+                testTag = "admin_reject_confirm_$userId",
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+
+        Spacer(modifier = Modifier.width(Spacing.sm))
+
+        Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            RwButton(
+                onClick = onApprove,
+                variant = RwButtonVariant.Primary,
+                modifier = Modifier.testTag("admin_approve_$userId"),
+            ) {
+                Text(packStringResource(Res.string.admin_users_approve))
+            }
+            RwButton(
+                onClick = onRejectClick,
+                variant = RwButtonVariant.Danger,
+                modifier = Modifier.testTag("admin_reject_$userId"),
+            ) {
+                Text(packStringResource(Res.string.admin_users_reject))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActiveUserItem(
+    user: User,
+    generatedLink: String?,
+    onGenerateResetLink: () -> Unit,
+    onCopyLink: (String) -> Unit,
+) {
+    val userId = user.id.value
+
+    ListItemCard(
+        testTag = "admin_user_item_$userId",
+        modifier = Modifier.widthIn(max = 1200.dp),
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                Text(
+                    user.username,
+                    style = AppTypography.subheading,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                RwBadge(
+                    text = when (user.role) {
+                        UserRole.ADMIN -> packStringResource(Res.string.profile_role_admin)
+                        UserRole.USER -> packStringResource(Res.string.profile_role_user)
+                    },
+                    color = if (user.role == UserRole.ADMIN) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        LocalAppColors.current.chromeTextMetadata
+                    },
+                )
+                if (user.oauthProviders.isNotEmpty()) {
+                    RwBadge(
+                        text = packStringResource(Res.string.admin_users_oauth_badge),
+                        color = MaterialTheme.colorScheme.tertiary,
+                    )
+                }
+                if (!user.hasPassword) {
+                    RwBadge(
+                        text = packStringResource(Res.string.admin_users_no_password_badge),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            if (generatedLink != null) {
+                Spacer(modifier = Modifier.height(Spacing.sm))
+                Text(
+                    packStringResource(Res.string.admin_users_reset_link_label),
+                    style = AppTypography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+                ) {
+                    SelectionContainer(modifier = Modifier.weight(1f)) {
+                        Text(
+                            generatedLink,
+                            style = AppTypography.bodySmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.testTag("admin_reset_link_value_$userId"),
+                        )
+                    }
+                    RwButton(
+                        onClick = { onCopyLink(generatedLink) },
+                        variant = RwButtonVariant.Ghost,
+                    ) {
+                        Text(packStringResource(Res.string.admin_users_copy_link))
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.width(Spacing.sm))
+
+        RwButton(
+            onClick = onGenerateResetLink,
+            variant = RwButtonVariant.Secondary,
+            modifier = Modifier.testTag("admin_generate_reset_link_$userId"),
+        ) {
+            Text(
+                if (user.hasPassword) packStringResource(Res.string.admin_users_generate_reset_link)
+                else packStringResource(Res.string.admin_users_generate_set_password_link)
+            )
+        }
+    }
 }
