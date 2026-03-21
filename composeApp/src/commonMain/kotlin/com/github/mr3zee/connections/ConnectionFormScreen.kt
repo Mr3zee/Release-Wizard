@@ -480,11 +480,33 @@ fun ConnectionFormScreen(
                 }
                 ConnectionType.GITHUB -> {
                     var showGithubToken by remember { mutableStateOf(false) }
+                    var githubUrlInput by remember(connectionId) { mutableStateOf("") }
 
                     Text(
                         text = packStringResource(Res.string.connections_section_github),
                         style = AppTypography.heading,
                         modifier = Modifier.testTag("section_header_github"),
+                    )
+                    RwTextField(
+                        value = githubUrlInput,
+                        onValueChange = { url ->
+                            githubUrlInput = url
+                            val parsed = parseGitHubUrl(url)
+                            if (parsed != null) {
+                                githubOwner = parsed.first
+                                githubRepo = parsed.second
+                            }
+                        },
+                        label = packStringResource(Res.string.connections_github_url_label),
+                        placeholder = packStringResource(Res.string.connections_github_url_placeholder),
+                        singleLine = true,
+                        supportingText = {
+                            Text(
+                                packStringResource(Res.string.connections_github_url_hint),
+                                style = AppTypography.bodySmall,
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth().testTag("github_url_autofill"),
                     )
                     RwTextField(
                         value = githubToken,
@@ -633,6 +655,23 @@ private fun buildConfig(
         repo = githubRepo,
         pollingIntervalSeconds = githubPollingInterval.toIntOrNull()?.coerceIn(5, 300) ?: 30,
     )
+}
+
+private val GitHubUrlRegex = Regex("""^(?:https?://)?github\.com/([^/]+)/([^/.]+?)(?:\.git)?(?:/.*)?$""")
+
+/**
+ * Parses a GitHub URL and returns a pair of (owner, repo), or null if the URL doesn't match.
+ * Supports:
+ *   - https://github.com/owner/repo
+ *   - https://github.com/owner/repo.git
+ *   - https://github.com/owner/repo/tree/main/...
+ *   - github.com/owner/repo (without protocol)
+ */
+private fun parseGitHubUrl(url: String): Pair<String, String>? {
+    val match = GitHubUrlRegex.matchEntire(url.trim()) ?: return null
+    val owner = match.groupValues[1]
+    val repo = match.groupValues[2]
+    return if (owner.isNotEmpty() && repo.isNotEmpty()) owner to repo else null
 }
 
 private fun ConnectionConfig.isValid(): Boolean = when (this) {

@@ -14,6 +14,7 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.CompletableDeferred
 import kotlin.test.Test
+import kotlin.test.assertTrue
 
 @OptIn(ExperimentalTestApi::class)
 class LoginScreenTest {
@@ -703,5 +704,88 @@ class LoginScreenTest {
         // Now toggle button should say "Already have an account? Sign in"
         onNodeWithText("Already have an account? Sign in").assertExists()
         onNodeWithText("Don't have an account? Create account").assertDoesNotExist()
+    }
+
+    // ==================================================================================
+    // Commit 2316709: No "Session expired" error on first visit
+    // ==================================================================================
+
+    @Test
+    fun `no session expired error on first visit when auth me returns 401`() = runComposeUiTest {
+        // Simulate first visit: /auth/me returns 401 (no prior session)
+        val client = mockHttpClient(
+            mapOf(
+                "/auth/me" to json("Not authenticated", HttpStatusCode.Unauthorized),
+            )
+        )
+        val viewModel = AuthViewModel(AuthApiClient(client))
+
+        setContent { MaterialTheme { LoginScreen(viewModel = viewModel) } }
+
+        // checkSession would fail with 401 on first visit — simulate that flow
+        viewModel.checkSession()
+
+        // Wait for session check to complete (isCheckingSession becomes false)
+        waitUntil(timeoutMillis = 3000L) {
+            !viewModel.isCheckingSession.value
+        }
+
+        // Now simulate what AuthEventBus would do if a 401 were processed
+        // (e.g. from a non-excluded path). On first visit, hadSession is false,
+        // so onSessionExpired should NOT set an error.
+        viewModel.onSessionExpired()
+        waitForIdle()
+
+        // Login screen should be visible
+        onNodeWithTag("login_screen").assertExists()
+        // The "login_error" tag should NOT exist — no spurious "Session expired"
+        onNodeWithTag("login_error").assertDoesNotExist()
+    }
+
+    // ==================================================================================
+    // Commit 2316709: Password field same height as username field
+    // ==================================================================================
+
+    @Test
+    fun `password field has same height as username field`() = runComposeUiTest {
+        val viewModel = AuthViewModel(AuthApiClient(loginClient()))
+        setContent { MaterialTheme { LoginScreen(viewModel = viewModel) } }
+
+        // Both fields must exist
+        onNodeWithTag("login_username").assertExists()
+        onNodeWithTag("login_password").assertExists()
+
+        // Compare heights using unclipped bounds
+        val usernameBounds = onNodeWithTag("login_username").getUnclippedBoundsInRoot()
+        val passwordBounds = onNodeWithTag("login_password").getUnclippedBoundsInRoot()
+
+        val usernameHeight = usernameBounds.bottom - usernameBounds.top
+        val passwordHeight = passwordBounds.bottom - passwordBounds.top
+
+        // Heights should be equal (within 2dp tolerance for sub-pixel rounding)
+        val diff = kotlin.math.abs(usernameHeight.value - passwordHeight.value)
+        assertTrue(diff <= 2f, "Username field height ($usernameHeight) and password field height ($passwordHeight) should be equal within 2dp, but diff was ${diff}dp")
+    }
+
+    // ==================================================================================
+    // Commit 2316709: Login form fields exist and are functional
+    // ==================================================================================
+
+    @Test
+    fun `login form fields accept text input and login button exists`() = runComposeUiTest {
+        val viewModel = AuthViewModel(AuthApiClient(loginClient()))
+        setContent { MaterialTheme { LoginScreen(viewModel = viewModel) } }
+
+        // Enter text in username field
+        onNodeWithTag("login_username").performTextInput("testuser")
+        waitForIdle()
+
+        // Enter text in password field
+        onNodeWithTag("login_password").performTextInput("testpass")
+        waitForIdle()
+
+        // Assert login button exists and is enabled (both fields filled)
+        onNodeWithTag("login_button").assertExists()
+        onNodeWithTag("login_button").assertIsEnabled()
     }
 }
