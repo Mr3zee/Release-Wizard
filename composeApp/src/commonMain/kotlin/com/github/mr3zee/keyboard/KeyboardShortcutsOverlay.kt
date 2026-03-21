@@ -100,6 +100,7 @@ fun KeyboardShortcutsOverlay(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .padding(end = 12.dp)
                         .verticalScroll(scrollState),
                 ) {
                     Row(

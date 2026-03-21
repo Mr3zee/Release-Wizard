@@ -26,7 +26,7 @@ class TeamListViewModel(
     private val _teams = MutableStateFlow<List<TeamResponse>>(emptyList())
     val teams: StateFlow<List<TeamResponse>> = _teams
 
-    private val _isLoading = MutableStateFlow(false)
+    private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading
 
     private val _error = MutableStateFlow<UiMessage?>(null)

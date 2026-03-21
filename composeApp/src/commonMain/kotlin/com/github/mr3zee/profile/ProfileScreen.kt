@@ -46,6 +46,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -57,11 +59,9 @@ import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwCard
 import com.github.mr3zee.components.RwDangerZone
-import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwInlineConfirmation
 import com.github.mr3zee.components.RwInlineForm
 import com.github.mr3zee.components.RwTextField
-import com.github.mr3zee.components.RwTooltip
 import com.github.mr3zee.i18n.packStringResource
 import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
@@ -579,29 +579,20 @@ private fun PasswordVisibilityToggle(
     onToggle: () -> Unit,
     testTag: String,
 ) {
-    RwTooltip(
-        tooltip = if (showPassword) {
+    Icon(
+        if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+        contentDescription = if (showPassword) {
             packStringResource(Res.string.common_hide_password)
         } else {
             packStringResource(Res.string.common_show_password)
         },
-    ) {
-        RwIconButton(
-            onClick = onToggle,
-            modifier = Modifier
-                .focusProperties { canFocus = false }
-                .testTag(testTag),
-        ) {
-            Icon(
-                if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                contentDescription = if (showPassword) {
-                    packStringResource(Res.string.common_hide_password)
-                } else {
-                    packStringResource(Res.string.common_show_password)
-                },
-            )
-        }
-    }
+        modifier = Modifier
+            .size(20.dp)
+            .focusProperties { canFocus = false }
+            .testTag(testTag)
+            .pointerHoverIcon(PointerIcon.Hand)
+            .clickable { onToggle() },
+    )
 }
 
 @Composable

@@ -38,7 +38,7 @@ class ConnectionsViewModel(
     private val _webhookUrls = MutableStateFlow<Map<String, String>>(emptyMap())
     val webhookUrls: StateFlow<Map<String, String>> = _webhookUrls
 
-    private val _isLoading = MutableStateFlow(false)
+    private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading
 
     private val _error = MutableStateFlow<UiMessage?>(null)

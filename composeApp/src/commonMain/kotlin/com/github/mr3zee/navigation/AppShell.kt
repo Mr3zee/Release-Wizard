@@ -38,7 +38,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.geometry.Offset
@@ -100,7 +99,6 @@ fun AppShell(
                     modifier = Modifier
                         .width(sidebarWidth)
                         .fillMaxHeight()
-                        .clipToBounds()
                         .background(colors.chromeSurface)
                         .drawBehind {
                             // Right border

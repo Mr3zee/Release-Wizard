@@ -92,6 +92,16 @@ class AuthViewModel(
         }
     }
 
+    /**
+     * Called after successful account deletion. Clears [hadSession] so that
+     * any in-flight 401 responses do not trigger a "Session expired" message,
+     * then clears the user state.
+     */
+    fun onAccountDeleted() {
+        hadSession = false
+        _user.value = null
+    }
+
     fun onSessionExpired() {
         _user.value = null
         // Only show "session expired" if the user was previously authenticated.

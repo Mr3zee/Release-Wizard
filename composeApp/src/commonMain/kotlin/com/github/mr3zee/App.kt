@@ -239,6 +239,13 @@ fun App() {
         router.replacePath("/projects")
     }
 
+    val accountDeleted = {
+        authViewModel.onAccountDeleted()
+        activeTeamId.value = null
+        navController.resetTo(Screen.ProjectList)
+        router.replacePath("/projects")
+    }
+
     AppTheme(themePreference = themePreference, languagePack = languagePack) {
         CompositionLocalProvider(LocalPasswordPolicyHint provides passwordPolicyHint) {
         Surface(
@@ -372,6 +379,7 @@ fun App() {
                                 currentUserId = user?.id,
                                 currentUserRole = user?.role,
                                 onLogout = logout,
+                                onAccountDeleted = accountDeleted,
                                 onTeamChanged = { teamId ->
                                     activeTeamId.value = teamId
                                 },

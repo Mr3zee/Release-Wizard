@@ -47,12 +47,16 @@ fun AppNavigation(
     currentUserId: String? = null,
     currentUserRole: com.github.mr3zee.model.UserRole? = null,
     onLogout: () -> Unit,
+    onAccountDeleted: () -> Unit = onLogout,
     onTeamChanged: (TeamId) -> Unit,
     onRefreshUser: () -> Unit,
     profileViewModel: ProfileViewModel? = null,
     authApiClient: AuthApiClient? = null,
 ) {
     val isTeamLead = userTeams.any { it.role == TeamRole.TEAM_LEAD }
+    // Track teams created in this session so the UI shows "Member" immediately,
+    // without waiting for the async checkSession/user-refresh round-trip.
+    var localCreatedTeamIds by remember { mutableStateOf(emptySet<TeamId>()) }
 
     when (currentScreen) {
         is Screen.ProjectList -> ProjectListScreen(
@@ -157,12 +161,13 @@ fun AppNavigation(
                 viewModel = viewModel,
                 onTeamClick = { onNavigate(Screen.TeamDetail(it)) },
                 onTeamCreated = { teamId ->
+                    localCreatedTeamIds = localCreatedTeamIds + teamId
                     onTeamChanged(teamId)
                     onRefreshUser()
                     onNavigate(Screen.ProjectList)
                 },
                 onMyInvites = { onNavigate(Screen.MyInvites) },
-                memberTeamIds = userTeams.map { it.teamId }.toSet(),
+                memberTeamIds = userTeams.map { it.teamId }.toSet() + localCreatedTeamIds,
             )
         }
         is Screen.TeamDetail -> {
@@ -231,7 +236,7 @@ fun AppNavigation(
                 onBack = { onGoBack() },
                 onNavigateToTeam = { onNavigate(Screen.TeamDetail(it)) },
                 onNavigateToAdminUsers = { onNavigate(Screen.AdminUsers) },
-                onAccountDeleted = onLogout,
+                onAccountDeleted = onAccountDeleted,
             )
         }
         is Screen.AdminUsers -> {
