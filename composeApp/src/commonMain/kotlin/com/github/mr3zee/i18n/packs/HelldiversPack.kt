@@ -183,6 +183,7 @@ object HelldiversPack {
             "connections_polling_out_of_range" to "Must be between 5 and 300, Citizen",
             "connections_polling_range_hint" to "5\u2013300 seconds, standard issue: 30",
             "connections_search_placeholder" to "Search supply lines...",
+            "connections_save_to_test" to "Deploy to verify",
             "connections_section_github" to "GitHub Tactical Settings",
             "connections_section_slack" to "Slack Comms Array Settings",
             "connections_section_teamcity" to "TeamCity War Factory Settings",

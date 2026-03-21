@@ -181,6 +181,7 @@ object AllLiesPack {
             "connections_polling_out_of_range" to "Perfectly within range, no issues",
             "connections_polling_range_hint" to "Unlimited seconds, no default",
             "connections_search_placeholder" to "Lose connections...",
+            "connections_save_to_test" to "Already tested",
             "connections_section_github" to "GitHub Misconfiguration Settings",
             "connections_section_slack" to "Slack Disconnection Settings",
             "connections_section_teamcity" to "TeamCity Demolition Settings",

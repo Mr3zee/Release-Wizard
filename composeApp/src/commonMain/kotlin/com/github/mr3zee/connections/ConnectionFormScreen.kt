@@ -581,17 +581,16 @@ fun ConnectionFormScreen(
                 }
             }
 
-            if (isEditMode && connectionId != null) {
-                HorizontalDivider()
+            HorizontalDivider()
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
                     RwButton(
-                        onClick = { viewModel.testConnection(connectionId) },
+                        onClick = { if (connectionId != null) viewModel.testConnection(connectionId) },
                         variant = RwButtonVariant.Secondary,
-                        enabled = !isTesting,
+                        enabled = connectionId != null && !isTesting,
                         modifier = Modifier.testTag("test_connection_button"),
                     ) {
                         if (isTesting) {
@@ -599,11 +598,15 @@ fun ConnectionFormScreen(
                             Spacer(modifier = Modifier.width(Spacing.sm))
                             Text(packStringResource(Res.string.common_testing))
                         } else {
-                            Text(packStringResource(Res.string.connections_test))
+                            Text(
+                                if (connectionId != null) packStringResource(Res.string.connections_test)
+                                else packStringResource(Res.string.connections_save_to_test),
+                            )
                         }
                     }
                 }
 
+                if (isEditMode && connectionId != null) {
                 Spacer(modifier = Modifier.height(Spacing.md))
 
                 RwDangerZone(
@@ -629,7 +632,7 @@ fun ConnectionFormScreen(
                         testTag = "delete_connection_confirm",
                     )
                 }
-            }
+                }
 
             }
                 VerticalScrollbar(

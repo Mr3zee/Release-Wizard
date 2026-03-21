@@ -181,6 +181,7 @@ object RickAndMortyPack {
             "connections_polling_out_of_range" to "Out of range, *burp* Morty",
             "connections_polling_range_hint" to "5\u2013300 seconds, default: 30. Basic *burp* stuff, Morty.",
             "connections_search_placeholder" to "Search connections across *burp* dimensions...",
+            "connections_save_to_test" to "Save to *burp* test",
             "connections_section_github" to "GitHub *burp* Settings",
             "connections_section_slack" to "Slack Settings, Morty",
             "connections_section_teamcity" to "TeamCity *burp* Settings",

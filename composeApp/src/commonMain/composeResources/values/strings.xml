@@ -102,6 +102,7 @@
     <string name="connections_create">Create connection</string>
     <string name="connections_delete_confirmation">Are you sure you want to delete "%1$s"?</string>
     <string name="connections_test">Test connection</string>
+    <string name="connections_save_to_test">Save to test</string>
     <string name="connections_edit_title">Edit Connection</string>
     <string name="connections_new_title">New Connection</string>
     <string name="connections_name_label">Connection Name</string>
