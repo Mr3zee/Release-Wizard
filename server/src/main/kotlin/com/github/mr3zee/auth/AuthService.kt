@@ -24,8 +24,14 @@ import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import kotlin.time.Clock
 
+sealed class LoginResult {
+    data class Success(val user: User) : LoginResult()
+    data object InvalidCredentials : LoginResult()
+    data object OAuthOnly : LoginResult()
+}
+
 interface AuthService {
-    suspend fun validate(username: String, password: String): User?
+    suspend fun validate(username: String, password: String): LoginResult
     suspend fun register(username: String, password: String): User?
     suspend fun getUserById(id: UserId): User?
     suspend fun getUserByUsername(username: String): User?
@@ -180,7 +186,7 @@ class DatabaseAuthService(
         hasPassword = this[UserTable.passwordHash] != null,
     )
 
-    override suspend fun validate(username: String, password: String): User? {
+    override suspend fun validate(username: String, password: String): LoginResult {
         // DB-H1: Read user row in a short transaction, then verify hash outside to avoid
         // holding a DB connection during the ~400ms Argon2 computation.
         val row = dbQuery {
@@ -193,24 +199,24 @@ class DatabaseAuthService(
             withContext(Dispatchers.IO) { argon2.verify(dummyHash, preparePassword(password.toCharArray())) }
             // AUTH-L2: Uniform log message for all login failures to prevent user enumeration via logs
             log.warn("Login failed for user '{}'", username)
-            return null
+            return LoginResult.InvalidCredentials
         }
         val hash = row[UserTable.passwordHash]
         if (hash == null) {
             // OAuth-only user — cannot authenticate with password. Perform dummy hash for timing.
             withContext(Dispatchers.IO) { argon2.verify(dummyHash, preparePassword(password.toCharArray())) }
             log.warn("Login failed for user '{}'", username)
-            return null
+            return LoginResult.OAuthOnly
         }
         val userId = UserId(row[UserTable.id].value.toString())
         val valid = verifyPasswordWithRotation(hash, password, userId)
         return if (valid) {
             log.info("Login succeeded for user '{}'", username)
-            row.toUser()
+            LoginResult.Success(row.toUser())
         } else {
             // AUTH-L2: Same message as user-not-found to prevent log-based enumeration
             log.warn("Login failed for user '{}'", username)
-            null
+            LoginResult.InvalidCredentials
         }
     }
 

@@ -9,7 +9,6 @@ sealed interface UiMessage {
     data object InvalidCredentials : UiMessage
     data object RegistrationFailed : UiMessage
     data object SessionExpired : UiMessage
-    data object OAuthOnlyAccount : UiMessage
     data object GoogleAuthFailed : UiMessage
     data object GoogleAuthCancelled : UiMessage
 
@@ -47,7 +46,6 @@ fun UiMessage.resolve(): String = when (this) {
     is UiMessage.InvalidCredentials -> packStringResource(Res.string.error_invalid_credentials)
     is UiMessage.RegistrationFailed -> packStringResource(Res.string.error_registration_failed)
     is UiMessage.SessionExpired -> packStringResource(Res.string.error_session_expired)
-    is UiMessage.OAuthOnlyAccount -> packStringResource(Res.string.auth_oauth_only_account)
     is UiMessage.GoogleAuthFailed -> packStringResource(Res.string.auth_oauth_error)
     is UiMessage.GoogleAuthCancelled -> packStringResource(Res.string.auth_oauth_cancelled)
     is UiMessage.NotAuthenticated -> packStringResource(Res.string.error_not_authenticated)

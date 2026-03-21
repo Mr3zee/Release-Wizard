@@ -71,39 +71,35 @@ fun Route.authRoutes() {
                 return@post
             }
 
-            val user = authService.validate(request.username, request.password)
-            if (user != null) {
-                accountLockout.recordSuccess(request.username)
-                val now = Clock.System.now().toEpochMilliseconds()
-                val csrfToken = generateCsrfToken()
-                call.sessions.set(
-                    UserSession(
-                        username = user.username,
-                        userId = user.id.value,
-                        role = user.role,
-                        csrfToken = csrfToken,
-                        clientType = request.clientType,
-                        createdAt = now,
-                        lastAccessedAt = now,
+            when (val result = authService.validate(request.username, request.password)) {
+                is LoginResult.Success -> {
+                    val user = result.user
+                    accountLockout.recordSuccess(request.username)
+                    val now = Clock.System.now().toEpochMilliseconds()
+                    val csrfToken = generateCsrfToken()
+                    call.sessions.set(
+                        UserSession(
+                            username = user.username,
+                            userId = user.id.value,
+                            role = user.role,
+                            csrfToken = csrfToken,
+                            clientType = request.clientType,
+                            createdAt = now,
+                            lastAccessedAt = now,
+                        )
                     )
-                )
 
-                log.info("User '{}' logged in", user.username)
-                call.respond(UserInfo(username = user.username, id = user.id.value, role = user.role))
-            } else {
-                // Check if this is an OAuth-only account (no password set)
-                val existingUser = authService.getUserByUsername(request.username)
-                if (existingUser != null && !oauthService.hasPassword(existingUser.id)) {
+                    log.info("User '{}' logged in", user.username)
+                    call.respond(UserInfo(username = user.username, id = user.id.value, role = user.role))
+                }
+                is LoginResult.OAuthOnly -> {
+                    // SEC-L1: Same HTTP status and error code as invalid credentials
+                    // to prevent account type enumeration.
                     accountLockout.recordFailure(request.username)
-                    log.warn("OAuth-only login attempt for username '{}'", request.username)
-                    call.respond(
-                        HttpStatusCode.BadRequest,
-                        ErrorResponse(
-                            error = "This account uses Google sign-in",
-                            code = "OAUTH_ONLY_ACCOUNT",
-                        ),
-                    )
-                } else {
+                    log.warn("Failed login attempt for username '{}'", request.username)
+                    respondUnauthorized(call, "Invalid credentials")
+                }
+                is LoginResult.InvalidCredentials -> {
                     accountLockout.recordFailure(request.username)
                     log.warn("Failed login attempt for username '{}'", request.username)
                     respondUnauthorized(call, "Invalid credentials")

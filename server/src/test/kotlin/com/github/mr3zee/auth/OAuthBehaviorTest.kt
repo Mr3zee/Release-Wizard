@@ -77,7 +77,7 @@ class OAuthBehaviorTest {
     }
 
     @Test
-    fun `password login for OAuth-only user returns OAUTH_ONLY_ACCOUNT`() = testApplication {
+    fun `password login for OAuth-only user returns same 401 as invalid credentials`() = testApplication {
         application { testModule() }
         val client = jsonClient()
 
@@ -87,11 +87,12 @@ class OAuthBehaviorTest {
         // Create OAuth user directly in DB
         val oauthUsername = createOAuthUserInDb()
 
-        // Attempt password login
+        // Attempt password login — returns 401 with same code as invalid credentials
+        // to prevent account type enumeration (SEC-L1)
         val response = client.login(oauthUsername, "anything")
-        assertEquals(HttpStatusCode.BadRequest, response.status)
+        assertEquals(HttpStatusCode.Unauthorized, response.status)
         val body: ErrorResponse = response.body()
-        assertEquals("OAUTH_ONLY_ACCOUNT", body.code)
+        assertEquals("INVALID_CREDENTIALS", body.code)
     }
 
     @Test
