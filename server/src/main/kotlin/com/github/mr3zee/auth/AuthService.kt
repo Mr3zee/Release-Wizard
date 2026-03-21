@@ -239,9 +239,11 @@ class DatabaseAuthService(private val db: Database) : AuthService {
             }
         }
 
-    override suspend fun changeUsername(userId: UserId, newUsername: String, currentPassword: String): Result<User> {
-        // Validate password outside the transaction (timing-safe)
-        // todo claude: duplicate 13 lines
+    /**
+     * Fetches a user row by ID and verifies the password outside a transaction.
+     * Returns the ResultRow on success, or a failure Result for not-found / wrong password.
+     */
+    private suspend fun fetchUserAndVerifyPassword(userId: UserId, password: String): Result<ResultRow> {
         val userRow = dbQuery {
             UserTable.selectAll()
                 .where { UserTable.id eq UUID.fromString(userId.value) }
@@ -250,11 +252,17 @@ class DatabaseAuthService(private val db: Database) : AuthService {
 
         val storedHash = userRow[UserTable.passwordHash]
         val passwordValid = withContext(Dispatchers.IO) {
-            argon2.verify(storedHash, currentPassword.toCharArray())
+            argon2.verify(storedHash, password.toCharArray())
         }
         if (!passwordValid) {
             return Result.failure(IllegalArgumentException("INVALID_PASSWORD"))
         }
+        return Result.success(userRow)
+    }
+
+    override suspend fun changeUsername(userId: UserId, newUsername: String, currentPassword: String): Result<User> {
+        fetchUserAndVerifyPassword(userId, currentPassword)
+            .getOrElse { return Result.failure(it) }
 
         // Validate username format
         val trimmed = newUsername.trim()
@@ -303,21 +311,9 @@ class DatabaseAuthService(private val db: Database) : AuthService {
     }
 
     override suspend fun changePassword(userId: UserId, currentPassword: String, newPassword: String): Result<Boolean> {
-        // Validate current password outside the transaction
-        // todo claude: duplicate 13 lines
-        val userRow = dbQuery {
-            UserTable.selectAll()
-                .where { UserTable.id eq UUID.fromString(userId.value) }
-                .singleOrNull()
-        } ?: return Result.failure(IllegalArgumentException("User not found"))
-
+        val userRow = fetchUserAndVerifyPassword(userId, currentPassword)
+            .getOrElse { return Result.failure(it) }
         val storedHash = userRow[UserTable.passwordHash]
-        val passwordValid = withContext(Dispatchers.IO) {
-            argon2.verify(storedHash, currentPassword.toCharArray())
-        }
-        if (!passwordValid) {
-            return Result.failure(IllegalArgumentException("INVALID_PASSWORD"))
-        }
 
         // Hash new password outside the transaction
         val newHash = withContext(Dispatchers.IO) {
@@ -349,21 +345,8 @@ class DatabaseAuthService(private val db: Database) : AuthService {
         confirmUsername: String,
         currentPassword: String,
     ): Result<Boolean> {
-        // Validate password outside the transaction
-        // todo claude: duplicate 13 lines
-        val userRow = dbQuery {
-            UserTable.selectAll()
-                .where { UserTable.id eq UUID.fromString(userId.value) }
-                .singleOrNull()
-        } ?: return Result.failure(IllegalArgumentException("User not found"))
-
-        val storedHash = userRow[UserTable.passwordHash]
-        val passwordValid = withContext(Dispatchers.IO) {
-            argon2.verify(storedHash, currentPassword.toCharArray())
-        }
-        if (!passwordValid) {
-            return Result.failure(IllegalArgumentException("INVALID_PASSWORD"))
-        }
+        val userRow = fetchUserAndVerifyPassword(userId, currentPassword)
+            .getOrElse { return Result.failure(it) }
 
         val actualUsername = userRow[UserTable.username]
         if (confirmUsername != actualUsername) {

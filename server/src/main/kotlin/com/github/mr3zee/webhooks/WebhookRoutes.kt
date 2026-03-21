@@ -4,13 +4,13 @@ import com.github.mr3zee.api.ApiRoutes
 import com.github.mr3zee.api.StatusUpdatePayload
 import io.ktor.http.*
 import io.ktor.server.plugins.ratelimit.*
+import com.github.mr3zee.util.bearerTokenUuid
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.SerializationException
 import org.koin.ktor.ext.inject
 import org.slf4j.LoggerFactory
-import java.util.UUID
 
 private val log = LoggerFactory.getLogger("com.github.mr3zee.webhooks.WebhookRoutes")
 
@@ -28,16 +28,8 @@ fun Route.webhookRoutes() {
     rateLimit(RateLimitName("webhook")) {
     route(ApiRoutes.Webhooks.BASE) {
         post("/status") {
-            // todo claude: duplicate 12 lines
-            val authHeader = call.request.header("Authorization")
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                call.respond(HttpStatusCode.NotFound, "Not found")
-                return@post
-            }
-            val tokenStr = authHeader.removePrefix("Bearer ").trim()
-            val token = try {
-                UUID.fromString(tokenStr)
-            } catch (_: IllegalArgumentException) {
+            val token = call.bearerTokenUuid()
+            if (token == null) {
                 call.respond(HttpStatusCode.NotFound, "Not found")
                 return@post
             }
@@ -67,6 +59,7 @@ fun Route.webhookRoutes() {
             }
 
             // HOOK-M2: Mask bearer token in log output to prevent credential exposure
+            val tokenStr = token.toString()
             val maskedToken = if (tokenStr.length > 8) tokenStr.take(8) + "..." else "***"
 
             when (val result = statusWebhookService.processStatusUpdate(token, payload)) {

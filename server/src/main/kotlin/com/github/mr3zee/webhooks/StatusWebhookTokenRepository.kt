@@ -69,15 +69,7 @@ class ExposedStatusWebhookTokenRepository(
         StatusWebhookTokenTable.selectAll()
             .where { StatusWebhookTokenTable.id eq token }
             .singleOrNull()
-            ?.let {
-                StatusWebhookToken(
-                    token = it[StatusWebhookTokenTable.id].value,
-                    releaseId = ReleaseId(it[StatusWebhookTokenTable.releaseId].value.toString()),
-                    blockId = BlockId(it[StatusWebhookTokenTable.blockId]),
-                    active = it[StatusWebhookTokenTable.active],
-                    createdAt = it[StatusWebhookTokenTable.createdAt],
-                )
-            }
+            ?.toStatusWebhookToken()
     }
 
     /**
@@ -85,33 +77,7 @@ class ExposedStatusWebhookTokenRepository(
      * Returns the token record if active and within TTL, null otherwise.
      */
     override suspend fun findActiveToken(token: UUID, ttl: Duration): StatusWebhookToken? = dbQuery {
-        // todo claude: duplicate 18 lines
-        val row = StatusWebhookTokenTable.selectAll()
-            .where { StatusWebhookTokenTable.id eq token }
-            .forUpdate()
-            .singleOrNull() ?: return@dbQuery null
-
-        if (!row[StatusWebhookTokenTable.active]) return@dbQuery null
-
-        val createdAt = row[StatusWebhookTokenTable.createdAt]
-        val age = Clock.System.now() - createdAt
-        if (age > ttl) {
-            // Deactivate expired token within the same transaction
-            StatusWebhookTokenTable.update({
-                (StatusWebhookTokenTable.id eq token) and (StatusWebhookTokenTable.active eq true)
-            }) {
-                it[StatusWebhookTokenTable.active] = false
-            }
-            return@dbQuery null
-        }
-
-        StatusWebhookToken(
-            token = row[StatusWebhookTokenTable.id].value,
-            releaseId = ReleaseId(row[StatusWebhookTokenTable.releaseId].value.toString()),
-            blockId = BlockId(row[StatusWebhookTokenTable.blockId]),
-            active = true,
-            createdAt = createdAt,
-        )
+        fetchAndValidateToken(token, ttl)?.toStatusWebhookToken()
     }
 
     /**
@@ -119,25 +85,7 @@ class ExposedStatusWebhookTokenRepository(
      * Uses FOR UPDATE to prevent concurrent use of the same token.
      */
     override suspend fun findAndDeactivateToken(token: UUID, ttl: Duration): StatusWebhookToken? = dbQuery {
-        // todo claude: duplicate 18 lines
-        val row = StatusWebhookTokenTable.selectAll()
-            .where { StatusWebhookTokenTable.id eq token }
-            .forUpdate()
-            .singleOrNull() ?: return@dbQuery null
-
-        if (!row[StatusWebhookTokenTable.active]) return@dbQuery null
-
-        val createdAt = row[StatusWebhookTokenTable.createdAt]
-        val age = Clock.System.now() - createdAt
-        if (age > ttl) {
-            // Deactivate expired token
-            StatusWebhookTokenTable.update({
-                (StatusWebhookTokenTable.id eq token) and (StatusWebhookTokenTable.active eq true)
-            }) {
-                it[StatusWebhookTokenTable.active] = false
-            }
-            return@dbQuery null
-        }
+        val row = fetchAndValidateToken(token, ttl) ?: return@dbQuery null
 
         // Deactivate the token in the same transaction — single-use guarantee
         StatusWebhookTokenTable.update({
@@ -146,13 +94,42 @@ class ExposedStatusWebhookTokenRepository(
             it[StatusWebhookTokenTable.active] = false
         }
 
+        row.toStatusWebhookToken(active = false)
+    }
+
+    private fun ResultRow.toStatusWebhookToken(active: Boolean = this[StatusWebhookTokenTable.active]) =
         StatusWebhookToken(
-            token = row[StatusWebhookTokenTable.id].value,
-            releaseId = ReleaseId(row[StatusWebhookTokenTable.releaseId].value.toString()),
-            blockId = BlockId(row[StatusWebhookTokenTable.blockId]),
-            active = false, // already deactivated
-            createdAt = createdAt,
+            token = this[StatusWebhookTokenTable.id].value,
+            releaseId = ReleaseId(this[StatusWebhookTokenTable.releaseId].value.toString()),
+            blockId = BlockId(this[StatusWebhookTokenTable.blockId]),
+            active = active,
+            createdAt = this[StatusWebhookTokenTable.createdAt],
         )
+
+    /**
+     * Locks the token row, validates it's active and within TTL.
+     * Deactivates expired tokens atomically. Returns the valid row or null.
+     */
+    private fun fetchAndValidateToken(token: UUID, ttl: Duration): ResultRow? {
+        val row = StatusWebhookTokenTable.selectAll()
+            .where { StatusWebhookTokenTable.id eq token }
+            .forUpdate()
+            .singleOrNull() ?: return null
+
+        if (!row[StatusWebhookTokenTable.active]) return null
+
+        val createdAt = row[StatusWebhookTokenTable.createdAt]
+        val age = Clock.System.now() - createdAt
+        if (age > ttl) {
+            StatusWebhookTokenTable.update({
+                (StatusWebhookTokenTable.id eq token) and (StatusWebhookTokenTable.active eq true)
+            }) {
+                it[StatusWebhookTokenTable.active] = false
+            }
+            return null
+        }
+
+        return row
     }
 
     override suspend fun deactivate(releaseId: ReleaseId, blockId: BlockId) = dbQuery {

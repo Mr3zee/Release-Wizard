@@ -344,27 +344,12 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
     }
 
     override suspend fun updateMemberRoleAtomic(teamId: TeamId, userId: String, newRole: TeamRole): Boolean = dbQuery {
-        // todo claude: duplicate 14 lines
         val teamUuid = UUID.fromString(teamId.value)
         val userUuid = UUID.fromString(userId)
+        val allMembers = lockTeamMembersForUpdate(teamUuid, userUuid)
 
-        // Lock ALL membership rows for this team to prevent concurrent demotions of different leads
-        // from both passing the lead count check (e.g., 2 leads → both see count=2 → both demote → 0 leads)
-        val allMembers = TeamMembershipTable.selectAll()
-            .where { TeamMembershipTable.teamId eq teamUuid }
-            .forUpdate()
-            .toList()
-
-        val row = allMembers.find { it[TeamMembershipTable.userId].value == userUuid }
-            ?: throw NotFoundException("Member not found")
-
-        val currentRole = row[TeamMembershipTable.role]
-
-        if (currentRole == TeamRole.TEAM_LEAD && newRole != TeamRole.TEAM_LEAD) {
-            val leadCount = allMembers.count { it[TeamMembershipTable.role] == TeamRole.TEAM_LEAD }
-            if (leadCount <= 1) {
-                throw IllegalArgumentException("Cannot demote the last team lead")
-            }
+        if (newRole != TeamRole.TEAM_LEAD) {
+            requireNotLastLead(allMembers, userUuid, "Cannot demote the last team lead")
         }
 
         TeamMembershipTable.update({
@@ -373,31 +358,53 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
     }
 
     override suspend fun removeMemberAtomic(teamId: TeamId, userId: String): Boolean = dbQuery {
-        // todo claude: duplicate 14 lines
         val teamUuid = UUID.fromString(teamId.value)
         val userUuid = UUID.fromString(userId)
-
-        // Lock ALL membership rows for this team to prevent concurrent removals of different leads
-        val allMembers = TeamMembershipTable.selectAll()
-            .where { TeamMembershipTable.teamId eq teamUuid }
-            .forUpdate()
-            .toList()
-
-        val row = allMembers.find { it[TeamMembershipTable.userId].value == userUuid }
-            ?: throw NotFoundException("Member not found")
-
-        val currentRole = row[TeamMembershipTable.role]
-
-        if (currentRole == TeamRole.TEAM_LEAD) {
-            val leadCount = allMembers.count { it[TeamMembershipTable.role] == TeamRole.TEAM_LEAD }
-            if (leadCount <= 1) {
-                throw IllegalArgumentException("Cannot remove the last team lead")
-            }
-        }
+        requireNotLastLead(lockTeamMembersForUpdate(teamUuid, userUuid), userUuid, "Cannot remove the last team lead")
 
         TeamMembershipTable.deleteWhere {
             (TeamMembershipTable.teamId eq teamUuid) and (TeamMembershipTable.userId eq userUuid)
         } > 0
+    }
+
+    /**
+     * Locks all membership rows for a team (FOR UPDATE) and validates the target user is a member.
+     * Prevents concurrent modifications from racing on lead count checks.
+     */
+    private fun lockTeamMembersForUpdate(teamUuid: UUID, userUuid: UUID): List<ResultRow> {
+        val allMembers = TeamMembershipTable.selectAll()
+            .where { TeamMembershipTable.teamId eq teamUuid }
+            .forUpdate()
+            .toList()
+        allMembers.find { it[TeamMembershipTable.userId].value == userUuid }
+            ?: throw NotFoundException("Member not found")
+        return allMembers
+    }
+
+    private fun requireNotLastLead(allMembers: List<ResultRow>, userUuid: UUID, errorMessage: String) {
+        val currentRole = allMembers.first { it[TeamMembershipTable.userId].value == userUuid }[TeamMembershipTable.role]
+        if (currentRole == TeamRole.TEAM_LEAD) {
+            val leadCount = allMembers.count { it[TeamMembershipTable.role] == TeamRole.TEAM_LEAD }
+            if (leadCount <= 1) {
+                throw IllegalArgumentException(errorMessage)
+            }
+        }
+    }
+
+    private fun insertMembershipOrThrowConflict(teamUuid: UUID, userUuid: UUID, role: TeamRole) {
+        try {
+            TeamMembershipTable.insert {
+                it[TeamMembershipTable.teamId] = teamUuid
+                it[TeamMembershipTable.userId] = userUuid
+                it[TeamMembershipTable.role] = role
+                it[TeamMembershipTable.joinedAt] = Clock.System.now()
+            }
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+            if (isUniqueConstraintViolation(e)) {
+                throw IllegalArgumentException("Already a member of this team")
+            }
+            throw e
+        }
     }
 
     override suspend fun acceptInviteAtomic(inviteId: String, userId: String, role: TeamRole): TeamId = dbQuery {
@@ -442,21 +449,7 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
             it[TeamInviteTable.status] = InviteStatus.ACCEPTED
         }
 
-        // Add member — catch duplicate key as conflict
-        // todo claude: duplicate 13 lines
-        try {
-            TeamMembershipTable.insert {
-                it[TeamMembershipTable.teamId] = teamUuid
-                it[TeamMembershipTable.userId] = userUuid
-                it[TeamMembershipTable.role] = role
-                it[TeamMembershipTable.joinedAt] = Clock.System.now()
-            }
-        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-            if (isUniqueConstraintViolation(e)) {
-                throw IllegalArgumentException("Already a member of this team")
-            }
-            throw e
-        }
+        insertMembershipOrThrowConflict(teamUuid, userUuid, role)
 
         TeamId(teamUuid.toString())
     }
@@ -501,21 +494,7 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
             it[JoinRequestTable.reviewedAt] = Clock.System.now()
         }
 
-        // Add member — catch duplicate key as conflict
-        // todo claude: duplicate 13 lines
-        try {
-            TeamMembershipTable.insert {
-                it[TeamMembershipTable.teamId] = teamUuid
-                it[TeamMembershipTable.userId] = requestUserId
-                it[TeamMembershipTable.role] = role
-                it[TeamMembershipTable.joinedAt] = Clock.System.now()
-            }
-        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
-            if (isUniqueConstraintViolation(e)) {
-                throw IllegalArgumentException("Already a member of this team")
-            }
-            throw e
-        }
+        insertMembershipOrThrowConflict(teamUuid, requestUserId, role)
 
         requestUserId.toString()
     }

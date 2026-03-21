@@ -156,6 +156,33 @@ class ExposedProjectsRepository(private val db: Database) : ProjectsRepository {
         )
     }
 
+    private fun applyProjectUpdate(
+        uuid: UUID,
+        name: String?,
+        description: String?,
+        dagGraph: DagGraph?,
+        parameters: List<Parameter>?,
+        defaultTags: List<String>?,
+    ): ProjectTemplate? {
+        val now = Clock.System.now()
+        val updated = ProjectTemplateTable.update({ ProjectTemplateTable.id eq uuid }) { stmt ->
+            name?.let { stmt[ProjectTemplateTable.name] = it }
+            description?.let { stmt[ProjectTemplateTable.description] = it }
+            dagGraph?.let { stmt[ProjectTemplateTable.dagGraph] = it }
+            parameters?.let { stmt[ProjectTemplateTable.parameters] = it }
+            defaultTags?.let { stmt[ProjectTemplateTable.defaultTags] = it }
+            stmt[ProjectTemplateTable.updatedAt] = now
+        }
+        return if (updated > 0) {
+            ProjectTemplateTable.selectAll()
+                .where { ProjectTemplateTable.id eq uuid }
+                .single()
+                .toProjectTemplate()
+        } else {
+            null
+        }
+    }
+
     override suspend fun update(
         id: ProjectId,
         name: String?,
@@ -165,24 +192,7 @@ class ExposedProjectsRepository(private val db: Database) : ProjectsRepository {
         defaultTags: List<String>?,
     ): ProjectTemplate? = dbQuery {
         val uuid = UUID.fromString(id.value)
-        val now = Clock.System.now()
-        // todo claude: duplicate 16 lines
-        val updated = ProjectTemplateTable.update({ ProjectTemplateTable.id eq uuid }) { stmt ->
-            name?.let { stmt[ProjectTemplateTable.name] = it }
-            description?.let { stmt[ProjectTemplateTable.description] = it }
-            dagGraph?.let { stmt[ProjectTemplateTable.dagGraph] = it }
-            parameters?.let { stmt[ProjectTemplateTable.parameters] = it }
-            defaultTags?.let { stmt[ProjectTemplateTable.defaultTags] = it }
-            stmt[ProjectTemplateTable.updatedAt] = now
-        }
-        if (updated > 0) {
-            ProjectTemplateTable.selectAll()
-                .where { ProjectTemplateTable.id eq uuid }
-                .single()
-                .toProjectTemplate()
-        } else {
-            null
-        }
+        applyProjectUpdate(uuid, name, description, dagGraph, parameters, defaultTags)
     }
 
     /**
@@ -222,23 +232,7 @@ class ExposedProjectsRepository(private val db: Database) : ProjectsRepository {
             )
         }
 
-        // todo claude: duplicate 16 lines
-        val updated = ProjectTemplateTable.update({ ProjectTemplateTable.id eq uuid }) { stmt ->
-            name?.let { stmt[ProjectTemplateTable.name] = it }
-            description?.let { stmt[ProjectTemplateTable.description] = it }
-            dagGraph?.let { stmt[ProjectTemplateTable.dagGraph] = it }
-            parameters?.let { stmt[ProjectTemplateTable.parameters] = it }
-            defaultTags?.let { stmt[ProjectTemplateTable.defaultTags] = it }
-            stmt[ProjectTemplateTable.updatedAt] = now
-        }
-        if (updated > 0) {
-            ProjectTemplateTable.selectAll()
-                .where { ProjectTemplateTable.id eq uuid }
-                .single()
-                .toProjectTemplate()
-        } else {
-            null
-        }
+        applyProjectUpdate(uuid, name, description, dagGraph, parameters, defaultTags)
     }
 
     override suspend fun delete(id: ProjectId): Boolean = dbQuery {
