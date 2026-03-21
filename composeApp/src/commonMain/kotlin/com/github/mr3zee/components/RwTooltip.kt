@@ -43,6 +43,7 @@ fun RwTooltip(
                     Text(
                         text = tooltip,
                         style = AppTypography.caption,
+                        color = colors.tooltipText,
                     )
                 }
             },
