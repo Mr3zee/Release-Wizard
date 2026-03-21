@@ -5,8 +5,12 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
-import androidx.compose.foundation.clickable
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -47,7 +51,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import com.composeunstyled.UnstyledButton
+import com.github.mr3zee.components.focusRing
+import com.github.mr3zee.theme.AppShapes
 import com.github.mr3zee.api.UserTeamInfo
 import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwRadioButton
@@ -261,37 +270,56 @@ fun SidebarSettingsContent(
             animationSpec = tween(200),
         )
 
+        val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
         Column(modifier = Modifier.padding(horizontal = Spacing.xs)) {
-            // Settings header — clickable to expand, with chevron indicator
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
+            // Settings header — single clickable row with chevron inside
+            val settingsInteractionSource = remember { MutableInteractionSource() }
+            val settingsHovered by settingsInteractionSource.collectIsHoveredAsState()
+            val settingsBgColor = if (settingsHovered) colors.buttonGhostHover else Color.Transparent
+
+            UnstyledButton(
+                onClick = {
+                    expanded = !expanded
+                    focusManager.clearFocus()
+                },
+                interactionSource = settingsInteractionSource,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .pointerHoverIcon(PointerIcon.Hand, overrideDescendants = true)
+                    .focusRing(cornerRadius = 10.dp, interactionSource = settingsInteractionSource)
+                    .clip(AppShapes.md)
+                    .background(settingsBgColor)
+                    .testTag("sidebar_settings"),
             ) {
-                Box(modifier = Modifier.weight(1f)) {
-                    SidebarNavItem(
-                        icon = Icons.Outlined.Settings,
-                        activeIcon = Icons.Filled.Settings,
-                        label = packStringResource(Res.string.sidebar_settings),
-                        isActive = false,
-                        isCollapsed = false,
-                        onClick = { expanded = !expanded },
-                        testTag = "sidebar_settings",
-                        semanticRole = androidx.compose.ui.semantics.Role.Button,
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp)
+                        .padding(horizontal = Spacing.sm),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        if (expanded) Icons.Filled.Settings else Icons.Outlined.Settings,
+                        contentDescription = null,
+                        tint = colors.chromeTextSecondary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(Modifier.width(Spacing.md))
+                    Text(
+                        text = packStringResource(Res.string.sidebar_settings),
+                        style = AppTypography.body,
+                        color = colors.chromeTextSecondary,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Icon(
+                        Icons.Default.ExpandMore,
+                        contentDescription = null,
+                        tint = colors.chromeTextTertiary,
+                        modifier = Modifier
+                            .size(18.dp)
+                            .rotate(chevronRotation),
                     )
                 }
-                Icon(
-                    if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (expanded) {
-                        packStringResource(Res.string.sidebar_settings_collapse)
-                    } else {
-                        packStringResource(Res.string.sidebar_settings_expand)
-                    },
-                    tint = colors.chromeTextTertiary,
-                    modifier = Modifier
-                        .size(18.dp)
-                        .clickable { expanded = !expanded }
-                        .rotate(chevronRotation),
-                )
             }
 
             // Expandable sub-items
@@ -447,10 +475,18 @@ private fun SettingsSubItem(
     testTag: String,
 ) {
     val colors = LocalAppColors.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val isHovered by interactionSource.collectIsHoveredAsState()
+    val bgColor = if (isHovered) colors.buttonGhostHover else Color.Transparent
+
     UnstyledButton(
         onClick = onClick,
+        interactionSource = interactionSource,
         modifier = Modifier
             .fillMaxWidth()
+            .pointerHoverIcon(PointerIcon.Hand, overrideDescendants = true)
+            .clip(AppShapes.sm)
+            .background(bgColor)
             .padding(vertical = Spacing.xs)
             .testTag(testTag),
     ) {

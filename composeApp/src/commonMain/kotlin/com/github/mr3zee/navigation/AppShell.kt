@@ -3,6 +3,7 @@ package com.github.mr3zee.navigation
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -98,7 +99,6 @@ fun AppShell(
                     modifier = Modifier
                         .width(sidebarWidth)
                         .fillMaxHeight()
-                        .clipToBounds()
                         .background(colors.chromeSurface)
                         .drawBehind {
                             // Right border
@@ -153,6 +153,7 @@ fun AppShell(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = Spacing.xs, vertical = Spacing.xs),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
                         SidebarNavItem(
                             icon = Icons.Outlined.FolderOpen,

@@ -1,7 +1,5 @@
 package com.github.mr3zee.components
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -76,10 +74,8 @@ fun SidebarNavItem(
         else -> Color.Transparent
     }
 
-    val animatedBgColor by animateColorAsState(
-        targetValue = bgColor,
-        animationSpec = tween(150),
-    )
+    // No animation — instant color change avoids intermediate artifacts
+    // (animating from Color.Transparent interpolates through semi-transparent blacks)
 
     val displayIcon = if (isActive) activeIcon else icon
 
@@ -139,7 +135,7 @@ fun SidebarNavItem(
             .pointerHoverIcon(PointerIcon.Hand, overrideDescendants = true)
             .focusRing(cornerRadius = 10.dp, interactionSource = interactionSource)
             .clip(AppShapes.md)
-            .background(animatedBgColor)
+            .background(bgColor)
             .then(
                 if (isActive && isCollapsed) {
                     Modifier.drawBehind {
