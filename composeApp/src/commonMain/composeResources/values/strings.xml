@@ -595,11 +595,11 @@
     <string name="sidebar_releases">Releases</string>
     <string name="sidebar_connections">Connections</string>
     <string name="sidebar_teams">Teams</string>
-    <string name="sidebar_settings">Settings</string>
+    <string name="sidebar_settings">Preferences</string>
     <string name="sidebar_collapse">Collapse sidebar</string>
     <string name="sidebar_expand">Expand sidebar</string>
-    <string name="sidebar_settings_expand">Expand settings</string>
-    <string name="sidebar_settings_collapse">Collapse settings</string>
+    <string name="sidebar_settings_expand">Expand preferences</string>
+    <string name="sidebar_settings_collapse">Collapse preferences</string>
     <string name="sidebar_sign_out_confirm">Select again to sign out</string>
     <string name="sidebar_team_none">No team selected</string>
 
@@ -636,8 +636,8 @@
     <string name="profile_passwords_mismatch">Passwords do not match</string>
     <string name="profile_teams_section">Teams</string>
     <string name="profile_no_teams">Not a member of any teams</string>
-    <string name="profile_submit_username">Change Username</string>
-    <string name="profile_submit_password">Change Password</string>
+    <string name="profile_submit_username">Save Changes</string>
+    <string name="profile_submit_password">Save Changes</string>
 
     <!-- ==================== Reset Password ==================== -->
     <string name="reset_password_title">Reset Password</string>

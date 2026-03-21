@@ -157,6 +157,7 @@ fun AppNavigation(
         }
         is Screen.TeamList -> {
             val viewModel = remember { TeamListViewModel(teamApiClient) }
+            LaunchedEffect(Unit) { onRefreshUser() }
             TeamListScreen(
                 viewModel = viewModel,
                 onTeamClick = { onNavigate(Screen.TeamDetail(it)) },

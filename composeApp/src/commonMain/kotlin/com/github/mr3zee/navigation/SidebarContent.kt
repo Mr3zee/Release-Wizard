@@ -22,7 +22,10 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.VerticalScrollbar
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -370,40 +373,45 @@ fun SidebarSettingsContent(
                             expanded = showLanguagePicker,
                             onDismissRequest = { showLanguagePicker = false },
                         ) {
-                            Column(
-                                modifier = Modifier
-                                    .heightIn(max = 300.dp)
-                                    .verticalScroll(rememberScrollState()),
-                            ) {
-                                LanguagePack.entries.forEach { pack ->
-                                    RwDropdownMenuItem(
-                                        text = {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                RwRadioButton(
-                                                    selected = pack == languagePack,
-                                                    onClick = null,
-                                                    modifier = Modifier.size(20.dp),
-                                                )
-                                                Spacer(Modifier.width(Spacing.sm))
-                                                Column {
-                                                    Text(pack.displayName, style = AppTypography.body)
-                                                    if (pack != LanguagePack.ENGLISH) {
-                                                        Text(
-                                                            pack.preview,
-                                                            style = AppTypography.bodySmall,
-                                                            color = colors.chromeTextSecondary,
-                                                        )
+                            val langScrollState = rememberScrollState()
+                            Box(modifier = Modifier.heightIn(max = 300.dp)) {
+                                Column(
+                                    modifier = Modifier.verticalScroll(langScrollState),
+                                ) {
+                                    LanguagePack.entries.forEach { pack ->
+                                        RwDropdownMenuItem(
+                                            text = {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    RwRadioButton(
+                                                        selected = pack == languagePack,
+                                                        onClick = null,
+                                                        modifier = Modifier.size(20.dp),
+                                                    )
+                                                    Spacer(Modifier.width(Spacing.sm))
+                                                    Column {
+                                                        Text(pack.displayName, style = AppTypography.body)
+                                                        if (pack != LanguagePack.ENGLISH) {
+                                                            Text(
+                                                                pack.preview,
+                                                                style = AppTypography.bodySmall,
+                                                                color = colors.chromeTextSecondary,
+                                                            )
+                                                        }
                                                     }
                                                 }
-                                            }
-                                        },
-                                        onClick = {
-                                            onLanguagePackChange(pack)
-                                            showLanguagePicker = false
-                                        },
-                                        modifier = Modifier.testTag("sidebar_language_${pack.name}"),
-                                    )
+                                            },
+                                            onClick = {
+                                                onLanguagePackChange(pack)
+                                                showLanguagePicker = false
+                                            },
+                                            modifier = Modifier.testTag("sidebar_language_${pack.name}"),
+                                        )
+                                    }
                                 }
+                                VerticalScrollbar(
+                                    modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+                                    adapter = rememberScrollbarAdapter(langScrollState),
+                                )
                             }
                         }
                     }
