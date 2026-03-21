@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="icons/logo-dark-bg/logo-dark-bg_128x128.png" alt="Release Wizard" />
+  <img src="icons/logo-dark-bg/logo-dark-bg_256x256.png" alt="Release Wizard" width="128" />
 </p>
 
 <h1 align="center">Release Wizard</h1>
@@ -129,9 +129,9 @@ source .env && ./gradlew :server:run
 - Rate limiting on auth endpoints
 - Account lockout after failed login attempts
 
-## Internationalization
+## Language Packs
 
-Six language packs: English, Russian, Spanish, French, German, and Chinese.
+Seven themed text packs for fun: English (default), Gen Z, Rick and Morty, Helldivers, All Lies, Emojis, and Rick Roll.
 
 ## License
 
