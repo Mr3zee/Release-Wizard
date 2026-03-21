@@ -48,7 +48,6 @@ import com.github.mr3zee.components.RwBadge
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwInlineConfirmation
-import com.github.mr3zee.components.RwTooltip
 import com.github.mr3zee.i18n.packStringResource
 import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
@@ -116,7 +115,6 @@ fun AdminUsersScreen(
                 onRefresh = { viewModel.loadUsers() },
                 isRefreshing = isRefreshing,
                 isManualRefresh = isManualRefresh,
-                showTooltipOnBack = true,
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },

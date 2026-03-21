@@ -186,19 +186,17 @@ fun EditorToolbar(
             }
         }
 
-        RwTooltip(tooltip = packStringResource(Res.string.editor_toolbar_delete)) {
-            RwButton(
-                onClick = onDelete,
-                variant = RwButtonVariant.Secondary,
-                enabled = enabled && hasSelection,
-                contentColor = MaterialTheme.colorScheme.error,
-                modifier = Modifier.fillMaxWidth().testTag("delete_button"),
-                contentPadding = PaddingValues(Spacing.sm),
-            ) {
-                Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(Spacing.xs))
-                Text(packStringResource(Res.string.editor_toolbar_delete))
-            }
+        RwButton(
+            onClick = onDelete,
+            variant = RwButtonVariant.Secondary,
+            enabled = enabled && hasSelection,
+            contentColor = MaterialTheme.colorScheme.error,
+            modifier = Modifier.fillMaxWidth().testTag("delete_button"),
+            contentPadding = PaddingValues(Spacing.sm),
+        ) {
+            Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.width(Spacing.xs))
+            Text(packStringResource(Res.string.editor_toolbar_delete))
         }
     }
     VerticalScrollbar(

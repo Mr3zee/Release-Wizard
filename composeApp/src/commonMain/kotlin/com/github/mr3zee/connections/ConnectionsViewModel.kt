@@ -71,6 +71,9 @@ class ConnectionsViewModel(
     private val _savedSuccessfully = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val savedSuccessfully: SharedFlow<Unit> = _savedSuccessfully
 
+    private val _deletedSuccessfully = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val deletedSuccessfully: SharedFlow<Unit> = _deletedSuccessfully
+
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing
 
@@ -252,6 +255,7 @@ class ConnectionsViewModel(
             try {
                 apiClient.deleteConnection(id)
                 loadConnections()
+                _deletedSuccessfully.tryEmit(Unit)
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }

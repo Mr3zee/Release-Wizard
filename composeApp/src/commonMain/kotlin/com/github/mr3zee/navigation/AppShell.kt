@@ -3,8 +3,9 @@ package com.github.mr3zee.navigation
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.changedToDownIgnoreConsumed
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -259,10 +260,16 @@ fun AppShell(
             // ── Content area ─────────────────────────────────────────
             val focusManager = LocalFocusManager.current
             Box(
-                Modifier.weight(1f).fillMaxHeight().clickable(
-                    indication = null,
-                    interactionSource = remember { MutableInteractionSource() },
-                ) { focusManager.clearFocus() },
+                Modifier.weight(1f).fillMaxHeight().pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            if (event.changes.any { it.changedToDownIgnoreConsumed() }) {
+                                focusManager.clearFocus()
+                            }
+                        }
+                    }
+                },
             ) {
                 content()
             }

@@ -203,7 +203,6 @@ fun ProfileScreen(
             BackRefreshTopBar(
                 title = packStringResource(Res.string.profile_title),
                 onBack = onBack,
-                showTooltipOnBack = true,
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },

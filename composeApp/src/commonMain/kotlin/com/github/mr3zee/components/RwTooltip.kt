@@ -23,6 +23,7 @@ import com.github.mr3zee.theme.LocalAppColors
 fun RwTooltip(
     tooltip: String,
     modifier: Modifier = Modifier,
+    hoverDelayMillis: Long = 500L,
     content: @Composable () -> Unit,
 ) {
     val colors = LocalAppColors.current
@@ -30,7 +31,7 @@ fun RwTooltip(
     Box(modifier = modifier) {
         Tooltip(
             enabled = true,
-            hoverDelayMillis = 500L,
+            hoverDelayMillis = hoverDelayMillis,
             panel = {
                 TooltipPanel(
                     modifier = Modifier.zIndex(15f),

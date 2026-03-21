@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwCard
+import com.github.mr3zee.components.RwDangerZone
 import com.github.mr3zee.components.RwDropdownMenuItem
 import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwInlineConfirmation
@@ -68,6 +69,13 @@ fun ConnectionFormScreen(
     // Navigate back only after a successful save
     LaunchedEffect(Unit) {
         viewModel.savedSuccessfully.collect {
+            onBack()
+        }
+    }
+
+    // Navigate back only after a successful delete
+    LaunchedEffect(Unit) {
+        viewModel.deletedSuccessfully.collect {
             onBack()
         }
     }
@@ -598,26 +606,29 @@ fun ConnectionFormScreen(
 
                 Spacer(modifier = Modifier.height(Spacing.md))
 
-                RwButton(
-                    onClick = { showDeleteConfirmation = true },
-                    variant = RwButtonVariant.Danger,
-                    modifier = Modifier.testTag("delete_connection_button"),
+                RwDangerZone(
+                    testTag = "connection_danger_zone",
                 ) {
-                    Text(packStringResource(Res.string.common_delete))
-                }
+                    RwButton(
+                        onClick = { showDeleteConfirmation = true },
+                        variant = RwButtonVariant.Danger,
+                        modifier = Modifier.testTag("delete_connection_button"),
+                    ) {
+                        Text(packStringResource(Res.string.common_delete))
+                    }
 
-                RwInlineConfirmation(
-                    visible = showDeleteConfirmation,
-                    message = packStringResource(Res.string.connections_delete_confirmation, name),
-                    confirmLabel = packStringResource(Res.string.common_delete),
-                    onConfirm = {
-                        showDeleteConfirmation = false
-                        viewModel.deleteConnection(connectionId)
-                        onBack()
-                    },
-                    onDismiss = { showDeleteConfirmation = false },
-                    testTag = "delete_connection_confirm",
-                )
+                    RwInlineConfirmation(
+                        visible = showDeleteConfirmation,
+                        message = packStringResource(Res.string.connections_delete_confirmation, name),
+                        confirmLabel = packStringResource(Res.string.common_delete),
+                        onConfirm = {
+                            showDeleteConfirmation = false
+                            viewModel.deleteConnection(connectionId)
+                        },
+                        onDismiss = { showDeleteConfirmation = false },
+                        testTag = "delete_connection_confirm",
+                    )
+                }
             }
 
             }

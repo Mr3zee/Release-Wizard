@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -28,7 +29,6 @@ import com.github.mr3zee.components.RwCard
 import com.github.mr3zee.components.RwBadge
 import com.github.mr3zee.components.RwInlineConfirmation
 import com.github.mr3zee.components.RwMarkdownText
-import com.github.mr3zee.components.RwTooltip
 import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.model.TeamMembership
@@ -99,24 +99,18 @@ fun TeamDetailScreen(
                         )
                     },
                     navigationIcon = {
-                        RwTooltip(tooltip = packStringResource(Res.string.common_back)) {
-                            RwButton(onClick = onBack, variant = RwButtonVariant.Ghost, modifier = Modifier.testTag("back_button")) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
-                                Text(packStringResource(Res.string.common_back))
-                            }
+                        RwButton(onClick = onBack, variant = RwButtonVariant.Ghost, modifier = Modifier.testTag("back_button")) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
+                            Text(packStringResource(Res.string.common_back))
                         }
                     },
                     actions = {
-                        RwTooltip(tooltip = packStringResource(Res.string.teams_audit_log)) {
-                            RwButton(onClick = onAuditLog, variant = RwButtonVariant.Ghost, modifier = Modifier.testTag("audit_log_button")) {
-                                Text(packStringResource(Res.string.teams_audit_log))
-                            }
+                        RwButton(onClick = onAuditLog, variant = RwButtonVariant.Ghost, modifier = Modifier.testTag("audit_log_button")) {
+                            Text(packStringResource(Res.string.teams_audit_log))
                         }
                         if (isTeamLead) {
-                            RwTooltip(tooltip = packStringResource(Res.string.teams_manage)) {
-                                RwButton(onClick = onManage, variant = RwButtonVariant.Ghost, modifier = Modifier.testTag("manage_team_button")) {
-                                    Text(packStringResource(Res.string.teams_manage))
-                                }
+                            RwButton(onClick = onManage, variant = RwButtonVariant.Ghost, modifier = Modifier.testTag("manage_team_button")) {
+                                Text(packStringResource(Res.string.teams_manage))
                             }
                         }
                         RefreshIconButton(
@@ -127,22 +121,20 @@ fun TeamDetailScreen(
                         Spacer(Modifier.width(Spacing.sm))
                         VerticalDivider(modifier = Modifier.height(24.dp))
                         Spacer(Modifier.width(Spacing.sm))
-                        RwTooltip(tooltip = packStringResource(Res.string.teams_leave)) {
-                            RwButton(
-                                onClick = { showLeaveDialog = true },
-                                variant = RwButtonVariant.Ghost,
-                                contentColor = MaterialTheme.colorScheme.error,
-                                enabled = !isLeaving,
-                                modifier = Modifier.testTag("leave_team_button"),
-                            ) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.ExitToApp,
-                                    contentDescription = packStringResource(Res.string.teams_leave),
-                                    modifier = Modifier.size(16.dp),
-                                )
-                                Spacer(Modifier.width(Spacing.xs))
-                                Text(packStringResource(Res.string.teams_leave))
-                            }
+                        RwButton(
+                            onClick = { showLeaveDialog = true },
+                            variant = RwButtonVariant.Ghost,
+                            contentColor = MaterialTheme.colorScheme.error,
+                            enabled = !isLeaving,
+                            modifier = Modifier.testTag("leave_team_button"),
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ExitToApp,
+                                contentDescription = packStringResource(Res.string.teams_leave),
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Spacer(Modifier.width(Spacing.xs))
+                            Text(packStringResource(Res.string.teams_leave))
                         }
                     },
                 )
@@ -230,9 +222,11 @@ fun TeamDetailScreen(
                                     )
                                     if (t.description.isNotBlank()) {
                                         Spacer(modifier = Modifier.height(Spacing.sm))
-                                        RwMarkdownText(
-                                            markdown = t.description,
-                                        )
+                                        Box(modifier = Modifier.heightIn(max = 200.dp).clipToBounds()) {
+                                            RwMarkdownText(
+                                                markdown = t.description,
+                                            )
+                                        }
                                     }
                                     Spacer(modifier = Modifier.height(Spacing.sm))
                                     Text(

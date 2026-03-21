@@ -31,7 +31,6 @@ import releasewizard.composeapp.generated.resources.*
  * @param isRefreshing Whether a refresh operation is in progress.
  * @param isManualRefresh Whether the refresh was manually triggered (affects progress opacity).
  * @param isLoading Whether an initial load is in progress (hides progress indicator when true).
- * @param showTooltipOnBack Whether to wrap the back button in a tooltip.
  * @param extraActions Additional action buttons to show before the refresh button.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,32 +42,22 @@ fun BackRefreshTopBar(
     isRefreshing: Boolean = false,
     isManualRefresh: Boolean = false,
     isLoading: Boolean = false,
-    showTooltipOnBack: Boolean = false,
     extraActions: (@Composable RowScope.() -> Unit)? = null,
 ) {
     Box {
         TopAppBar(
             title = { Text(title) },
             navigationIcon = {
-                val backButton: @Composable () -> Unit = {
-                    RwButton(
-                        onClick = onBack,
-                        variant = RwButtonVariant.Ghost,
-                        modifier = Modifier.testTag("back_button"),
-                    ) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = packStringResource(Res.string.common_navigate_back),
-                        )
-                        Text(packStringResource(Res.string.common_back))
-                    }
-                }
-                if (showTooltipOnBack) {
-                    RwTooltip(tooltip = packStringResource(Res.string.common_back)) {
-                        backButton()
-                    }
-                } else {
-                    backButton()
+                RwButton(
+                    onClick = onBack,
+                    variant = RwButtonVariant.Ghost,
+                    modifier = Modifier.testTag("back_button"),
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = packStringResource(Res.string.common_navigate_back),
+                    )
+                    Text(packStringResource(Res.string.common_back))
                 }
             },
             actions = {

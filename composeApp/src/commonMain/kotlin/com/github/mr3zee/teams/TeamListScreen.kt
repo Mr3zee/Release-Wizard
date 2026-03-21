@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -298,9 +299,11 @@ private fun TeamListItem(
                 overflow = TextOverflow.Ellipsis,
             )
             if (teamResponse.team.description.isNotBlank()) {
-                RwMarkdownText(
-                    markdown = teamResponse.team.description,
-                )
+                Box(modifier = Modifier.heightIn(max = 48.dp).clipToBounds()) {
+                    RwMarkdownText(
+                        markdown = teamResponse.team.description,
+                    )
+                }
             }
         }
         Text(
