@@ -143,6 +143,7 @@ object GenZPack {
             "common_retry" to "Try Again Bestie",
             "common_save" to "Save It Bestie",
             "common_saving" to "Saving rn...",
+            "common_testing" to "Vibe checking rn...",
             "common_show_password" to "Spill the tea",
             "common_show_value" to "Spill the vibes",
             "common_sort_by" to "Sort by bestie",

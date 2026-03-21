@@ -30,6 +30,7 @@ object HelldiversPack {
             "common_retry" to "Redeploy",
             "common_save" to "Secure the Objective",
             "common_saving" to "Securing objective...",
+            "common_testing" to "Running diagnostics...",
             "common_show_password" to "Declassify intel",
             "common_show_value" to "Declassify intel",
             "common_sort_by" to "Sort by Tactical Order",

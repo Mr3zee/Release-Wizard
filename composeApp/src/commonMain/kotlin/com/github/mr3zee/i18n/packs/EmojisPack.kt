@@ -143,6 +143,7 @@ object EmojisPack {
             "common_retry" to "\ud83d\udd01\ud83d\udcaa",
             "common_save" to "\ud83d\udcbe\u2705",
             "common_saving" to "\ud83d\udcbe\u23f3",
+            "common_testing" to "\ud83e\uddea\u23f3",
             "common_show_password" to "\ud83d\udc41\ufe0f\ud83d\udd13",
             "common_show_value" to "\ud83d\udc41\ufe0f\ud83d\udcce",
             "common_sort_by" to "\ud83d\udd00\ud83d\udcca",

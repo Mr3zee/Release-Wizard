@@ -146,6 +146,7 @@ object RickRollPack {
             "common_retry" to "Never gonna give you up (Retry)",
             "common_save" to "Never gonna give you up",
             "common_saving" to "I just wanna tell you how I'm saving...",
+            "common_testing" to "Gonna run around and test you...",
             "common_show_password" to "I just wanna tell you what I'm typing (Show)",
             "common_show_value" to "I just wanna show you this value",
             "common_sort_by" to "You know the rules (Sort by)",

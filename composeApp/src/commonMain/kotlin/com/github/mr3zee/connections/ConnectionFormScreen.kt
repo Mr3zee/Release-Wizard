@@ -57,12 +57,30 @@ fun ConnectionFormScreen(
     val editingConnection by viewModel.editingConnection.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
     val error by viewModel.error.collectAsState()
+    val testSuccessMessage by viewModel.testSuccessMessage.collectAsState()
+    val testingConnectionIds by viewModel.testingConnectionIds.collectAsState()
+    val isTesting = connectionId != null && connectionId in testingConnectionIds
+
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
+
+    val snackbarHostState = remember { SnackbarHostState() }
 
     // Navigate back only after a successful save
     LaunchedEffect(Unit) {
         viewModel.savedSuccessfully.collect {
             onBack()
         }
+    }
+
+    // Show test success via snackbar
+    val resolvedTestSuccess = testSuccessMessage?.resolve()
+    LaunchedEffect(testSuccessMessage) {
+        val msg = resolvedTestSuccess ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(
+            message = msg,
+            duration = SnackbarDuration.Short,
+        )
+        viewModel.clearTestSuccessMessage()
     }
 
     var name by remember(connectionId) { mutableStateOf("") }
@@ -182,8 +200,9 @@ fun ConnectionFormScreen(
         }
     }
 
-    val shortcutActions = remember(showDiscardDialog, name, currentConfig, isSaving) {
-        ShortcutActions(onSave = handleSave, hasDialogOpen = showDiscardDialog)
+    val hasDialogOpen = showDiscardDialog || showDeleteConfirmation
+    val shortcutActions = remember(hasDialogOpen, name, currentConfig, isSaving) {
+        ShortcutActions(onSave = handleSave, hasDialogOpen = hasDialogOpen)
     }
     ProvideShortcutActions(shortcutActions) {
 
@@ -209,6 +228,7 @@ fun ConnectionFormScreen(
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         modifier = Modifier.testTag("connection_form_screen"),
     ) { padding ->
         Column(
@@ -531,6 +551,53 @@ fun ConnectionFormScreen(
                 }
             }
 
+            if (isEditMode && connectionId != null) {
+                HorizontalDivider()
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
+                    RwButton(
+                        onClick = { viewModel.testConnection(connectionId) },
+                        variant = RwButtonVariant.Secondary,
+                        enabled = !isTesting,
+                        modifier = Modifier.testTag("test_connection_button"),
+                    ) {
+                        if (isTesting) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(Spacing.sm))
+                            Text(packStringResource(Res.string.common_testing))
+                        } else {
+                            Text(packStringResource(Res.string.connections_test))
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(Spacing.md))
+
+                RwButton(
+                    onClick = { showDeleteConfirmation = true },
+                    variant = RwButtonVariant.Danger,
+                    modifier = Modifier.testTag("delete_connection_button"),
+                ) {
+                    Text(packStringResource(Res.string.common_delete))
+                }
+
+                RwInlineConfirmation(
+                    visible = showDeleteConfirmation,
+                    message = packStringResource(Res.string.connections_delete_confirmation, name),
+                    confirmLabel = packStringResource(Res.string.common_delete),
+                    onConfirm = {
+                        showDeleteConfirmation = false
+                        viewModel.deleteConnection(connectionId)
+                        onBack()
+                    },
+                    onDismiss = { showDeleteConfirmation = false },
+                    testTag = "delete_connection_confirm",
+                )
+            }
+
             }
                 VerticalScrollbar(
                     modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
@@ -586,6 +653,7 @@ private fun TokenHelpLink(
         modifier = if (onClick != null) {
             Modifier
                 .padding(vertical = Spacing.xs)
+                .pointerHoverIcon(PointerIcon.Hand)
                 .clickable(role = Role.Button, onClickLabel = openLinkLabel, onClick = onClick)
         } else {
             Modifier

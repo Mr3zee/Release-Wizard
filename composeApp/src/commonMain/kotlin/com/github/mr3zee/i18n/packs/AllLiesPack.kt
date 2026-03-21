@@ -143,6 +143,7 @@ object AllLiesPack {
             "common_retry" to "Give Up Forever",
             "common_save" to "Definitely Lose Everything",
             "common_saving" to "Discarding all progress...",
+            "common_testing" to "Definitely not testing...",
             "common_show_password" to "Encrypt password further",
             "common_show_value" to "Encrypt value deeper",
             "common_sort_by" to "Randomize by",

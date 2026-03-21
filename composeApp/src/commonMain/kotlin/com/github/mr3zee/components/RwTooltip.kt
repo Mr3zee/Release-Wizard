@@ -30,6 +30,7 @@ fun RwTooltip(
     Box(modifier = modifier) {
         Tooltip(
             enabled = true,
+            hoverDelayMillis = 500L,
             panel = {
                 TooltipPanel(
                     modifier = Modifier.zIndex(15f),

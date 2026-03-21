@@ -143,6 +143,7 @@ object RickAndMortyPack {
             "common_retry" to "Try again, *burp* Morty",
             "common_save" to "Save it, Morty, I'm not *burp* doing it again",
             "common_saving" to "Saving across dimensions...",
+            "common_testing" to "Testing across *burp* dimensions...",
             "common_show_password" to "Show password, I don't *burp* care",
             "common_show_value" to "Show the *burp* value, Morty",
             "common_sort_by" to "Sort by, *burp* Morty",

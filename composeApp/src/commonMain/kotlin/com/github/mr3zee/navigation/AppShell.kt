@@ -3,6 +3,8 @@ package com.github.mr3zee.navigation
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -255,7 +257,13 @@ fun AppShell(
             }
 
             // ── Content area ─────────────────────────────────────────
-            Box(Modifier.weight(1f).fillMaxHeight()) {
+            val focusManager = LocalFocusManager.current
+            Box(
+                Modifier.weight(1f).fillMaxHeight().clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() },
+                ) { focusManager.clearFocus() },
+            ) {
                 content()
             }
         }

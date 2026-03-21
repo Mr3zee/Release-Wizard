@@ -27,6 +27,7 @@ import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwCard
 import com.github.mr3zee.components.RwBadge
 import com.github.mr3zee.components.RwInlineConfirmation
+import com.github.mr3zee.components.RwMarkdownText
 import com.github.mr3zee.components.RwTooltip
 import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
@@ -229,10 +230,8 @@ fun TeamDetailScreen(
                                     )
                                     if (t.description.isNotBlank()) {
                                         Spacer(modifier = Modifier.height(Spacing.sm))
-                                        Text(
-                                            t.description,
-                                            style = AppTypography.body,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        RwMarkdownText(
+                                            markdown = t.description,
                                         )
                                     }
                                     Spacer(modifier = Modifier.height(Spacing.sm))

@@ -37,6 +37,7 @@ import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.components.RwBadge
+import com.github.mr3zee.components.RwMarkdownText
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.resolve
@@ -297,20 +298,17 @@ private fun TeamListItem(
                 overflow = TextOverflow.Ellipsis,
             )
             if (teamResponse.team.description.isNotBlank()) {
-                Text(
-                    teamResponse.team.description,
-                    style = AppTypography.body,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
+                RwMarkdownText(
+                    markdown = teamResponse.team.description,
                 )
             }
-            Text(
-                packPluralStringResource(Res.plurals.members, teamResponse.memberCount, teamResponse.memberCount),
-                style = AppTypography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
+        Text(
+            packPluralStringResource(Res.plurals.members, teamResponse.memberCount, teamResponse.memberCount),
+            style = AppTypography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = Spacing.sm),
+        )
         if (isMember) {
             RwBadge(
                 text = packStringResource(Res.string.teams_member_badge),
