@@ -19,6 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.UnstyledButton
@@ -103,6 +105,7 @@ fun RwButton(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier
+            .pointerHoverIcon(PointerIcon.Hand, overrideDescendants = true)
             .focusRing(cornerRadius = 8.dp, ringColor = focusRingColor, interactionSource = interactionSource)
             .scale(scale)
             .alpha(if (enabled || variant == RwButtonVariant.Primary) 1f else 0.6f),
@@ -153,6 +156,7 @@ fun RwIconButton(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier
+            .pointerHoverIcon(PointerIcon.Hand, overrideDescendants = true)
             .focusRing(cornerRadius = 8.dp, interactionSource = interactionSource)
             .size(44.dp)
             .alpha(if (enabled) 1f else 0.6f),

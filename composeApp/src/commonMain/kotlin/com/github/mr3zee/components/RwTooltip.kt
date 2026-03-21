@@ -34,8 +34,8 @@ fun RwTooltip(
                 TooltipPanel(
                     modifier = Modifier.zIndex(15f),
                     shape = AppShapes.xs,
-                    backgroundColor = colors.chromeTextPrimary,
-                    contentColor = colors.chromeSurface,
+                    backgroundColor = colors.tooltipBg,
+                    contentColor = colors.tooltipText,
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                     enter = fadeIn(),
                     exit = fadeOut(),

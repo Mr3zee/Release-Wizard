@@ -116,7 +116,7 @@ fun AppShell(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = Spacing.md, vertical = Spacing.md),
+                                .padding(horizontal = Spacing.md, vertical = Spacing.sm),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             AppLogo(modifier = Modifier.size(24.dp))
@@ -232,9 +232,13 @@ fun AppShell(
                             } else {
                                 packStringResource(Res.string.sidebar_collapse)
                             }
+                            val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
                             RwTooltip(tooltip = tooltipText) {
                                 RwIconButton(
-                                    onClick = { manuallyCollapsed = !manuallyCollapsed },
+                                    onClick = {
+                                        manuallyCollapsed = !manuallyCollapsed
+                                        focusManager.clearFocus()
+                                    },
                                     modifier = Modifier.testTag("sidebar_collapse_toggle"),
                                 ) {
                                     Icon(

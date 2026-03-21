@@ -109,6 +109,10 @@ data class AppColors(
     val sidebarActiveText: Color,
     val sidebarActiveHoverBg: Color,
 
+    // ── Tooltip ──────────────────────────────────────────────────────
+    val tooltipBg: Color,
+    val tooltipText: Color,
+
     // ── Focus ring ────────────────────────────────────────────────────
     val focusRing: Color,
     val focusRingOnColor: Color,
@@ -204,6 +208,10 @@ val LightAppColors = AppColors(
     statusStopped = Color(0xFF0D9488),
 
     // Sidebar — opaque tokens tuned for WCAG AA 4.5:1
+    // Tooltip
+    tooltipBg = Color(0xFF1F2937),
+    tooltipText = Color(0xFFFFFFFF),
+
     sidebarActiveBg = Color(0xFFEFF6FF),      // matches chipBgSelected
     sidebarActiveText = Color(0xFF2563EB),     // buttonPrimaryHover for AA contrast
     sidebarActiveHoverBg = Color(0xFFDCEAFE),  // slightly saturated
@@ -237,8 +245,8 @@ val DarkAppColors = AppColors(
     buttonSecondaryHover = Color(0xFF282C3A),
     buttonSecondaryPress = Color(0xFF2D3140),
     buttonSecondaryBorder = Color(0xFF3A3F50),
-    buttonGhostHover = Color(0xFF22252F),
-    buttonGhostPress = Color(0xFF282C3A),
+    buttonGhostHover = Color(0xFF2A2E3C),
+    buttonGhostPress = Color(0xFF303546),
     // Darkened for WCAG AA 4.5:1 contrast with white text
     buttonDangerBg = Color(0xFFDC2626),
     buttonDangerHover = Color(0xFFB91C1C),
@@ -304,6 +312,10 @@ val DarkAppColors = AppColors(
     statusStopped = Color(0xFF5EEAD4),
 
     // Sidebar — opaque tokens tuned for dark theme, WCAG AA compliant
+    // Tooltip — dark bg in dark theme (not inverted)
+    tooltipBg = Color(0xFF2D3140),
+    tooltipText = Color(0xFFE5E7EB),
+
     sidebarActiveBg = Color(0xFF1D3A5C),       // darker to increase contrast
     sidebarActiveText = Color(0xFF93C5FD),     // blue-300 for AA 4.5:1 against sidebarActiveBg
     sidebarActiveHoverBg = Color(0xFF264B73),  // slightly brighter on hover

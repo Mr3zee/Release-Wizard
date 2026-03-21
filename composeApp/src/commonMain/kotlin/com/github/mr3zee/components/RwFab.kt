@@ -15,6 +15,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.UnstyledButton
@@ -47,6 +49,7 @@ fun RwFab(
     UnstyledButton(
         onClick = onClick,
         modifier = modifier
+            .pointerHoverIcon(PointerIcon.Hand, overrideDescendants = true)
             .focusRing(cornerRadius = 14.dp, ringColor = colors.focusRingOnColor, interactionSource = interactionSource)
             .scale(scale)
             .shadow(6.dp, AppShapes.lg),

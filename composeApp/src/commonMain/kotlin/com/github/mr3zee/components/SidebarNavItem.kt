@@ -1,6 +1,6 @@
 package com.github.mr3zee.components
 
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -28,6 +28,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -74,9 +76,9 @@ fun SidebarNavItem(
         else -> Color.Transparent
     }
 
-    val bgAlpha by animateFloatAsState(
-        targetValue = if (bgColor == Color.Transparent) 0f else 1f,
-        animationSpec = tween(100),
+    val animatedBgColor by animateColorAsState(
+        targetValue = bgColor,
+        animationSpec = tween(150),
     )
 
     val displayIcon = if (isActive) activeIcon else icon
@@ -134,9 +136,10 @@ fun SidebarNavItem(
         interactionSource = interactionSource,
         modifier = modifier
             .fillMaxWidth()
+            .pointerHoverIcon(PointerIcon.Hand, overrideDescendants = true)
             .focusRing(cornerRadius = 10.dp, interactionSource = interactionSource)
             .clip(AppShapes.md)
-            .background(bgColor.copy(alpha = bgAlpha))
+            .background(animatedBgColor)
             .then(
                 if (isActive && isCollapsed) {
                     Modifier.drawBehind {

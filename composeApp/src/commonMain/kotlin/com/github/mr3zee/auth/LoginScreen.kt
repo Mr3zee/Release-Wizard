@@ -6,6 +6,8 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -157,6 +159,7 @@ fun LoginScreen(
                                 .size(20.dp)
                                 .focusProperties { canFocus = false }
                                 .testTag("login_password_toggle_visibility")
+                                .pointerHoverIcon(PointerIcon.Hand)
                                 .clickable { showPassword = !showPassword },
                         )
                     },
@@ -201,6 +204,7 @@ fun LoginScreen(
                                     .size(20.dp)
                                     .focusProperties { canFocus = false }
                                     .testTag("login_confirm_password_toggle_visibility")
+                                    .pointerHoverIcon(PointerIcon.Hand)
                                     .clickable { showConfirmPassword = !showConfirmPassword },
                             )
                         },
