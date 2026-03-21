@@ -4,6 +4,7 @@ import com.github.mr3zee.LocalPasswordPolicyHint
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
@@ -37,9 +38,7 @@ import com.github.mr3zee.components.AppLogo
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwCard
-import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwTextField
-import com.github.mr3zee.components.RwTooltip
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.resolve
@@ -150,18 +149,16 @@ fun LoginScreen(
                         { Text(passwordPolicyHint ?: packStringResource(Res.string.auth_password_requirements)) }
                     } else null,
                     trailingIcon = {
-                        RwTooltip(tooltip = if (showPassword) packStringResource(Res.string.common_hide_password) else packStringResource(Res.string.common_show_password)) {
-                            RwIconButton(
-                                onClick = { showPassword = !showPassword },
-                                modifier = Modifier.focusProperties { canFocus = false }.testTag("login_password_toggle_visibility"),
-                            ) {
-                                Icon(
-                                    if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    contentDescription = if (showPassword) packStringResource(Res.string.common_hide_password)
-                                        else packStringResource(Res.string.common_show_password),
-                                )
-                            }
-                        }
+                        Icon(
+                            if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            contentDescription = if (showPassword) packStringResource(Res.string.common_hide_password)
+                                else packStringResource(Res.string.common_show_password),
+                            modifier = Modifier
+                                .size(20.dp)
+                                .focusProperties { canFocus = false }
+                                .testTag("login_password_toggle_visibility")
+                                .clickable { showPassword = !showPassword },
+                        )
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -196,18 +193,16 @@ fun LoginScreen(
                             { Text(packStringResource(Res.string.auth_password_mismatch)) }
                         } else null,
                         trailingIcon = {
-                            RwTooltip(tooltip = if (showConfirmPassword) packStringResource(Res.string.common_hide_password) else packStringResource(Res.string.common_show_password)) {
-                                RwIconButton(
-                                    onClick = { showConfirmPassword = !showConfirmPassword },
-                                    modifier = Modifier.focusProperties { canFocus = false }.testTag("login_confirm_password_toggle_visibility"),
-                                ) {
-                                    Icon(
-                                        if (showConfirmPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                        contentDescription = if (showConfirmPassword) packStringResource(Res.string.common_hide_password)
-                                            else packStringResource(Res.string.common_show_password),
-                                    )
-                                }
-                            }
+                            Icon(
+                                if (showConfirmPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                contentDescription = if (showConfirmPassword) packStringResource(Res.string.common_hide_password)
+                                    else packStringResource(Res.string.common_show_password),
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .focusProperties { canFocus = false }
+                                    .testTag("login_confirm_password_toggle_visibility")
+                                    .clickable { showConfirmPassword = !showConfirmPassword },
+                            )
                         },
                         modifier = Modifier
                             .fillMaxWidth()

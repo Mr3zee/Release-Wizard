@@ -18,6 +18,9 @@ class AuthViewModel(
     private val _user = MutableStateFlow<UserInfo?>(null)
     val user: StateFlow<UserInfo?> = _user
 
+    /** True once the user has been authenticated at least once in this session. */
+    private var hadSession = false
+
     private val _isCheckingSession = MutableStateFlow(true)
     val isCheckingSession: StateFlow<Boolean> = _isCheckingSession
 
@@ -32,7 +35,9 @@ class AuthViewModel(
             _isCheckingSession.value = true
             _error.value = null
             try {
-                _user.value = apiClient.me()
+                val userInfo = apiClient.me()
+                _user.value = userInfo
+                hadSession = true
             } catch (_: Exception) {
                 _user.value = null
             } finally {
@@ -48,6 +53,7 @@ class AuthViewModel(
             try {
                 val userInfo = apiClient.login(username, password)
                 _user.value = userInfo
+                hadSession = true
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -63,6 +69,7 @@ class AuthViewModel(
             try {
                 val userInfo = apiClient.register(username, password)
                 _user.value = userInfo
+                hadSession = true
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -84,7 +91,11 @@ class AuthViewModel(
 
     fun onSessionExpired() {
         _user.value = null
-        _error.value = UiMessage.SessionExpired
+        // Only show "session expired" if the user was previously authenticated.
+        // Avoids confusing the message on first visit with no prior session.
+        if (hadSession) {
+            _error.value = UiMessage.SessionExpired
+        }
     }
 
     fun setError(message: UiMessage) {
