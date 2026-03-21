@@ -181,6 +181,8 @@ object EmojisPack {
             "connections_tc_polling_placeholder" to "30",
             "connections_tc_server_placeholder" to "https://teamcity.example.com",
             "connections_tc_token_hint" to "\ud83c\udfd7\ufe0f\u2699\ufe0f\ud83d\udd11",
+            "connections_tc_token_hint_no_url" to "\ud83c\udfd7\ufe0f\u2699\ufe0f\ud83d\udd11 (\u2b06\ufe0f\ud83c\udfd7\ufe0f\ud83d\udd17)",
+            "connections_open_external_link" to "\ud83c\udf10\ud83d\udd17",
             "connections_tc_token_placeholder" to "\ud83d\udd11\ud83c\udfd7\ufe0f",
             "connections_test" to "\ud83e\uddea\ud83d\udd17",
             "connections_test_failed" to $$"\ud83e\uddea\u274c %1$s",

@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Lock
@@ -15,7 +16,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -350,6 +353,7 @@ fun ConnectionFormScreen(
 
             HorizontalDivider()
 
+            val uriHandler = LocalUriHandler.current
             when (selectedType) {
                 ConnectionType.SLACK -> {
                     var showSlackWebhook by remember { mutableStateOf(false) }
@@ -373,6 +377,12 @@ fun ConnectionFormScreen(
                                     contentDescription = if (showSlackWebhook) packStringResource(Res.string.common_hide_value) else packStringResource(Res.string.common_show_value),
                                 )
                             }
+                        },
+                        supportingText = {
+                            TokenHelpLink(
+                                text = packStringResource(Res.string.connections_slack_webhook_hint),
+                                onClick = { uriHandler.openUri("https://api.slack.com/apps") },
+                            )
                         },
                         modifier = Modifier.fillMaxWidth().testTag("slack_webhook_url"),
                     )
@@ -407,6 +417,19 @@ fun ConnectionFormScreen(
                                     contentDescription = if (showTeamCityToken) packStringResource(Res.string.common_hide_value) else packStringResource(Res.string.common_show_value),
                                 )
                             }
+                        },
+                        supportingText = {
+                            val tcTokenUrl = if (teamCityServerUrl.isNotBlank()) {
+                                "${teamCityServerUrl.trimEnd('/')}/profile.html?item=accessTokens"
+                            } else null
+                            TokenHelpLink(
+                                text = if (tcTokenUrl != null) {
+                                    packStringResource(Res.string.connections_tc_token_hint)
+                                } else {
+                                    packStringResource(Res.string.connections_tc_token_hint_no_url)
+                                },
+                                onClick = tcTokenUrl?.let { url -> { uriHandler.openUri(url) } },
+                            )
                         },
                         modifier = Modifier.fillMaxWidth().testTag("teamcity_token"),
                     )
@@ -450,6 +473,12 @@ fun ConnectionFormScreen(
                                     contentDescription = if (showGithubToken) packStringResource(Res.string.common_hide_value) else packStringResource(Res.string.common_show_value),
                                 )
                             }
+                        },
+                        supportingText = {
+                            TokenHelpLink(
+                                text = packStringResource(Res.string.connections_github_pat_hint),
+                                onClick = { uriHandler.openUri("https://github.com/settings/tokens?type=beta") },
+                            )
                         },
                         modifier = Modifier.fillMaxWidth().testTag("github_token"),
                     )
@@ -532,4 +561,37 @@ private fun ConnectionConfig.isValid(): Boolean = when (this) {
     is ConnectionConfig.SlackConfig -> webhookUrl.isNotBlank()
     is ConnectionConfig.TeamCityConfig -> serverUrl.isNotBlank() && token.isNotBlank()
     is ConnectionConfig.GitHubConfig -> token.isNotBlank() && owner.isNotBlank() && repo.isNotBlank()
+}
+
+@Composable
+private fun TokenHelpLink(
+    text: String,
+    onClick: (() -> Unit)?,
+) {
+    val openLinkLabel = packStringResource(Res.string.connections_open_external_link)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
+        modifier = if (onClick != null) {
+            Modifier
+                .padding(vertical = Spacing.xs)
+                .clickable(role = Role.Button, onClickLabel = openLinkLabel, onClick = onClick)
+        } else {
+            Modifier
+        },
+    ) {
+        Text(
+            text = text,
+            style = AppTypography.bodySmall,
+            color = if (onClick != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (onClick != null) {
+            Icon(
+                Icons.AutoMirrored.Filled.OpenInNew,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        }
+    }
 }

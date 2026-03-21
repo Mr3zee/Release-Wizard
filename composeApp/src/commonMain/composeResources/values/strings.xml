@@ -130,9 +130,11 @@
 
     <!-- Connection credential hints -->
     <string name="connections_github_owner_hint">GitHub username or organization name</string>
-    <string name="connections_github_pat_hint">Generate at GitHub \u003E Settings \u003E Developer settings \u003E Tokens</string>
-    <string name="connections_tc_token_hint">Create at TeamCity \u003E My Settings \u0026 Tools \u003E Access Tokens</string>
-    <string name="connections_slack_webhook_hint">Create at api.slack.com \u003E Your Apps \u003E Incoming Webhooks</string>
+    <string name="connections_github_pat_hint">Generate at GitHub \u003E Settings \u003E Developer settings \u003E Fine-grained tokens</string>
+    <string name="connections_tc_token_hint">Generate at TeamCity \u003E Profile \u003E Access Tokens</string>
+    <string name="connections_tc_token_hint_no_url">Generate at TeamCity \u003E Profile \u003E Access Tokens (enter server URL above to open directly)</string>
+    <string name="connections_slack_webhook_hint">Generate at Slack \u003E Your Apps \u003E Incoming Webhooks</string>
+    <string name="connections_open_external_link">Opens in browser</string>
 
     <!-- ==================== Connections: Section Headers ==================== -->
     <string name="connections_section_slack">Slack settings</string>

@@ -15,6 +15,9 @@ import io.ktor.client.plugins.cookies.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.flow.MutableStateFlow
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.UriHandler
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.Test
@@ -1548,5 +1551,121 @@ class ConnectionScreensTest {
         onNodeWithText("Back").performClick()
         assertTrue(backCalled, "Back should be called immediately on clean edit form")
         onNodeWithTag("discard_confirm", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    // ==================== Token Help Links ====================
+
+    @Test
+    fun `github form shows token help link`() = runComposeUiTest {
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")), MutableStateFlow(TeamId("test-team")))
+        setContent {
+            MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = {}) }
+        }
+
+        onNodeWithText("Generate at GitHub", substring = true, useUnmergedTree = true).assertExists()
+        onNodeWithText("Fine-grained tokens", substring = true, useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun `slack form shows webhook help link`() = runComposeUiTest {
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")), MutableStateFlow(TeamId("test-team")))
+        setContent {
+            MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = {}) }
+        }
+
+        onNodeWithTag("connection_type_selector").performClick()
+        onNodeWithText("Slack").performClick()
+        onNodeWithText("Generate at Slack", substring = true, useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun `teamcity form shows token help link without url`() = runComposeUiTest {
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")), MutableStateFlow(TeamId("test-team")))
+        setContent {
+            MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = {}) }
+        }
+
+        onNodeWithTag("connection_type_selector").performClick()
+        onNodeWithText("TeamCity").performClick()
+        // Should show the no-url variant with the "(enter server URL above" hint
+        onNodeWithText("enter server URL above", substring = true, useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun `teamcity token help link becomes active when server url filled`() = runComposeUiTest {
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")), MutableStateFlow(TeamId("test-team")))
+        setContent {
+            MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = {}) }
+        }
+
+        onNodeWithTag("connection_type_selector").performClick()
+        onNodeWithText("TeamCity").performClick()
+        // Before entering URL — shows hint about entering server URL
+        onNodeWithText("enter server URL above", substring = true, useUnmergedTree = true).assertExists()
+
+        // After entering server URL — no longer shows the no-url hint
+        onNodeWithTag("teamcity_server_url").performTextInput("https://tc.example.com")
+        onNodeWithText("enter server URL above", substring = true, useUnmergedTree = true).assertDoesNotExist()
+        onNodeWithText("Generate at TeamCity", substring = true, useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun `github token help link opens correct url`() = runComposeUiTest {
+        val openedUrls = mutableListOf<String>()
+        val fakeUriHandler = object : UriHandler {
+            override fun openUri(uri: String) { openedUrls.add(uri) }
+        }
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")), MutableStateFlow(TeamId("test-team")))
+        setContent {
+            CompositionLocalProvider(LocalUriHandler provides fakeUriHandler) {
+                MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = {}) }
+            }
+        }
+
+        onNodeWithText("Generate at GitHub", substring = true, useUnmergedTree = true).performClick()
+        assertEquals(1, openedUrls.size)
+        assertTrue(openedUrls[0].contains("github.com/settings/tokens"))
+        assertTrue(openedUrls[0].contains("type=beta"))
+    }
+
+    @Test
+    fun `slack webhook help link opens correct url`() = runComposeUiTest {
+        val openedUrls = mutableListOf<String>()
+        val fakeUriHandler = object : UriHandler {
+            override fun openUri(uri: String) { openedUrls.add(uri) }
+        }
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")), MutableStateFlow(TeamId("test-team")))
+        setContent {
+            CompositionLocalProvider(LocalUriHandler provides fakeUriHandler) {
+                MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = {}) }
+            }
+        }
+
+        onNodeWithTag("connection_type_selector").performClick()
+        onNodeWithText("Slack").performClick()
+        onNodeWithText("Generate at Slack", substring = true, useUnmergedTree = true).performClick()
+        assertEquals(1, openedUrls.size)
+        assertTrue(openedUrls[0].contains("api.slack.com/apps"))
+    }
+
+    @Test
+    fun `teamcity token help link opens dynamic url based on server url`() = runComposeUiTest {
+        val openedUrls = mutableListOf<String>()
+        val fakeUriHandler = object : UriHandler {
+            override fun openUri(uri: String) { openedUrls.add(uri) }
+        }
+        val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")), MutableStateFlow(TeamId("test-team")))
+        setContent {
+            CompositionLocalProvider(LocalUriHandler provides fakeUriHandler) {
+                MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = {}) }
+            }
+        }
+
+        onNodeWithTag("connection_type_selector").performClick()
+        onNodeWithText("TeamCity").performClick()
+        onNodeWithTag("teamcity_server_url").performTextInput("https://tc.example.com")
+        onNodeWithText("Generate at TeamCity", substring = true, useUnmergedTree = true).performClick()
+        assertEquals(1, openedUrls.size)
+        assertEquals("https://tc.example.com/profile.html?item=accessTokens", openedUrls[0])
     }
 }
