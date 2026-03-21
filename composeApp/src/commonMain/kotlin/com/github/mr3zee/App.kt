@@ -383,7 +383,7 @@ fun App() {
                                 onTeamChanged = { teamId ->
                                     activeTeamId.value = teamId
                                 },
-                                onRefreshUser = { authViewModel.checkSession() },
+                                onRefreshUser = { authViewModel.refreshUser() },
                                 profileViewModel = profileViewModel,
                                 authApiClient = authApiClient,
                             )

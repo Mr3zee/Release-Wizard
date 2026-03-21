@@ -49,6 +49,21 @@ class AuthViewModel(
         }
     }
 
+    /** Refresh user info silently without showing the full-screen loading spinner. */
+    fun refreshUser() {
+        viewModelScope.launch {
+            try {
+                val userInfo = apiClient.me()
+                _user.value = userInfo
+                if (userInfo != null) {
+                    hadSession = true
+                }
+            } catch (_: Exception) {
+                // Silently ignore — user stays as-is
+            }
+        }
+    }
+
     fun login(username: String, password: String) {
         viewModelScope.launch {
             _isLoading.value = true

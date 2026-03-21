@@ -45,7 +45,7 @@ class ReleaseListViewModel(
     private val _projects = MutableStateFlow<List<ProjectTemplate>>(emptyList())
     val projects: StateFlow<List<ProjectTemplate>> = _projects
 
-    private val _isLoading = MutableStateFlow(true)
+    private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
     private val _error = MutableStateFlow<UiMessage?>(null)
