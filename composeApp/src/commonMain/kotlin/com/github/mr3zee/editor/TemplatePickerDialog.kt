@@ -7,6 +7,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -125,6 +127,7 @@ private fun TemplateDropdownItem(
             }
         },
         onClick = onClick,
-        modifier = Modifier.testTag("template_item_$label"),
+        modifier = Modifier.testTag("template_item_$label")
+            .pointerHoverIcon(PointerIcon.Hand),
     )
 }

@@ -206,7 +206,8 @@ private fun TeamDropdown(
                         )
                     },
                     onClick = { onTeamChanged(teamInfo.teamId) },
-                    modifier = Modifier.testTag("sidebar_team_picker_${teamInfo.teamId.value}"),
+                    modifier = Modifier.testTag("sidebar_team_picker_${teamInfo.teamId.value}")
+                        .pointerHoverIcon(PointerIcon.Hand),
                 )
             }
         }
@@ -393,7 +394,8 @@ fun SidebarSettingsContent(
                                             onLanguagePackChange(pack)
                                             showLanguagePicker = false
                                         },
-                                        modifier = Modifier.testTag("sidebar_language_${pack.name}"),
+                                        modifier = Modifier.testTag("sidebar_language_${pack.name}")
+                                            .pointerHoverIcon(PointerIcon.Hand),
                                     )
                                 }
                             }
@@ -436,7 +438,8 @@ private fun SettingsMenuItems(
             }
             onThemeChange(next)
         },
-        modifier = Modifier.testTag("sidebar_settings_theme"),
+        modifier = Modifier.testTag("sidebar_settings_theme")
+            .pointerHoverIcon(PointerIcon.Hand),
     )
     // Language picker (also available in collapsed popup per UX review)
     LanguagePack.entries.forEach { pack ->
@@ -457,14 +460,16 @@ private fun SettingsMenuItems(
                 }
             },
             onClick = { onLanguagePackChange(pack) },
-            modifier = Modifier.testTag("sidebar_language_${pack.name}"),
+            modifier = Modifier.testTag("sidebar_language_${pack.name}")
+                .pointerHoverIcon(PointerIcon.Hand),
         )
     }
     HorizontalDivider()
     DropdownMenuItem(
         text = { Text(packStringResource(Res.string.shortcuts_menu_item)) },
         onClick = onShowShortcuts,
-        modifier = Modifier.testTag("sidebar_settings_shortcuts"),
+        modifier = Modifier.testTag("sidebar_settings_shortcuts")
+            .pointerHoverIcon(PointerIcon.Hand),
     )
 }
 

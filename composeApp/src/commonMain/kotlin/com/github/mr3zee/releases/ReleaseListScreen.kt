@@ -18,6 +18,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -524,7 +526,8 @@ private fun StartReleaseInlineForm(
                                 selectedProject = project
                                 expanded = false
                             },
-                            modifier = Modifier.testTag("project_option_${project.id.value}"),
+                            modifier = Modifier.testTag("project_option_${project.id.value}")
+                                .pointerHoverIcon(PointerIcon.Hand),
                         )
                     }
                 }
@@ -589,7 +592,8 @@ private fun ReleaseListItem(
                                 showMenu = false
                                 onArchive()
                             },
-                            modifier = Modifier.testTag("archive_menu_item"),
+                            modifier = Modifier.testTag("archive_menu_item")
+                                .pointerHoverIcon(PointerIcon.Hand),
                         )
                     }
                     DropdownMenuItem(
@@ -598,7 +602,8 @@ private fun ReleaseListItem(
                             showMenu = false
                             onDelete()
                         },
-                        modifier = Modifier.testTag("delete_menu_item"),
+                        modifier = Modifier.testTag("delete_menu_item")
+                            .pointerHoverIcon(PointerIcon.Hand),
                     )
                 }
             }

@@ -14,6 +14,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -426,7 +428,8 @@ private fun ConnectionSortDropdown(
                             onSortOrderChange(order)
                             expanded = false
                         },
-                        modifier = Modifier.testTag("sort_option_${order.name}"),
+                        modifier = Modifier.testTag("sort_option_${order.name}")
+                            .pointerHoverIcon(PointerIcon.Hand),
                     )
                 }
             }

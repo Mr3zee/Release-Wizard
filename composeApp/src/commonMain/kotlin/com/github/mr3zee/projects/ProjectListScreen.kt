@@ -16,6 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.testTag
 import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
@@ -327,7 +329,8 @@ private fun ProjectListItem(
                             showMenu = false
                             onDelete()
                         },
-                        modifier = Modifier.testTag("delete_menu_item"),
+                        modifier = Modifier.testTag("delete_menu_item")
+                            .pointerHoverIcon(PointerIcon.Hand),
                     )
                 }
             }
@@ -440,7 +443,8 @@ private fun SortDropdown(
                             onSortOrderChange(order)
                             expanded = false
                         },
-                        modifier = Modifier.testTag("sort_option_${order.name}"),
+                        modifier = Modifier.testTag("sort_option_${order.name}")
+                            .pointerHoverIcon(PointerIcon.Hand),
                     )
                 }
             }

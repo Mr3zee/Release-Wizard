@@ -13,6 +13,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -270,6 +272,7 @@ private fun ActionBlockProperties(
                         onUpdateType(block.id, type)
                         typeExpanded = false
                     },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                 )
             }
         }
@@ -316,6 +319,7 @@ private fun ActionBlockProperties(
                             onUpdateConnectionId(block.id, null)
                             connExpanded = false
                         },
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     )
                     filteredConnections.forEach { conn ->
                         DropdownMenuItem(
@@ -324,6 +328,7 @@ private fun ActionBlockProperties(
                                 onUpdateConnectionId(block.id, conn.id)
                                 connExpanded = false
                             },
+                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                         )
                     }
                 }
@@ -593,6 +598,7 @@ private fun ExternalConfigSelector(
                                     dropdownExpanded = false
                                     onSelect(config.id)
                                 },
+                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                             )
                         }
                     }

@@ -120,6 +120,7 @@ fun App() {
 
     val user by authViewModel.user.collectAsState()
     val isCheckingSession by authViewModel.isCheckingSession.collectAsState()
+    val currentTeamId by activeTeamId.collectAsState()
 
     var themePreference by remember { mutableStateOf(loadThemePreference()) }
     var languagePack by remember { mutableStateOf(loadLanguagePack()) }
@@ -297,6 +298,15 @@ fun App() {
                             onCheckStatus = { authViewModel.checkSession() },
                             onSignOut = logout,
                         )
+                    }
+                    user != null && user?.teams?.isNotEmpty() == true && currentTeamId == null -> {
+                        // Waiting for team auto-selection from LaunchedEffect(user)
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator()
+                        }
                     }
                     else -> {
                         val currentUserTeams = user?.teams ?: emptyList()
