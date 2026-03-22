@@ -61,7 +61,8 @@ fun ConnectionFormScreen(
     val error by viewModel.error.collectAsState()
     val testSuccessMessage by viewModel.testSuccessMessage.collectAsState()
     val testingConnectionIds by viewModel.testingConnectionIds.collectAsState()
-    val isTesting = connectionId != null && connectionId in testingConnectionIds
+    val isTestingConfig by viewModel.isTestingConfig.collectAsState()
+    val isTesting = (connectionId != null && connectionId in testingConnectionIds) || isTestingConfig
 
     var showDeleteConfirmation by remember { mutableStateOf(false) }
 
@@ -590,9 +591,15 @@ fun ConnectionFormScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     RwButton(
-                        onClick = { if (connectionId != null) viewModel.testConnection(connectionId) },
+                        onClick = {
+                            if (connectionId != null) {
+                                viewModel.testConnection(connectionId)
+                            } else {
+                                viewModel.testConnectionConfig(selectedType, currentConfig)
+                            }
+                        },
                         variant = RwButtonVariant.Secondary,
-                        enabled = connectionId != null && !isTesting,
+                        enabled = currentConfig.isValid() && !isTesting,
                         modifier = Modifier.testTag("test_connection_button"),
                     ) {
                         if (isTesting) {
@@ -602,13 +609,6 @@ fun ConnectionFormScreen(
                         } else {
                             Text(packStringResource(Res.string.connections_test))
                         }
-                    }
-                    if (connectionId == null) {
-                        Text(
-                            packStringResource(Res.string.connections_save_first_hint),
-                            style = AppTypography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
                     }
                 }
 

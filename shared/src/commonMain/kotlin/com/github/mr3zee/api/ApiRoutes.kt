@@ -58,6 +58,7 @@ object ApiRoutes {
 
     object Connections {
         const val BASE = "$API_V1/connections"
+        const val TEST_CONFIG = "$BASE/test"
         fun byId(id: String) = "$BASE/$id"
         fun test(id: String) = "$BASE/$id/test"
         fun teamcityBuildTypes(id: String) = "$BASE/$id/teamcity/build-types"

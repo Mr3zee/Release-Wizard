@@ -1,6 +1,7 @@
 package com.github.mr3zee.api
 
 import com.github.mr3zee.model.Connection
+import com.github.mr3zee.model.ConnectionConfig
 import com.github.mr3zee.model.ConnectionId
 import com.github.mr3zee.model.ConnectionType
 import io.ktor.client.*
@@ -53,6 +54,14 @@ class ConnectionApiClient(private val client: HttpClient) {
 
     suspend fun testConnection(id: ConnectionId): ConnectionTestResult {
         val response = client.post(serverUrl(ApiRoutes.Connections.test(id.value)))
+        return response.body()
+    }
+
+    suspend fun testConnectionConfig(type: ConnectionType, config: ConnectionConfig): ConnectionTestResult {
+        val response = client.post(serverUrl(ApiRoutes.Connections.TEST_CONFIG)) {
+            contentType(ContentType.Application.Json)
+            setBody(TestConnectionConfigRequest(type = type, config = config))
+        }
         return response.body()
     }
 

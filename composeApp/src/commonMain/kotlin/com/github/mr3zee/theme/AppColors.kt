@@ -275,7 +275,7 @@ val DarkAppColors = AppColors(
     edgeDefault = Color(0xFFBFC5D0),
     edgeSelected = Color(0xFF60A5FA),
     edgeGlow = Color(0x4D60A5FA),
-    blockSelectionHighlight = Color(0xFF60A5FA),
+    blockSelectionHighlight = Color(0xFFFFFFFF),
     portDefault = Color(0xFFB0B8C4),
     portHover = Color(0xFF60A5FA),
     portHoverRing = Color(0x4060A5FA),
@@ -284,7 +284,7 @@ val DarkAppColors = AppColors(
     // Block types
     teamcityBuild = Color(0xFFA78BFA),
     githubAction = Color(0xFF60A5FA),
-    githubPublication = Color(0xFF34D399),
+    githubPublication = Color(0xFF047857),
     slackMessage = Color(0xFFFB7185),
     gateIndicator = Color(0xFF22D3EE),
     containerBlock = Color(0xFF94A3B8),

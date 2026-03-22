@@ -89,7 +89,7 @@ internal fun handleScrollZoom(
     density: Float,
 ): Pair<Float, Offset>? {
     if (scrollY == 0f) return null
-    val factor = if (scrollY < 0) 1.08f else 1f / 1.08f
+    val factor = if (scrollY < 0) 1.03f else 1f / 1.03f
     val newZoom = (zoom * factor).coerceIn(MIN_ZOOM, MAX_ZOOM)
     val logicalBefore = Offset(
         (pointerPos.x - panOffset.x) / (density * zoom),

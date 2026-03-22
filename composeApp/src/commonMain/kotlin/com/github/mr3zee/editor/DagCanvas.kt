@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.isCtrlPressed
 import androidx.compose.ui.input.pointer.isMetaPressed
@@ -158,6 +159,19 @@ fun DagCanvas(
             .clipToBounds()
             .alpha(if (isReadOnly) 0.6f else 1f)
             .background(appColors.canvasBackground)
+            // Pinch-to-zoom (trackpad / touch)
+            .pointerInput(Unit) {
+                detectTransformGestures { centroid, pan, gestureZoom, _ ->
+                    val newZoom = (zoom * gestureZoom).coerceIn(MIN_ZOOM, MAX_ZOOM)
+                    // Adjust pan so the centroid stays fixed
+                    val newPanOffset = Offset(
+                        centroid.x - (centroid.x - panOffset.x) / (density * zoom) * density * newZoom,
+                        centroid.y - (centroid.y - panOffset.y) / (density * zoom) * density * newZoom,
+                    ) + pan
+                    zoom = newZoom
+                    panOffset = newPanOffset
+                }
+            }
             // Scroll for zoom + hover tracking
             .pointerInput(graph) {
                 awaitPointerEventScope {
@@ -179,7 +193,7 @@ fun DagCanvas(
                 }
             }
             // Click and drag
-            .pointerInput(graph, isReadOnly) {
+            .pointerInput(graph, isReadOnly, selectedBlockIds) {
                 awaitPointerEventScope {
                     while (true) {
                         val down = awaitPointerEvent()
@@ -249,7 +263,14 @@ fun DagCanvas(
                                     is HitTarget.BlockHit -> {
                                         if (!isReadOnly) {
                                             val logicalDelta = moveTransform.toLogicalDelta(delta)
-                                            onMoveBlock(hit.blockId, logicalDelta.x, logicalDelta.y)
+                                            // Move all selected blocks together if the dragged block is selected
+                                            if (hit.blockId in selectedBlockIds && selectedBlockIds.size > 1) {
+                                                for (id in selectedBlockIds) {
+                                                    onMoveBlock(id, logicalDelta.x, logicalDelta.y)
+                                                }
+                                            } else {
+                                                onMoveBlock(hit.blockId, logicalDelta.x, logicalDelta.y)
+                                            }
                                         } else {
                                             panOffset += delta
                                         }

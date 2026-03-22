@@ -35,6 +35,12 @@ data class ConnectionListResponse(
 )
 
 @Serializable
+data class TestConnectionConfigRequest(
+    val type: ConnectionType,
+    val config: ConnectionConfig,
+)
+
+@Serializable
 data class ConnectionTestResult(
     val success: Boolean,
     val message: String,

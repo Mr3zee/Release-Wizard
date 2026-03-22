@@ -25,6 +25,7 @@ interface ConnectionsService {
     suspend fun updateConnection(id: ConnectionId, request: UpdateConnectionRequest, session: UserSession): Connection?
     suspend fun deleteConnection(id: ConnectionId, session: UserSession): Boolean
     suspend fun testConnection(id: ConnectionId, session: UserSession): ConnectionTestResult?
+    suspend fun testConnectionConfig(config: ConnectionConfig): ConnectionTestResult
     suspend fun fetchExternalConfigs(id: ConnectionId, expectedType: ConnectionType, session: UserSession): ExternalConfigsResponse
     suspend fun fetchExternalConfigParameters(id: ConnectionId, configId: String, session: UserSession): ExternalConfigParametersResponse
     suspend fun findTeamId(id: ConnectionId): String?
@@ -129,6 +130,10 @@ class DefaultConnectionsService(
         checkAccess(id, session)
         val connection = repository.findById(id) ?: return null
         return connectionTester.test(connection.config)
+    }
+
+    override suspend fun testConnectionConfig(config: ConnectionConfig): ConnectionTestResult {
+        return connectionTester.test(config)
     }
 
     override suspend fun fetchExternalConfigs(id: ConnectionId, expectedType: ConnectionType, session: UserSession): ExternalConfigsResponse {

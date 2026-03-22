@@ -49,6 +49,12 @@ fun Route.connectionRoutes() {
             call.respond(HttpStatusCode.Created, ConnectionResponse(connection, webhookUrl = null))
         }
 
+        post("/test") {
+            val request = call.receive<TestConnectionConfigRequest>()
+            val result = service.testConnectionConfig(request.config)
+            call.respond(result)
+        }
+
         route("/{id}") {
             get {
                 val id = call.requireConnectionId() ?: return@get

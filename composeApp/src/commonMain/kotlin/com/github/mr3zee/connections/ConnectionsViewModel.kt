@@ -65,6 +65,9 @@ class ConnectionsViewModel(
     private val _testingConnectionIds = MutableStateFlow<Set<ConnectionId>>(emptySet())
     val testingConnectionIds: StateFlow<Set<ConnectionId>> = _testingConnectionIds
 
+    private val _isTestingConfig = MutableStateFlow(false)
+    val isTestingConfig: StateFlow<Boolean> = _isTestingConfig
+
     private val _isSaving = MutableStateFlow(false)
     val isSaving: StateFlow<Boolean> = _isSaving
 
@@ -278,6 +281,26 @@ class ConnectionsViewModel(
                 _error.value = e.toUiMessage()
             } finally {
                 _testingConnectionIds.value -= id
+            }
+        }
+    }
+
+    fun testConnectionConfig(type: ConnectionType, config: ConnectionConfig) {
+        if (_isTestingConfig.value) return
+        viewModelScope.launch {
+            _isTestingConfig.value = true
+            _error.value = null
+            try {
+                val result = apiClient.testConnectionConfig(type, config)
+                if (result.success) {
+                    _testSuccessMessage.value = UiMessage.ConnectionTestSucceeded(result.message)
+                } else {
+                    _error.value = UiMessage.ConnectionTestFailed(result.message)
+                }
+            } catch (e: Exception) {
+                _error.value = e.toUiMessage()
+            } finally {
+                _isTestingConfig.value = false
             }
         }
     }

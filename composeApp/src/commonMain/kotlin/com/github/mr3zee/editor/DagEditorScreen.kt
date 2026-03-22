@@ -43,8 +43,6 @@ import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.LocalAppColors
 import com.github.mr3zee.theme.Spacing
-import com.github.mr3zee.util.HostOS
-import com.github.mr3zee.util.currentHostOS
 import com.github.mr3zee.util.resolve
 import com.github.mr3zee.i18n.packPluralStringResource
 import com.github.mr3zee.i18n.packStringResource
@@ -148,61 +146,9 @@ fun DagEditorScreen(
 
     ProvideShortcutActions(shortcutActions) {
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(project?.name ?: packStringResource(Res.string.editor_loading))
-                        if (isReadOnly) {
-                            Text(
-                                " " + packStringResource(Res.string.editor_read_only),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = AppTypography.body,
-                            )
-                        } else {
-                            AutoSaveIndicator(autoSaveStatus)
-                        }
-                    }
-                },
-                navigationIcon = {
-                    RwButton(onClick = handleBack, variant = RwButtonVariant.Ghost) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
-                        Text(packStringResource(Res.string.common_back))
-                    }
-                },
-                actions = {
-                    if (validationErrors.isNotEmpty()) {
-                        ValidationErrorBadge(validationErrors)
-                    }
-                    if (onOpenAutomation != null) {
-                        RwButton(
-                            onClick = { guardedNavigate(onOpenAutomation) },
-                            variant = RwButtonVariant.Ghost,
-                            modifier = Modifier.testTag("automation_button"),
-                        ) {
-                            Icon(Icons.Default.Schedule, contentDescription = packStringResource(Res.string.automation_open_button))
-                            Text(packStringResource(Res.string.automation_open_button))
-                        }
-                    }
-                    val saveMod = if (currentHostOS() == HostOS.MACOS) "\u2318" else "Ctrl"
-                    val autoSaveExhausted = autoSaveStatus is AutoSaveStatus.Failed && (autoSaveStatus as AutoSaveStatus.Failed).exhausted
-                    RwTooltip(tooltip = "$saveMod+S") {
-                        RwButton(
-                            onClick = { viewModel.save() },
-                            variant = if (isDirty || autoSaveExhausted) RwButtonVariant.Primary else RwButtonVariant.Ghost,
-                            enabled = isDirty && !isSaving && !isReadOnly,
-                            modifier = Modifier.testTag("save_button"),
-                        ) {
-                            Text(if (isSaving) packStringResource(Res.string.common_saving) else packStringResource(Res.string.common_save))
-                        }
-                    }
-                },
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+    Box(
         modifier = Modifier
-            .testTag("dag_editor_screen")
+            .fillMaxSize()
             .focusRequester(editorFocusRequester)
             .focusable()
             // Preview handler: intercept editor-global shortcuts (undo/redo/save) regardless of focus
@@ -255,6 +201,49 @@ fun DagEditorScreen(
                     }
                 } else false
             },
+    ) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(project?.name ?: packStringResource(Res.string.editor_loading))
+                        if (isReadOnly) {
+                            Text(
+                                " " + packStringResource(Res.string.editor_read_only),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = AppTypography.body,
+                            )
+                        } else {
+                            AutoSaveIndicator(autoSaveStatus)
+                        }
+                    }
+                },
+                navigationIcon = {
+                    RwButton(onClick = handleBack, variant = RwButtonVariant.Ghost) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
+                        Text(packStringResource(Res.string.common_back))
+                    }
+                },
+                actions = {
+                    if (validationErrors.isNotEmpty()) {
+                        ValidationErrorBadge(validationErrors)
+                    }
+                    if (onOpenAutomation != null) {
+                        RwButton(
+                            onClick = { guardedNavigate(onOpenAutomation) },
+                            variant = RwButtonVariant.Ghost,
+                            modifier = Modifier.testTag("automation_button"),
+                        ) {
+                            Icon(Icons.Default.Schedule, contentDescription = packStringResource(Res.string.automation_open_button))
+                            Text(packStringResource(Res.string.automation_open_button))
+                        }
+                    }
+                },
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        modifier = Modifier.testTag("dag_editor_screen"),
     ) { padding ->
         if (isLoading) {
             Box(
@@ -527,6 +516,7 @@ fun DagEditorScreen(
             }
         }
     }
+    } // Box (focus + key events)
 
     } // ProvideShortcutActions
 }
