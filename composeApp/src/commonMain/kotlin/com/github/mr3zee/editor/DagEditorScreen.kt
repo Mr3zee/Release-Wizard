@@ -151,27 +151,19 @@ fun DagEditorScreen(
             .fillMaxSize()
             .focusRequester(editorFocusRequester)
             .focusable()
-            // Preview handler: intercept Ctrl+S regardless of focus (should always save)
+            // All editor shortcuts in onPreviewKeyEvent so they work
+            // regardless of which child element has focus.
             .onPreviewKeyEvent { event ->
                 if (event.type == KeyEventType.KeyDown) {
+                    if (isConfirmationVisible && (event.key == Key.Delete || event.key == Key.Backspace)) {
+                        return@onPreviewKeyEvent false
+                    }
                     val isModifier = event.isCtrlPressed || event.isMetaPressed
                     when {
                         !isReadOnly && isModifier && event.key == Key.S -> {
                             if (isDirty) viewModel.save()
                             true
                         }
-                        else -> false
-                    }
-                } else false
-            }
-            // Bubble handler: shortcuts that yield to focused text fields (undo/redo/copy/paste/select-all/delete)
-            .onKeyEvent { event ->
-                if (event.type == KeyEventType.KeyDown) {
-                    if (isConfirmationVisible && (event.key == Key.Delete || event.key == Key.Backspace)) {
-                        return@onKeyEvent false
-                    }
-                    val isModifier = event.isCtrlPressed || event.isMetaPressed
-                    when {
                         !isReadOnly && isModifier && event.key == Key.Z && !event.isShiftPressed -> {
                             viewModel.undo()
                             true

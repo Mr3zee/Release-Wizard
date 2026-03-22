@@ -257,22 +257,11 @@ fun AppShell(
             }
 
             // ── Content area ─────────────────────────────────────────
-            // Clear sidebar focus on any pointer-down in the content area.
-            // Uses PointerEventPass.Final so children (canvas drag, buttons)
-            // process events first — we only clear focus, never consume.
-            val focusManager = LocalFocusManager.current
-            Box(
-                Modifier.weight(1f).fillMaxHeight().pointerInput(Unit) {
-                    awaitPointerEventScope {
-                        while (true) {
-                            val event = awaitPointerEvent(PointerEventPass.Final)
-                            if (event.changes.any { it.pressed && !it.previousPressed }) {
-                                focusManager.clearFocus()
-                            }
-                        }
-                    }
-                },
-            ) {
+            // Focus clearing is handled by SidebarNavItem.onClick calling
+            // focusManager.clearFocus() — no content-area handler needed.
+            // (Any pointer-based approach here interferes with canvas drag
+            // by causing recomposition that restarts pointerInput blocks.)
+            Box(Modifier.weight(1f).fillMaxHeight()) {
                 content()
             }
         }

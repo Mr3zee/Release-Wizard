@@ -160,20 +160,9 @@ fun DagCanvas(
             .clipToBounds()
             .alpha(if (isReadOnly) 0.6f else 1f)
             .background(appColors.canvasBackground)
-            // Pinch-to-zoom (trackpad / touch)
-            .pointerInput(Unit) {
-                detectTransformGestures { centroid, pan, gestureZoom, _ ->
-                    val newZoom = (zoom * gestureZoom).coerceIn(MIN_ZOOM, MAX_ZOOM)
-                    // Adjust pan so the centroid stays fixed
-                    val newPanOffset = Offset(
-                        centroid.x - (centroid.x - panOffset.x) / (density * zoom) * density * newZoom,
-                        centroid.y - (centroid.y - panOffset.y) / (density * zoom) * density * newZoom,
-                    ) + pan
-                    zoom = newZoom
-                    panOffset = newPanOffset
-                }
-            }
             // Scroll for zoom + hover tracking
+            // (macOS trackpad pinch generates scroll events, so this covers both
+            // scroll-wheel zoom and pinch-to-zoom on Desktop)
             .pointerInput(graph) {
                 awaitPointerEventScope {
                     while (true) {
