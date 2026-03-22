@@ -5,6 +5,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import com.github.mr3zee.theme.AppTypography
@@ -58,7 +59,7 @@ fun RwMarkdownField(
                     label = { Text(packStringResource(Res.string.editor_markdown_edit), style = AppTypography.label) },
                     enabled = enabled,
                     role = Role.Tab,
-                    modifier = Modifier.weight(1f).testTag("${testTag}_edit_tab"),
+                    modifier = Modifier.weight(1f).focusProperties { canFocus = false }.testTag("${testTag}_edit_tab"),
                 )
                 RwChip(
                     selected = mode == MarkdownFieldMode.PREVIEW,
@@ -66,7 +67,7 @@ fun RwMarkdownField(
                     label = { Text(packStringResource(Res.string.editor_markdown_preview), style = AppTypography.label) },
                     enabled = enabled,
                     role = Role.Tab,
-                    modifier = Modifier.weight(1f).testTag("${testTag}_preview_tab"),
+                    modifier = Modifier.weight(1f).focusProperties { canFocus = false }.testTag("${testTag}_preview_tab"),
                 )
             }
             Spacer(Modifier.height(Spacing.xs))

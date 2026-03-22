@@ -309,8 +309,8 @@ fun DagCanvas(
         }
     }
 
-    // Empty canvas hint
-    if (graph.edges.isEmpty()) {
+    // Empty canvas hint — only show when blocks exist but no edges yet
+    if (graph.blocks.isNotEmpty() && graph.edges.isEmpty()) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,

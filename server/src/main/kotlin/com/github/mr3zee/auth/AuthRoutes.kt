@@ -159,7 +159,7 @@ fun Route.authRoutes() {
                 log.warn("Registration rejected: username '{}' already taken", trimmedUsername)
                 call.respond(
                     HttpStatusCode.BadRequest,
-                    ErrorResponse(error = "Registration failed", code = "REGISTRATION_FAILED"),
+                    ErrorResponse(error = "Username already taken", code = "USERNAME_TAKEN"),
                 )
             }
         }

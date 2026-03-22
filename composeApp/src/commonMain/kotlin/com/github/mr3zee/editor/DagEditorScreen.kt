@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.focusable
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.platform.testTag
@@ -204,20 +205,11 @@ fun DagEditorScreen(
             .testTag("dag_editor_screen")
             .focusRequester(editorFocusRequester)
             .focusable()
-            .onKeyEvent { event ->
+            // Preview handler: intercept editor-global shortcuts (undo/redo/save) regardless of focus
+            .onPreviewKeyEvent { event ->
                 if (event.type == KeyEventType.KeyDown) {
-                    // Suppress destructive keys while a confirmation banner is showing
-                    if (isConfirmationVisible && (event.key == Key.Delete || event.key == Key.Backspace)) {
-                        return@onKeyEvent false
-                    }
-                    // Support both Ctrl (Windows/Linux) and Cmd (macOS)
                     val isModifier = event.isCtrlPressed || event.isMetaPressed
                     when {
-                        !isReadOnly && (event.key == Key.Delete || event.key == Key.Backspace) -> {
-                            if (selectedBlockIds.isNotEmpty()) viewModel.removeSelectedBlocks()
-                            else if (selectedEdgeIndex != null) viewModel.removeSelectedEdge()
-                            true
-                        }
                         !isReadOnly && isModifier && event.key == Key.Z && !event.isShiftPressed -> {
                             viewModel.undo()
                             true
@@ -228,6 +220,23 @@ fun DagEditorScreen(
                         }
                         !isReadOnly && isModifier && event.key == Key.S -> {
                             if (isDirty) viewModel.save()
+                            true
+                        }
+                        else -> false
+                    }
+                } else false
+            }
+            // Bubble handler: shortcuts that should yield to focused text fields (copy/paste/select-all/delete)
+            .onKeyEvent { event ->
+                if (event.type == KeyEventType.KeyDown) {
+                    if (isConfirmationVisible && (event.key == Key.Delete || event.key == Key.Backspace)) {
+                        return@onKeyEvent false
+                    }
+                    val isModifier = event.isCtrlPressed || event.isMetaPressed
+                    when {
+                        !isReadOnly && (event.key == Key.Delete || event.key == Key.Backspace) -> {
+                            if (selectedBlockIds.isNotEmpty()) viewModel.removeSelectedBlocks()
+                            else if (selectedEdgeIndex != null) viewModel.removeSelectedEdge()
                             true
                         }
                         isModifier && event.key == Key.C -> {
@@ -401,7 +410,7 @@ fun DagEditorScreen(
                     ) {
                         RwIconButton(
                             onClick = { leftSidebarExpanded = !leftSidebarExpanded },
-                            modifier = Modifier.size(44.dp).testTag("toggle_left_sidebar"),
+                            modifier = Modifier.size(44.dp).focusProperties { canFocus = false }.testTag("toggle_left_sidebar"),
                         ) {
                             Icon(
                                 if (leftSidebarExpanded) Icons.AutoMirrored.Filled.KeyboardArrowLeft
@@ -461,7 +470,7 @@ fun DagEditorScreen(
                     ) {
                         RwIconButton(
                             onClick = { rightSidebarExpanded = !rightSidebarExpanded },
-                            modifier = Modifier.size(44.dp).testTag("toggle_right_sidebar"),
+                            modifier = Modifier.size(44.dp).focusProperties { canFocus = false }.testTag("toggle_right_sidebar"),
                         ) {
                             Icon(
                                 if (rightSidebarExpanded) Icons.AutoMirrored.Filled.KeyboardArrowRight

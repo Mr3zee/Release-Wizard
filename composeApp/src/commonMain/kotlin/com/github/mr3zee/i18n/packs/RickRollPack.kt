@@ -185,6 +185,7 @@ object RickRollPack {
             "connections_polling_range_hint" to "5\u2013300 seconds, never gonna change from 30",
             "connections_search_placeholder" to "We've known each other... search connections...",
             "connections_save_to_test" to "Save and never let you down",
+            "connections_save_first_hint" to "You gotta save first \u2014 never gonna give you up",
             "connections_section_github" to "GitHub settings \u2014 you know the rules",
             "connections_section_slack" to "Slack settings \u2014 never gonna let you down",
             "connections_section_teamcity" to "TeamCity settings \u2014 never gonna run around",

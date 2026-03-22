@@ -124,7 +124,7 @@ fun BlockPropertiesPanel(
             modifier = Modifier.fillMaxWidth().testTag("block_name_field"),
         )
 
-        Spacer(Modifier.height(Spacing.md))
+        Spacer(Modifier.height(Spacing.lg))
 
         when (block) {
             is Block.ActionBlock -> {
@@ -165,7 +165,7 @@ fun BlockPropertiesPanel(
         }
 
         // Description — collapsible section after type-specific config
-        Spacer(Modifier.height(Spacing.md))
+        Spacer(Modifier.height(Spacing.lg))
         BlockDescriptionSection(
             block = block,
             enabled = enabled,
@@ -289,7 +289,7 @@ private fun ActionBlockProperties(
         }
     }
 
-    Spacer(Modifier.height(Spacing.md))
+    Spacer(Modifier.height(Spacing.lg))
 
     // Connection selector — shown for block types that need a connection
     val requiredConnectionType = block.type.requiredConnectionType()
@@ -344,7 +344,7 @@ private fun ActionBlockProperties(
             }
         }
 
-        Spacer(Modifier.height(Spacing.md))
+        Spacer(Modifier.height(Spacing.lg))
     }
 
     // External config selector — shown for block types with configIdParameterKey and a selected connection
@@ -361,7 +361,7 @@ private fun ActionBlockProperties(
             onRefresh = { onRefreshConfigs(block.id) },
         )
 
-        Spacer(Modifier.height(Spacing.md))
+        Spacer(Modifier.height(Spacing.lg))
     }
 
     // Status webhook injection (TeamCity builds only)
@@ -388,7 +388,7 @@ private fun ActionBlockProperties(
             style = AppTypography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Spacer(Modifier.height(Spacing.md))
+        Spacer(Modifier.height(Spacing.lg))
     }
 
     // Timeout
@@ -423,7 +423,7 @@ private fun ActionBlockProperties(
         modifier = Modifier.fillMaxWidth().testTag("block_timeout_field"),
     )
 
-    Spacer(Modifier.height(Spacing.md))
+    Spacer(Modifier.height(Spacing.lg))
 
     // Compute predecessors for template picker (shared by gates and parameters)
     val predecessors = remember(graph, block.id) {
@@ -440,7 +440,7 @@ private fun ActionBlockProperties(
         enabled = enabled,
     )
 
-    Spacer(Modifier.height(Spacing.md))
+    Spacer(Modifier.height(Spacing.lg))
 
     // Parameters header with refresh button
     Row(

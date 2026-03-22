@@ -587,6 +587,7 @@ fun ConnectionFormScreen(
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     RwButton(
                         onClick = { if (connectionId != null) viewModel.testConnection(connectionId) },
@@ -599,11 +600,15 @@ fun ConnectionFormScreen(
                             Spacer(modifier = Modifier.width(Spacing.sm))
                             Text(packStringResource(Res.string.common_testing))
                         } else {
-                            Text(
-                                if (connectionId != null) packStringResource(Res.string.connections_test)
-                                else packStringResource(Res.string.connections_save_to_test),
-                            )
+                            Text(packStringResource(Res.string.connections_test))
                         }
+                    }
+                    if (connectionId == null) {
+                        Text(
+                            packStringResource(Res.string.connections_save_first_hint),
+                            style = AppTypography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
 
