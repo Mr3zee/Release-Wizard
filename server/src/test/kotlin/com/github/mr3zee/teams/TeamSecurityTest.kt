@@ -179,4 +179,93 @@ class TeamSecurityTest {
         assertTrue(teamInvites.invites.isNotEmpty())
         assertTrue(teamInvites.invites.all { it.status == InviteStatus.PENDING })
     }
+
+    // --- Invite Error Messages ---
+
+    @Test
+    fun `invite non-existent user returns User not found`() = testApplication {
+        application { testModule() }
+        val admin = jsonClient()
+        admin.login("admin", "adminpass")
+        val teamId = admin.createTestTeam("Invite Error Team")
+
+        val response = admin.post(ApiRoutes.Teams.invites(teamId.value)) {
+            contentType(ContentType.Application.Json)
+            setBody(CreateInviteRequest(username = "nonexistentuser"))
+        }
+        assertEquals(HttpStatusCode.NotFound, response.status)
+        val error = response.body<ErrorResponse>()
+        assertTrue(error.error.contains("User not found"), "Expected 'User not found' but got: ${error.error}")
+    }
+
+    @Test
+    fun `invite yourself returns Cannot invite yourself`() = testApplication {
+        application { testModule() }
+        val admin = jsonClient()
+        admin.login("admin", "adminpass")
+        val teamId = admin.createTestTeam("Self Invite Team")
+
+        val response = admin.post(ApiRoutes.Teams.invites(teamId.value)) {
+            contentType(ContentType.Application.Json)
+            setBody(CreateInviteRequest(username = "admin"))
+        }
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        val error = response.body<ErrorResponse>()
+        assertTrue(error.error.contains("Cannot invite yourself"), "Expected 'Cannot invite yourself' but got: ${error.error}")
+    }
+
+    @Test
+    fun `invite existing member returns already a member`() = testApplication {
+        application { testModule() }
+        val admin = jsonClient()
+        admin.login("admin", "adminpass")
+        val teamId = admin.createTestTeam("Member Invite Team")
+
+        // Register and add a second user to the team
+        val user2 = jsonClient()
+        user2.login("member2", "member2pass")
+        admin.post(ApiRoutes.Teams.invites(teamId.value)) {
+            contentType(ContentType.Application.Json)
+            setBody(CreateInviteRequest(username = "member2"))
+        }
+        val invites = user2.get(ApiRoutes.Auth.MyInvites.BASE).body<InviteListResponse>()
+        user2.post(ApiRoutes.Auth.MyInvites.accept(invites.invites.first().id))
+
+        // Now try to invite the already-member user again
+        val response = admin.post(ApiRoutes.Teams.invites(teamId.value)) {
+            contentType(ContentType.Application.Json)
+            setBody(CreateInviteRequest(username = "member2"))
+        }
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        val error = response.body<ErrorResponse>()
+        assertTrue(error.error.contains("already a member"), "Expected 'already a member' but got: ${error.error}")
+    }
+
+    @Test
+    fun `invite user with pending invite returns Invite already sent`() = testApplication {
+        application { testModule() }
+        val admin = jsonClient()
+        admin.login("admin", "adminpass")
+        val teamId = admin.createTestTeam("Duplicate Invite Team")
+
+        // Register a second user
+        val user2 = jsonClient()
+        user2.login("pendinguser", "pendinguserpass")
+
+        // Send first invite
+        val firstInvite = admin.post(ApiRoutes.Teams.invites(teamId.value)) {
+            contentType(ContentType.Application.Json)
+            setBody(CreateInviteRequest(username = "pendinguser"))
+        }
+        assertEquals(HttpStatusCode.Created, firstInvite.status)
+
+        // Send second invite to same user
+        val response = admin.post(ApiRoutes.Teams.invites(teamId.value)) {
+            contentType(ContentType.Application.Json)
+            setBody(CreateInviteRequest(username = "pendinguser"))
+        }
+        assertEquals(HttpStatusCode.BadRequest, response.status)
+        val error = response.body<ErrorResponse>()
+        assertTrue(error.error.contains("Invite already sent"), "Expected 'Invite already sent' but got: ${error.error}")
+    }
 }

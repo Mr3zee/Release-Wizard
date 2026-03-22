@@ -143,7 +143,7 @@ class AuthRoutesTest {
     }
 
     @Test
-    fun `register duplicate username returns generic error`() = testApplication {
+    fun `register duplicate username returns USERNAME_TAKEN`() = testApplication {
         application { testModule() }
         val client = jsonClient()
 
@@ -152,7 +152,8 @@ class AuthRoutesTest {
         val response = client.register(username = "dupuser", password = "password5678")
         assertEquals(HttpStatusCode.BadRequest, response.status)
         val error = response.body<ErrorResponse>()
-        assertEquals("REGISTRATION_FAILED", error.code)
+        assertEquals("USERNAME_TAKEN", error.code)
+        assertEquals("Username already taken", error.error)
     }
 
     @Test

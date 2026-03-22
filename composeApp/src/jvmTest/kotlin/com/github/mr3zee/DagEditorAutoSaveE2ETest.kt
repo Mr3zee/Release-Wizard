@@ -1,6 +1,7 @@
 package com.github.mr3zee
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.*
 import com.github.mr3zee.api.ProjectApiClient
 import com.github.mr3zee.editor.AutoSaveStatus
@@ -147,8 +148,12 @@ class DagEditorAutoSaveE2ETest {
         waitForIdle()
         assertIs<AutoSaveStatus.Pending>(vm.autoSaveStatus.value)
 
-        // Click Save manually
-        onNodeWithTag("save_button").performClick()
+        // Trigger manual save via Ctrl+S
+        onNodeWithTag("dag_editor_screen").performKeyInput {
+            keyDown(Key.CtrlLeft)
+            pressKey(Key.S)
+            keyUp(Key.CtrlLeft)
+        }
 
         // Wait for save to complete
         waitUntil(timeoutMillis = 3000L) {
@@ -222,33 +227,5 @@ class DagEditorAutoSaveE2ETest {
         assertTrue(vm.isDirty.value, "Should remain dirty after failed auto-save")
     }
 
-    @Test
-    fun `save button has Primary variant when auto-save exhausted`() = runComposeUiTest {
-        val vm = autoSaveViewModel(
-            putStatus = HttpStatusCode.InternalServerError,
-            debounceMs = 100L,
-        )
-        setContent {
-            MaterialTheme {
-                DagEditorScreen(viewModel = vm, onBack = {})
-            }
-        }
-
-        waitUntil(timeoutMillis = 3000L) {
-            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
-        }
-
-        // Add a block
-        onNodeWithTag("add_block_SLACK_MESSAGE").performClick()
-        waitForIdle()
-
-        // Wait for all retries to exhaust
-        waitUntil(timeoutMillis = 30_000L) {
-            val s = vm.autoSaveStatus.value
-            s is AutoSaveStatus.Failed && s.exhausted
-        }
-
-        // Save button should still be enabled for manual recovery
-        onNodeWithTag("save_button").assertIsEnabled()
-    }
+    // save button has Primary variant when auto-save exhausted: removed (save button was removed)
 }

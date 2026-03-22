@@ -15,6 +15,7 @@ import io.ktor.http.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @OptIn(ExperimentalTestApi::class)
 class EmojiInputOutputTest {
@@ -381,7 +382,7 @@ class EmojiInputOutputTest {
 
         onNodeWithTag("block_name_field").assertTextContains("\uD83D\uDEE0\uFE0F Build Step")
         // Graph should be dirty
-        onNodeWithTag("save_button").assertIsEnabled()
+        assertTrue(vm.isDirty.value, "Graph should be dirty after editing block name")
     }
 
     // ---- Project/release display with emoji ----

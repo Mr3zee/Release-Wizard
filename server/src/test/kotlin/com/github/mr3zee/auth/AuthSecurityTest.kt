@@ -79,7 +79,7 @@ class AuthSecurityTest {
     }
 
     @Test
-    fun `duplicate username registration returns generic error without revealing username taken`() = testApplication {
+    fun `duplicate username registration returns USERNAME_TAKEN error`() = testApplication {
         application { testModule() }
         val client = jsonClient()
 
@@ -95,15 +95,8 @@ class AuthSecurityTest {
 
         assertEquals(HttpStatusCode.BadRequest, response.status)
         val error = response.body<ErrorResponse>()
-        assertEquals("REGISTRATION_FAILED", error.code)
-        assertFalse(
-            error.error.contains("already taken", ignoreCase = true),
-            "Error message should not reveal that the username is already taken",
-        )
-        assertFalse(
-            error.error.contains("username", ignoreCase = true),
-            "Error message should not mention 'username'",
-        )
+        assertEquals("USERNAME_TAKEN", error.code)
+        assertEquals("Username already taken", error.error)
     }
 
     @Test

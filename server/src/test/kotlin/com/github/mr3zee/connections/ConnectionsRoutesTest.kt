@@ -15,6 +15,7 @@ import io.ktor.http.*
 import io.ktor.server.testing.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ConnectionsRoutesTest {
@@ -431,5 +432,121 @@ class ConnectionsRoutesTest {
         val config = created.connection.config as ConnectionConfig.GitHubConfig
         assertTrue(config.token.contains("****"))
         assertTrue(!config.token.contains("supersecret"))
+    }
+
+    // --- Test Connection Config (POST /api/v1/connections/test) ---
+
+    @Test
+    fun `test connection config with valid Slack config returns result`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        client.login()
+
+        val response = client.post(ApiRoutes.Connections.TEST_CONFIG) {
+            contentType(ContentType.Application.Json)
+            setBody(
+                TestConnectionConfigRequest(
+                    type = ConnectionType.SLACK,
+                    config = ConnectionConfig.SlackConfig(
+                        webhookUrl = "https://hooks.slack.com/services/T00/B00/xxx",
+                    ),
+                )
+            )
+        }
+        assertEquals(HttpStatusCode.OK, response.status)
+        val result = response.body<ConnectionTestResult>()
+        // The mock client responds with 200 for Slack webhook URLs, so the test should succeed
+        assertTrue(result.success)
+    }
+
+    @Test
+    fun `test connection config without auth returns 401`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+
+        val response = client.post(ApiRoutes.Connections.TEST_CONFIG) {
+            contentType(ContentType.Application.Json)
+            setBody(
+                TestConnectionConfigRequest(
+                    type = ConnectionType.SLACK,
+                    config = ConnectionConfig.SlackConfig(
+                        webhookUrl = "https://hooks.slack.com/services/T00/B00/xxx",
+                    ),
+                )
+            )
+        }
+        assertEquals(HttpStatusCode.Unauthorized, response.status)
+    }
+
+    @Test
+    fun `test connection config with invalid Slack webhook URL returns failure`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        client.login()
+
+        val response = client.post(ApiRoutes.Connections.TEST_CONFIG) {
+            contentType(ContentType.Application.Json)
+            setBody(
+                TestConnectionConfigRequest(
+                    type = ConnectionType.SLACK,
+                    config = ConnectionConfig.SlackConfig(
+                        webhookUrl = "https://example.com/not-a-slack-webhook",
+                    ),
+                )
+            )
+        }
+        assertEquals(HttpStatusCode.OK, response.status)
+        val result = response.body<ConnectionTestResult>()
+        // ConnectionTester validates the URL format before making the request
+        assertFalse(result.success)
+        assertTrue(result.message.contains("Invalid Slack webhook URL"))
+    }
+
+    @Test
+    fun `test connection config with GitHub config returns result`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        client.login()
+
+        val response = client.post(ApiRoutes.Connections.TEST_CONFIG) {
+            contentType(ContentType.Application.Json)
+            setBody(
+                TestConnectionConfigRequest(
+                    type = ConnectionType.GITHUB,
+                    config = ConnectionConfig.GitHubConfig(
+                        token = "ghp_testtoken12345",
+                        owner = "mr3zee",
+                        repo = "release-wizard",
+                    ),
+                )
+            )
+        }
+        assertEquals(HttpStatusCode.OK, response.status)
+        val result = response.body<ConnectionTestResult>()
+        // The mock client responds with 200 for GitHub API calls
+        assertTrue(result.success)
+    }
+
+    @Test
+    fun `test connection config with TeamCity config returns result`() = testApplication {
+        application { testModule() }
+        val client = jsonClient()
+        client.login()
+
+        val response = client.post(ApiRoutes.Connections.TEST_CONFIG) {
+            contentType(ContentType.Application.Json)
+            setBody(
+                TestConnectionConfigRequest(
+                    type = ConnectionType.TEAMCITY,
+                    config = ConnectionConfig.TeamCityConfig(
+                        serverUrl = "https://tc.example.com",
+                        token = "tc-token-12345",
+                    ),
+                )
+            )
+        }
+        assertEquals(HttpStatusCode.OK, response.status)
+        val result = response.body<ConnectionTestResult>()
+        assertTrue(result.success)
     }
 }

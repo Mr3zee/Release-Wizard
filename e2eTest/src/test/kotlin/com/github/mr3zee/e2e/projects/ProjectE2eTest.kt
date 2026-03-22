@@ -54,6 +54,6 @@ class ProjectE2eTest : E2eTestBase() {
             onAllNodesWithTag("dag_editor_screen").fetchSemanticsNodes().isNotEmpty()
         }
         onNodeWithTag("dag_canvas").assertExists()
-        onNodeWithTag("save_button", useUnmergedTree = true).assertExists()
+        onNodeWithTag("undo_button", useUnmergedTree = true).assertExists()
     }
 }

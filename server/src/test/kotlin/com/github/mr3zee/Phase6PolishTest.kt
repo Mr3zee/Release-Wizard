@@ -234,21 +234,20 @@ class Phase6PolishTest {
     }
 
     @Test
-    fun `TEAM-L2 - invite for existing member gives same generic error`() = testApplication {
+    fun `TEAM-L2 - invite for existing member returns specific error`() = testApplication {
         application { testModule() }
         val client = jsonClient()
         client.login()
         val teamId = client.createTestTeam("member-enum-team")
 
-        // Admin is already a member — inviting them should give the same generic error
+        // Admin is already a member — inviting themselves triggers the self-invite check first
         val response = client.post("${ApiRoutes.Teams.BASE}/${teamId.value}/invites") {
             contentType(ContentType.Application.Json)
             setBody(CreateInviteRequest(username = "admin"))
         }
         assertEquals(HttpStatusCode.BadRequest, response.status)
         val body = response.body<ErrorResponse>()
-        // Same generic message, not "already a member"
-        assertEquals("Unable to invite user", body.error)
+        assertTrue(body.error.contains("Cannot invite yourself"), "Expected 'Cannot invite yourself' but got: ${body.error}")
     }
 
     // --- NOTIFICATION STREAM ---

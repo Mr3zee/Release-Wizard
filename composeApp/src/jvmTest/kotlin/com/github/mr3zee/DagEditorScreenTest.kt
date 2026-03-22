@@ -99,8 +99,8 @@ class DagEditorScreenTest {
         onNodeWithTag("add_block_TEAMCITY_BUILD").performClick()
         waitForIdle()
 
-        // After adding a block, save button should be enabled (dirty)
-        onNodeWithTag("save_button").assertIsEnabled()
+        // After adding a block, graph should be dirty
+        assertTrue(vm.isDirty.value, "Graph should be dirty after adding a block")
     }
 
     // 4. Add container from toolbar
@@ -120,8 +120,8 @@ class DagEditorScreenTest {
         onNodeWithTag("add_container").performClick()
         waitForIdle()
 
-        // After adding a container, the graph is dirty so save should be enabled
-        onNodeWithTag("save_button").assertIsEnabled()
+        // After adding a container, the graph should be dirty
+        assertTrue(vm.isDirty.value, "Graph should be dirty after adding a container")
     }
 
     // 5. Undo button disabled initially
@@ -217,46 +217,7 @@ class DagEditorScreenTest {
         onNodeWithTag("delete_button").assertIsNotEnabled()
     }
 
-    // 9. Save button disabled when not dirty
-    @Test
-    fun `save button disabled when not dirty`() = runComposeUiTest {
-        val vm = editorViewModel()
-        setContent {
-            MaterialTheme {
-                DagEditorScreen(viewModel = vm, onBack = {})
-            }
-        }
-
-        waitUntil(timeoutMillis = 3000L) {
-            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
-        }
-
-        onNodeWithTag("save_button").assertIsNotEnabled()
-    }
-
-    // 10. Save button enables after change
-    @Test
-    fun `save button enables after change`() = runComposeUiTest {
-        val vm = editorViewModel()
-        setContent {
-            MaterialTheme {
-                DagEditorScreen(viewModel = vm, onBack = {})
-            }
-        }
-
-        waitUntil(timeoutMillis = 3000L) {
-            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
-        }
-
-        // Initially not dirty
-        onNodeWithTag("save_button").assertIsNotEnabled()
-
-        // Add a block to make the graph dirty
-        onNodeWithTag("add_block_SLACK_MESSAGE").performClick()
-        waitForIdle()
-
-        onNodeWithTag("save_button").assertIsEnabled()
-    }
+    // Tests 9-10 removed: save button was removed (auto-save replaces it)
 
     // 11. Properties panel shows hint when no block selected
     @Test
@@ -420,8 +381,8 @@ class DagEditorScreenTest {
 
         // Redo should now be disabled (re-applied)
         onNodeWithTag("redo_button").assertIsNotEnabled()
-        // Save should be enabled
-        onNodeWithTag("save_button").assertIsEnabled()
+        // Graph should be dirty after redo
+        assertTrue(vm.isDirty.value, "Graph should be dirty after redo")
     }
 
     @Test
@@ -485,7 +446,7 @@ class DagEditorScreenTest {
         waitForIdle()
 
         // Graph should be dirty now
-        onNodeWithTag("save_button").assertIsEnabled()
+        assertTrue(vm.isDirty.value, "Graph should be dirty after editing block name")
     }
 
     @Test
@@ -606,20 +567,7 @@ class DagEditorScreenTest {
         onNodeWithText("This project is being edited by otheruser", substring = true, useUnmergedTree = true).assertExists()
     }
 
-    @Test
-    fun `save button disabled in read-only mode`() = runComposeUiTest {
-        val vm = lockedByOtherViewModel()
-        setContent {
-            MaterialTheme {
-                DagEditorScreen(viewModel = vm, onBack = {})
-            }
-        }
-
-        waitUntil(timeoutMillis = 3000L) {
-            onAllNodesWithTag("edit_lock_banner").fetchSemanticsNodes().isNotEmpty()
-        }
-        onNodeWithTag("save_button").assertIsNotEnabled()
-    }
+    // save button disabled in read-only mode: removed (save button was removed, auto-save replaces it)
 
     @Test
     fun `toolbar buttons disabled in read-only mode`() = runComposeUiTest {
@@ -942,7 +890,6 @@ class DagEditorScreenTest {
         waitUntil(timeoutMillis = 3000L) {
             onAllNodesWithTag("edit_lock_banner").fetchSemanticsNodes().isNotEmpty()
         }
-        onNodeWithTag("save_button").assertIsNotEnabled()
         onNodeWithTag("add_block_TEAMCITY_BUILD").assertIsNotEnabled()
         onNodeWithTag("add_container").assertIsNotEnabled()
     }
@@ -1109,8 +1056,12 @@ class DagEditorScreenTest {
         onNodeWithTag("add_block_SLACK_MESSAGE").performClick()
         waitForIdle()
 
-        // Save — will get 409, which triggers LockLost
-        onNodeWithTag("save_button").performClick()
+        // Save via Ctrl+S — will get 409, which triggers LockLost
+        onNodeWithTag("dag_editor_screen").performKeyInput {
+            keyDown(Key.CtrlLeft)
+            pressKey(Key.S)
+            keyUp(Key.CtrlLeft)
+        }
         waitForIdle()
 
         // Wait for LockLost state
@@ -1154,8 +1105,12 @@ class DagEditorScreenTest {
         onNodeWithTag("add_block_SLACK_MESSAGE").performClick()
         waitForIdle()
 
-        // Trigger save
-        onNodeWithTag("save_button").performClick()
+        // Trigger save via Ctrl+S
+        onNodeWithTag("dag_editor_screen").performKeyInput {
+            keyDown(Key.CtrlLeft)
+            pressKey(Key.S)
+            keyUp(Key.CtrlLeft)
+        }
         // Immediately try to go back while save might be in-flight
         onNodeWithText("Back").performClick()
         waitForIdle()
@@ -1190,7 +1145,7 @@ class DagEditorScreenTest {
         // Make dirty
         onNodeWithTag("add_block_SLACK_MESSAGE").performClick()
         waitForIdle()
-        onNodeWithTag("save_button").assertIsEnabled()
+        assertTrue(vm.isDirty.value, "Graph should be dirty after adding block")
 
         // Press Ctrl+S
         onNodeWithTag("dag_editor_screen").performKeyInput {
@@ -1200,11 +1155,11 @@ class DagEditorScreenTest {
         }
         waitForIdle()
 
-        // After save completes, dirty should be cleared -> save button disabled
+        // After save completes, dirty should be cleared
         waitUntil(timeoutMillis = 3000L) {
             !vm.isDirty.value
         }
-        onNodeWithTag("save_button").assertIsNotEnabled()
+        assertFalse(vm.isDirty.value, "Graph should not be dirty after Ctrl+S save")
     }
 
     // --- QA-EDITOR-8: Validation error badge appears ---
@@ -1361,10 +1316,14 @@ class DagEditorScreenTest {
             vm.lockState.value is LockState.Acquired
         }
 
-        // Make dirty and trigger save (fails with 409 -> LockLost)
+        // Make dirty and trigger save via Ctrl+S (fails with 409 -> LockLost)
         onNodeWithTag("add_block_SLACK_MESSAGE").performClick()
         waitForIdle()
-        onNodeWithTag("save_button").performClick()
+        onNodeWithTag("dag_editor_screen").performKeyInput {
+            keyDown(Key.CtrlLeft)
+            pressKey(Key.S)
+            keyUp(Key.CtrlLeft)
+        }
         waitForIdle()
 
         // Wait for lock lost
@@ -1526,7 +1485,7 @@ class DagEditorScreenTest {
         // Block count should increase by 1
         val blockCountAfter = vm.graph.value.blocks.size
         assertTrue(blockCountAfter > blockCountBefore, "Paste should add a block")
-        onNodeWithTag("save_button").assertIsEnabled()
+        assertTrue(vm.isDirty.value, "Graph should be dirty after paste")
     }
 
     // --- QA-EDITOR-17: Ctrl+A selects all blocks ---
@@ -1584,8 +1543,8 @@ class DagEditorScreenTest {
             onAllNodesWithTag("block_type_selector").fetchSemanticsNodes().isNotEmpty()
         }
 
-        // Save should be disabled (clean)
-        onNodeWithTag("save_button").assertIsNotEnabled()
+        // Graph should be clean initially
+        assertFalse(vm.isDirty.value, "Graph should not be dirty initially")
 
         // Open type dropdown
         onNodeWithTag("block_type_selector").performClick()
@@ -1596,7 +1555,7 @@ class DagEditorScreenTest {
         waitForIdle()
 
         // Graph should be dirty
-        onNodeWithTag("save_button").assertIsEnabled()
+        assertTrue(vm.isDirty.value, "Graph should be dirty after changing block type")
     }
 
     // --- QA-EDITOR-19: Remove parameter button removes row ---
@@ -1712,16 +1671,20 @@ class DagEditorScreenTest {
         onNodeWithTag("add_block_SLACK_MESSAGE").performClick()
         waitForIdle()
 
-        // Attempt save — will fail
-        onNodeWithTag("save_button").performClick()
+        // Attempt save via Ctrl+S — will fail
+        onNodeWithTag("dag_editor_screen").performKeyInput {
+            keyDown(Key.CtrlLeft)
+            pressKey(Key.S)
+            keyUp(Key.CtrlLeft)
+        }
         waitForIdle()
 
         // Error snackbar or error state should appear — verify the screen is still shown
-        // and save button is still enabled (since save failed, dirty state persists)
+        // and graph remains dirty (since save failed)
         waitUntil(timeoutMillis = 3000L) {
             !vm.isSaving.value
         }
-        onNodeWithTag("save_button").assertIsEnabled()
+        assertTrue(vm.isDirty.value, "Graph should remain dirty after failed save")
     }
 
     // --- QA-EDITOR-22: Canvas read-only prevents block movement ---
@@ -1825,47 +1788,7 @@ class DagEditorScreenTest {
         onNodeWithText("*", substring = true, useUnmergedTree = true).assertExists()
     }
 
-    // --- QA-EDITOR-25: Save button text changes to "Saving..." ---
-    @Test
-    fun `QA-EDITOR-25 save button text changes to Saving while saving`() = runComposeUiTest {
-        // Use a client that provides PUT response — save will be fast with mock
-        val saveClient = mockHttpClient(
-            listOf(
-                "/projects/p1" to json(projectJson, HttpStatusCode.OK, method = HttpMethod.Get),
-                "/projects/p1/lock" to json(lockJson, HttpStatusCode.OK, method = HttpMethod.Post),
-                "/projects/p1/lock/heartbeat" to json(lockJson, HttpStatusCode.OK, method = HttpMethod.Put),
-                "/projects/p1" to json(projectJson, HttpStatusCode.OK, method = HttpMethod.Put),
-            )
-        )
-        val vm = DagEditorViewModel(ProjectId("p1"), ProjectApiClient(saveClient))
-        setContent {
-            MaterialTheme {
-                DagEditorScreen(viewModel = vm, onBack = {})
-            }
-        }
-
-        waitUntil(timeoutMillis = 3000L) {
-            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
-        }
-
-        // Make dirty
-        onNodeWithTag("add_block_SLACK_MESSAGE").performClick()
-        waitForIdle()
-
-        // Before save, button says "Save"
-        onNodeWithText("Save").assertExists()
-
-        // Trigger save
-        onNodeWithTag("save_button").performClick()
-        waitForIdle()
-
-        // After save completes (mock is instant), verify button goes back to "Save"
-        // and is disabled (clean)
-        waitUntil(timeoutMillis = 3000L) {
-            !vm.isSaving.value
-        }
-        onNodeWithText("Save").assertExists()
-    }
+    // QA-EDITOR-25 removed: save button was removed (auto-save replaces it)
 
     // --- QA-EDITOR-26: Ctrl+Shift+Z triggers redo ---
     @Test

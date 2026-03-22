@@ -633,6 +633,21 @@ class ProfileRoutesTest {
         assertTrue(cacheControl.contains("max-age=3600"), "Expected max-age=3600 in Cache-Control header")
     }
 
+    @Test
+    fun `default password policy has minLength 16`() = testApplication {
+        application { testModuleWithPasswordPolicy(PasswordPolicyConfig()) }
+        val client = jsonClient()
+
+        val response = client.get(ApiRoutes.Auth.PASSWORD_POLICY)
+        assertEquals(HttpStatusCode.OK, response.status)
+        val policy = response.body<PasswordPolicyResponse>()
+        assertEquals(16, policy.minLength)
+        assertEquals(128, policy.maxLength)
+        assertEquals(true, policy.requireUppercase)
+        assertEquals(true, policy.requireDigit)
+        assertEquals(true, policy.requireSpecial)
+    }
+
     // ── Session Invalidation After Password Change ─────────────────────
 
     @Test
