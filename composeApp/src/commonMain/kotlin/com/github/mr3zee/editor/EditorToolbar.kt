@@ -11,6 +11,7 @@ import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -42,10 +43,13 @@ fun EditorToolbar(
     onRedo: () -> Unit,
     onCopy: () -> Unit,
     onPaste: () -> Unit,
+    onSave: () -> Unit = {},
     canUndo: Boolean,
     canRedo: Boolean,
     hasSelection: Boolean,
     hasClipboard: Boolean,
+    isDirty: Boolean = false,
+    autoSaveExhausted: Boolean = false,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
@@ -197,6 +201,21 @@ fun EditorToolbar(
             Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(Spacing.xs))
             Text(packStringResource(Res.string.editor_toolbar_delete))
+        }
+
+        if (autoSaveExhausted) {
+            HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.sm))
+            RwButton(
+                onClick = onSave,
+                variant = RwButtonVariant.Primary,
+                enabled = enabled && isDirty,
+                modifier = Modifier.fillMaxWidth().testTag("toolbar_save_button"),
+                contentPadding = PaddingValues(Spacing.sm),
+            ) {
+                Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(Spacing.xs))
+                Text(packStringResource(Res.string.common_save))
+            }
         }
     }
     VerticalScrollbar(

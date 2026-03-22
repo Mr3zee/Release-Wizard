@@ -3,7 +3,7 @@ package com.github.mr3zee.navigation
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -257,14 +257,19 @@ fun AppShell(
             }
 
             // ── Content area ─────────────────────────────────────────
-            // Clear sidebar/text-field focus when the user taps the content area.
-            // Uses detectTapGestures (not raw awaitPointerEvent) so that drags
-            // are NOT intercepted — only completed taps trigger clearFocus.
+            // Clear sidebar focus on any pointer-down in the content area.
+            // Uses PointerEventPass.Final so children (canvas drag, buttons)
+            // process events first — we only clear focus, never consume.
             val focusManager = LocalFocusManager.current
             Box(
                 Modifier.weight(1f).fillMaxHeight().pointerInput(Unit) {
-                    detectTapGestures {
-                        focusManager.clearFocus()
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Final)
+                            if (event.changes.any { it.pressed && !it.previousPressed }) {
+                                focusManager.clearFocus()
+                            }
+                        }
                     }
                 },
             ) {

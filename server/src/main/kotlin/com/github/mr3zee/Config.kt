@@ -23,10 +23,10 @@ data class AuthConfig(
 )
 
 data class PasswordPolicyConfig(
-    val minLength: Int = 16,
-    val requireUppercase: Boolean = true,
-    val requireDigit: Boolean = true,
-    val requireSpecial: Boolean = true,
+    val minLength: Int,
+    val requireUppercase: Boolean,
+    val requireDigit: Boolean,
+    val requireSpecial: Boolean,
 )
 
 data class EncryptionConfig(

@@ -8,6 +8,7 @@ import kotlin.coroutines.cancellation.CancellationException
 import com.github.mr3zee.model.ConnectionId
 import com.github.mr3zee.model.ConnectionType
 import com.github.mr3zee.model.TeamId
+import com.github.mr3zee.model.UserRole
 import io.ktor.http.*
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.request.*
@@ -50,6 +51,13 @@ fun Route.connectionRoutes() {
         }
 
         post("/test") {
+            val session = call.userSession()
+            // Require at least one team membership to prevent unauthenticated SSRF
+            val teamIds = service.getUserTeamIds(session)
+            if (teamIds.isEmpty() && session.role != UserRole.ADMIN) {
+                call.respond(HttpStatusCode.Forbidden, ErrorResponse(error = "You must be a member of at least one team", code = "FORBIDDEN"))
+                return@post
+            }
             val request = call.receive<TestConnectionConfigRequest>()
             val result = service.testConnectionConfig(request.config)
             call.respond(result)

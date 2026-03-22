@@ -182,8 +182,6 @@ object EmojisPack {
             "connections_polling_out_of_range" to "5\ufe0f\u20e3\u2194\ufe0f\ud83d\udcaf\ud83d\udcaf\ud83d\udcaf",
             "connections_polling_range_hint" to "5\ufe0f\u20e3\u2013\ud83d\udcaf\ud83d\udcaf\ud83d\udcaf \u23f1\ufe0f, \ud83d\udccb 30",
             "connections_search_placeholder" to "\ud83d\udd0d\ud83d\udd17...",
-            "connections_save_to_test" to "\ud83d\udcbe\ud83e\uddea\ud83d\udd17",
-            "connections_save_first_hint" to "\ud83d\udcbe\u27a1\ufe0f\ud83e\uddea",
             "connections_section_github" to "\ud83d\udc19\u2699\ufe0f",
             "connections_section_slack" to "\ud83d\udcac\u2699\ufe0f",
             "connections_section_teamcity" to "\ud83c\udfd7\ufe0f\u2699\ufe0f",

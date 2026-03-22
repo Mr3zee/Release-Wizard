@@ -284,7 +284,7 @@ val DarkAppColors = AppColors(
     // Block types
     teamcityBuild = Color(0xFFA78BFA),
     githubAction = Color(0xFF60A5FA),
-    githubPublication = Color(0xFF047857),
+    githubPublication = Color(0xFF10B981),
     slackMessage = Color(0xFFFB7185),
     gateIndicator = Color(0xFF22D3EE),
     containerBlock = Color(0xFF94A3B8),

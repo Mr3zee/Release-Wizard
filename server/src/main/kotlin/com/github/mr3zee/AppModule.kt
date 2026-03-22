@@ -18,7 +18,7 @@ fun appModule(
     encryptionConfig: EncryptionConfig,
     authConfig: AuthConfig,
     webhookConfig: WebhookConfig,
-    passwordPolicyConfig: PasswordPolicyConfig = PasswordPolicyConfig(),
+    passwordPolicyConfig: PasswordPolicyConfig = PasswordPolicyConfig(minLength = 16, requireUppercase = true, requireDigit = true, requireSpecial = true),
     useFlyway: Boolean = true,
     oauthConfig: OAuthConfig = OAuthConfig(null, null),
 ) = module {

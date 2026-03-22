@@ -42,6 +42,7 @@ import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.typeLabel
 import releasewizard.composeapp.generated.resources.Res
 import releasewizard.composeapp.generated.resources.editor_empty_canvas_hint
+import releasewizard.composeapp.generated.resources.editor_empty_canvas_no_blocks
 import releasewizard.composeapp.generated.resources.editor_zoom_fit
 import releasewizard.composeapp.generated.resources.editor_zoom_in
 import releasewizard.composeapp.generated.resources.editor_zoom_out
@@ -330,8 +331,20 @@ fun DagCanvas(
         }
     }
 
-    // Empty canvas hint — only show when blocks exist but no edges yet
-    if (graph.blocks.isNotEmpty() && graph.edges.isEmpty()) {
+    // Empty canvas hints
+    if (graph.blocks.isEmpty()) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = packStringResource(Res.string.editor_empty_canvas_no_blocks),
+                style = AppTypography.body,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier.testTag("empty_canvas_hint"),
+            )
+        }
+    } else if (graph.edges.isEmpty()) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,

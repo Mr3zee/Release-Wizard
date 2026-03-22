@@ -635,7 +635,7 @@ class ProfileRoutesTest {
 
     @Test
     fun `default password policy has minLength 16`() = testApplication {
-        application { testModuleWithPasswordPolicy(PasswordPolicyConfig()) }
+        application { testModuleWithPasswordPolicy(PasswordPolicyConfig(minLength = 16, requireUppercase = true, requireDigit = true, requireSpecial = true)) }
         val client = jsonClient()
 
         val response = client.get(ApiRoutes.Auth.PASSWORD_POLICY)

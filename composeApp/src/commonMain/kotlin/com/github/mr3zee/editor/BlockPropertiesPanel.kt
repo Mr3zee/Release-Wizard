@@ -393,7 +393,6 @@ private fun ActionBlockProperties(
 
     // Slack Message — dedicated text field (manages the "text" parameter)
     if (block.type == BlockType.SLACK_MESSAGE) {
-        val textParamIndex = block.parameters.indexOfFirst { it.key == "text" }
         var slackMessage by remember(block.id) {
             mutableStateOf(block.parameters.find { it.key == "text" }?.value ?: "")
         }
@@ -407,9 +406,10 @@ private fun ActionBlockProperties(
             value = slackMessage,
             onValueChange = { text ->
                 slackMessage = text
-                val updatedParams = if (textParamIndex >= 0) {
+                val currentIndex = block.parameters.indexOfFirst { it.key == "text" }
+                val updatedParams = if (currentIndex >= 0) {
                     block.parameters.toMutableList().apply {
-                        set(textParamIndex, get(textParamIndex).copy(value = text))
+                        set(currentIndex, get(currentIndex).copy(value = text))
                     }
                 } else {
                     block.parameters + Parameter(key = "text", value = text)

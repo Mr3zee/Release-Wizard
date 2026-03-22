@@ -151,9 +151,25 @@ fun DagEditorScreen(
             .fillMaxSize()
             .focusRequester(editorFocusRequester)
             .focusable()
-            // Preview handler: intercept editor-global shortcuts (undo/redo/save) regardless of focus
+            // Preview handler: intercept Ctrl+S regardless of focus (should always save)
             .onPreviewKeyEvent { event ->
                 if (event.type == KeyEventType.KeyDown) {
+                    val isModifier = event.isCtrlPressed || event.isMetaPressed
+                    when {
+                        !isReadOnly && isModifier && event.key == Key.S -> {
+                            if (isDirty) viewModel.save()
+                            true
+                        }
+                        else -> false
+                    }
+                } else false
+            }
+            // Bubble handler: shortcuts that yield to focused text fields (undo/redo/copy/paste/select-all/delete)
+            .onKeyEvent { event ->
+                if (event.type == KeyEventType.KeyDown) {
+                    if (isConfirmationVisible && (event.key == Key.Delete || event.key == Key.Backspace)) {
+                        return@onKeyEvent false
+                    }
                     val isModifier = event.isCtrlPressed || event.isMetaPressed
                     when {
                         !isReadOnly && isModifier && event.key == Key.Z && !event.isShiftPressed -> {
@@ -164,22 +180,6 @@ fun DagEditorScreen(
                             viewModel.redo()
                             true
                         }
-                        !isReadOnly && isModifier && event.key == Key.S -> {
-                            if (isDirty) viewModel.save()
-                            true
-                        }
-                        else -> false
-                    }
-                } else false
-            }
-            // Bubble handler: shortcuts that should yield to focused text fields (copy/paste/select-all/delete)
-            .onKeyEvent { event ->
-                if (event.type == KeyEventType.KeyDown) {
-                    if (isConfirmationVisible && (event.key == Key.Delete || event.key == Key.Backspace)) {
-                        return@onKeyEvent false
-                    }
-                    val isModifier = event.isCtrlPressed || event.isMetaPressed
-                    when {
                         !isReadOnly && (event.key == Key.Delete || event.key == Key.Backspace) -> {
                             if (selectedBlockIds.isNotEmpty()) viewModel.removeSelectedBlocks()
                             else if (selectedEdgeIndex != null) viewModel.removeSelectedEdge()
@@ -371,10 +371,13 @@ fun DagEditorScreen(
                         onRedo = { viewModel.redo() },
                         onCopy = { viewModel.copySelected() },
                         onPaste = { viewModel.pasteClipboard() },
+                        onSave = { viewModel.save() },
                         canUndo = canUndo,
                         canRedo = canRedo,
                         hasSelection = selectedBlockIds.isNotEmpty() || selectedEdgeIndex != null,
                         hasClipboard = clipboard != null,
+                        isDirty = isDirty,
+                        autoSaveExhausted = autoSaveStatus is AutoSaveStatus.Failed && (autoSaveStatus as AutoSaveStatus.Failed).exhausted,
                         enabled = !isReadOnly,
                     )
                 }

@@ -29,6 +29,7 @@ interface ConnectionsService {
     suspend fun fetchExternalConfigs(id: ConnectionId, expectedType: ConnectionType, session: UserSession): ExternalConfigsResponse
     suspend fun fetchExternalConfigParameters(id: ConnectionId, configId: String, session: UserSession): ExternalConfigParametersResponse
     suspend fun findTeamId(id: ConnectionId): String?
+    suspend fun getUserTeamIds(session: UserSession): List<TeamId>
 }
 
 class DefaultConnectionsService(
@@ -161,6 +162,10 @@ class DefaultConnectionsService(
 
     override suspend fun findTeamId(id: ConnectionId): String? {
         return repository.findTeamId(id)
+    }
+
+    override suspend fun getUserTeamIds(session: UserSession): List<TeamId> {
+        return teamAccessService.getUserTeamIds(session.userId)
     }
 
     private suspend fun mergeConfigWithExistingSecrets(id: ConnectionId, newConfig: ConnectionConfig): ConnectionConfig {

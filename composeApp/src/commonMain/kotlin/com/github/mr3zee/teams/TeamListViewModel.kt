@@ -157,7 +157,8 @@ class TeamListViewModel(
                 val response = apiClient.getMyInvites()
                 _pendingInviteByTeamId.value = response.invites.associate { it.teamId to it.id }
                 _pendingInviteTeamIds.value = _pendingInviteByTeamId.value.keys
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 // Best effort — don't block team list if invites fail to load
             }
         }
