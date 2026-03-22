@@ -215,6 +215,10 @@
     <string name="editor_config_selector">Configuration</string>
     <string name="editor_config_selector_placeholder">Search configurations\u2026</string>
     <string name="editor_config_no_configs">No configurations found</string>
+    <string name="editor_slack_message_label">Message</string>
+    <string name="editor_slack_message_placeholder">Enter the message to send (supports template expressions)</string>
+    <string name="automation_copy_webhook_url">Copy URL</string>
+    <string name="maven_parameter_key_supporting">The pipeline parameter that will receive the detected version</string>
 
     <!-- ==================== Editor: Gates ==================== -->
     <string name="editor_gate_section_header">Approval Gates</string>

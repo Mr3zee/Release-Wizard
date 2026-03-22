@@ -391,6 +391,39 @@ private fun ActionBlockProperties(
         Spacer(Modifier.height(Spacing.lg))
     }
 
+    // Slack Message — dedicated text field (manages the "text" parameter)
+    if (block.type == BlockType.SLACK_MESSAGE) {
+        val textParamIndex = block.parameters.indexOfFirst { it.key == "text" }
+        var slackMessage by remember(block.id) {
+            mutableStateOf(block.parameters.find { it.key == "text" }?.value ?: "")
+        }
+        // Sync if the block's parameters change externally
+        val currentTextValue = block.parameters.find { it.key == "text" }?.value ?: ""
+        if (slackMessage != currentTextValue) slackMessage = currentTextValue
+
+        Text(packStringResource(Res.string.editor_slack_message_label), style = AppTypography.label)
+        Spacer(Modifier.height(Spacing.xs))
+        RwTextField(
+            value = slackMessage,
+            onValueChange = { text ->
+                slackMessage = text
+                val updatedParams = if (textParamIndex >= 0) {
+                    block.parameters.toMutableList().apply {
+                        set(textParamIndex, get(textParamIndex).copy(value = text))
+                    }
+                } else {
+                    block.parameters + Parameter(key = "text", value = text)
+                }
+                onUpdateParameters(block.id, updatedParams)
+            },
+            placeholder = packStringResource(Res.string.editor_slack_message_placeholder),
+            singleLine = false,
+            enabled = enabled,
+            modifier = Modifier.fillMaxWidth().testTag("slack_message_field"),
+        )
+        Spacer(Modifier.height(Spacing.lg))
+    }
+
     // Timeout
     val isTimeoutRequired = block.type.requiresTimeout()
     var timeoutText by remember(block.id) {
@@ -477,11 +510,16 @@ private fun ActionBlockProperties(
     var params by remember(block.id) { mutableStateOf(block.parameters) }
     if (params != block.parameters) params = block.parameters
 
-    // Filter out the config ID parameter from the visible list — it's managed by the config selector
-    // Use indexed pairs to maintain correct mapping to the original params list
-    val visibleParamsWithIndex = remember(params, configKey) {
+    // Filter out managed parameters from the visible list:
+    // - config ID parameter (managed by the config selector)
+    // - "text" parameter for Slack blocks (managed by the dedicated message field)
+    val isSlack = block.type == BlockType.SLACK_MESSAGE
+    val visibleParamsWithIndex = remember(params, configKey, isSlack) {
         params.withIndex()
-            .filter { (_, p) -> configKey == null || p.key != configKey }
+            .filter { (_, p) ->
+                (configKey == null || p.key != configKey) &&
+                    (!isSlack || p.key != "text")
+            }
             .toList()
     }
 

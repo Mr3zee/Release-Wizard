@@ -168,8 +168,8 @@ class TemplateEngineTest {
     }
 
     @Test
-    fun `validateParameterKey rejects empty key`() {
-        assertFalse(TemplateEngine.validateParameterKey(""))
+    fun `validateParameterKey accepts empty key as placeholder`() {
+        assertTrue(TemplateEngine.validateParameterKey(""))
     }
 
     @Test

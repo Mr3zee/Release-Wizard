@@ -734,6 +734,9 @@ private fun CreateMavenTriggerInlineForm(
             onValueChange = { parameterKey = it },
             label = packStringResource(Res.string.maven_parameter_key_label),
             placeholder = packStringResource(Res.string.maven_parameter_key_hint),
+            supportingText = {
+                Text(packStringResource(Res.string.maven_parameter_key_supporting))
+            },
             singleLine = true,
             modifier = Modifier.fillMaxWidth().testTag("maven_parameter_key_field"),
         )
@@ -822,6 +825,17 @@ private fun WebhookTriggerItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+            }
+            RwTooltip(tooltip = packStringResource(Res.string.automation_copy_webhook_url)) {
+                RwIconButton(
+                    onClick = { copyToClipboard(trigger.webhookUrl) },
+                    modifier = Modifier.testTag("webhook_copy_url_${trigger.id}"),
+                ) {
+                    Icon(
+                        Icons.Default.ContentCopy,
+                        contentDescription = packStringResource(Res.string.automation_copy_webhook_url),
+                    )
+                }
             }
             RwSwitch(
                 checked = trigger.enabled,

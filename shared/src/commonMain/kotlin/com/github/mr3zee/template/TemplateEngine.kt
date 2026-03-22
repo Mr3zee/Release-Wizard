@@ -17,7 +17,9 @@ object TemplateEngine {
     private val INVALID_KEY_CHARS = charArrayOf('$', '{', '}')
 
     fun validateParameterKey(key: String): Boolean {
-        return key.isNotEmpty() && INVALID_KEY_CHARS.none { it in key }
+        // Empty keys are allowed — they represent unfilled placeholders in the editor.
+        // They are stripped before execution.
+        return key.isEmpty() || INVALID_KEY_CHARS.none { it in key }
     }
 
     fun resolve(
