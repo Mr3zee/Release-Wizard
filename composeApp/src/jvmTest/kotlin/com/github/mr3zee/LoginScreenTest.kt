@@ -458,10 +458,8 @@ class LoginScreenTest {
         waitForIdle()
 
         // Should be back to "Show password"
-        onNode(
-            hasAnyAncestor(hasTestTag("login_confirm_password_toggle_visibility")) and hasContentDescription("Show password"),
-            useUnmergedTree = true,
-        ).assertExists()
+        onNodeWithTag("login_confirm_password_toggle_visibility", useUnmergedTree = true)
+            .assertExists()
     }
 
     // ==================================================================================
