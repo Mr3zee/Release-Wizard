@@ -173,9 +173,15 @@ fun DagEditorScreen(
                             true
                         }
                         !isReadOnly && (event.key == Key.Delete || event.key == Key.Backspace) -> {
-                            if (selectedBlockIds.isNotEmpty()) viewModel.removeSelectedBlocks()
-                            else if (selectedEdgeIndex != null) viewModel.removeSelectedEdge()
-                            true
+                            // Only consume when there's a canvas selection to delete.
+                            // Otherwise let the event pass to text fields for normal editing.
+                            if (selectedBlockIds.isNotEmpty()) {
+                                viewModel.removeSelectedBlocks()
+                                true
+                            } else if (selectedEdgeIndex != null) {
+                                viewModel.removeSelectedEdge()
+                                true
+                            } else false
                         }
                         isModifier && event.key == Key.C -> {
                             viewModel.copySelected()
