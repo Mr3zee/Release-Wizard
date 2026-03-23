@@ -347,6 +347,7 @@ object RickRollPack {
             "projects_empty_state" to "We're no strangers to love, but no projects yet. Create one.",
             "projects_new_project" to "We're No Strangers (New Project)",
             "projects_no_team" to "No Team",
+            "projects_create_needs_team" to "You know the rules — join a team first. Never gonna let you create without one.",
             "projects_project_description" to "Description",
             "projects_project_description_placeholder" to "Never gonna describe you up",
             "projects_project_name" to "Project name",

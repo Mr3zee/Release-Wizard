@@ -342,6 +342,7 @@ object AllLiesPack {
             "projects_empty_state" to "You have so many projects. Please stop creating them.",
             "projects_new_project" to "Old Project",
             "projects_no_team" to "Every Team",
+            "projects_create_needs_team" to "You already have a team. Go ahead and create projects.",
             "projects_project_description" to "Irrelevant Details",
             "projects_project_description_placeholder" to "Write something nobody cares about",
             "projects_project_name" to "Project shame",

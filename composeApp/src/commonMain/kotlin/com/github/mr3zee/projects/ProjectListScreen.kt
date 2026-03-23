@@ -48,6 +48,7 @@ import com.github.mr3zee.i18n.packStringResource
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.resolve
+import kotlinx.coroutines.launch
 import releasewizard.composeapp.generated.resources.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -68,6 +69,7 @@ fun ProjectListScreen(
     val refreshError by viewModel.refreshError.collectAsState()
 
     val sortOrder by viewModel.sortOrder.collectAsState()
+    val hasActiveTeam by viewModel.hasActiveTeam.collectAsState()
 
     var showCreateDialog by remember { mutableStateOf(false) }
     var projectToDelete by remember { mutableStateOf<ProjectTemplate?>(null) }
@@ -82,12 +84,22 @@ fun ProjectListScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val searchFocusRequester = remember { FocusRequester() }
+    val scope = rememberCoroutineScope()
+    val needsTeamMessage = packStringResource(Res.string.projects_create_needs_team)
+
+    val onCreateAttempt: () -> Unit = {
+        if (hasActiveTeam) {
+            showCreateDialog = true
+        } else {
+            scope.launch { snackbarHostState.showSnackbar(needsTeamMessage) }
+        }
+    }
 
     val isDialogOpen = showCreateDialog || projectToDelete != null
     val shortcutActions = remember(isDialogOpen) {
         ShortcutActions(
             onSearch = { searchFocusRequester.requestFocus() },
-            onCreate = { showCreateDialog = true },
+            onCreate = onCreateAttempt,
             onRefresh = { viewModel.refresh() },
             hasDialogOpen = isDialogOpen,
         )
@@ -128,7 +140,7 @@ fun ProjectListScreen(
         floatingActionButton = {
             RwTooltip(tooltip = packStringResource(Res.string.projects_create_project)) {
                 RwFab(
-                    onClick = { showCreateDialog = true },
+                    onClick = onCreateAttempt,
                     modifier = Modifier.testTag("create_project_fab"),
                 ) {
                     Icon(Icons.Default.Add, contentDescription = packStringResource(Res.string.projects_create_project))

@@ -94,6 +94,7 @@
     <string name="projects_delete_confirmation">Are you sure you want to delete "%1$s"? This will permanently remove the project and all its pipeline configuration.</string>
     <string name="projects_switch_team_title">Switch Team</string>
     <string name="projects_no_team">No Team</string>
+    <string name="projects_create_needs_team">Create or join a team first to start creating projects.</string>
 
     <!-- ==================== Connections ==================== -->
     <string name="connections_title">Connections</string>

@@ -342,6 +342,7 @@ object GenZPack {
             "projects_empty_state" to "No projects yet bestie. Manifest one to start your era.",
             "projects_new_project" to "New Project Era",
             "projects_no_team" to "No Squad",
+            "projects_create_needs_team" to "Join a squad first bestie, can't create projects without one ngl.",
             "projects_project_description" to "Vibe Check",
             "projects_project_description_placeholder" to "Optional vibe check (markdown hits different)",
             "projects_project_name" to "Project name",

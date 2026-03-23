@@ -11,12 +11,18 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFontFamilyResolver
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.i18n.LanguagePack
 import com.github.mr3zee.i18n.LanguagePackRegistry
 import com.github.mr3zee.i18n.LocalLanguagePackData
+import org.jetbrains.compose.resources.Font
+import releasewizard.composeapp.generated.resources.NotoEmoji
+import releasewizard.composeapp.generated.resources.Res
 
 // ── Light color scheme ──────────────────────────────────────────────────────
 // Maps our design tokens into M3 color roles so retained M3 components
@@ -95,6 +101,14 @@ fun AppTheme(
     languagePack: LanguagePack = LanguagePack.ENGLISH,
     content: @Composable () -> Unit,
 ) {
+    // Preload emoji font so Skiko can fall back to it for emoji glyphs.
+    // On desktop JVM, system fonts already provide emojis; on web this is required.
+    val emojiFont = Font(Res.font.NotoEmoji)
+    val fontFamilyResolver = LocalFontFamilyResolver.current
+    LaunchedEffect(emojiFont) {
+        fontFamilyResolver.preload(FontFamily(emojiFont))
+    }
+
     val isDark = when (themePreference) {
         ThemePreference.SYSTEM -> isSystemInDarkTheme()
         ThemePreference.LIGHT -> false

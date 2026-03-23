@@ -346,6 +346,7 @@ object HelldiversPack {
             "projects_empty_state" to "No campaigns active, Citizen. Requisition one to spread Managed Democracy.",
             "projects_new_project" to "New Campaign",
             "projects_no_team" to "Unassigned Helldiver",
+            "projects_create_needs_team" to "Enlist in a squad before launching campaigns, Citizen. Report to the Teams barracks.",
             "projects_project_description" to "Mission Briefing",
             "projects_project_description_placeholder" to "Optional mission briefing (Markdown authorized)",
             "projects_project_name" to "Campaign designation",

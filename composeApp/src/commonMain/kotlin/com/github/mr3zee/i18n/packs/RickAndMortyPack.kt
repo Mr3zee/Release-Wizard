@@ -344,6 +344,7 @@ object RickAndMortyPack {
             "projects_empty_state" to "No projects, Morty. Create one. I believe in *burp* you. Just kidding.",
             "projects_new_project" to "New Project, Morty",
             "projects_no_team" to "No Team",
+            "projects_create_needs_team" to "You gotta *burp* join a team first, Morty. Go to Teams.",
             "projects_project_description" to "Description",
             "projects_project_description_placeholder" to "Describe your project, Morty",
             "projects_project_name" to "Project name",

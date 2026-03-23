@@ -16,7 +16,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -25,6 +28,9 @@ class ProjectListViewModel(
     private val apiClient: ProjectApiClient,
     private val activeTeamId: StateFlow<TeamId?>,
 ) : ViewModel() {
+
+    val hasActiveTeam: StateFlow<Boolean> = activeTeamId.map { it != null }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, activeTeamId.value != null)
 
     private val _projects = MutableStateFlow<List<ProjectTemplate>>(emptyList())
     val projects: StateFlow<List<ProjectTemplate>> = _projects
@@ -154,7 +160,7 @@ class ProjectListViewModel(
         viewModelScope.launch {
             _error.value = null
             try {
-                val teamId = activeTeamId.value ?: error("No active team selected")
+                val teamId = activeTeamId.value ?: return@launch
                 val project = apiClient.createProject(CreateProjectRequest(name = name, teamId = teamId, description = description))
                 loadProjects()
                 onCreated?.invoke(project.id)

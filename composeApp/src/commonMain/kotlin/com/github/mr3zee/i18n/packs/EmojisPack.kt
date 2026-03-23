@@ -342,6 +342,7 @@ object EmojisPack {
             "projects_empty_state" to "\ud83d\udcc1\u274c \u2728\ud83c\udd95\u27a1\ufe0f",
             "projects_new_project" to "\ud83c\udd95\ud83d\udcc1",
             "projects_no_team" to "\u274c\ud83d\udc65",
+            "projects_create_needs_team" to "\ud83d\udc65\u2753 \u27a1\ufe0f \ud83d\udcc1",
             "projects_project_description" to "\ud83d\udcdd Description",
             "projects_project_description_placeholder" to "\ud83d\udcdd Optional description (Markdown supported)",
             "projects_project_name" to "\ud83d\udcc1\ud83c\udff7\ufe0f",
