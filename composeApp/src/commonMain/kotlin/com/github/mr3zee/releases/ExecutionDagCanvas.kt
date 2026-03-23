@@ -115,8 +115,8 @@ fun ExecutionDagCanvas(
                                     var blockHit = false
                                     for (block in graph.blocks.asReversed()) {
                                         val pos = graph.positions[block.id] ?: continue
-                                        if (logical.x in pos.x..(pos.x + BLOCK_WIDTH) &&
-                                            logical.y in pos.y..(pos.y + BLOCK_HEIGHT)
+                                        if (logical.x in pos.x..(pos.x + pos.width) &&
+                                            logical.y in pos.y..(pos.y + pos.height)
                                         ) {
                                             onBlockClick(block.id)
                                             blockHit = true

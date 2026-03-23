@@ -78,6 +78,9 @@ fun DagEditorScreen(
     val configFetchError by viewModel.configFetchError.collectAsState()
     val isFetchingConfigParams by viewModel.isFetchingConfigParams.collectAsState()
     val autoSaveStatus by viewModel.autoSaveStatus.collectAsState()
+    val hoveredContainerId by viewModel.hoveredContainerId.collectAsState()
+    val detachingFromContainerId by viewModel.detachingFromContainerId.collectAsState()
+    val parentLookup by viewModel.parentLookup.collectAsState()
 
     val appColors = LocalAppColors.current
 
@@ -438,11 +441,26 @@ fun DagEditorScreen(
                     onToggleBlockSelection = { viewModel.toggleBlockSelection(it) },
                     onSelectEdge = { viewModel.selectEdge(it) },
                     onMoveBlock = { id, dx, dy -> viewModel.moveBlock(id, dx, dy) },
-                    onCommitMove = { viewModel.commitMove() },
-                    onAddEdge = { from, to -> viewModel.addEdge(from, to) },
+                    onCommitMove = {
+                        val msg = viewModel.commitMove()
+                        if (msg != null) {
+                            snackbarScope.launch { snackbarHostState.showSnackbar(msg, duration = SnackbarDuration.Short) }
+                        }
+                    },
+                    onAddEdge = { from, to ->
+                        val rejection = viewModel.addEdge(from, to)
+                        if (rejection != null) {
+                            snackbarScope.launch { snackbarHostState.showSnackbar(rejection, duration = SnackbarDuration.Short) }
+                        }
+                    },
                     onEdgeRejected = { message ->
                         snackbarScope.launch { snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short) }
                     },
+                    onResizeBlock = { id, edge, dx, dy -> viewModel.resizeBlock(id, edge, dx, dy) },
+                    onCommitResize = { viewModel.commitResize() },
+                    hoveredContainerId = hoveredContainerId,
+                    detachingFromContainerId = detachingFromContainerId,
+                    parentLookup = parentLookup,
                     isReadOnly = isReadOnly,
                     modifier = Modifier
                         .weight(1f)

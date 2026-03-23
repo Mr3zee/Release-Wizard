@@ -79,6 +79,10 @@ data class AppColors(
     val slackMessage: Color,
     val gateIndicator: Color,
     val containerBlock: Color,
+    val containerBorder: Color,
+    val containerHeaderBg: Color,
+    val containerDropHighlight: Color,
+    val containerDetachHighlight: Color,
 
     // Status colors (release-level)
     val statusPending: Color,
@@ -184,6 +188,10 @@ val LightAppColors = AppColors(
     slackMessage = Color(0xFFE11D48),
     gateIndicator = Color(0xFF0891B2),
     containerBlock = Color(0xFF6B7280),
+    containerBorder = Color(0xFF9CA3AF),
+    containerHeaderBg = Color(0xFFF3F4F6),
+    containerDropHighlight = Color(0xFF3B82F6),
+    containerDetachHighlight = Color(0xFFF59E0B),
 
     // Block text & shadow
     blockShadow = Color(0x20000000),
@@ -288,6 +296,10 @@ val DarkAppColors = AppColors(
     slackMessage = Color(0xFFFB7185),
     gateIndicator = Color(0xFF22D3EE),
     containerBlock = Color(0xFF94A3B8),
+    containerBorder = Color(0xFF64748B),
+    containerHeaderBg = Color(0xFF1E293B),
+    containerDropHighlight = Color(0xFF60A5FA),
+    containerDetachHighlight = Color(0xFFFBBF24),
 
     // Block text & shadow
     blockShadow = Color(0x30FFFFFF),

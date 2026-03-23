@@ -65,6 +65,17 @@ class DagEditorViewModel(
     private val _clipboard = MutableStateFlow<DagGraph?>(null)
     val clipboard: StateFlow<DagGraph?> = _clipboard
 
+    // Parent lookup: blockId -> containerId (null if top-level)
+    private val _parentLookup = MutableStateFlow<Map<BlockId, BlockId>>(emptyMap())
+    val parentLookup: StateFlow<Map<BlockId, BlockId>> = _parentLookup
+
+    // Container drag feedback state
+    private val _hoveredContainerId = MutableStateFlow<BlockId?>(null)
+    val hoveredContainerId: StateFlow<BlockId?> = _hoveredContainerId
+
+    private val _detachingFromContainerId = MutableStateFlow<BlockId?>(null)
+    val detachingFromContainerId: StateFlow<BlockId?> = _detachingFromContainerId
+
     private val _isDirty = MutableStateFlow(false)
     val isDirty: StateFlow<Boolean> = _isDirty
 
@@ -386,7 +397,7 @@ class DagEditorViewModel(
         if (isReadOnly.value) return
         val blockId = BlockId(Uuid.random().toString())
         val block = Block.ContainerBlock(id = blockId, name = name)
-        val position = BlockPosition(x, y)
+        val position = BlockPosition(x, y, BlockPosition.DEFAULT_CONTAINER_WIDTH, BlockPosition.DEFAULT_CONTAINER_HEIGHT)
         updateGraph(
             _graph.value.copy(
                 blocks = _graph.value.blocks + block,
@@ -402,13 +413,27 @@ class DagEditorViewModel(
         val blockIds = _selectedBlockIds.value
         if (blockIds.isEmpty()) return
         val g = _graph.value
-        updateGraph(
-            g.copy(
-                blocks = g.blocks.filter { it.id !in blockIds },
-                edges = g.edges.filter { it.fromBlockId !in blockIds && it.toBlockId !in blockIds },
-                positions = g.positions.filterKeys { it !in blockIds },
-            )
-        )
+
+        // Remove from top-level
+        var newBlocks = g.blocks.filter { it.id !in blockIds }
+        val newEdges = g.edges.filter { it.fromBlockId !in blockIds && it.toBlockId !in blockIds }
+        val newPositions = g.positions.filterKeys { it !in blockIds }
+
+        // Also remove from container children
+        newBlocks = newBlocks.map { block ->
+            if (block is Block.ContainerBlock) {
+                val childIdsToRemove = block.children.blocks.filter { it.id in blockIds }.map { it.id }.toSet()
+                if (childIdsToRemove.isNotEmpty()) {
+                    block.copy(children = block.children.copy(
+                        blocks = block.children.blocks.filter { it.id !in childIdsToRemove },
+                        edges = block.children.edges.filter { it.fromBlockId !in childIdsToRemove && it.toBlockId !in childIdsToRemove },
+                        positions = block.children.positions.filterKeys { it !in childIdsToRemove },
+                    ))
+                } else block
+            } else block
+        }
+
+        updateGraph(g.copy(blocks = newBlocks, edges = newEdges, positions = newPositions))
         // Clean up external config state for deleted blocks
         for (blockId in blockIds) {
             configFetchJobs.remove(blockId)?.cancel()
@@ -435,26 +460,276 @@ class DagEditorViewModel(
     fun moveBlock(blockId: BlockId, dx: Float, dy: Float) {
         if (isReadOnly.value) return
         val g = _graph.value
-        val current = g.positions[blockId] ?: return
-        val newPos = BlockPosition(current.x + dx, current.y + dy)
+        val parentId = _parentLookup.value[blockId]
+
+        if (parentId != null) {
+            // Child block: update position within container's children graph
+            val container = g.blocks.find { it.id == parentId } as? Block.ContainerBlock ?: return
+            val childPos = container.children.positions[blockId] ?: return
+            val newChildPos = childPos.copy(x = childPos.x + dx, y = childPos.y + dy)
+            val updatedChildren = container.children.copy(
+                positions = container.children.positions + (blockId to newChildPos),
+            )
+            val updatedContainer = container.copy(children = updatedChildren)
+            _graph.value = g.copy(
+                blocks = g.blocks.map { if (it.id == parentId) updatedContainer else it },
+            )
+
+            // Check if block is being dragged outside the container bounds
+            val containerPos = g.positions[parentId]
+            if (containerPos != null) {
+                val absX = containerPos.x + newChildPos.x + newChildPos.width / 2
+                val absY = containerPos.y + BlockPosition.CONTAINER_HEADER_HEIGHT + newChildPos.y + newChildPos.height / 2
+                val insideX = absX in containerPos.x..(containerPos.x + containerPos.width)
+                val insideY = absY in (containerPos.y + BlockPosition.CONTAINER_HEADER_HEIGHT)..(containerPos.y + containerPos.height)
+                _detachingFromContainerId.value = if (!insideX || !insideY) parentId else null
+            }
+        } else {
+            // Top-level block: update position in root graph
+            val current = g.positions[blockId] ?: return
+            val newPos = current.copy(x = current.x + dx, y = current.y + dy)
+            _graph.value = g.copy(positions = g.positions + (blockId to newPos))
+
+            // Check if a non-container block is being dragged over a container
+            val block = g.blocks.find { it.id == blockId }
+            if (block != null && block !is Block.ContainerBlock) {
+                val centerX = newPos.x + newPos.width / 2
+                val centerY = newPos.y + newPos.height / 2
+                val hovered = g.blocks.filterIsInstance<Block.ContainerBlock>().find { container ->
+                    val cPos = g.positions[container.id] ?: return@find false
+                    centerX in cPos.x..(cPos.x + cPos.width) &&
+                        centerY in (cPos.y + BlockPosition.CONTAINER_HEADER_HEIGHT)..(cPos.y + cPos.height)
+                }
+                _hoveredContainerId.value = hovered?.id
+            }
+        }
         // Move without pushing to undo stack (would flood during drag)
-        _graph.value = g.copy(positions = g.positions + (blockId to newPos))
         _isDirty.value = true
     }
 
-    fun commitMove() {
+    /** Returns a user-facing message if edges were removed during container membership change, null otherwise. */
+    fun commitMove(): String? {
+        val draggedHover = _hoveredContainerId.value
+        val draggedDetach = _detachingFromContainerId.value
+        _hoveredContainerId.value = null
+        _detachingFromContainerId.value = null
+
+        var droppedEdgeCount = 0
+
+        // Handle container membership changes (mutually exclusive: can't enter and leave at the same time)
+        if (draggedDetach != null) {
+            // Detach takes priority — child blocks being dragged outside their container
+            val selected = _selectedBlockIds.value
+            for (blockId in selected) {
+                if (_parentLookup.value[blockId] == draggedDetach) {
+                    droppedEdgeCount += countEdgesForBlock(blockId, inContainer = draggedDetach)
+                    removeBlockFromContainer(blockId, draggedDetach)
+                }
+            }
+        } else if (draggedHover != null) {
+            // Top-level blocks being dragged into a container
+            val selected = _selectedBlockIds.value
+            for (blockId in selected) {
+                val block = _graph.value.blocks.find { it.id == blockId }
+                if (block != null && block !is Block.ContainerBlock && _parentLookup.value[blockId] == null) {
+                    droppedEdgeCount += countEdgesForBlock(blockId, inContainer = null)
+                    moveBlockIntoContainer(blockId, draggedHover)
+                }
+            }
+        }
+
+        pushUndoState(_graph.value)
+        revalidate()
+        scheduleAutoSave()
+
+        return if (droppedEdgeCount > 0) {
+            "$droppedEdgeCount connection${if (droppedEdgeCount > 1) "s" else ""} removed (cross-boundary)"
+        } else null
+    }
+
+    /** Count edges connected to a block. If inContainer is non-null, counts within that container's edges. */
+    private fun countEdgesForBlock(blockId: BlockId, inContainer: BlockId?): Int {
+        val g = _graph.value
+        return if (inContainer != null) {
+            val container = g.blocks.find { it.id == inContainer } as? Block.ContainerBlock ?: return 0
+            container.children.edges.count { it.fromBlockId == blockId || it.toBlockId == blockId }
+        } else {
+            g.edges.count { it.fromBlockId == blockId || it.toBlockId == blockId }
+        }
+    }
+
+    private fun moveBlockIntoContainer(blockId: BlockId, containerId: BlockId) {
+        val g = _graph.value
+        val block = g.blocks.find { it.id == blockId } ?: return
+        val blockPos = g.positions[blockId] ?: return
+        val container = g.blocks.find { it.id == containerId } as? Block.ContainerBlock ?: return
+        val containerPos = g.positions[containerId] ?: return
+
+        // Convert absolute position to relative within container content area
+        val relX = blockPos.x - containerPos.x
+        val relY = blockPos.y - containerPos.y - BlockPosition.CONTAINER_HEADER_HEIGHT
+        val relPos = BlockPosition(relX, relY, blockPos.width, blockPos.height)
+
+        // Remove from top-level
+        val newBlocks = g.blocks.filter { it.id != blockId }
+        val newPositions = g.positions - blockId
+        val newEdges = g.edges.filter { it.fromBlockId != blockId && it.toBlockId != blockId }
+
+        // Add to container children
+        val updatedChildren = container.children.copy(
+            blocks = container.children.blocks + block,
+            positions = container.children.positions + (blockId to relPos),
+        )
+        val updatedContainer = container.copy(children = updatedChildren)
+        val finalBlocks = newBlocks.map { if (it.id == containerId) updatedContainer else it }
+
+        _graph.value = g.copy(blocks = finalBlocks, edges = newEdges, positions = newPositions)
+
+        // Auto-resize container if needed
+        autoResizeContainer(containerId)
+    }
+
+    private fun removeBlockFromContainer(blockId: BlockId, containerId: BlockId) {
+        val g = _graph.value
+        val container = g.blocks.find { it.id == containerId } as? Block.ContainerBlock ?: return
+        val containerPos = g.positions[containerId] ?: return
+        val childPos = container.children.positions[blockId] ?: return
+        val block = container.children.blocks.find { it.id == blockId } ?: return
+
+        // Convert relative to absolute position
+        val absX = containerPos.x + childPos.x
+        val absY = containerPos.y + BlockPosition.CONTAINER_HEADER_HEIGHT + childPos.y
+        val absPos = BlockPosition(absX, absY, childPos.width, childPos.height)
+
+        // Remove from container children
+        val updatedChildren = container.children.copy(
+            blocks = container.children.blocks.filter { it.id != blockId },
+            positions = container.children.positions - blockId,
+            edges = container.children.edges.filter { it.fromBlockId != blockId && it.toBlockId != blockId },
+        )
+        val updatedContainer = container.copy(children = updatedChildren)
+
+        // Add to top-level
+        val finalBlocks = g.blocks.map { if (it.id == containerId) updatedContainer else it } + block
+        val finalPositions = g.positions + (blockId to absPos)
+
+        _graph.value = g.copy(blocks = finalBlocks, positions = finalPositions)
+    }
+
+    private fun autoResizeContainer(containerId: BlockId) {
+        val g = _graph.value
+        val container = g.blocks.find { it.id == containerId } as? Block.ContainerBlock ?: return
+        val cPos = g.positions[containerId] ?: return
+        val padding = 20f
+
+        var neededWidth = cPos.width
+        var neededHeight = cPos.height
+
+        for (child in container.children.blocks) {
+            val childPos = container.children.positions[child.id] ?: continue
+            neededWidth = maxOf(neededWidth, childPos.x + childPos.width + padding)
+            neededHeight = maxOf(neededHeight, childPos.y + childPos.height + BlockPosition.CONTAINER_HEADER_HEIGHT + padding)
+        }
+
+        if (neededWidth > cPos.width || neededHeight > cPos.height) {
+            val newPos = cPos.copy(width = neededWidth, height = neededHeight)
+            _graph.value = _graph.value.copy(positions = _graph.value.positions + (containerId to newPos))
+        }
+    }
+
+    fun resizeBlock(blockId: BlockId, edge: ResizeEdge, dx: Float, dy: Float) {
+        if (isReadOnly.value) return
+        val g = _graph.value
+        val parentId = _parentLookup.value[blockId]
+
+        if (parentId != null) {
+            // Child block: resize within container children positions
+            val container = g.blocks.find { it.id == parentId } as? Block.ContainerBlock ?: return
+            val pos = container.children.positions[blockId] ?: return
+            val newPos = computeResizedPosition(pos, edge, dx, dy, isContainer = false)
+            val updatedChildren = container.children.copy(
+                positions = container.children.positions + (blockId to newPos),
+            )
+            val updatedContainer = container.copy(children = updatedChildren)
+            _graph.value = g.copy(blocks = g.blocks.map { if (it.id == parentId) updatedContainer else it })
+        } else {
+            val pos = g.positions[blockId] ?: return
+            val block = g.blocks.find { it.id == blockId }
+            val newPos = computeResizedPosition(pos, edge, dx, dy, isContainer = block is Block.ContainerBlock)
+            _graph.value = g.copy(positions = g.positions + (blockId to newPos))
+        }
+        _isDirty.value = true
+    }
+
+    private fun computeResizedPosition(
+        pos: BlockPosition, edge: ResizeEdge, dx: Float, dy: Float, isContainer: Boolean,
+    ): BlockPosition {
+        val minW = if (isContainer) BlockPosition.DEFAULT_CONTAINER_WIDTH else BlockPosition.DEFAULT_BLOCK_WIDTH
+        val minH = if (isContainer) BlockPosition.DEFAULT_CONTAINER_HEIGHT else BlockPosition.DEFAULT_BLOCK_HEIGHT
+
+        val (newX, newWidth) = when (edge) {
+            ResizeEdge.Left, ResizeEdge.TopLeft, ResizeEdge.BottomLeft -> {
+                val proposedW = (pos.width - dx).coerceAtLeast(minW)
+                val actualDx = pos.width - proposedW
+                (pos.x + actualDx) to proposedW
+            }
+            ResizeEdge.Right, ResizeEdge.TopRight, ResizeEdge.BottomRight -> {
+                pos.x to (pos.width + dx).coerceAtLeast(minW)
+            }
+            else -> pos.x to pos.width
+        }
+
+        val (newY, newHeight) = when (edge) {
+            ResizeEdge.Top, ResizeEdge.TopLeft, ResizeEdge.TopRight -> {
+                val proposedH = (pos.height - dy).coerceAtLeast(minH)
+                val actualDy = pos.height - proposedH
+                (pos.y + actualDy) to proposedH
+            }
+            ResizeEdge.Bottom, ResizeEdge.BottomLeft, ResizeEdge.BottomRight -> {
+                pos.y to (pos.height + dy).coerceAtLeast(minH)
+            }
+            else -> pos.y to pos.height
+        }
+
+        return BlockPosition(newX, newY, newWidth, newHeight)
+    }
+
+    fun commitResize() {
         pushUndoState(_graph.value)
         revalidate()
         scheduleAutoSave()
     }
 
-    fun addEdge(fromBlockId: BlockId, toBlockId: BlockId) {
-        if (isReadOnly.value) return
-        val g = _graph.value
-        // Don't add duplicate or self-loop edges
-        if (g.edges.any { it.fromBlockId == fromBlockId && it.toBlockId == toBlockId }) return
-        if (fromBlockId == toBlockId) return
-        updateGraph(g.copy(edges = g.edges + Edge(fromBlockId, toBlockId)))
+    /** Returns an error message if the edge was rejected, null on success. */
+    fun addEdge(fromBlockId: BlockId, toBlockId: BlockId): String? {
+        if (isReadOnly.value) return null
+        if (fromBlockId == toBlockId) return null
+
+        val fromParent = _parentLookup.value[fromBlockId]
+        val toParent = _parentLookup.value[toBlockId]
+
+        // Cross-boundary prevention: both blocks must be at the same nesting level
+        if (fromParent != toParent) {
+            return "Cannot connect blocks across container boundaries"
+        }
+
+        if (fromParent != null) {
+            // Both are inside the same container — add edge to container's children graph
+            val g = _graph.value
+            val container = g.blocks.find { it.id == fromParent } as? Block.ContainerBlock ?: return null
+            if (container.children.edges.any { it.fromBlockId == fromBlockId && it.toBlockId == toBlockId }) return null
+            val updatedChildren = container.children.copy(
+                edges = container.children.edges + Edge(fromBlockId, toBlockId),
+            )
+            val updatedContainer = container.copy(children = updatedChildren)
+            updateGraph(g.copy(blocks = g.blocks.map { if (it.id == fromParent) updatedContainer else it }))
+        } else {
+            // Both are top-level
+            val g = _graph.value
+            if (g.edges.any { it.fromBlockId == fromBlockId && it.toBlockId == toBlockId }) return null
+            updateGraph(g.copy(edges = g.edges + Edge(fromBlockId, toBlockId)))
+        }
+        return null
     }
 
     fun selectBlock(blockId: BlockId?) {
@@ -503,31 +778,36 @@ class DagEditorViewModel(
         }
     }
 
+    /** Transform a block by ID, searching both top-level and inside containers. */
     private fun updateBlockField(blockId: BlockId, transform: (Block) -> Block) {
         if (isReadOnly.value) return
         val g = _graph.value
-        updateGraphSilent(
-            g.copy(
-                blocks = g.blocks.map { block ->
-                    if (block.id != blockId) return@map block
-                    transform(block)
-                }
-            )
-        )
+        updateGraphSilent(g.copy(blocks = mapBlocksDeep(g.blocks, blockId, transform)))
+    }
+
+    /** Maps blocks, searching inside containers if needed. */
+    private fun mapBlocksDeep(
+        blocks: List<Block>, targetId: BlockId, transform: (Block) -> Block,
+    ): List<Block> = blocks.map { block ->
+        if (block.id == targetId) return@map transform(block)
+        if (block is Block.ContainerBlock) {
+            val hasChild = block.children.blocks.any { it.id == targetId }
+            if (hasChild) {
+                block.copy(children = block.children.copy(
+                    blocks = block.children.blocks.map { child ->
+                        if (child.id == targetId) transform(child) else child
+                    }
+                ))
+            } else block
+        } else block
     }
 
     fun updateBlockType(blockId: BlockId, type: BlockType) {
         if (isReadOnly.value) return
         val g = _graph.value
-        updateGraph(
-            g.copy(
-                blocks = g.blocks.map { block ->
-                    if (block.id == blockId && block is Block.ActionBlock) {
-                        block.copy(type = type)
-                    } else block
-                }
-            )
-        )
+        updateGraph(g.copy(blocks = mapBlocksDeep(g.blocks, blockId) { block ->
+            if (block is Block.ActionBlock) block.copy(type = type) else block
+        }))
     }
 
     fun updateBlockParameters(blockId: BlockId, parameters: List<Parameter>) {
@@ -655,21 +935,23 @@ class DagEditorViewModel(
     }
 
     private fun findActionBlock(blockId: BlockId): Block.ActionBlock? {
-        return _graph.value.blocks.filterIsInstance<Block.ActionBlock>().find { it.id == blockId }
+        // Search top-level
+        _graph.value.blocks.filterIsInstance<Block.ActionBlock>().find { it.id == blockId }?.let { return it }
+        // Search inside containers
+        for (block in _graph.value.blocks) {
+            if (block is Block.ContainerBlock) {
+                block.children.blocks.filterIsInstance<Block.ActionBlock>().find { it.id == blockId }?.let { return it }
+            }
+        }
+        return null
     }
 
     private fun updateActionBlock(blockId: BlockId, transform: (Block.ActionBlock) -> Block.ActionBlock) {
         if (isReadOnly.value) return
         val g = _graph.value
-        updateGraphSilent(
-            g.copy(
-                blocks = g.blocks.map { block ->
-                    if (block.id == blockId && block is Block.ActionBlock) {
-                        transform(block)
-                    } else block
-                }
-            )
-        )
+        updateGraphSilent(g.copy(blocks = mapBlocksDeep(g.blocks, blockId) { block ->
+            if (block is Block.ActionBlock) transform(block) else block
+        }))
     }
 
     fun undo() {
@@ -700,9 +982,49 @@ class DagEditorViewModel(
         val selected = _selectedBlockIds.value
         if (selected.isEmpty()) return
         val g = _graph.value
-        val blocks = g.blocks.filter { it.id in selected }
-        val edges = g.edges.filter { it.fromBlockId in selected && it.toBlockId in selected }
-        val positions = g.positions.filterKeys { it in selected }
+
+        // Collect blocks from both top-level and inside containers
+        val blocks = mutableListOf<Block>()
+        val edges = mutableListOf<Edge>()
+        val positions = mutableMapOf<BlockId, BlockPosition>()
+
+        // Top-level blocks
+        for (block in g.blocks) {
+            if (block.id in selected) {
+                blocks.add(block)
+                g.positions[block.id]?.let { positions[block.id] = it }
+            }
+            // Search inside containers for selected children
+            if (block is Block.ContainerBlock) {
+                val containerPos = g.positions[block.id]
+                for (child in block.children.blocks) {
+                    if (child.id in selected) {
+                        blocks.add(child)
+                        // Convert relative position to absolute for clipboard
+                        val childPos = block.children.positions[child.id]
+                        if (childPos != null && containerPos != null) {
+                            positions[child.id] = childPos.copy(
+                                x = containerPos.x + childPos.x,
+                                y = containerPos.y + BlockPosition.CONTAINER_HEADER_HEIGHT + childPos.y,
+                            )
+                        }
+                    }
+                }
+                // Include container-internal edges between selected children
+                for (edge in block.children.edges) {
+                    if (edge.fromBlockId in selected && edge.toBlockId in selected) {
+                        edges.add(edge)
+                    }
+                }
+            }
+        }
+        // Top-level edges between selected blocks
+        for (edge in g.edges) {
+            if (edge.fromBlockId in selected && edge.toBlockId in selected) {
+                edges.add(edge)
+            }
+        }
+
         _clipboard.value = DagGraph(blocks = blocks, edges = edges, positions = positions)
     }
 
@@ -713,9 +1035,9 @@ class DagEditorViewModel(
         val g = _graph.value
 
         val remapped = remapDagGraph(clip, emptyMap())
-        // Offset positions to visually separate pasted blocks
+        // Offset positions to visually separate pasted blocks (preserve width/height)
         val offsetPositions = remapped.positions.mapValues { (_, pos) ->
-            BlockPosition(pos.x + 30f, pos.y + 30f)
+            pos.copy(x = pos.x + 30f, y = pos.y + 30f)
         }
 
         updateGraph(
@@ -731,7 +1053,15 @@ class DagEditorViewModel(
     }
 
     fun selectAll() {
-        _selectedBlockIds.value = _graph.value.blocks.map { it.id }.toSet()
+        val allIds = buildSet {
+            for (block in _graph.value.blocks) {
+                add(block.id)
+                if (block is Block.ContainerBlock) {
+                    for (child in block.children.blocks) add(child.id)
+                }
+            }
+        }
+        _selectedBlockIds.value = allIds
         _selectedEdgeIndex.value = null
     }
 
@@ -802,6 +1132,19 @@ class DagEditorViewModel(
 
     private fun revalidate() {
         _validationErrors.value = DagValidator.validate(_graph.value)
+        rebuildParentLookup()
+    }
+
+    private fun rebuildParentLookup() {
+        val lookup = mutableMapOf<BlockId, BlockId>()
+        for (block in _graph.value.blocks) {
+            if (block is Block.ContainerBlock) {
+                for (child in block.children.blocks) {
+                    lookup[child.id] = block.id
+                }
+            }
+        }
+        _parentLookup.value = lookup
     }
 
     @OptIn(ExperimentalUuidApi::class)

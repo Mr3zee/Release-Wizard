@@ -18,14 +18,25 @@ import com.github.mr3zee.model.*
 import com.github.mr3zee.theme.AppColors
 import kotlin.math.PI
 
-// Block dimensions in dp (logical coordinates)
-internal const val BLOCK_WIDTH = 180f
-internal const val BLOCK_HEIGHT = 70f
+// Default block dimensions in dp (logical coordinates) — kept for backward compat references
+internal const val BLOCK_WIDTH = BlockPosition.DEFAULT_BLOCK_WIDTH
+internal const val BLOCK_HEIGHT = BlockPosition.DEFAULT_BLOCK_HEIGHT
 internal const val PORT_RADIUS = 8f
 internal const val PORT_HIT_RADIUS = 14f
 internal const val GRID_SIZE = 20f
 internal const val MIN_ZOOM = 0.25f
 internal const val MAX_ZOOM = 4f
+internal const val RESIZE_HANDLE_WIDTH = 6f
+
+enum class ResizeEdge {
+    Top, Bottom, Left, Right,
+    TopLeft, TopRight, BottomLeft, BottomRight;
+
+    val isCorner: Boolean get() = when (this) {
+        TopLeft, TopRight, BottomLeft, BottomRight -> true
+        else -> false
+    }
+}
 
 internal fun blockColor(block: Block, colors: AppColors): Color = when (block) {
     is Block.ActionBlock -> blockTypeColor(block.type, colors)
@@ -153,8 +164,8 @@ internal fun DrawScope.drawBlock(
 ) {
     val screenX = transform.toScreenX(position.x)
     val screenY = transform.toScreenY(position.y)
-    val screenW = transform.toScreen(BLOCK_WIDTH)
-    val screenH = transform.toScreen(BLOCK_HEIGHT)
+    val screenW = transform.toScreen(position.width)
+    val screenH = transform.toScreen(position.height)
     val cornerRadius = transform.toScreen(8f)
 
     // Shadow (offset scaled with zoom)
@@ -217,6 +228,26 @@ internal fun DrawScope.drawBlock(
         topLeft = Offset(screenX + transform.toScreen(10f), screenY + transform.toScreen(36f)),
     )
 
+    // Description text (shown when block is taller than default)
+    if (block.description.isNotBlank() && position.height > BlockPosition.DEFAULT_BLOCK_HEIGHT + 10f) {
+        val descSize = (9f * zoom).coerceIn(4f, 24f)
+        val descTopY = transform.toScreen(54f)
+        val availableHeight = screenH - descTopY - transform.toScreen(8f)
+        if (availableHeight > 0f) {
+            val maxWidth = (screenW - transform.toScreen(20f)).toInt().coerceAtLeast(1)
+            val descLayout = textMeasurer.measure(
+                block.description,
+                style = TextStyle(fontSize = descSize.sp, color = colors.blockTextSecondary),
+                maxLines = (availableHeight / (descSize * transform.density * 1.3f)).toInt().coerceAtLeast(1),
+                constraints = androidx.compose.ui.unit.Constraints(maxWidth = maxWidth),
+            )
+            drawText(
+                descLayout,
+                topLeft = Offset(screenX + transform.toScreen(10f), screenY + descTopY),
+            )
+        }
+    }
+
     // Gate badge indicators
     if (block is Block.ActionBlock) {
         val badgeRadius = transform.toScreen(5f)
@@ -241,21 +272,115 @@ internal fun DrawScope.drawBlock(
     }
 }
 
+internal fun DrawScope.drawContainerBlock(
+    transform: CanvasTransform,
+    container: Block.ContainerBlock,
+    position: BlockPosition,
+    isSelected: Boolean,
+    isDropTarget: Boolean,
+    isDetaching: Boolean,
+    textMeasurer: TextMeasurer,
+    zoom: Float,
+    colors: AppColors,
+) {
+    val screenX = transform.toScreenX(position.x)
+    val screenY = transform.toScreenY(position.y)
+    val screenW = transform.toScreen(position.width)
+    val screenH = transform.toScreen(position.height)
+    val cornerRadius = transform.toScreen(8f)
+    val headerHeight = transform.toScreen(BlockPosition.CONTAINER_HEADER_HEIGHT)
+
+    // Subtle fill at 5% opacity (distinguishes container area from empty canvas)
+    drawRoundRect(
+        color = colors.containerBlock.copy(alpha = 0.08f),
+        topLeft = Offset(screenX, screenY),
+        size = Size(screenW, screenH),
+        cornerRadius = CornerRadius(cornerRadius),
+    )
+
+    // Dashed border
+    val borderColor = when {
+        isDropTarget -> colors.containerDropHighlight
+        isDetaching -> colors.containerDetachHighlight
+        isSelected -> colors.blockSelectionHighlight
+        else -> colors.containerBorder
+    }
+    val borderWidth = if (isDropTarget || isDetaching || isSelected) transform.toScreen(2.5f) else transform.toScreen(1.5f)
+    val dashLength = transform.toScreen(8f)
+    val gapLength = transform.toScreen(4f)
+    drawRoundRect(
+        color = borderColor,
+        topLeft = Offset(screenX, screenY),
+        size = Size(screenW, screenH),
+        cornerRadius = CornerRadius(cornerRadius),
+        style = Stroke(
+            width = borderWidth,
+            pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(dashLength, gapLength)),
+        ),
+    )
+
+    // Info header background (filled, top portion only)
+    // Clip to top rounded corners via a path
+    val headerPath = Path().apply {
+        addRoundRect(
+            androidx.compose.ui.geometry.RoundRect(
+                left = screenX,
+                top = screenY,
+                right = screenX + screenW,
+                bottom = screenY + headerHeight,
+                topLeftCornerRadius = CornerRadius(cornerRadius),
+                topRightCornerRadius = CornerRadius(cornerRadius),
+                bottomLeftCornerRadius = CornerRadius.Zero,
+                bottomRightCornerRadius = CornerRadius.Zero,
+            )
+        )
+    }
+    drawPath(headerPath, color = colors.containerHeaderBg)
+
+    // Divider line between header and content
+    drawLine(
+        color = colors.containerBorder,
+        start = Offset(screenX, screenY + headerHeight),
+        end = Offset(screenX + screenW, screenY + headerHeight),
+        strokeWidth = transform.toScreen(1f),
+    )
+
+    // Container name in header
+    val nameSize = (12f * zoom).coerceIn(5f, 36f)
+    val nameLayout = textMeasurer.measure(
+        container.name,
+        style = TextStyle(fontSize = nameSize.sp, color = colors.chromeTextPrimary),
+        maxLines = 1,
+        constraints = androidx.compose.ui.unit.Constraints(maxWidth = (screenW - transform.toScreen(20f)).toInt().coerceAtLeast(1)),
+    )
+    drawText(
+        nameLayout,
+        topLeft = Offset(screenX + transform.toScreen(10f), screenY + (headerHeight - nameLayout.size.height) / 2),
+    )
+}
+
+/** Compute the Y offset for port placement. Containers anchor ports to header center. */
+internal fun portYOffset(position: BlockPosition, isContainer: Boolean): Float =
+    if (isContainer) BlockPosition.CONTAINER_HEADER_HEIGHT / 2
+    else position.height / 2
+
 internal fun DrawScope.drawPorts(
     transform: CanvasTransform,
     position: BlockPosition,
     isInputHovered: Boolean,
     isOutputHovered: Boolean,
     colors: AppColors,
+    isContainer: Boolean = false,
 ) {
     val portScreenRadius = transform.toScreen(PORT_RADIUS)
+    val yOff = portYOffset(position, isContainer)
 
     val inX = transform.toScreenX(position.x)
-    val inY = transform.toScreenY(position.y + BLOCK_HEIGHT / 2)
+    val inY = transform.toScreenY(position.y + yOff)
     drawPort(transform, portScreenRadius, Offset(inX, inY), isInputHovered, colors)
 
-    val outX = transform.toScreenX(position.x + BLOCK_WIDTH)
-    val outY = transform.toScreenY(position.y + BLOCK_HEIGHT / 2)
+    val outX = transform.toScreenX(position.x + position.width)
+    val outY = transform.toScreenY(position.y + yOff)
     drawPort(transform, portScreenRadius, Offset(outX, outY), isOutputHovered, colors)
 }
 
@@ -293,11 +418,13 @@ internal fun DrawScope.drawEdge(
     toPos: BlockPosition,
     isSelected: Boolean,
     colors: AppColors,
+    isFromContainer: Boolean = false,
+    isToContainer: Boolean = false,
 ) {
-    val startX = transform.toScreenX(fromPos.x + BLOCK_WIDTH)
-    val startY = transform.toScreenY(fromPos.y + BLOCK_HEIGHT / 2)
+    val startX = transform.toScreenX(fromPos.x + fromPos.width)
+    val startY = transform.toScreenY(fromPos.y + portYOffset(fromPos, isFromContainer))
     val endX = transform.toScreenX(toPos.x)
-    val endY = transform.toScreenY(toPos.y + BLOCK_HEIGHT / 2)
+    val endY = transform.toScreenY(toPos.y + portYOffset(toPos, isToContainer))
 
     val dx = endX - startX
     val cp1x = startX + dx * 0.4f
@@ -339,7 +466,7 @@ internal fun DrawScope.drawEdge(
     drawPath(arrowPath, color = edgeColor)
 }
 
-internal fun DrawScope.drawDraftEdge(start: Offset, end: Offset, colors: AppColors, transform: CanvasTransform? = null) {
+internal fun DrawScope.drawDraftEdge(start: Offset, end: Offset, colors: AppColors, transform: CanvasTransform? = null, colorOverride: Color? = null) {
     val dx = end.x - start.x
     val cp1x = start.x + dx * 0.4f
     val cp2x = end.x - dx * 0.4f
@@ -355,7 +482,7 @@ internal fun DrawScope.drawDraftEdge(start: Offset, end: Offset, colors: AppColo
 
     drawPath(
         path,
-        color = colors.draftEdge,
+        color = colorOverride ?: colors.draftEdge,
         style = Stroke(
             width = strokeWidth,
             pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(dashLength, gapLength)),
@@ -371,8 +498,8 @@ internal fun DrawScope.drawRunningIndicator(
 ) {
     val screenX = transform.toScreenX(position.x)
     val screenY = transform.toScreenY(position.y)
-    val screenW = transform.toScreen(BLOCK_WIDTH)
-    val screenH = transform.toScreen(BLOCK_HEIGHT)
+    val screenW = transform.toScreen(position.width)
+    val screenH = transform.toScreen(position.height)
     val dotRadius = transform.toScreen(3f)
     val clampedRadius = dotRadius.coerceAtLeast(1.5f)
 
@@ -408,8 +535,8 @@ internal fun DrawScope.drawBlockStatusIcon(
 ) {
     val screenX = transform.toScreenX(position.x)
     val screenY = transform.toScreenY(position.y)
-    val screenW = transform.toScreen(BLOCK_WIDTH)
-    val screenH = transform.toScreen(BLOCK_HEIGHT)
+    val screenW = transform.toScreen(position.width)
+    val screenH = transform.toScreen(position.height)
     val iconSize = transform.toScreen(8f)
     if (iconSize < 4f) return
     val iconCenterX = screenX + screenW - transform.toScreen(14f)
