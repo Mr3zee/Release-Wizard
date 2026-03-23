@@ -806,6 +806,13 @@ class DagEditorViewModel(
 
     // Project-level property updates (not tracked by undo — undo only covers graph changes).
 
+    fun updateProjectName(name: String) {
+        if (isReadOnly.value) return
+        _project.value = _project.value?.copy(name = name)
+        _isDirty.value = true
+        scheduleAutoSave()
+    }
+
     fun updateProjectDescription(description: String) {
         if (isReadOnly.value) return
         _project.value = _project.value?.copy(description = description)

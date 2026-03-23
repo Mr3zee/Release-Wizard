@@ -132,12 +132,12 @@ fun EditorToolbar(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
-            RwTooltip(tooltip = "$mod+Z") {
+            RwTooltip(tooltip = "$mod+Z", modifier = Modifier.weight(1f)) {
                 RwButton(
                     onClick = onUndo,
                     variant = RwButtonVariant.Secondary,
                     enabled = enabled && canUndo,
-                    modifier = Modifier.weight(1f).testTag("undo_button"),
+                    modifier = Modifier.fillMaxWidth().testTag("undo_button"),
                     contentPadding = PaddingValues(Spacing.sm),
                 ) {
                     Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -145,12 +145,12 @@ fun EditorToolbar(
                     Text(packStringResource(Res.string.editor_toolbar_undo))
                 }
             }
-            RwTooltip(tooltip = "$mod+Shift+Z") {
+            RwTooltip(tooltip = "$mod+Shift+Z", modifier = Modifier.weight(1f)) {
                 RwButton(
                     onClick = onRedo,
                     variant = RwButtonVariant.Secondary,
                     enabled = enabled && canRedo,
-                    modifier = Modifier.weight(1f).testTag("redo_button"),
+                    modifier = Modifier.fillMaxWidth().testTag("redo_button"),
                     contentPadding = PaddingValues(Spacing.sm),
                 ) {
                     Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -164,12 +164,12 @@ fun EditorToolbar(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
         ) {
-            RwTooltip(tooltip = "$mod+C") {
+            RwTooltip(tooltip = "$mod+C", modifier = Modifier.weight(1f)) {
                 RwButton(
                     onClick = onCopy,
                     variant = RwButtonVariant.Secondary,
                     enabled = hasSelection,
-                    modifier = Modifier.weight(1f).testTag("copy_button"),
+                    modifier = Modifier.fillMaxWidth().testTag("copy_button"),
                     contentPadding = PaddingValues(Spacing.sm),
                 ) {
                     Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -177,12 +177,12 @@ fun EditorToolbar(
                     Text(packStringResource(Res.string.editor_toolbar_copy))
                 }
             }
-            RwTooltip(tooltip = "$mod+V") {
+            RwTooltip(tooltip = "$mod+V", modifier = Modifier.weight(1f)) {
                 RwButton(
                     onClick = onPaste,
                     variant = RwButtonVariant.Secondary,
                     enabled = enabled && hasClipboard,
-                    modifier = Modifier.weight(1f).testTag("paste_button"),
+                    modifier = Modifier.fillMaxWidth().testTag("paste_button"),
                     contentPadding = PaddingValues(Spacing.sm),
                 ) {
                     Icon(Icons.Default.ContentPaste, contentDescription = null, modifier = Modifier.size(16.dp))

@@ -7,8 +7,12 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -25,13 +29,23 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.zIndex
 import androidx.compose.foundation.focusable
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.*
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
@@ -254,7 +268,37 @@ fun DagEditorScreen(
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(project?.name ?: packStringResource(Res.string.editor_loading))
+                        if (!isReadOnly && project != null) {
+                            var projectName by remember(project?.id) { mutableStateOf(project?.name ?: "") }
+                            var isFocused by remember { mutableStateOf(false) }
+                            val borderColor = if (isFocused) appColors.chromeBorderFocused else androidx.compose.ui.graphics.Color.Transparent
+                            val titleStyle = MaterialTheme.typography.titleLarge.copy(color = MaterialTheme.colorScheme.onSurface)
+                            // Measure width of text capped at 100 chars to set max field width
+                            val textMeasurer = rememberTextMeasurer()
+                            val displayText = if (projectName.length <= 100) projectName else projectName.take(100)
+                            val measuredWidth = remember(displayText, titleStyle) {
+                                textMeasurer.measure(displayText.ifEmpty { "W" }, titleStyle).size.width
+                            }
+                            val fieldWidth = with(LocalDensity.current) { measuredWidth.toDp() + 14.dp } // +padding
+                            androidx.compose.foundation.text.BasicTextField(
+                                value = projectName,
+                                onValueChange = {
+                                    projectName = it
+                                    viewModel.updateProjectName(it)
+                                },
+                                singleLine = true,
+                                textStyle = titleStyle,
+                                cursorBrush = androidx.compose.ui.graphics.SolidColor(appColors.buttonPrimaryBg),
+                                modifier = Modifier
+                                    .width(fieldWidth)
+                                    .onFocusChanged { isFocused = it.isFocused }
+                                    .border(1.dp, borderColor, androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    .testTag("project_name_header"),
+                            )
+                        } else {
+                            Text(project?.name ?: packStringResource(Res.string.editor_loading))
+                        }
                         if (isReadOnly) {
                             Text(
                                 " " + packStringResource(Res.string.editor_read_only),
@@ -448,46 +492,31 @@ fun DagEditorScreen(
                     )
                 }
 
-                // Left sidebar toggle + border
-                Column(
-                    Modifier.fillMaxHeight(),
-                    verticalArrangement = Arrangement.Center,
+                // Left sidebar border with toggle straddling/extending
+                Box(
+                    Modifier.fillMaxHeight().width(1.dp)
+                        .drawBehind { drawRect(appColors.chromeBorder) }
+                        .zIndex(1f),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Box(
-                        Modifier
-                            .fillMaxHeight()
-                            .weight(1f)
-                            .width(1.dp)
-                            .drawBehind { drawRect(appColors.chromeBorder) }
-                    )
-                    RwTooltip(
-                        tooltip = packStringResource(
-                            if (leftSidebarExpanded) Res.string.editor_collapse_toolbar
-                            else Res.string.editor_expand_toolbar
-                        ),
-                    ) {
-                        RwIconButton(
+                    Box(Modifier.layout { measurable, constraints ->
+                        val p = measurable.measure(constraints.copy(minWidth = 0, maxWidth = Int.MAX_VALUE))
+                        val xOff = if (leftSidebarExpanded) -p.width / 2 else 0
+                        layout(0, p.height) { p.place(xOff, 0) }
+                    }) {
+                        SidebarToggleButton(
+                            expanded = leftSidebarExpanded,
                             onClick = { leftSidebarExpanded = !leftSidebarExpanded },
-                            modifier = Modifier.size(44.dp).focusProperties { canFocus = false }.testTag("toggle_left_sidebar"),
-                        ) {
-                            Icon(
-                                if (leftSidebarExpanded) Icons.AutoMirrored.Filled.KeyboardArrowLeft
-                                else Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                contentDescription = packStringResource(
-                                    if (leftSidebarExpanded) Res.string.editor_collapse_toolbar
-                                    else Res.string.editor_expand_toolbar
-                                ),
-                                modifier = Modifier.size(16.dp),
-                            )
-                        }
+                            expandedIcon = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                            collapsedIcon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            tooltip = packStringResource(
+                                if (leftSidebarExpanded) Res.string.editor_collapse_toolbar
+                                else Res.string.editor_expand_toolbar
+                            ),
+                            colors = appColors,
+                            testTag = "toggle_left_sidebar",
+                        )
                     }
-                    Box(
-                        Modifier
-                            .fillMaxHeight()
-                            .weight(1f)
-                            .width(1.dp)
-                            .drawBehind { drawRect(appColors.chromeBorder) }
-                    )
                 }
 
                 // Center: canvas
@@ -527,46 +556,31 @@ fun DagEditorScreen(
                         .testTag("dag_canvas"),
                 )
 
-                // Right sidebar toggle + border
-                Column(
-                    Modifier.fillMaxHeight(),
-                    verticalArrangement = Arrangement.Center,
+                // Right sidebar border with toggle straddling/extending
+                Box(
+                    Modifier.fillMaxHeight().width(1.dp)
+                        .drawBehind { drawRect(appColors.chromeBorder) }
+                        .zIndex(1f),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Box(
-                        Modifier
-                            .fillMaxHeight()
-                            .weight(1f)
-                            .width(1.dp)
-                            .drawBehind { drawRect(appColors.chromeBorder) }
-                    )
-                    RwTooltip(
-                        tooltip = packStringResource(
-                            if (rightSidebarExpanded) Res.string.editor_collapse_properties
-                            else Res.string.editor_expand_properties
-                        ),
-                    ) {
-                        RwIconButton(
+                    Box(Modifier.layout { measurable, constraints ->
+                        val p = measurable.measure(constraints.copy(minWidth = 0, maxWidth = Int.MAX_VALUE))
+                        val xOff = if (rightSidebarExpanded) -p.width / 2 else -p.width
+                        layout(0, p.height) { p.place(xOff, 0) }
+                    }) {
+                        SidebarToggleButton(
+                            expanded = rightSidebarExpanded,
                             onClick = { rightSidebarExpanded = !rightSidebarExpanded },
-                            modifier = Modifier.size(44.dp).focusProperties { canFocus = false }.testTag("toggle_right_sidebar"),
-                        ) {
-                            Icon(
-                                if (rightSidebarExpanded) Icons.AutoMirrored.Filled.KeyboardArrowRight
-                                else Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                                contentDescription = packStringResource(
-                                    if (rightSidebarExpanded) Res.string.editor_collapse_properties
-                                    else Res.string.editor_expand_properties
-                                ),
-                                modifier = Modifier.size(16.dp),
-                            )
-                        }
+                            expandedIcon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            collapsedIcon = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                            tooltip = packStringResource(
+                                if (rightSidebarExpanded) Res.string.editor_collapse_properties
+                                else Res.string.editor_expand_properties
+                            ),
+                            colors = appColors,
+                            testTag = "toggle_right_sidebar",
+                        )
                     }
-                    Box(
-                        Modifier
-                            .fillMaxHeight()
-                            .weight(1f)
-                            .width(1.dp)
-                            .drawBehind { drawRect(appColors.chromeBorder) }
-                    )
                 }
 
                 // Right: properties panel
@@ -844,4 +858,52 @@ private fun formatValidationError(error: ValidationError): String = when (error)
     is ValidationError.ParameterKeyTooLong -> packStringResource(Res.string.editor_validation_parameter_key_too_long, error.max)
     is ValidationError.ParameterValueTooLong -> packStringResource(Res.string.editor_validation_parameter_value_too_long, error.max)
     is ValidationError.BlockDescriptionTooLong -> packStringResource(Res.string.editor_validation_block_description_too_long, error.length, error.max)
+}
+
+/** Circular sidebar toggle button that straddles the border with hover effect. */
+@Composable
+private fun SidebarToggleButton(
+    expanded: Boolean,
+    onClick: () -> Unit,
+    expandedIcon: androidx.compose.ui.graphics.vector.ImageVector,
+    collapsedIcon: androidx.compose.ui.graphics.vector.ImageVector,
+    tooltip: String,
+    colors: com.github.mr3zee.theme.AppColors,
+    testTag: String,
+) {
+    var isHovered by remember { mutableStateOf(false) }
+    val bgColor = if (isHovered) colors.buttonGhostHover else colors.chromeSurface
+
+    RwTooltip(tooltip = tooltip) {
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .border(1.dp, colors.chromeBorder, CircleShape)
+                .background(bgColor, CircleShape)
+                .clip(CircleShape)
+                .pointerHoverIcon(PointerIcon.Hand)
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Main)
+                            when (event.type) {
+                                androidx.compose.ui.input.pointer.PointerEventType.Enter -> isHovered = true
+                                androidx.compose.ui.input.pointer.PointerEventType.Exit -> isHovered = false
+                            }
+                        }
+                    }
+                }
+                .clickable { onClick() }
+                .focusProperties { canFocus = false }
+                .testTag(testTag),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                if (expanded) expandedIcon else collapsedIcon,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = colors.chromeTextSecondary,
+            )
+        }
+    }
 }
