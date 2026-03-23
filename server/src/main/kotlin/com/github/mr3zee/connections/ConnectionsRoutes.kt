@@ -55,7 +55,7 @@ fun Route.connectionRoutes() {
             // Require at least one team membership to prevent unauthenticated SSRF
             val teamIds = service.getUserTeamIds(session)
             if (teamIds.isEmpty() && session.role != UserRole.ADMIN) {
-                call.respond(HttpStatusCode.Forbidden, ErrorResponse(error = "You must be a member of at least one team", code = "FORBIDDEN"))
+                call.respond(HttpStatusCode.Forbidden, ErrorResponse(error = "Create or join a team before testing connections", code = "FORBIDDEN"))
                 return@post
             }
             val request = call.receive<TestConnectionConfigRequest>()

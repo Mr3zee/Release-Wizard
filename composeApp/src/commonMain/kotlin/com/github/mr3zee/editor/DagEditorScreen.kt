@@ -369,13 +369,13 @@ fun DagEditorScreen(
                         onRedo = { viewModel.redo() },
                         onCopy = { viewModel.copySelected() },
                         onPaste = { viewModel.pasteClipboard() },
-                        onSave = { viewModel.save() },
+                        onSave = { if (isDirty && !isSaving && !isReadOnly) viewModel.save() },
                         canUndo = canUndo,
                         canRedo = canRedo,
                         hasSelection = selectedBlockIds.isNotEmpty() || selectedEdgeIndex != null,
                         hasClipboard = clipboard != null,
                         isDirty = isDirty,
-                        autoSaveExhausted = autoSaveStatus is AutoSaveStatus.Failed && (autoSaveStatus as AutoSaveStatus.Failed).exhausted,
+                        autoSaveExhausted = (autoSaveStatus as? AutoSaveStatus.Failed)?.exhausted == true,
                         enabled = !isReadOnly,
                     )
                 }

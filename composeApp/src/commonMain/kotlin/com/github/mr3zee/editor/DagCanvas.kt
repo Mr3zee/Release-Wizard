@@ -329,8 +329,8 @@ fun DagCanvas(
             Text(
                 text = packStringResource(Res.string.editor_empty_canvas_no_blocks),
                 style = AppTypography.body,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                modifier = Modifier.testTag("empty_canvas_hint"),
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                modifier = Modifier.testTag("canvas_hint_add_blocks"),
             )
         }
     } else if (graph.edges.isEmpty()) {
@@ -341,8 +341,8 @@ fun DagCanvas(
             Text(
                 text = packStringResource(Res.string.editor_empty_canvas_hint),
                 style = AppTypography.body,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                modifier = Modifier.testTag("empty_canvas_hint"),
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                modifier = Modifier.testTag("canvas_hint_connect_blocks"),
             )
         }
     }

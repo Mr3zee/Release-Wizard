@@ -205,16 +205,18 @@ fun EditorToolbar(
 
         if (autoSaveExhausted) {
             HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.sm))
-            RwButton(
-                onClick = onSave,
-                variant = RwButtonVariant.Primary,
-                enabled = enabled && isDirty,
-                modifier = Modifier.fillMaxWidth().testTag("toolbar_save_button"),
-                contentPadding = PaddingValues(Spacing.sm),
-            ) {
-                Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(Spacing.xs))
-                Text(packStringResource(Res.string.common_save))
+            RwTooltip(tooltip = "$mod+S") {
+                RwButton(
+                    onClick = onSave,
+                    variant = RwButtonVariant.Primary,
+                    enabled = enabled && isDirty,
+                    modifier = Modifier.fillMaxWidth().testTag("toolbar_save_button"),
+                    contentPadding = PaddingValues(Spacing.sm),
+                ) {
+                    Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(Spacing.xs))
+                    Text(packStringResource(Res.string.common_save))
+                }
             }
         }
     }

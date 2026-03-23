@@ -106,6 +106,7 @@ class TeamListViewModel(
             _pagination.value = response.pagination
             _refreshError.value = null
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             if (silent) {
                 _refreshError.value = e.toUiMessage()
             } else {
@@ -131,6 +132,7 @@ class TeamListViewModel(
                     _pagination.value = response.pagination
                 }
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 _error.value = e.toUiMessage()
             } finally {
                 _isLoadingMore.value = false
@@ -146,6 +148,7 @@ class TeamListViewModel(
                 loadTeams()
                 onCreated?.invoke(response.team.id)
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 _error.value = e.toUiMessage()
             }
         }
@@ -174,6 +177,7 @@ class TeamListViewModel(
                 onAccepted()
                 loadTeamsInternal(silent = true)
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 _error.value = e.toUiMessage()
             }
         }
@@ -191,6 +195,7 @@ class TeamListViewModel(
                 apiClient.submitJoinRequest(teamId)
                 _message.value = UiMessage.JoinRequestSubmitted
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 _error.value = e.toUiMessage()
             }
         }

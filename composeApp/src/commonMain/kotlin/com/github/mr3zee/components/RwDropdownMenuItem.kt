@@ -18,7 +18,7 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.shape.RoundedCornerShape
+import com.github.mr3zee.theme.AppShapes
 import com.github.mr3zee.theme.LocalAppColors
 
 /**
@@ -38,7 +38,7 @@ fun RwDropdownMenu(
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismissRequest,
-        modifier = modifier.border(1.dp, colors.chromeBorder, RoundedCornerShape(4.dp)),
+        modifier = modifier.border(1.dp, colors.chromeBorder, AppShapes.xs),
         offset = offset,
         content = content,
     )
