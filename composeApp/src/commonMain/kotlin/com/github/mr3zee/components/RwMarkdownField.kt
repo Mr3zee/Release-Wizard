@@ -1,13 +1,26 @@
 package com.github.mr3zee.components
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.dp
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.LocalAppColors
 import com.github.mr3zee.theme.Spacing
@@ -47,27 +60,29 @@ fun RwMarkdownField(
             Spacer(Modifier.height(Spacing.xs))
         }
 
-        // Toggle chips (hidden in readOnly mode)
+        // Segmented toggle (hidden in readOnly mode)
         if (!readOnly) {
+            val segmentShape = RoundedCornerShape(6.dp)
             Row(
-                horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(segmentShape)
+                    .border(1.dp, colors.chipBorder, segmentShape)
+                    .drawBehind { drawRect(colors.chipBg) },
             ) {
-                RwChip(
+                SegmentTab(
                     selected = mode == MarkdownFieldMode.EDIT,
                     onClick = { mode = MarkdownFieldMode.EDIT },
-                    label = { Text(packStringResource(Res.string.editor_markdown_edit), style = AppTypography.label) },
+                    label = packStringResource(Res.string.editor_markdown_edit),
                     enabled = enabled,
-                    role = Role.Tab,
-                    modifier = Modifier.weight(1f).focusProperties { canFocus = false }.testTag("${testTag}_edit_tab"),
+                    modifier = Modifier.weight(1f).testTag("${testTag}_edit_tab"),
                 )
-                RwChip(
+                SegmentTab(
                     selected = mode == MarkdownFieldMode.PREVIEW,
                     onClick = { mode = MarkdownFieldMode.PREVIEW },
-                    label = { Text(packStringResource(Res.string.editor_markdown_preview), style = AppTypography.label) },
+                    label = packStringResource(Res.string.editor_markdown_preview),
                     enabled = enabled,
-                    role = Role.Tab,
-                    modifier = Modifier.weight(1f).focusProperties { canFocus = false }.testTag("${testTag}_preview_tab"),
+                    modifier = Modifier.weight(1f).testTag("${testTag}_preview_tab"),
                 )
             }
             Spacer(Modifier.height(Spacing.xs))
@@ -106,6 +121,41 @@ fun RwMarkdownField(
                 },
                 modifier = Modifier.fillMaxWidth().testTag("${testTag}_input"),
             )
+        }
+    }
+}
+
+@Composable
+private fun SegmentTab(
+    selected: Boolean,
+    onClick: () -> Unit,
+    label: String,
+    enabled: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalAppColors.current
+    val bgColor by animateColorAsState(
+        targetValue = if (selected) colors.chipBgSelected else colors.chipBg,
+        animationSpec = tween(durationMillis = 100),
+    )
+    val textColor = if (selected) colors.chipTextSelected else colors.chipText
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .drawBehind { drawRect(bgColor) }
+            .then(if (enabled) Modifier.pointerHoverIcon(PointerIcon.Hand) else Modifier)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                enabled = enabled,
+                role = Role.Tab,
+                onClick = onClick,
+            )
+            .padding(vertical = 6.dp),
+    ) {
+        CompositionLocalProvider(LocalContentColor provides textColor) {
+            Text(label, style = AppTypography.label)
         }
     }
 }

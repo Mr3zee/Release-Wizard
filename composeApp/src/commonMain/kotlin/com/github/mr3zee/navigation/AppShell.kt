@@ -101,6 +101,7 @@ fun AppShell(
                     modifier = Modifier
                         .width(sidebarWidth)
                         .fillMaxHeight()
+                        .zIndex(1f)
                         .background(colors.chromeSurface)
                         .drawBehind {
                             // Right border

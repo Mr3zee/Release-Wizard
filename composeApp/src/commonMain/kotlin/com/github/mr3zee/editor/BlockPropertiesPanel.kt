@@ -75,11 +75,13 @@ fun BlockPropertiesPanel(
             .verticalScroll(scrollState)
             .padding(Spacing.md),
     ) {
-        Text(
-            packStringResource(Res.string.editor_prop_title),
-            style = AppTypography.subheading,
-            modifier = Modifier.padding(bottom = Spacing.sm),
-        )
+        if (block != null) {
+            Text(
+                packStringResource(Res.string.editor_prop_title),
+                style = AppTypography.subheading,
+                modifier = Modifier.padding(bottom = Spacing.sm),
+            )
+        }
 
         if (block == null) {
             // Project description editor when no block is selected
