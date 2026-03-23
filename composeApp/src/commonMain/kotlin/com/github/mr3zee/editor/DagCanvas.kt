@@ -246,7 +246,7 @@ fun DagCanvas(
                                             val releaseTransform = CanvasTransform(zoom, panOffset, density)
                                             val releaseLogical = releaseTransform.toLogical(moveChange.position)
                                             val releaseHit = hitTest(releaseLogical, currentGraph, zoom)
-                                            if (releaseHit is HitTarget.InputPort) {
+                                            if (releaseHit is HitTarget.InputPort && releaseHit.blockId != hit.blockId) {
                                                 onAddEdge(hit.blockId, releaseHit.blockId)
                                             }
                                             connectionDraft = null
