@@ -101,6 +101,7 @@ fun DagEditorScreen(
 
     var leftSidebarExpanded by remember { mutableStateOf(true) }
     var rightSidebarExpanded by remember { mutableStateOf(true) }
+    var isTextFieldFocused by remember { mutableStateOf(false) }
 
     var pendingDiscardNavigation by remember { mutableStateOf<(() -> Unit)?>(null) }
     var showForceUnlockDialog by remember { mutableStateOf(false) }
@@ -216,10 +217,13 @@ fun DagEditorScreen(
                 if (event.type == KeyEventType.KeyDown) {
                     val isModifier = event.isCtrlPressed || event.isMetaPressed
                     when {
+                        // Save always works regardless of text field focus
                         !isReadOnly && isModifier && event.key == Key.S -> {
                             if (isDirty) viewModel.save()
                             true
                         }
+                        // Skip editor shortcuts when a text field has focus (let text editing work)
+                        isTextFieldFocused -> false
                         !isReadOnly && isModifier && event.key == Key.Z && !event.isShiftPressed -> {
                             viewModel.undo()
                             true
@@ -271,6 +275,7 @@ fun DagEditorScreen(
                         if (!isReadOnly && project != null) {
                             var projectName by remember(project?.id) { mutableStateOf(project?.name ?: "") }
                             var isFocused by remember { mutableStateOf(false) }
+                            // Track text field focus to suppress editor shortcuts (Ctrl+C/V/A/Z)
                             val borderColor = if (isFocused) appColors.chromeBorderFocused else androidx.compose.ui.graphics.Color.Transparent
                             val titleStyle = MaterialTheme.typography.titleLarge.copy(color = MaterialTheme.colorScheme.onSurface)
                             // Measure width of text capped at 100 chars to set max field width
@@ -291,7 +296,7 @@ fun DagEditorScreen(
                                 cursorBrush = androidx.compose.ui.graphics.SolidColor(appColors.buttonPrimaryBg),
                                 modifier = Modifier
                                     .width(fieldWidth)
-                                    .onFocusChanged { isFocused = it.isFocused }
+                                    .onFocusChanged { isFocused = it.isFocused; isTextFieldFocused = it.isFocused }
                                     .border(1.dp, borderColor, androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
                                     .padding(horizontal = 6.dp, vertical = 2.dp)
                                     .testTag("project_name_header"),
@@ -545,6 +550,7 @@ fun DagEditorScreen(
                         snackbarScope.launch { snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short) }
                     },
                     onResizeBlock = { id, edge, dx, dy -> viewModel.resizeBlock(id, edge, dx, dy) },
+                    onResizeHeader = { id, dy -> viewModel.resizeHeader(id, dy) },
                     onCommitResize = { viewModel.commitResize() },
                     hoveredContainerId = hoveredContainerId,
                     detachingFromContainerId = detachingFromContainerId,

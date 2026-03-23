@@ -210,7 +210,7 @@ internal fun DrawScope.drawBlock(
     }
 
     // Name text
-    val nameSize = (13f * zoom).coerceIn(6f, 40f)
+    val nameSize = (14f * zoom).coerceIn(6f, 42f)
     val nameLayout = textMeasurer.measure(
         block.name,
         style = TextStyle(fontSize = nameSize.sp, color = colors.blockText),
@@ -220,22 +220,12 @@ internal fun DrawScope.drawBlock(
         topLeft = Offset(screenX + transform.toScreen(10f), screenY + transform.toScreen(12f)),
     )
 
-    // Type label
-    val typeSize = (10f * zoom).coerceIn(5f, 30f)
-    val typeLayout = textMeasurer.measure(
-        typeLabel,
-        style = TextStyle(fontSize = typeSize.sp, color = colors.blockTextSecondary),
-    )
-    drawText(
-        typeLayout,
-        topLeft = Offset(screenX + transform.toScreen(10f), screenY + transform.toScreen(36f)),
-    )
-
-    // Description text — always shown, more lines as block grows taller
+    // Description text — shown below name, more lines as block grows taller
     if (block.description.isNotBlank()) {
-        val descSize = (8f * zoom).coerceIn(4f, 22f)
-        val descTopY = transform.toScreen(50f)
-        val availableHeight = screenH - descTopY - transform.toScreen(4f)
+        val descSize = (12f * zoom).coerceIn(5f, 36f)
+        val descTopY = transform.toScreen(34f)
+        val typeLabelHeight = transform.toScreen(16f) // reserve space for type label at bottom
+        val availableHeight = screenH - descTopY - typeLabelHeight
         if (availableHeight > 0f) {
             val maxWidth = (screenW - transform.toScreen(20f)).toInt().coerceAtLeast(1)
             val lineHeight = descSize * transform.density * 1.3f
@@ -252,6 +242,17 @@ internal fun DrawScope.drawBlock(
             )
         }
     }
+
+    // Type label — bottom-left corner
+    val typeSize = (9f * zoom).coerceIn(4f, 26f)
+    val typeLayout = textMeasurer.measure(
+        typeLabel,
+        style = TextStyle(fontSize = typeSize.sp, color = colors.blockTextSecondary),
+    )
+    drawText(
+        typeLayout,
+        topLeft = Offset(screenX + transform.toScreen(10f), screenY + screenH - typeLayout.size.height - transform.toScreen(6f)),
+    )
 
     // Gate badge indicators
     if (block is Block.ActionBlock) {
@@ -293,7 +294,7 @@ internal fun DrawScope.drawContainerBlock(
     val screenW = transform.toScreen(position.width)
     val screenH = transform.toScreen(position.height)
     val cornerRadius = transform.toScreen(8f)
-    val headerHeight = transform.toScreen(BlockPosition.CONTAINER_HEADER_HEIGHT)
+    val headerHeight = transform.toScreen(position.headerHeight)
 
     // Subtle fill at 8% opacity (distinguishes container area from empty canvas)
     drawRoundRect(
@@ -325,7 +326,6 @@ internal fun DrawScope.drawContainerBlock(
     )
 
     // Info header background (filled, top portion only)
-    // Clip to top rounded corners via a path
     val headerPath = Path().apply {
         addRoundRect(
             androidx.compose.ui.geometry.RoundRect(
@@ -351,7 +351,7 @@ internal fun DrawScope.drawContainerBlock(
         strokeWidth = transform.toScreen(1f),
     )
 
-    // Child count badge (right-aligned in header)
+    // Child count badge (top-right of header)
     val childCount = container.children.blocks.size
     val countSize = (10f * zoom).coerceIn(4f, 28f)
     val countText = "$childCount block${if (childCount != 1) "s" else ""}"
@@ -360,11 +360,11 @@ internal fun DrawScope.drawContainerBlock(
         style = TextStyle(fontSize = countSize.sp, color = colors.chromeTextSecondary),
         maxLines = 1,
     )
-    val countRightPadding = transform.toScreen(10f)
-    val countX = screenX + screenW - countLayout.size.width - countRightPadding
+    val padding = transform.toScreen(10f)
+    val countX = screenX + screenW - countLayout.size.width - padding
 
-    // Container name in header (constrained to leave room for count badge)
-    val nameSize = (12f * zoom).coerceIn(5f, 36f)
+    // Container name (top of header)
+    val nameSize = (13f * zoom).coerceIn(5f, 38f)
     val nameMaxWidth = (countX - screenX - transform.toScreen(20f)).toInt().coerceAtLeast(1)
     val nameLayout = textMeasurer.measure(
         container.name,
@@ -372,31 +372,26 @@ internal fun DrawScope.drawContainerBlock(
         maxLines = 1,
         constraints = androidx.compose.ui.unit.Constraints(maxWidth = nameMaxWidth),
     )
-    drawText(
-        nameLayout,
-        topLeft = Offset(screenX + transform.toScreen(10f), screenY + (headerHeight - nameLayout.size.height) / 2),
-    )
+    val nameY = screenY + transform.toScreen(6f)
+    drawText(nameLayout, topLeft = Offset(screenX + padding, nameY))
 
-    // Draw count badge with pill background
+    // Draw count badge with pill background (aligned with name)
     val badgePadH = transform.toScreen(4f)
     val badgePadV = transform.toScreen(2f)
-    val badgeY = screenY + (headerHeight - countLayout.size.height) / 2
+    val badgeY = nameY + (nameLayout.size.height - countLayout.size.height) / 2
     drawRoundRect(
         color = colors.containerBorder.copy(alpha = 0.2f),
         topLeft = Offset(countX - badgePadH, badgeY - badgePadV),
         size = Size(countLayout.size.width + badgePadH * 2, countLayout.size.height.toFloat() + badgePadV * 2),
         cornerRadius = CornerRadius(transform.toScreen(4f)),
     )
-    drawText(
-        countLayout,
-        topLeft = Offset(countX, badgeY),
-    )
+    drawText(countLayout, topLeft = Offset(countX, badgeY))
 
-    // Container description text — shown in content area, more lines as container grows
+    // Description in header (below name, fills remaining header space)
     if (container.description.isNotBlank()) {
-        val descSize = (8f * zoom).coerceIn(4f, 22f)
-        val descTopY = headerHeight + transform.toScreen(6f)
-        val availableHeight = screenH - descTopY - transform.toScreen(4f)
+        val descSize = (12f * zoom).coerceIn(5f, 36f)
+        val descTopY = nameY + nameLayout.size.height + transform.toScreen(2f)
+        val availableHeight = headerHeight - (descTopY - screenY) - transform.toScreen(4f)
         if (availableHeight > 0f) {
             val maxWidth = (screenW - transform.toScreen(20f)).toInt().coerceAtLeast(1)
             val lineHeight = descSize * transform.density * 1.3f
@@ -407,10 +402,7 @@ internal fun DrawScope.drawContainerBlock(
                 maxLines = maxLines,
                 constraints = androidx.compose.ui.unit.Constraints(maxWidth = maxWidth),
             )
-            drawText(
-                descLayout,
-                topLeft = Offset(screenX + transform.toScreen(10f), screenY + descTopY),
-            )
+            drawText(descLayout, topLeft = Offset(screenX + padding, descTopY))
         }
     }
 

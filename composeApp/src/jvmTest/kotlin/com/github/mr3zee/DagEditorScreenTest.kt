@@ -2550,4 +2550,58 @@ class DagEditorScreenTest {
 
         assertEquals(blockCount - 1, vm.graph.value.blocks.size, "Block should be deleted by Delete key")
     }
+
+    // --- Editable project name in header ---
+    @Test
+    fun `project name editable in header`() = runComposeUiTest {
+        val vm = editorViewModel()
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // The project name field should exist
+        onNodeWithTag("project_name_header").assertExists()
+
+        // Type in it — performTextInput prepends, so name becomes "NewTest Project"
+        onNodeWithTag("project_name_header").performTextInput("New")
+        waitForIdle()
+
+        assertTrue(vm.project.value?.name?.contains("New") == true, "Name should contain typed text")
+        assertTrue(vm.isDirty.value, "Graph should be dirty after name change")
+    }
+
+    // --- Shortcuts don't interfere with project name editing ---
+    @Test
+    fun `Ctrl-A in project name does not select all blocks`() = runComposeUiTest {
+        val vm = editorViewModel()
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Focus the project name field
+        onNodeWithTag("project_name_header").performClick()
+        waitForIdle()
+
+        // Press Ctrl+A — should NOT trigger selectAll (block selection should remain empty)
+        onNodeWithTag("project_name_header").performKeyInput {
+            keyDown(Key.MetaLeft)
+            pressKey(Key.A)
+            keyUp(Key.MetaLeft)
+        }
+        waitForIdle()
+
+        assertTrue(vm.selectedBlockIds.value.isEmpty(), "Ctrl+A in name field should not select blocks")
+    }
 }

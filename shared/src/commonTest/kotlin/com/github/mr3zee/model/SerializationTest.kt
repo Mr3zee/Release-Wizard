@@ -586,4 +586,19 @@ class SerializationTest {
         assertEquals(BlockPosition.DEFAULT_BLOCK_WIDTH, pos?.width)
         assertEquals(BlockPosition.DEFAULT_BLOCK_HEIGHT, pos?.height)
     }
+
+    @Test
+    fun `BlockPosition without headerHeight uses default`() {
+        val legacyJson = """{"x":100.0,"y":50.0,"width":400.0,"height":200.0}"""
+        val pos = json.decodeFromString<BlockPosition>(legacyJson)
+        assertEquals(BlockPosition.CONTAINER_HEADER_HEIGHT, pos.headerHeight)
+    }
+
+    @Test
+    fun `BlockPosition with explicit headerHeight round trip`() {
+        val pos = BlockPosition(100f, 50f, 400f, 200f, headerHeight = 60f)
+        val encoded = json.encodeToString(BlockPosition.serializer(), pos)
+        val decoded = json.decodeFromString<BlockPosition>(encoded)
+        assertEquals(60f, decoded.headerHeight)
+    }
 }

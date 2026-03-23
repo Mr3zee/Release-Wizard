@@ -59,6 +59,7 @@ private sealed class HitTarget {
     data class InputPort(val blockId: BlockId) : HitTarget()
     data class EdgeHit(val index: Int, val containerId: BlockId? = null) : HitTarget()
     data class ResizeHandleHit(val blockId: BlockId, val edge: ResizeEdge) : HitTarget()
+    data class HeaderDividerHit(val blockId: BlockId) : HitTarget()
 }
 
 private fun hitTest(
@@ -78,7 +79,7 @@ private fun hitTest(
         val childPos = container.children.positions[childId] ?: return null
         return BlockPosition(
             cPos.x + childPos.x,
-            cPos.y + BlockPosition.CONTAINER_HEADER_HEIGHT + childPos.y,
+            cPos.y + cPos.headerHeight + childPos.y,
             childPos.width, childPos.height,
         )
     }
@@ -153,7 +154,7 @@ private fun hitTest(
     for (container in containers) {
         val cPos = graph.positions[container.id] ?: continue
         val contentOffsetX = cPos.x
-        val contentOffsetY = cPos.y + BlockPosition.CONTAINER_HEADER_HEIGHT
+        val contentOffsetY = cPos.y + cPos.headerHeight
         for ((index, edge) in container.children.edges.withIndex()) {
             val fromChild = container.children.positions[edge.fromBlockId] ?: continue
             val toChild = container.children.positions[edge.toBlockId] ?: continue
@@ -164,6 +165,16 @@ private fun hitTest(
             if (isNearBezier(logicalPos, start, end, threshold = edgeThreshold)) {
                 return HitTarget.EdgeHit(index, containerId = container.id)
             }
+        }
+    }
+
+    // Container header divider — draggable to resize header
+    for (container in containers) {
+        val pos = graph.positions[container.id] ?: continue
+        val dividerY = pos.y + pos.headerHeight
+        if (logicalPos.x in pos.x..(pos.x + pos.width) &&
+            logicalPos.y in (dividerY - handleWidth)..(dividerY + handleWidth)) {
+            return HitTarget.HeaderDividerHit(container.id)
         }
     }
 
@@ -242,6 +253,7 @@ fun DagCanvas(
     onAddEdge: (BlockId, BlockId) -> Unit,
     onEdgeRejected: (String) -> Unit = {},
     onResizeBlock: (BlockId, ResizeEdge, Float, Float) -> Unit = { _, _, _, _ -> },
+    onResizeHeader: (BlockId, Float) -> Unit = { _, _ -> },
     onCommitResize: () -> Unit = {},
     hoveredContainerId: BlockId? = null,
     detachingFromContainerId: BlockId? = null,
@@ -272,10 +284,10 @@ fun DagCanvas(
     val currentContainers by rememberUpdatedState(containers)
     val currentActionBlocks by rememberUpdatedState(actionBlocks)
     // Pre-resolve block type labels for canvas (stringResource requires composable context)
-    // Pre-resolve type labels. Uses key() to avoid rebuilding on hover-only recompositions.
-    // typeLabel() is @Composable (calls packStringResource), so it must run in composable context.
+    // Pre-resolve type labels. Keyed on blocks list (not full graph) to avoid rebuilding on
+    // position-only changes during drag. typeLabel() is @Composable (calls packStringResource).
     var blockLabels by remember { mutableStateOf<Map<BlockId, String>>(emptyMap()) }
-    key(graph) {
+    key(graph.blocks) {
         blockLabels = buildMap {
             for (block in graph.blocks) {
                 put(block.id, block.typeLabel())
@@ -312,10 +324,10 @@ fun DagCanvas(
                             val logical = t.toLogical(pos)
                             val hit = hitTest(logical, currentGraph, zoom, currentContainers, currentActionBlocks)
                             hoveredPort = if (hit is HitTarget.InputPort || hit is HitTarget.OutputPort) hit else null
-                            cursorIcon = if (!isReadOnly && hit is HitTarget.ResizeHandleHit) {
-                                resizeEdgeCursor(hit.edge)
-                            } else {
-                                PointerIcon.Default
+                            cursorIcon = when {
+                                !isReadOnly && hit is HitTarget.ResizeHandleHit -> resizeEdgeCursor(hit.edge)
+                                !isReadOnly && hit is HitTarget.HeaderDividerHit -> resizeEdgeCursor(ResizeEdge.Top)
+                                else -> PointerIcon.Default
                             }
                         }
                     }
@@ -371,6 +383,7 @@ fun DagCanvas(
                                             if (isModifierHeld) onToggleBlockSelection(hit.blockId)
                                             else onSelectBlock(hit.blockId)
                                         }
+                                        is HitTarget.HeaderDividerHit -> onSelectBlock(hit.blockId)
                                         is HitTarget.EdgeHit -> onSelectEdge(hit.index, hit.containerId)
                                         is HitTarget.None -> {
                                             onSelectBlock(null)
@@ -381,6 +394,7 @@ fun DagCanvas(
                                     when (hit) {
                                         is HitTarget.BlockHit -> onCommitMove()
                                         is HitTarget.ResizeHandleHit -> onCommitResize()
+                                        is HitTarget.HeaderDividerHit -> onCommitResize()
                                         is HitTarget.OutputPort -> {
                                             val releaseTransform = CanvasTransform(zoom, panOffset, density)
                                             val releaseLogical = releaseTransform.toLogical(moveChange.position)
@@ -434,6 +448,14 @@ fun DagCanvas(
                                             panOffset += delta
                                         }
                                     }
+                                    is HitTarget.HeaderDividerHit -> {
+                                        if (!isReadOnly) {
+                                            val logicalDelta = moveTransform.toLogicalDelta(delta)
+                                            onResizeHeader(hit.blockId, logicalDelta.y)
+                                        } else {
+                                            panOffset += delta
+                                        }
+                                    }
                                     is HitTarget.OutputPort -> {
                                         if (!isReadOnly) {
                                             connectionDraft = ConnectionDraft(
@@ -473,7 +495,7 @@ fun DagCanvas(
 
             // Draw children's edges within the container
             val contentOffsetX = pos.x
-            val contentOffsetY = pos.y + BlockPosition.CONTAINER_HEADER_HEIGHT
+            val contentOffsetY = pos.y + pos.headerHeight
             for ((childEdgeIndex, childEdge) in container.children.edges.withIndex()) {
                 val fromChild = container.children.positions[childEdge.fromBlockId] ?: continue
                 val toChild = container.children.positions[childEdge.toBlockId] ?: continue
@@ -523,7 +545,7 @@ fun DagCanvas(
                     val childPos = c.children.positions[draft.fromBlockId] ?: continue
                     resolved = BlockPosition(
                         cPos.x + childPos.x,
-                        cPos.y + BlockPosition.CONTAINER_HEADER_HEIGHT + childPos.y,
+                        cPos.y + cPos.headerHeight + childPos.y,
                         childPos.width, childPos.height,
                     )
                     break

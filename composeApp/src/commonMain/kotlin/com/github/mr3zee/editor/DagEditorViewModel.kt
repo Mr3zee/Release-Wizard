@@ -148,6 +148,7 @@ class DagEditorViewModel(
             val updated = apiClient.updateProject(
                 p.id,
                 UpdateProjectRequest(
+                    name = p.name,
                     dagGraph = graphSnapshot,
                     description = descSnapshot,
                 ),
@@ -324,6 +325,7 @@ class DagEditorViewModel(
                 val updated = apiClient.updateProject(
                     p.id,
                     UpdateProjectRequest(
+                        name = p.name,
                         dagGraph = _graph.value,
                         description = p.description,
                     ),
@@ -499,9 +501,9 @@ class DagEditorViewModel(
             val containerPos = g.positions[parentId]
             if (containerPos != null) {
                 val absX = containerPos.x + newChildPos.x + newChildPos.width / 2
-                val absY = containerPos.y + BlockPosition.CONTAINER_HEADER_HEIGHT + newChildPos.y + newChildPos.height / 2
+                val absY = containerPos.y + containerPos.headerHeight + newChildPos.y + newChildPos.height / 2
                 val insideX = absX in containerPos.x..(containerPos.x + containerPos.width)
-                val insideY = absY in (containerPos.y + BlockPosition.CONTAINER_HEADER_HEIGHT)..(containerPos.y + containerPos.height)
+                val insideY = absY in (containerPos.y + containerPos.headerHeight)..(containerPos.y + containerPos.height)
                 _detachingFromContainerId.value = if (!insideX || !insideY) parentId else null
             }
         } else {
@@ -518,7 +520,7 @@ class DagEditorViewModel(
                 val hovered = g.blocks.filterIsInstance<Block.ContainerBlock>().find { container ->
                     val cPos = g.positions[container.id] ?: return@find false
                     centerX in cPos.x..(cPos.x + cPos.width) &&
-                        centerY in (cPos.y + BlockPosition.CONTAINER_HEADER_HEIGHT)..(cPos.y + cPos.height)
+                        centerY in (cPos.y + cPos.headerHeight)..(cPos.y + cPos.height)
                 }
                 _hoveredContainerId.value = hovered?.id
             }
@@ -590,7 +592,7 @@ class DagEditorViewModel(
 
         // Convert absolute position to relative within container content area
         val relX = blockPos.x - containerPos.x
-        val relY = blockPos.y - containerPos.y - BlockPosition.CONTAINER_HEADER_HEIGHT
+        val relY = blockPos.y - containerPos.y - containerPos.headerHeight
         val relPos = BlockPosition(relX, relY, blockPos.width, blockPos.height)
 
         // Remove from top-level
@@ -621,7 +623,7 @@ class DagEditorViewModel(
 
         // Convert relative to absolute position
         val absX = containerPos.x + childPos.x
-        val absY = containerPos.y + BlockPosition.CONTAINER_HEADER_HEIGHT + childPos.y
+        val absY = containerPos.y + containerPos.headerHeight + childPos.y
         val absPos = BlockPosition(absX, absY, childPos.width, childPos.height)
 
         // Remove from container children
@@ -651,7 +653,7 @@ class DagEditorViewModel(
         for (child in container.children.blocks) {
             val childPos = container.children.positions[child.id] ?: continue
             neededWidth = maxOf(neededWidth, childPos.x + childPos.width + padding)
-            neededHeight = maxOf(neededHeight, childPos.y + childPos.height + BlockPosition.CONTAINER_HEADER_HEIGHT + padding)
+            neededHeight = maxOf(neededHeight, childPos.y + childPos.height + cPos.headerHeight + padding)
         }
 
         if (neededWidth > cPos.width || neededHeight > cPos.height) {
@@ -700,7 +702,7 @@ class DagEditorViewModel(
                 }.coerceAtLeast(BlockPosition.DEFAULT_CONTAINER_WIDTH)
                 contentMinH = block.children.blocks.maxOf { child ->
                     val cp = block.children.positions[child.id] ?: return@maxOf 0f
-                    cp.y + cp.height + BlockPosition.CONTAINER_HEADER_HEIGHT + padding
+                    cp.y + cp.height + pos.headerHeight + padding
                 }.coerceAtLeast(BlockPosition.DEFAULT_CONTAINER_HEIGHT)
             } else {
                 contentMinW = 0f
@@ -717,7 +719,7 @@ class DagEditorViewModel(
         contentMinW: Float = 0f, contentMinH: Float = 0f,
     ): BlockPosition {
         val defaultMinW = if (isContainer) BlockPosition.DEFAULT_CONTAINER_WIDTH else BlockPosition.DEFAULT_BLOCK_WIDTH
-        val defaultMinH = if (isContainer) BlockPosition.DEFAULT_CONTAINER_HEIGHT else BlockPosition.DEFAULT_BLOCK_HEIGHT
+        val defaultMinH = if (isContainer) maxOf(BlockPosition.DEFAULT_CONTAINER_HEIGHT, pos.headerHeight + BlockPosition.MIN_CONTAINER_CONTENT_HEIGHT) else BlockPosition.DEFAULT_BLOCK_HEIGHT
         val minW = maxOf(defaultMinW, contentMinW)
         val minH = maxOf(defaultMinH, contentMinH)
 
@@ -745,7 +747,21 @@ class DagEditorViewModel(
             else -> pos.y to pos.height
         }
 
-        return BlockPosition(newX, newY, newWidth, newHeight)
+        return pos.copy(x = newX, y = newY, width = newWidth, height = newHeight)
+    }
+
+    fun resizeHeader(blockId: BlockId, dy: Float) {
+        if (isReadOnly.value) return
+        val g = _graph.value
+        val pos = g.positions[blockId] ?: return
+        val newHeaderHeight = (pos.headerHeight + dy).coerceIn(
+            BlockPosition.MIN_CONTAINER_HEADER_HEIGHT,
+            pos.height - BlockPosition.MIN_CONTAINER_CONTENT_HEIGHT,
+        )
+        _graph.value = g.copy(positions = g.positions + (blockId to pos.copy(headerHeight = newHeaderHeight)))
+        _isDirty.value = true
+        // Children positions are relative to header bottom — growing the header pushes them down
+        autoResizeContainer(blockId)
     }
 
     fun commitResize() {
@@ -1068,7 +1084,7 @@ class DagEditorViewModel(
                         if (childPos != null && containerPos != null) {
                             positions[child.id] = childPos.copy(
                                 x = containerPos.x + childPos.x,
-                                y = containerPos.y + BlockPosition.CONTAINER_HEADER_HEIGHT + childPos.y,
+                                y = containerPos.y + containerPos.headerHeight + childPos.y,
                             )
                         }
                     }
