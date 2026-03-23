@@ -134,6 +134,7 @@ fun DagCanvas(
     onMoveBlock: (BlockId, Float, Float) -> Unit,
     onCommitMove: () -> Unit,
     onAddEdge: (BlockId, BlockId) -> Unit,
+    onEdgeRejected: (String) -> Unit = {},
     isReadOnly: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
@@ -246,8 +247,16 @@ fun DagCanvas(
                                             val releaseTransform = CanvasTransform(zoom, panOffset, density)
                                             val releaseLogical = releaseTransform.toLogical(moveChange.position)
                                             val releaseHit = hitTest(releaseLogical, currentGraph, zoom)
-                                            if (releaseHit is HitTarget.InputPort && releaseHit.blockId != hit.blockId) {
-                                                onAddEdge(hit.blockId, releaseHit.blockId)
+                                            if (releaseHit is HitTarget.InputPort) {
+                                                val from = hit.blockId
+                                                val to = releaseHit.blockId
+                                                if (from == to) {
+                                                    onEdgeRejected("Cannot connect a block to itself")
+                                                } else if (wouldCreateCycle(currentGraph, from, to)) {
+                                                    onEdgeRejected("Cannot create a cycle in the pipeline")
+                                                } else {
+                                                    onAddEdge(from, to)
+                                                }
                                             }
                                             connectionDraft = null
                                         }
@@ -411,4 +420,21 @@ fun DagCanvas(
         }
     }
     } // Box
+}
+
+/** Check if adding an edge from→to would create a cycle in the DAG. */
+private fun wouldCreateCycle(graph: com.github.mr3zee.model.DagGraph, from: com.github.mr3zee.model.BlockId, to: com.github.mr3zee.model.BlockId): Boolean {
+    // BFS from `to` following existing edges. If we can reach `from`, adding from→to creates a cycle.
+    val adjacency = graph.edges.groupBy({ it.fromBlockId }, { it.toBlockId })
+    val visited = mutableSetOf(to)
+    val queue = ArrayDeque<com.github.mr3zee.model.BlockId>()
+    queue.add(to)
+    while (queue.isNotEmpty()) {
+        val current = queue.removeFirst()
+        if (current == from) return true
+        adjacency[current]?.forEach { next ->
+            if (visited.add(next)) queue.add(next)
+        }
+    }
+    return false
 }

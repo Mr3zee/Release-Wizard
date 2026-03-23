@@ -17,6 +17,8 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
@@ -89,6 +91,7 @@ fun DagEditorScreen(
     val isConfirmationVisible = pendingDiscardNavigation != null || pendingLockLostNavigation != null || showForceUnlockDialog
 
     val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarScope = rememberCoroutineScope()
     val dismissLabel = packStringResource(Res.string.common_dismiss)
     val resolvedError = error?.resolve()
 
@@ -437,6 +440,9 @@ fun DagEditorScreen(
                     onMoveBlock = { id, dx, dy -> viewModel.moveBlock(id, dx, dy) },
                     onCommitMove = { viewModel.commitMove() },
                     onAddEdge = { from, to -> viewModel.addEdge(from, to) },
+                    onEdgeRejected = { message ->
+                        snackbarScope.launch { snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short) }
+                    },
                     isReadOnly = isReadOnly,
                     modifier = Modifier
                         .weight(1f)
