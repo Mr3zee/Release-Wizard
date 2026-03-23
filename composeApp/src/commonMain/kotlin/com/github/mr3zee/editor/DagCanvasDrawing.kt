@@ -18,9 +18,6 @@ import com.github.mr3zee.model.*
 import com.github.mr3zee.theme.AppColors
 import kotlin.math.PI
 
-// Default block dimensions in dp (logical coordinates) — kept for backward compat references
-internal const val BLOCK_WIDTH = BlockPosition.DEFAULT_BLOCK_WIDTH
-internal const val BLOCK_HEIGHT = BlockPosition.DEFAULT_BLOCK_HEIGHT
 internal const val PORT_RADIUS = 8f
 internal const val PORT_HIT_RADIUS = 14f
 internal const val GRID_SIZE = 20f
@@ -31,11 +28,6 @@ internal const val RESIZE_HANDLE_WIDTH = 6f
 enum class ResizeEdge {
     Top, Bottom, Left, Right,
     TopLeft, TopRight, BottomLeft, BottomRight;
-
-    val isCorner: Boolean get() = when (this) {
-        TopLeft, TopRight, BottomLeft, BottomRight -> true
-        else -> false
-    }
 }
 
 internal fun blockColor(block: Block, colors: AppColors): Color = when (block) {

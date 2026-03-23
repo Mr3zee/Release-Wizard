@@ -56,7 +56,9 @@ import com.github.mr3zee.theme.loadLanguagePack
 import com.github.mr3zee.theme.loadThemePreference
 import com.github.mr3zee.theme.saveLanguagePack
 import com.github.mr3zee.theme.saveThemePreference
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * CompositionLocal for the server-driven password policy hint string.
@@ -309,7 +311,7 @@ fun App() {
                     user != null && user?.teams?.isNotEmpty() == true && currentTeamId == null -> {
                         // Waiting for team auto-selection from LaunchedEffect(user)
                         LaunchedEffect(Unit) {
-                            kotlinx.coroutines.delay(3000L)
+                            delay(3000L.milliseconds)
                             // If still no team selected after 3s, something went wrong — show teams list
                             if (activeTeamId.value == null) {
                                 navController.resetTo(Screen.TeamList)

@@ -642,7 +642,7 @@ class DagEditorViewModel(
      * When removing multiple blocks, they are all pushed by the same delta to preserve relative positions.
      */
     private fun removeBlocksFromContainer(blockIds: Set<BlockId>, containerId: BlockId) {
-        var g = _graph.value
+        val g = _graph.value
         val container = g.blocks.find { it.id == containerId } as? Block.ContainerBlock ?: return
         val containerPos = g.positions[containerId] ?: return
 
@@ -705,7 +705,7 @@ class DagEditorViewModel(
 
         // Add to top-level with pushed positions
         var finalBlocks = g.blocks.map { if (it.id == containerId) updatedContainer else it }
-        var finalPositions = g.positions.toMutableMap()
+        val finalPositions = g.positions.toMutableMap()
         for (rb in removed) {
             finalBlocks = finalBlocks + rb.block
             finalPositions[rb.block.id] = rb.absPos.copy(x = rb.absPos.x + pushDx, y = rb.absPos.y + pushDy)
@@ -816,7 +816,7 @@ class DagEditorViewModel(
                 // Only shift children when the border is blocked by the content min.
                 // Shift by exactly the resize delta, capped at the available gap.
                 var updatedBlock = block
-                var updatedPos = pos
+                val updatedPos = pos
                 if (resizesLeft || resizesTop) {
                     val positions = updatedBlock.children.positions.toMutableMap()
                     if (resizesLeft && dx > 0f) {

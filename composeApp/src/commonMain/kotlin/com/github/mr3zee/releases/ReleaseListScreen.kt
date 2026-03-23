@@ -46,7 +46,6 @@ import com.github.mr3zee.model.ReleaseId
 import com.github.mr3zee.model.ReleaseStatus
 import com.github.mr3zee.model.isTerminal
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.semantics.contentDescription

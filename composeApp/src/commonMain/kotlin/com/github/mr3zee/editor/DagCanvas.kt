@@ -680,7 +680,7 @@ fun DagCanvas(
 internal expect fun resizeEdgeCursor(edge: ResizeEdge): PointerIcon
 
 /** Check if adding an edge from→to would create a cycle in the DAG. */
-private fun wouldCreateCycle(graph: com.github.mr3zee.model.DagGraph, from: com.github.mr3zee.model.BlockId, to: com.github.mr3zee.model.BlockId): Boolean {
+private fun wouldCreateCycle(graph: DagGraph, from: BlockId, to: BlockId): Boolean {
     // BFS from `to` following existing edges. If we can reach `from`, adding from→to creates a cycle.
     // Collect all edges: top-level + all container children edges
     val allEdges = buildList {
@@ -691,7 +691,7 @@ private fun wouldCreateCycle(graph: com.github.mr3zee.model.DagGraph, from: com.
     }
     val adjacency = allEdges.groupBy({ it.fromBlockId }, { it.toBlockId })
     val visited = mutableSetOf(to)
-    val queue = ArrayDeque<com.github.mr3zee.model.BlockId>()
+    val queue = ArrayDeque<BlockId>()
     queue.add(to)
     while (queue.isNotEmpty()) {
         val current = queue.removeFirst()

@@ -30,6 +30,7 @@ import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.Spacing
 import kotlinx.coroutines.delay
 import releasewizard.composeapp.generated.resources.*
+import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun PendingApprovalScreen(
@@ -41,7 +42,7 @@ fun PendingApprovalScreen(
     // Auto-poll every 30 seconds
     LaunchedEffect(Unit) {
         while (true) {
-            delay(30_000L)
+            delay(30_000L.milliseconds)
             onCheckStatus()
         }
     }

@@ -7,7 +7,6 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -28,7 +27,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Settings
@@ -63,7 +61,6 @@ import com.github.mr3zee.api.UserTeamInfo
 import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwRadioButton
 import com.github.mr3zee.components.RwTooltip
-import com.github.mr3zee.components.SidebarNavItem
 import com.github.mr3zee.i18n.LanguagePack
 import com.github.mr3zee.i18n.packStringResource
 import com.github.mr3zee.model.TeamId

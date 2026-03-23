@@ -25,6 +25,7 @@ import com.github.mr3zee.theme.AppShapes
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.LocalAppColors
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Custom tooltip that renders in a Popup layer to avoid clipping by sibling composables.
@@ -43,7 +44,7 @@ fun RwTooltip(
 
     LaunchedEffect(isHovered) {
         if (isHovered) {
-            delay(hoverDelayMillis)
+            delay(hoverDelayMillis.milliseconds)
             showTooltip = true
         } else {
             showTooltip = false

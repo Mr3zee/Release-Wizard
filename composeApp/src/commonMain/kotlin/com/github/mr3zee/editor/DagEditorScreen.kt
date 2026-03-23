@@ -63,7 +63,9 @@ import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.resolve
 import com.github.mr3zee.i18n.packPluralStringResource
 import com.github.mr3zee.i18n.packStringResource
+import kotlinx.coroutines.delay
 import releasewizard.composeapp.generated.resources.*
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -321,7 +323,7 @@ fun DagEditorScreen(
                             // Debounced saving indicator — only show after 300ms to avoid flash for quick saves
                             var showSavingIndicator by remember { mutableStateOf(false) }
                             LaunchedEffect(Unit) {
-                                kotlinx.coroutines.delay(300L)
+                                delay(300L.milliseconds)
                                 showSavingIndicator = true
                             }
                             if (showSavingIndicator) {
