@@ -667,7 +667,7 @@
     <string name="admin_users_empty">No registered users yet</string>
     <string name="admin_users_empty_hint">Users will appear here once they register.</string>
     <string name="admin_users_generate_reset_link">Generate Reset Link</string>
-    <string name="admin_users_generate_set_password_link">Generate Set Password Link</string>
+    <string name="admin_users_generate_set_password_link">Generate Password Link</string>
     <string name="admin_users_oauth_badge">Google</string>
     <string name="admin_users_no_password_badge">No Password</string>
     <string name="admin_users_copy_link">Copy Link</string>

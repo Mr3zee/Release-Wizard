@@ -378,6 +378,14 @@ fun Route.authRoutes() {
             requireAdmin(call, session) ?: return@post
             val request = call.receive<GeneratePasswordResetRequest>()
 
+            if (session.userId == request.userId) {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse(error = "Cannot generate a password link for yourself", code = "SELF_RESET"),
+                )
+                return@post
+            }
+
             val result = passwordResetService.generateToken(
                 UserId(request.userId),
                 UserId(session.userId),

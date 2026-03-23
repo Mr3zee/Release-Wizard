@@ -64,6 +64,7 @@ import releasewizard.composeapp.generated.resources.*
 @Composable
 fun AdminUsersScreen(
     viewModel: AdminUsersViewModel,
+    currentUserId: String?,
     onBack: () -> Unit,
 ) {
     val users by viewModel.users.collectAsState()
@@ -199,8 +200,10 @@ fun AdminUsersScreen(
                                 .testTag("admin_users_active_section_header"),
                         )
                         activeUsers.forEach { user ->
+                            val isSelf = currentUserId != null && user.id.value == currentUserId
                             ActiveUserItem(
                                 user = user,
+                                isSelf = isSelf,
                                 generatedLink = generatedLinks[user.id.value],
                                 onGenerateResetLink = { viewModel.generateResetLink(user.id.value) },
                                 onCopyLink = { link ->
@@ -298,6 +301,7 @@ private fun PendingUserItem(
 @Composable
 private fun ActiveUserItem(
     user: User,
+    isSelf: Boolean,
     generatedLink: String?,
     onGenerateResetLink: () -> Unit,
     onCopyLink: (String) -> Unit,
@@ -374,17 +378,19 @@ private fun ActiveUserItem(
             }
         }
 
-        Spacer(modifier = Modifier.width(Spacing.sm))
+        if (!isSelf) {
+            Spacer(modifier = Modifier.width(Spacing.sm))
 
-        RwButton(
-            onClick = onGenerateResetLink,
-            variant = RwButtonVariant.Secondary,
-            modifier = Modifier.testTag("admin_generate_reset_link_$userId"),
-        ) {
-            Text(
-                if (user.hasPassword) packStringResource(Res.string.admin_users_generate_reset_link)
-                else packStringResource(Res.string.admin_users_generate_set_password_link)
-            )
+            RwButton(
+                onClick = onGenerateResetLink,
+                variant = RwButtonVariant.Secondary,
+                modifier = Modifier.testTag("admin_generate_reset_link_$userId"),
+            ) {
+                Text(
+                    if (user.hasPassword) packStringResource(Res.string.admin_users_generate_reset_link)
+                    else packStringResource(Res.string.admin_users_generate_set_password_link)
+                )
+            }
         }
     }
 }

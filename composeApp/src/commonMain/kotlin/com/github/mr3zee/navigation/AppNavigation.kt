@@ -246,6 +246,7 @@ fun AppNavigation(
             val viewModel = remember { AdminUsersViewModel(client) }
             AdminUsersScreen(
                 viewModel = viewModel,
+                currentUserId = currentUserId,
                 onBack = { onGoBack() },
             )
         }
