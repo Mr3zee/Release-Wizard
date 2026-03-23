@@ -102,12 +102,6 @@ fun BlockPropertiesPanel(
                 modifier = Modifier.fillMaxWidth().testTag("project_description_field"),
                 testTag = "project_description_field",
             )
-            Spacer(Modifier.height(Spacing.md))
-            Text(
-                packStringResource(Res.string.editor_prop_empty_hint),
-                style = AppTypography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
             return@Column
         }
 
@@ -178,6 +172,20 @@ fun BlockPropertiesPanel(
         modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
         adapter = rememberScrollbarAdapter(scrollState),
     )
+    // Centered hint when no block is selected
+    if (block == null) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                packStringResource(Res.string.editor_prop_empty_hint),
+                style = AppTypography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(Spacing.md),
+            )
+        }
+    }
     }
 }
 

@@ -68,6 +68,7 @@ fun RwTooltip(
         if (showTooltip) {
             Popup(
                 popupPositionProvider = TooltipPositionProvider,
+                properties = androidx.compose.ui.window.PopupProperties(focusable = false),
             ) {
                 Box(
                     modifier = Modifier

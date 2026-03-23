@@ -231,17 +231,19 @@ internal fun DrawScope.drawBlock(
         topLeft = Offset(screenX + transform.toScreen(10f), screenY + transform.toScreen(36f)),
     )
 
-    // Description text (shown when block is taller than default)
-    if (block.description.isNotBlank() && position.height > BlockPosition.DEFAULT_BLOCK_HEIGHT + 10f) {
-        val descSize = (9f * zoom).coerceIn(4f, 24f)
-        val descTopY = transform.toScreen(54f)
-        val availableHeight = screenH - descTopY - transform.toScreen(8f)
+    // Description text — always shown, more lines as block grows taller
+    if (block.description.isNotBlank()) {
+        val descSize = (8f * zoom).coerceIn(4f, 22f)
+        val descTopY = transform.toScreen(50f)
+        val availableHeight = screenH - descTopY - transform.toScreen(4f)
         if (availableHeight > 0f) {
             val maxWidth = (screenW - transform.toScreen(20f)).toInt().coerceAtLeast(1)
+            val lineHeight = descSize * transform.density * 1.3f
+            val maxLines = (availableHeight / lineHeight).toInt().coerceAtLeast(1)
             val descLayout = textMeasurer.measure(
                 block.description,
                 style = TextStyle(fontSize = descSize.sp, color = colors.blockTextSecondary),
-                maxLines = (availableHeight / (descSize * transform.density * 1.3f)).toInt().coerceAtLeast(1),
+                maxLines = maxLines,
                 constraints = androidx.compose.ui.unit.Constraints(maxWidth = maxWidth),
             )
             drawText(
@@ -389,6 +391,28 @@ internal fun DrawScope.drawContainerBlock(
         countLayout,
         topLeft = Offset(countX, badgeY),
     )
+
+    // Container description text — shown in content area, more lines as container grows
+    if (container.description.isNotBlank()) {
+        val descSize = (8f * zoom).coerceIn(4f, 22f)
+        val descTopY = headerHeight + transform.toScreen(6f)
+        val availableHeight = screenH - descTopY - transform.toScreen(4f)
+        if (availableHeight > 0f) {
+            val maxWidth = (screenW - transform.toScreen(20f)).toInt().coerceAtLeast(1)
+            val lineHeight = descSize * transform.density * 1.3f
+            val maxLines = (availableHeight / lineHeight).toInt().coerceAtLeast(1)
+            val descLayout = textMeasurer.measure(
+                container.description,
+                style = TextStyle(fontSize = descSize.sp, color = colors.chromeTextSecondary),
+                maxLines = maxLines,
+                constraints = androidx.compose.ui.unit.Constraints(maxWidth = maxWidth),
+            )
+            drawText(
+                descLayout,
+                topLeft = Offset(screenX + transform.toScreen(10f), screenY + descTopY),
+            )
+        }
+    }
 
     // Empty container placeholder
     if (childCount == 0) {

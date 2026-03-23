@@ -2485,4 +2485,69 @@ class DagEditorScreenTest {
 
         onNodeWithText("Validation Issues").assertExists()
     }
+
+    // --- Backspace/Delete shortcuts work on blocks and edges ---
+    @Test
+    fun `Backspace deletes selected block`() = runComposeUiTest {
+        val vm = editorViewModel()
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        assertEquals(1, vm.graph.value.blocks.size, "Should start with 1 block")
+
+        // Select the block by clicking on canvas
+        onNodeWithTag("dag_canvas").performTouchInput {
+            click(Offset(190f, 135f))
+        }
+        waitForIdle()
+
+        // Press Backspace
+        onNodeWithTag("dag_editor_screen").performKeyInput {
+            pressKey(Key.Backspace)
+        }
+        waitForIdle()
+
+        assertEquals(0, vm.graph.value.blocks.size, "Block should be deleted by Backspace")
+    }
+
+    @Test
+    fun `Delete removes selected block`() = runComposeUiTest {
+        val vm = editorViewModel()
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Add a second block and connect
+        onNodeWithTag("add_block_SLACK_MESSAGE").performClick()
+        waitForIdle()
+        val blockCount = vm.graph.value.blocks.size
+        assertTrue(blockCount >= 2)
+
+        // Select the first block
+        onNodeWithTag("dag_canvas").performTouchInput {
+            click(Offset(190f, 135f))
+        }
+        waitForIdle()
+
+        // Press Delete
+        onNodeWithTag("dag_editor_screen").performKeyInput {
+            pressKey(Key.Delete)
+        }
+        waitForIdle()
+
+        assertEquals(blockCount - 1, vm.graph.value.blocks.size, "Block should be deleted by Delete key")
+    }
 }
