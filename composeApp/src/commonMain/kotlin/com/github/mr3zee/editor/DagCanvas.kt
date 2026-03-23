@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -145,6 +146,10 @@ fun DagCanvas(
     var connectionDraft by remember { mutableStateOf<ConnectionDraft?>(null) }
     var hoveredPort by remember { mutableStateOf<HitTarget?>(null) }
 
+    // Always-current graph reference for pointerInput lambdas that don't
+    // restart on graph changes (to avoid cancelling active drag gestures).
+    val currentGraph by rememberUpdatedState(graph)
+
     // Transform for drawing — recreated each recomposition
     val drawTransform = CanvasTransform(zoom, panOffset, density)
 
@@ -176,7 +181,7 @@ fun DagCanvas(
                             // Compute transform inline to avoid stale captures
                             val t = CanvasTransform(zoom, panOffset, density)
                             val logical = t.toLogical(pos)
-                            val hit = hitTest(logical, graph, zoom)
+                            val hit = hitTest(logical, currentGraph, zoom)
                             hoveredPort = if (hit is HitTarget.InputPort || hit is HitTarget.OutputPort) hit else null
                         }
                     }
@@ -196,7 +201,7 @@ fun DagCanvas(
                         // Compute transform inline from current state
                         val downTransform = CanvasTransform(zoom, panOffset, density)
                         val logicalDown = downTransform.toLogical(downPos)
-                        val hit = hitTest(logicalDown, graph, zoom)
+                        val hit = hitTest(logicalDown, currentGraph, zoom)
 
                         var prevPos = downPos
                         var wasDragged = false
@@ -240,7 +245,7 @@ fun DagCanvas(
                                         is HitTarget.OutputPort -> {
                                             val releaseTransform = CanvasTransform(zoom, panOffset, density)
                                             val releaseLogical = releaseTransform.toLogical(moveChange.position)
-                                            val releaseHit = hitTest(releaseLogical, graph, zoom)
+                                            val releaseHit = hitTest(releaseLogical, currentGraph, zoom)
                                             if (releaseHit is HitTarget.InputPort) {
                                                 onAddEdge(hit.blockId, releaseHit.blockId)
                                             }
