@@ -163,7 +163,7 @@ fun DagCanvas(
             // Scroll for zoom + hover tracking
             // (macOS trackpad pinch generates scroll events, so this covers both
             // scroll-wheel zoom and pinch-to-zoom on Desktop)
-            .pointerInput(graph) {
+            .pointerInput(Unit) {
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent()
@@ -183,7 +183,10 @@ fun DagCanvas(
                 }
             }
             // Click and drag
-            .pointerInput(graph, isReadOnly, selectedBlockIds) {
+            // Key does NOT include `graph` — graph changes on every block move,
+            // which would restart this handler and cancel the active drag gesture.
+            // Graph is read inline via Compose snapshot state.
+            .pointerInput(isReadOnly, selectedBlockIds) {
                 awaitPointerEventScope {
                     while (true) {
                         val down = awaitPointerEvent()
