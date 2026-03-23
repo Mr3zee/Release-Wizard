@@ -576,13 +576,7 @@ private fun AutoSaveIndicator(status: AutoSaveStatus) {
         ) {
             when (targetStatus) {
                 is AutoSaveStatus.Idle -> {}
-                is AutoSaveStatus.Pending -> {
-                    Text(
-                        " " + packStringResource(Res.string.editor_dirty_indicator),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = AppTypography.body,
-                    )
-                }
+                is AutoSaveStatus.Pending -> {}
                 is AutoSaveStatus.Saving -> {
                     CircularProgressIndicator(
                         modifier = Modifier.size(14.dp),

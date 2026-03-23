@@ -491,14 +491,16 @@ fun DagCanvas(
                 drawBlock(drawTransform, childBlock, absPos, isChildSelected, textMeasurer, zoom, appColors, blockLabels[childBlock.id] ?: "")
             }
 
-            // Draw children ports
+            // Draw children ports (same idle/dragging visibility as top-level)
+            val isDragging = connectionDraft != null
             for (childBlock in container.children.blocks) {
                 val childPos = container.children.positions[childBlock.id] ?: continue
                 val absPos = BlockPosition(contentOffsetX + childPos.x, contentOffsetY + childPos.y, childPos.width, childPos.height)
                 val currentHoveredPort = hoveredPort
                 val isInputHovered = currentHoveredPort is HitTarget.InputPort && currentHoveredPort.blockId == childBlock.id
                 val isOutputHovered = currentHoveredPort is HitTarget.OutputPort && currentHoveredPort.blockId == childBlock.id
-                drawPorts(drawTransform, absPos, isInputHovered, isOutputHovered, appColors)
+                drawPorts(drawTransform, absPos, isInputHovered, isOutputHovered, appColors,
+                    showInput = isDragging, showOutput = !isDragging)
             }
         }
 
@@ -548,12 +550,15 @@ fun DagCanvas(
         }
 
         // Layer 4: Ports for top-level blocks (containers + action blocks)
+        // When idle: show only output (from) ports. When dragging a connection: show only input (to) ports.
+        val isDraggingConnection = connectionDraft != null
         for (block in graph.blocks) {
             val pos = graph.positions[block.id] ?: continue
             val currentHoveredPort = hoveredPort
             val isInputHovered = currentHoveredPort is HitTarget.InputPort && currentHoveredPort.blockId == block.id
             val isOutputHovered = currentHoveredPort is HitTarget.OutputPort && currentHoveredPort.blockId == block.id
-            drawPorts(drawTransform, pos, isInputHovered, isOutputHovered, appColors)
+            drawPorts(drawTransform, pos, isInputHovered, isOutputHovered, appColors,
+                showInput = isDraggingConnection, showOutput = !isDraggingConnection)
         }
     }
 

@@ -419,17 +419,23 @@ internal fun DrawScope.drawPorts(
     isInputHovered: Boolean,
     isOutputHovered: Boolean,
     colors: AppColors,
+    showInput: Boolean = true,
+    showOutput: Boolean = true,
 ) {
     val portScreenRadius = transform.toScreen(PORT_RADIUS)
     val yOff = portYOffset(position)
 
-    val inX = transform.toScreenX(position.x)
-    val inY = transform.toScreenY(position.y + yOff)
-    drawPort(transform, portScreenRadius, Offset(inX, inY), isInputHovered, colors)
+    if (showInput) {
+        val inX = transform.toScreenX(position.x)
+        val inY = transform.toScreenY(position.y + yOff)
+        drawPort(transform, portScreenRadius, Offset(inX, inY), isInputHovered, colors)
+    }
 
-    val outX = transform.toScreenX(position.x + position.width)
-    val outY = transform.toScreenY(position.y + yOff)
-    drawPort(transform, portScreenRadius, Offset(outX, outY), isOutputHovered, colors)
+    if (showOutput) {
+        val outX = transform.toScreenX(position.x + position.width)
+        val outY = transform.toScreenY(position.y + yOff)
+        drawPort(transform, portScreenRadius, Offset(outX, outY), isOutputHovered, colors)
+    }
 }
 
 private fun DrawScope.drawPort(

@@ -69,9 +69,11 @@ class AuthViewModel(
             _isLoading.value = true
             _error.value = null
             try {
-                val userInfo = apiClient.login(username, password)
-                _user.value = userInfo
+                apiClient.login(username, password)
                 hadSession = true
+                // Login response doesn't include teams — fetch full profile via /me
+                val fullUser = apiClient.me()
+                _user.value = fullUser
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -85,9 +87,11 @@ class AuthViewModel(
             _isLoading.value = true
             _error.value = null
             try {
-                val userInfo = apiClient.register(username, password)
-                _user.value = userInfo
+                apiClient.register(username, password)
                 hadSession = true
+                // Register response doesn't include teams — fetch full profile via /me
+                val fullUser = apiClient.me()
+                _user.value = fullUser
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
