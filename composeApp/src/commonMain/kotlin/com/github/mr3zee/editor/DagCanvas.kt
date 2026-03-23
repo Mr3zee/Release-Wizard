@@ -254,6 +254,7 @@ fun DagCanvas(
     onEdgeRejected: (String) -> Unit = {},
     onResizeBlock: (BlockId, ResizeEdge, Float, Float) -> Unit = { _, _, _, _ -> },
     onResizeHeader: (BlockId, Float) -> Unit = { _, _ -> },
+    onUpdateDragFeedback: (Set<BlockId>) -> Unit = {},
     onCommitResize: () -> Unit = {},
     hoveredContainerId: BlockId? = null,
     detachingFromContainerId: BlockId? = null,
@@ -392,7 +393,14 @@ fun DagCanvas(
                                     }
                                 } else {
                                     when (hit) {
-                                        is HitTarget.BlockHit -> onCommitMove()
+                                        is HitTarget.BlockHit -> {
+                                            // Ensure dragged block is selected so commitMove processes it
+                                            // (single-block drag may not have selected the block)
+                                            if (hit.blockId !in selectedBlockIds) {
+                                                onSelectBlock(hit.blockId)
+                                            }
+                                            onCommitMove()
+                                        }
                                         is HitTarget.ResizeHandleHit -> onCommitResize()
                                         is HitTarget.HeaderDividerHit -> onCommitResize()
                                         is HitTarget.OutputPort -> {
@@ -429,13 +437,18 @@ fun DagCanvas(
                                         if (!isReadOnly) {
                                             val logicalDelta = moveTransform.toLogicalDelta(delta)
                                             // Move all selected blocks together if the dragged block is selected
+                                            val movedIds: Set<BlockId>
                                             if (hit.blockId in selectedBlockIds && selectedBlockIds.size > 1) {
                                                 for (id in selectedBlockIds) {
                                                     onMoveBlock(id, logicalDelta.x, logicalDelta.y)
                                                 }
+                                                movedIds = selectedBlockIds
                                             } else {
                                                 onMoveBlock(hit.blockId, logicalDelta.x, logicalDelta.y)
+                                                movedIds = setOf(hit.blockId)
                                             }
+                                            // Update hover/detach feedback based on ALL moved blocks
+                                            onUpdateDragFeedback(movedIds)
                                         } else {
                                             panOffset += delta
                                         }

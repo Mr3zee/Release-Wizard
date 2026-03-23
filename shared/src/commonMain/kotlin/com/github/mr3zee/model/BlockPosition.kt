@@ -15,7 +15,8 @@ data class BlockPosition(
         const val DEFAULT_BLOCK_HEIGHT = 70f
         const val DEFAULT_CONTAINER_WIDTH = 400f
         const val DEFAULT_CONTAINER_HEIGHT = 200f
-        const val CONTAINER_HEADER_HEIGHT = 40f
+        const val CONTAINER_HEADER_HEIGHT = 30f
+        const val DEFAULT_NEW_CONTAINER_HEADER_HEIGHT = 40f
         const val MIN_CONTAINER_HEADER_HEIGHT = 30f
         const val MIN_CONTAINER_CONTENT_HEIGHT = 40f
     }

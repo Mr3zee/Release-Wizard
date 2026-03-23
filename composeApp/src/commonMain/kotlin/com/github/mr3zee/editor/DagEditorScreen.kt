@@ -551,6 +551,7 @@ fun DagEditorScreen(
                     },
                     onResizeBlock = { id, edge, dx, dy -> viewModel.resizeBlock(id, edge, dx, dy) },
                     onResizeHeader = { id, dy -> viewModel.resizeHeader(id, dy) },
+                    onUpdateDragFeedback = { ids -> viewModel.updateDragFeedback(ids) },
                     onCommitResize = { viewModel.commitResize() },
                     hoveredContainerId = hoveredContainerId,
                     detachingFromContainerId = detachingFromContainerId,

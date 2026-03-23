@@ -403,7 +403,7 @@ class DagEditorViewModel(
         if (isReadOnly.value) return
         val blockId = BlockId(Uuid.random().toString())
         val block = Block.ContainerBlock(id = blockId, name = name)
-        val position = BlockPosition(x, y, BlockPosition.DEFAULT_CONTAINER_WIDTH, BlockPosition.DEFAULT_CONTAINER_HEIGHT)
+        val position = BlockPosition(x, y, BlockPosition.DEFAULT_CONTAINER_WIDTH, BlockPosition.DEFAULT_CONTAINER_HEIGHT, BlockPosition.DEFAULT_NEW_CONTAINER_HEADER_HEIGHT)
         updateGraph(
             _graph.value.copy(
                 blocks = _graph.value.blocks + block,
@@ -494,39 +494,61 @@ class DagEditorViewModel(
             _graph.value = g.copy(
                 blocks = g.blocks.map { if (it.id == parentId) updatedContainer else it },
             )
-            // Continuously auto-resize parent container while child is being moved
-            autoResizeContainer(parentId)
-
-            // Check if block is being dragged outside the container bounds
-            val containerPos = g.positions[parentId]
-            if (containerPos != null) {
-                val absX = containerPos.x + newChildPos.x + newChildPos.width / 2
-                val absY = containerPos.y + containerPos.headerHeight + newChildPos.y + newChildPos.height / 2
-                val insideX = absX in containerPos.x..(containerPos.x + containerPos.width)
-                val insideY = absY in (containerPos.y + containerPos.headerHeight)..(containerPos.y + containerPos.height)
-                _detachingFromContainerId.value = if (!insideX || !insideY) parentId else null
-            }
         } else {
             // Top-level block: update position in root graph
             val current = g.positions[blockId] ?: return
             val newPos = current.copy(x = current.x + dx, y = current.y + dy)
             _graph.value = g.copy(positions = g.positions + (blockId to newPos))
-
-            // Check if a non-container block is being dragged over a container
-            val block = g.blocks.find { it.id == blockId }
-            if (block != null && block !is Block.ContainerBlock) {
-                val centerX = newPos.x + newPos.width / 2
-                val centerY = newPos.y + newPos.height / 2
-                val hovered = g.blocks.filterIsInstance<Block.ContainerBlock>().find { container ->
-                    val cPos = g.positions[container.id] ?: return@find false
-                    centerX in cPos.x..(cPos.x + cPos.width) &&
-                        centerY in (cPos.y + cPos.headerHeight)..(cPos.y + cPos.height)
-                }
-                _hoveredContainerId.value = hovered?.id
-            }
         }
         // Move without pushing to undo stack (would flood during drag)
         _isDirty.value = true
+    }
+
+    /** Update hover/detach feedback after all blocks in a drag have been moved.
+     *  If ANY selected block passes the check, the feedback is set for ALL. */
+    fun updateDragFeedback(movedBlockIds: Set<BlockId>) {
+        val g = _graph.value
+
+        // Check detach: if any child block center is outside the container's full bounds
+        // (header area is still "inside" — children in the header don't trigger detach,
+        // auto-resize will push them below the header on commit)
+        var detachContainer: BlockId? = null
+        for (blockId in movedBlockIds) {
+            val parentId = _parentLookup.value[blockId] ?: continue
+            val container = g.blocks.find { it.id == parentId } as? Block.ContainerBlock ?: continue
+            val childPos = container.children.positions[blockId] ?: continue
+            val containerPos = g.positions[parentId] ?: continue
+            val absX = containerPos.x + childPos.x + childPos.width / 2
+            val absY = containerPos.y + containerPos.headerHeight + childPos.y + childPos.height / 2
+            val insideX = absX in containerPos.x..(containerPos.x + containerPos.width)
+            val insideY = absY in containerPos.y..(containerPos.y + containerPos.height)
+            if (!insideX || !insideY) {
+                detachContainer = parentId
+                break
+            }
+        }
+        _detachingFromContainerId.value = detachContainer
+
+        // Check hover: if any top-level non-container block is over a container, flag hover
+        var hoverContainer: BlockId? = null
+        for (blockId in movedBlockIds) {
+            if (_parentLookup.value[blockId] != null) continue // skip children
+            val block = g.blocks.find { it.id == blockId } ?: continue
+            if (block is Block.ContainerBlock) continue
+            val pos = g.positions[blockId] ?: continue
+            val centerX = pos.x + pos.width / 2
+            val centerY = pos.y + pos.height / 2
+            val hovered = g.blocks.filterIsInstance<Block.ContainerBlock>().find { container ->
+                val cPos = g.positions[container.id] ?: return@find false
+                centerX in cPos.x..(cPos.x + cPos.width) &&
+                    centerY in (cPos.y + cPos.headerHeight)..(cPos.y + cPos.height)
+            }
+            if (hovered != null) {
+                hoverContainer = hovered.id
+                break
+            }
+        }
+        _hoveredContainerId.value = hoverContainer
     }
 
     /** Returns a user-facing message if edges were removed during container membership change, null otherwise. */
@@ -540,13 +562,14 @@ class DagEditorViewModel(
 
         // Handle container membership changes (mutually exclusive: can't enter and leave at the same time)
         if (draggedDetach != null) {
-            // Detach takes priority — child blocks being dragged outside their container
+            // Detach takes priority — push all matching children out at once (preserves relative positions)
             val selected = _selectedBlockIds.value
-            for (blockId in selected) {
-                if (_parentLookup.value[blockId] == draggedDetach) {
-                    droppedEdgeCount += countEdgesForBlock(blockId, inContainer = draggedDetach)
-                    removeBlockFromContainer(blockId, draggedDetach)
-                }
+            val toDetach = selected.filter { _parentLookup.value[it] == draggedDetach }.toSet()
+            for (blockId in toDetach) {
+                droppedEdgeCount += countEdgesForBlock(blockId, inContainer = draggedDetach)
+            }
+            if (toDetach.isNotEmpty()) {
+                removeBlocksFromContainer(toDetach, draggedDetach)
             }
         } else if (draggedHover != null) {
             // Top-level blocks being dragged into a container
@@ -614,51 +637,146 @@ class DagEditorViewModel(
         autoResizeContainer(containerId)
     }
 
-    private fun removeBlockFromContainer(blockId: BlockId, containerId: BlockId) {
-        val g = _graph.value
+    /**
+     * Remove block(s) from container and push them outward past the nearest container border.
+     * When removing multiple blocks, they are all pushed by the same delta to preserve relative positions.
+     */
+    private fun removeBlocksFromContainer(blockIds: Set<BlockId>, containerId: BlockId) {
+        var g = _graph.value
         val container = g.blocks.find { it.id == containerId } as? Block.ContainerBlock ?: return
         val containerPos = g.positions[containerId] ?: return
-        val childPos = container.children.positions[blockId] ?: return
-        val block = container.children.blocks.find { it.id == blockId } ?: return
 
-        // Convert relative to absolute position
-        val absX = containerPos.x + childPos.x
-        val absY = containerPos.y + containerPos.headerHeight + childPos.y
-        val absPos = BlockPosition(absX, absY, childPos.width, childPos.height)
+        // Compute absolute positions and find the centroid of removed blocks
+        data class RemovedBlock(val block: Block, val absPos: BlockPosition)
+        val removed = mutableListOf<RemovedBlock>()
+        var sumCenterX = 0f; var sumCenterY = 0f
+        for (blockId in blockIds) {
+            val childPos = container.children.positions[blockId] ?: continue
+            val block = container.children.blocks.find { it.id == blockId } ?: continue
+            val absX = containerPos.x + childPos.x
+            val absY = containerPos.y + containerPos.headerHeight + childPos.y
+            val absPos = BlockPosition(absX, absY, childPos.width, childPos.height)
+            removed.add(RemovedBlock(block, absPos))
+            sumCenterX += absX + childPos.width / 2
+            sumCenterY += absY + childPos.height / 2
+        }
+        if (removed.isEmpty()) return
+
+        // Find bounding box of all removed blocks (absolute coords)
+        var bbLeft = Float.MAX_VALUE; var bbTop = Float.MAX_VALUE
+        var bbRight = Float.MIN_VALUE; var bbBottom = Float.MIN_VALUE
+        for (rb in removed) {
+            bbLeft = minOf(bbLeft, rb.absPos.x)
+            bbTop = minOf(bbTop, rb.absPos.y)
+            bbRight = maxOf(bbRight, rb.absPos.x + rb.absPos.width)
+            bbBottom = maxOf(bbBottom, rb.absPos.y + rb.absPos.height)
+        }
+        val bbCenterX = (bbLeft + bbRight) / 2
+        val bbCenterY = (bbTop + bbBottom) / 2
+
+        // Distance from bounding box edges to container borders
+        val cLeft = containerPos.x; val cTop = containerPos.y
+        val cRight = containerPos.x + containerPos.width; val cBottom = containerPos.y + containerPos.height
+        val distLeft = bbCenterX - cLeft
+        val distRight = cRight - bbCenterX
+        val distTop = bbCenterY - cTop
+        val distBottom = cBottom - bbCenterY
+        val minDist = minOf(distLeft, distRight, distTop, distBottom)
+        val pushPadding = 20f
+
+        // Push ALL blocks so the entire bounding box clears the nearest border
+        val pushDx: Float
+        val pushDy: Float
+        when (minDist) {
+            distLeft -> { pushDx = cLeft - bbRight - pushPadding; pushDy = 0f }
+            distRight -> { pushDx = cRight - bbLeft + pushPadding; pushDy = 0f }
+            distTop -> { pushDx = 0f; pushDy = cTop - bbBottom - pushPadding }
+            else -> { pushDx = 0f; pushDy = cBottom - bbTop + pushPadding }
+        }
 
         // Remove from container children
+        val removedIds = blockIds
         val updatedChildren = container.children.copy(
-            blocks = container.children.blocks.filter { it.id != blockId },
-            positions = container.children.positions - blockId,
-            edges = container.children.edges.filter { it.fromBlockId != blockId && it.toBlockId != blockId },
+            blocks = container.children.blocks.filter { it.id !in removedIds },
+            positions = container.children.positions.filterKeys { it !in removedIds },
+            edges = container.children.edges.filter { it.fromBlockId !in removedIds && it.toBlockId !in removedIds },
         )
         val updatedContainer = container.copy(children = updatedChildren)
 
-        // Add to top-level
-        val finalBlocks = g.blocks.map { if (it.id == containerId) updatedContainer else it } + block
-        val finalPositions = g.positions + (blockId to absPos)
+        // Add to top-level with pushed positions
+        var finalBlocks = g.blocks.map { if (it.id == containerId) updatedContainer else it }
+        var finalPositions = g.positions.toMutableMap()
+        for (rb in removed) {
+            finalBlocks = finalBlocks + rb.block
+            finalPositions[rb.block.id] = rb.absPos.copy(x = rb.absPos.x + pushDx, y = rb.absPos.y + pushDy)
+        }
 
         _graph.value = g.copy(blocks = finalBlocks, positions = finalPositions)
     }
 
+    /**
+     * Auto-resize container to fit all children. Expands in all 4 directions as needed.
+     * Does NOT push children — only grows the container.
+     */
     private fun autoResizeContainer(containerId: BlockId) {
         val g = _graph.value
         val container = g.blocks.find { it.id == containerId } as? Block.ContainerBlock ?: return
-        val cPos = g.positions[containerId] ?: return
-        val padding = 20f
+        var cPos = g.positions[containerId] ?: return
+        if (container.children.blocks.isEmpty()) return
+        val padding = 10f
 
-        var neededWidth = cPos.width
-        var neededHeight = cPos.height
-
+        // Find bounding box of all children (relative coords)
+        var minX = Float.MAX_VALUE; var minY = Float.MAX_VALUE
+        var maxRight = 0f; var maxBottom = 0f
         for (child in container.children.blocks) {
-            val childPos = container.children.positions[child.id] ?: continue
-            neededWidth = maxOf(neededWidth, childPos.x + childPos.width + padding)
-            neededHeight = maxOf(neededHeight, childPos.y + childPos.height + cPos.headerHeight + padding)
+            val cp = container.children.positions[child.id] ?: continue
+            minX = minOf(minX, cp.x)
+            minY = minOf(minY, cp.y)
+            maxRight = maxOf(maxRight, cp.x + cp.width)
+            maxBottom = maxOf(maxBottom, cp.y + cp.height)
         }
 
+        // Expand left/up if children have negative coords
+        var updatedPositions: MutableMap<BlockId, BlockPosition>? = null
+        if (minX < padding) {
+            val shiftX = padding - minX
+            updatedPositions = (updatedPositions ?: container.children.positions.toMutableMap())
+            for (child in container.children.blocks) {
+                val cp = updatedPositions[child.id] ?: continue
+                updatedPositions[child.id] = cp.copy(x = cp.x + shiftX)
+            }
+            cPos = cPos.copy(x = cPos.x - shiftX, width = cPos.width + shiftX)
+            maxRight += shiftX
+        }
+        if (minY < padding) {
+            val shiftY = padding - minY
+            updatedPositions = (updatedPositions ?: container.children.positions.toMutableMap())
+            for (child in container.children.blocks) {
+                val cp = updatedPositions[child.id] ?: continue
+                updatedPositions[child.id] = cp.copy(y = cp.y + shiftY)
+            }
+            cPos = cPos.copy(y = cPos.y - shiftY, height = cPos.height + shiftY)
+            maxBottom += shiftY
+        }
+
+        // Expand right/bottom
+        val neededWidth = maxOf(cPos.width, maxRight + padding)
+        val neededHeight = maxOf(cPos.height, maxBottom + cPos.headerHeight + padding)
         if (neededWidth > cPos.width || neededHeight > cPos.height) {
-            val newPos = cPos.copy(width = neededWidth, height = neededHeight)
-            _graph.value = _graph.value.copy(positions = _graph.value.positions + (containerId to newPos))
+            cPos = cPos.copy(width = neededWidth, height = neededHeight)
+        }
+
+        // Apply
+        val origPos = g.positions[containerId]
+        if (updatedPositions != null || cPos != origPos) {
+            val finalChildren = if (updatedPositions != null) {
+                container.children.copy(positions = updatedPositions)
+            } else container.children
+            val updatedContainer = container.copy(children = finalChildren)
+            _graph.value = _graph.value.copy(
+                blocks = _graph.value.blocks.map { if (it.id == containerId) updatedContainer else it },
+                positions = _graph.value.positions + (containerId to cPos),
+            )
         }
     }
 
@@ -686,30 +804,67 @@ class DagEditorViewModel(
             )
             val updatedContainer = container.copy(children = updatedChildren)
             _graph.value = g.copy(blocks = g.blocks.map { if (it.id == parentId) updatedContainer else it })
-            // Continuously auto-resize parent container while child is being resized
-            autoResizeContainer(parentId)
         } else {
             val pos = g.positions[blockId] ?: return
             val block = g.blocks.find { it.id == blockId }
-            // For containers, enforce content-fitting minimum so children aren't clipped
-            val contentMinW: Float
-            val contentMinH: Float
+
             if (block is Block.ContainerBlock && block.children.blocks.isNotEmpty()) {
-                val padding = 20f
-                contentMinW = block.children.blocks.maxOf { child ->
-                    val cp = block.children.positions[child.id] ?: return@maxOf 0f
+                val padding = 10f
+                val resizesLeft = edge in setOf(ResizeEdge.Left, ResizeEdge.TopLeft, ResizeEdge.BottomLeft)
+                val resizesTop = edge in setOf(ResizeEdge.Top, ResizeEdge.TopLeft, ResizeEdge.TopRight)
+
+                // Only shift children when the border is blocked by the content min.
+                // Shift by exactly the resize delta, capped at the available gap.
+                var updatedBlock = block
+                var updatedPos = pos
+                if (resizesLeft || resizesTop) {
+                    val positions = updatedBlock.children.positions.toMutableMap()
+                    if (resizesLeft && dx > 0f) {
+                        // dx > 0 means dragging left edge rightward (shrinking)
+                        val minChildX = updatedBlock.children.blocks.minOfOrNull { positions[it.id]?.x ?: Float.MAX_VALUE } ?: 0f
+                        val gap = (minChildX - padding).coerceAtLeast(0f)
+                        val shiftX = minOf(dx, gap) // only shift what the resize needs, up to available gap
+                        if (shiftX > 0f) {
+                            for (child in updatedBlock.children.blocks) {
+                                val cp = positions[child.id] ?: continue
+                                positions[child.id] = cp.copy(x = cp.x - shiftX)
+                            }
+                        }
+                    }
+                    if (resizesTop && dy > 0f) {
+                        // dy > 0 means dragging top edge downward (shrinking)
+                        val minChildY = updatedBlock.children.blocks.minOfOrNull { positions[it.id]?.y ?: Float.MAX_VALUE } ?: 0f
+                        val gap = (minChildY - padding).coerceAtLeast(0f)
+                        val shiftY = minOf(dy, gap)
+                        if (shiftY > 0f) {
+                            for (child in updatedBlock.children.blocks) {
+                                val cp = positions[child.id] ?: continue
+                                positions[child.id] = cp.copy(y = cp.y - shiftY)
+                            }
+                        }
+                    }
+                    updatedBlock = updatedBlock.copy(children = updatedBlock.children.copy(positions = positions))
+                }
+
+                // Compute content-fitting minimum from (possibly shifted) children
+                val contentMinW = updatedBlock.children.blocks.maxOf { child ->
+                    val cp = updatedBlock.children.positions[child.id] ?: return@maxOf 0f
                     cp.x + cp.width + padding
                 }.coerceAtLeast(BlockPosition.DEFAULT_CONTAINER_WIDTH)
-                contentMinH = block.children.blocks.maxOf { child ->
-                    val cp = block.children.positions[child.id] ?: return@maxOf 0f
-                    cp.y + cp.height + pos.headerHeight + padding
+                val contentMinH = updatedBlock.children.blocks.maxOf { child ->
+                    val cp = updatedBlock.children.positions[child.id] ?: return@maxOf 0f
+                    cp.y + cp.height + updatedPos.headerHeight + padding
                 }.coerceAtLeast(BlockPosition.DEFAULT_CONTAINER_HEIGHT)
+
+                val newPos = computeResizedPosition(updatedPos, edge, dx, dy, isContainer = true, contentMinW, contentMinH)
+                _graph.value = g.copy(
+                    blocks = g.blocks.map { if (it.id == blockId) updatedBlock else it },
+                    positions = g.positions + (blockId to newPos),
+                )
             } else {
-                contentMinW = 0f
-                contentMinH = 0f
+                val newPos = computeResizedPosition(pos, edge, dx, dy, isContainer = block is Block.ContainerBlock)
+                _graph.value = g.copy(positions = g.positions + (blockId to newPos))
             }
-            val newPos = computeResizedPosition(pos, edge, dx, dy, isContainer = block is Block.ContainerBlock, contentMinW, contentMinH)
-            _graph.value = g.copy(positions = g.positions + (blockId to newPos))
         }
         _isDirty.value = true
     }

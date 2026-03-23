@@ -87,7 +87,7 @@ fun BlockPropertiesPanel(
             // Project description editor when no block is selected
             Text(
                 packStringResource(Res.string.editor_project_description_header),
-                style = AppTypography.label,
+                style = AppTypography.subheading,
             )
             Spacer(Modifier.height(Spacing.xs))
             var projDesc by remember(projectDescription) { mutableStateOf(projectDescription) }
