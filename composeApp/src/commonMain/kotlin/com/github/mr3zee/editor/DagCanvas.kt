@@ -46,7 +46,6 @@ import com.github.mr3zee.util.typeLabel
 import releasewizard.composeapp.generated.resources.Res
 import releasewizard.composeapp.generated.resources.editor_empty_canvas_hint
 import releasewizard.composeapp.generated.resources.editor_empty_canvas_no_blocks
-import releasewizard.composeapp.generated.resources.editor_snap_to_grid
 import releasewizard.composeapp.generated.resources.editor_zoom_fit
 import releasewizard.composeapp.generated.resources.editor_zoom_in
 import releasewizard.composeapp.generated.resources.editor_zoom_out
@@ -57,7 +56,7 @@ private sealed class HitTarget {
     data class BlockHit(val blockId: BlockId) : HitTarget()
     data class OutputPort(val blockId: BlockId) : HitTarget()
     data class InputPort(val blockId: BlockId) : HitTarget()
-    data class EdgeHit(val index: Int) : HitTarget()
+    data class EdgeHit(val index: Int, val containerId: BlockId? = null) : HitTarget()
     data class ResizeHandleHit(val blockId: BlockId, val edge: ResizeEdge) : HitTarget()
 }
 
@@ -156,7 +155,23 @@ private fun hitTest(
             return HitTarget.EdgeHit(index)
         }
     }
-    // Note: container children edges use a separate index space, skip for now (edge selection within containers is a future enhancement)
+    // Container children edges
+    for (container in containers) {
+        val cPos = graph.positions[container.id] ?: continue
+        val contentOffsetX = cPos.x
+        val contentOffsetY = cPos.y + BlockPosition.CONTAINER_HEADER_HEIGHT
+        for ((index, edge) in container.children.edges.withIndex()) {
+            val fromChild = container.children.positions[edge.fromBlockId] ?: continue
+            val toChild = container.children.positions[edge.toBlockId] ?: continue
+            val absFrom = BlockPosition(contentOffsetX + fromChild.x, contentOffsetY + fromChild.y, fromChild.width, fromChild.height)
+            val absTo = BlockPosition(contentOffsetX + toChild.x, contentOffsetY + toChild.y, toChild.width, toChild.height)
+            val start = Offset(absFrom.x + absFrom.width, absFrom.y + portYOffset(absFrom, false))
+            val end = Offset(absTo.x, absTo.y + portYOffset(absTo, false))
+            if (isNearBezier(logicalPos, start, end, threshold = edgeThreshold)) {
+                return HitTarget.EdgeHit(index, containerId = container.id)
+            }
+        }
+    }
 
     return HitTarget.None
 }
@@ -216,9 +231,10 @@ fun DagCanvas(
     graph: DagGraph,
     selectedBlockIds: Set<BlockId>,
     selectedEdgeIndex: Int?,
+    selectedEdgeContainerId: BlockId? = null,
     onSelectBlock: (BlockId?) -> Unit,
     onToggleBlockSelection: (BlockId) -> Unit,
-    onSelectEdge: (Int?) -> Unit,
+    onSelectEdge: (index: Int?, containerId: BlockId?) -> Unit,
     onMoveBlock: (BlockId, Float, Float) -> Unit,
     onCommitMove: () -> Unit,
     onAddEdge: (BlockId, BlockId) -> Unit,
@@ -228,8 +244,6 @@ fun DagCanvas(
     hoveredContainerId: BlockId? = null,
     detachingFromContainerId: BlockId? = null,
     parentLookup: Map<BlockId, BlockId> = emptyMap(),
-    snapToGrid: Boolean = false,
-    onToggleSnapToGrid: () -> Unit = {},
     isReadOnly: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
@@ -353,10 +367,10 @@ fun DagCanvas(
                                             if (isModifierHeld) onToggleBlockSelection(hit.blockId)
                                             else onSelectBlock(hit.blockId)
                                         }
-                                        is HitTarget.EdgeHit -> onSelectEdge(hit.index)
+                                        is HitTarget.EdgeHit -> onSelectEdge(hit.index, hit.containerId)
                                         is HitTarget.None -> {
                                             onSelectBlock(null)
-                                            onSelectEdge(null)
+                                            onSelectEdge(null, null)
                                         }
                                     }
                                 } else {
@@ -456,12 +470,13 @@ fun DagCanvas(
             // Draw children's edges within the container
             val contentOffsetX = pos.x
             val contentOffsetY = pos.y + BlockPosition.CONTAINER_HEADER_HEIGHT
-            for (childEdge in container.children.edges) {
+            for ((childEdgeIndex, childEdge) in container.children.edges.withIndex()) {
                 val fromChild = container.children.positions[childEdge.fromBlockId] ?: continue
                 val toChild = container.children.positions[childEdge.toBlockId] ?: continue
                 val absFrom = BlockPosition(contentOffsetX + fromChild.x, contentOffsetY + fromChild.y, fromChild.width, fromChild.height)
                 val absTo = BlockPosition(contentOffsetX + toChild.x, contentOffsetY + toChild.y, toChild.width, toChild.height)
-                drawEdge(drawTransform, absFrom, absTo, isSelected = false, appColors)
+                val isChildEdgeSelected = selectedEdgeContainerId == container.id && childEdgeIndex == selectedEdgeIndex
+                drawEdge(drawTransform, absFrom, absTo, isSelected = isChildEdgeSelected, appColors)
             }
 
             // Draw children blocks
@@ -500,9 +515,12 @@ fun DagCanvas(
             val startScreenX = drawTransform.toScreenX(fromPos.x + fromPos.width)
             val startScreenY = drawTransform.toScreenY(fromPos.y + portYOffset(fromPos, fromIsContainer))
             val currentHover = hoveredPort
-            val isCrossBoundary = currentHover is HitTarget.InputPort &&
-                parentLookup[draft.fromBlockId] != parentLookup[currentHover.blockId]
-            val draftColor = if (isCrossBoundary) appColors.blockStatusFailed else null
+            val isInvalidTarget = currentHover is HitTarget.InputPort && (
+                parentLookup[draft.fromBlockId] != parentLookup[currentHover.blockId] ||
+                draft.fromBlockId == currentHover.blockId ||
+                wouldCreateCycle(currentGraph, draft.fromBlockId, currentHover.blockId)
+            )
+            val draftColor = if (isInvalidTarget) appColors.blockStatusFailed else null
             drawDraftEdge(Offset(startScreenX, startScreenY), draft.currentScreenPos, appColors, drawTransform, colorOverride = draftColor)
         }
 
@@ -597,15 +615,6 @@ fun DagCanvas(
             modifier = Modifier.testTag("zoom_fit_button"),
         ) {
             Text(packStringResource(Res.string.editor_zoom_fit), style = AppTypography.caption)
-        }
-        RwTooltip(tooltip = packStringResource(Res.string.editor_snap_to_grid)) {
-            RwButton(
-                onClick = onToggleSnapToGrid,
-                variant = if (snapToGrid) RwButtonVariant.Secondary else RwButtonVariant.Ghost,
-                modifier = Modifier.testTag("snap_to_grid_button"),
-            ) {
-                Text(packStringResource(Res.string.editor_snap_to_grid), style = AppTypography.caption)
-            }
         }
     }
     } // Box

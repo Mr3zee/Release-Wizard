@@ -62,6 +62,10 @@ class DagEditorViewModel(
     private val _selectedEdgeIndex = MutableStateFlow<Int?>(null)
     val selectedEdgeIndex: StateFlow<Int?> = _selectedEdgeIndex
 
+    // Which container the selected edge belongs to (null = top-level)
+    private val _selectedEdgeContainerId = MutableStateFlow<BlockId?>(null)
+    val selectedEdgeContainerId: StateFlow<BlockId?> = _selectedEdgeContainerId
+
     private val _clipboard = MutableStateFlow<DagGraph?>(null)
     val clipboard: StateFlow<DagGraph?> = _clipboard
 
@@ -75,14 +79,6 @@ class DagEditorViewModel(
 
     private val _detachingFromContainerId = MutableStateFlow<BlockId?>(null)
     val detachingFromContainerId: StateFlow<BlockId?> = _detachingFromContainerId
-
-    // Snap-to-grid toggle
-    private val _snapToGrid = MutableStateFlow(false)
-    val snapToGrid: StateFlow<Boolean> = _snapToGrid
-
-    fun toggleSnapToGrid() {
-        _snapToGrid.value = !_snapToGrid.value
-    }
 
     private val _isDirty = MutableStateFlow(false)
     val isDirty: StateFlow<Boolean> = _isDirty
@@ -458,11 +454,25 @@ class DagEditorViewModel(
     fun removeSelectedEdge() {
         if (isReadOnly.value) return
         val idx = _selectedEdgeIndex.value ?: return
+        val containerId = _selectedEdgeContainerId.value
         val g = _graph.value
-        if (idx in g.edges.indices) {
-            updateGraph(g.copy(edges = g.edges.toMutableList().apply { removeAt(idx) }))
+
+        if (containerId != null) {
+            // Edge inside a container
+            val container = g.blocks.find { it.id == containerId } as? Block.ContainerBlock ?: return
+            if (idx in container.children.edges.indices) {
+                val updatedEdges = container.children.edges.toMutableList().apply { removeAt(idx) }
+                val updatedContainer = container.copy(children = container.children.copy(edges = updatedEdges))
+                updateGraph(g.copy(blocks = g.blocks.map { if (it.id == containerId) updatedContainer else it }))
+            }
+        } else {
+            // Top-level edge
+            if (idx in g.edges.indices) {
+                updateGraph(g.copy(edges = g.edges.toMutableList().apply { removeAt(idx) }))
+            }
         }
         _selectedEdgeIndex.value = null
+        _selectedEdgeContainerId.value = null
     }
 
     fun moveBlock(blockId: BlockId, dx: Float, dy: Float) {
@@ -474,13 +484,7 @@ class DagEditorViewModel(
             // Child block: update position within container's children graph
             val container = g.blocks.find { it.id == parentId } as? Block.ContainerBlock ?: return
             val childPos = container.children.positions[blockId] ?: return
-            val rawX = childPos.x + dx
-            val rawY = childPos.y + dy
-            val newChildPos = if (_snapToGrid.value) {
-                childPos.copy(x = snapToGrid(rawX), y = snapToGrid(rawY))
-            } else {
-                childPos.copy(x = rawX, y = rawY)
-            }
+            val newChildPos = childPos.copy(x = childPos.x + dx, y = childPos.y + dy)
             val updatedChildren = container.children.copy(
                 positions = container.children.positions + (blockId to newChildPos),
             )
@@ -501,13 +505,7 @@ class DagEditorViewModel(
         } else {
             // Top-level block: update position in root graph
             val current = g.positions[blockId] ?: return
-            val rawX = current.x + dx
-            val rawY = current.y + dy
-            val newPos = if (_snapToGrid.value) {
-                current.copy(x = snapToGrid(rawX), y = snapToGrid(rawY))
-            } else {
-                current.copy(x = rawX, y = rawY)
-            }
+            val newPos = current.copy(x = current.x + dx, y = current.y + dy)
             _graph.value = g.copy(positions = g.positions + (blockId to newPos))
 
             // Check if a non-container block is being dragged over a container
@@ -711,11 +709,7 @@ class DagEditorViewModel(
             else -> pos.y to pos.height
         }
 
-        return if (_snapToGrid.value) {
-            BlockPosition(snapToGrid(newX), snapToGrid(newY), snapToGrid(newWidth), snapToGrid(newHeight))
-        } else {
-            BlockPosition(newX, newY, newWidth, newHeight)
-        }
+        return BlockPosition(newX, newY, newWidth, newHeight)
     }
 
     fun commitResize() {
@@ -767,8 +761,9 @@ class DagEditorViewModel(
         _selectedEdgeIndex.value = null
     }
 
-    fun selectEdge(index: Int?) {
+    fun selectEdge(index: Int?, containerId: BlockId? = null) {
         _selectedEdgeIndex.value = index
+        _selectedEdgeContainerId.value = containerId
         _selectedBlockIds.value = emptySet()
     }
 

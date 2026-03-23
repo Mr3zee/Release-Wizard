@@ -28,11 +28,6 @@ internal const val MIN_ZOOM = 0.25f
 internal const val MAX_ZOOM = 4f
 internal const val RESIZE_HANDLE_WIDTH = 6f
 
-/** Snap a value to the nearest grid line. */
-internal fun snapToGrid(value: Float): Float {
-    return (value / GRID_SIZE).let { kotlin.math.round(it) } * GRID_SIZE
-}
-
 enum class ResizeEdge {
     Top, Bottom, Left, Right,
     TopLeft, TopRight, BottomLeft, BottomRight;
@@ -383,10 +378,9 @@ internal fun DrawScope.drawContainerBlock(
     )
 }
 
-/** Compute the Y offset for port placement. Containers anchor ports to header center. */
+/** Compute the Y offset for port placement. Always centered on the block height. */
 internal fun portYOffset(position: BlockPosition, isContainer: Boolean): Float =
-    if (isContainer) BlockPosition.CONTAINER_HEADER_HEIGHT / 2
-    else position.height / 2
+    position.height / 2
 
 internal fun DrawScope.drawPorts(
     transform: CanvasTransform,

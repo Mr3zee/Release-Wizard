@@ -61,6 +61,7 @@ fun DagEditorScreen(
     val graph by viewModel.graph.collectAsState()
     val selectedBlockIds by viewModel.selectedBlockIds.collectAsState()
     val selectedEdgeIndex by viewModel.selectedEdgeIndex.collectAsState()
+    val selectedEdgeContainerId by viewModel.selectedEdgeContainerId.collectAsState()
     val isDirty by viewModel.isDirty.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -81,8 +82,6 @@ fun DagEditorScreen(
     val hoveredContainerId by viewModel.hoveredContainerId.collectAsState()
     val detachingFromContainerId by viewModel.detachingFromContainerId.collectAsState()
     val parentLookup by viewModel.parentLookup.collectAsState()
-    val snapToGrid by viewModel.snapToGrid.collectAsState()
-
     val appColors = LocalAppColors.current
 
     var leftSidebarExpanded by remember { mutableStateOf(true) }
@@ -438,9 +437,10 @@ fun DagEditorScreen(
                     graph = graph,
                     selectedBlockIds = selectedBlockIds,
                     selectedEdgeIndex = selectedEdgeIndex,
+                    selectedEdgeContainerId = selectedEdgeContainerId,
                     onSelectBlock = { viewModel.selectBlock(it) },
                     onToggleBlockSelection = { viewModel.toggleBlockSelection(it) },
-                    onSelectEdge = { viewModel.selectEdge(it) },
+                    onSelectEdge = { index, containerId -> viewModel.selectEdge(index, containerId) },
                     onMoveBlock = { id, dx, dy -> viewModel.moveBlock(id, dx, dy) },
                     onCommitMove = {
                         val msg = viewModel.commitMove()
@@ -462,8 +462,6 @@ fun DagEditorScreen(
                     hoveredContainerId = hoveredContainerId,
                     detachingFromContainerId = detachingFromContainerId,
                     parentLookup = parentLookup,
-                    snapToGrid = snapToGrid,
-                    onToggleSnapToGrid = { viewModel.toggleSnapToGrid() },
                     isReadOnly = isReadOnly,
                     modifier = Modifier
                         .weight(1f)
