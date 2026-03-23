@@ -151,13 +151,10 @@ fun DagEditorScreen(
             .fillMaxSize()
             .focusRequester(editorFocusRequester)
             .focusable()
-            // All editor shortcuts in onPreviewKeyEvent so they work
-            // regardless of which child element has focus.
+            // Preview handler: modifier shortcuts that should always work
+            // regardless of focus (Ctrl+S, Ctrl+Z, Ctrl+C/V/A).
             .onPreviewKeyEvent { event ->
                 if (event.type == KeyEventType.KeyDown) {
-                    if (isConfirmationVisible && (event.key == Key.Delete || event.key == Key.Backspace)) {
-                        return@onPreviewKeyEvent false
-                    }
                     val isModifier = event.isCtrlPressed || event.isMetaPressed
                     when {
                         !isReadOnly && isModifier && event.key == Key.S -> {
@@ -172,17 +169,6 @@ fun DagEditorScreen(
                             viewModel.redo()
                             true
                         }
-                        !isReadOnly && (event.key == Key.Delete || event.key == Key.Backspace) -> {
-                            // Only consume when there's a canvas selection to delete.
-                            // Otherwise let the event pass to text fields for normal editing.
-                            if (selectedBlockIds.isNotEmpty()) {
-                                viewModel.removeSelectedBlocks()
-                                true
-                            } else if (selectedEdgeIndex != null) {
-                                viewModel.removeSelectedEdge()
-                                true
-                            } else false
-                        }
                         isModifier && event.key == Key.C -> {
                             viewModel.copySelected()
                             true
@@ -194,6 +180,24 @@ fun DagEditorScreen(
                         isModifier && event.key == Key.A -> {
                             viewModel.selectAll()
                             true
+                        }
+                        else -> false
+                    }
+                } else false
+            }
+            // Bubble handler: Delete/Backspace in onKeyEvent so text fields
+            // consume the event first. Only fires if no child handled it.
+            .onKeyEvent { event ->
+                if (event.type == KeyEventType.KeyDown) {
+                    when {
+                        !isReadOnly && (event.key == Key.Delete || event.key == Key.Backspace) -> {
+                            if (selectedBlockIds.isNotEmpty()) {
+                                viewModel.removeSelectedBlocks()
+                                true
+                            } else if (selectedEdgeIndex != null) {
+                                viewModel.removeSelectedEdge()
+                                true
+                            } else false
                         }
                         else -> false
                     }

@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -65,6 +66,7 @@ fun EditorToolbar(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .focusProperties { canFocus = false }
             .verticalScroll(scrollState)
             .padding(Spacing.sm),
         verticalArrangement = Arrangement.spacedBy(Spacing.xs),
