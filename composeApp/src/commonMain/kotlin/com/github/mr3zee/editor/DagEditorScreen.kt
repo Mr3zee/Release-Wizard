@@ -445,7 +445,7 @@ fun DagEditorScreen(
 
                 // Left sidebar toggle + border
                 Column(
-                    Modifier.fillMaxHeight().zIndex(1f),
+                    Modifier.fillMaxHeight(),
                     verticalArrangement = Arrangement.Center,
                 ) {
                     Box(
