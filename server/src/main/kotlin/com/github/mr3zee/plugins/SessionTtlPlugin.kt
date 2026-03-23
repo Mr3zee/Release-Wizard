@@ -111,7 +111,13 @@ val SessionTtl = createApplicationPlugin(name = "SessionTtl") {
 
     onCallRespond { call, _ ->
         // Read the final session state (after route handlers may have created/updated it)
-        val session = call.sessions.get<UserSession>() ?: return@onCallRespond
+        // Sessions may not be available when responding from engine error handlers or
+        // StatusPages that fire before the Sessions pipeline phase — skip gracefully.
+        val session = try {
+            call.sessions.get<UserSession>()
+        } catch (_: SessionNotYetConfiguredException) {
+            null
+        } ?: return@onCallRespond
         // Only add cache/CSRF headers for API responses — static assets are managed by CachingHeaders plugin
         if (!call.request.path().startsWith("/api/")) return@onCallRespond
         if (session.csrfToken.isNotEmpty()) {

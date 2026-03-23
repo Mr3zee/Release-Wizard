@@ -186,7 +186,7 @@ fun ApplicationConfig.oauthConfig(): OAuthConfig {
 }
 
 fun ApplicationConfig.corsConfig(): CorsConfig {
-    val origins = propertyOrNull("app.cors.allowedOrigins")?.getList()
+    val explicit = propertyOrNull("app.cors.allowedOrigins")?.getList()
         ?.filter { origin ->
             if (origin.isBlank()) {
                 configLog.warn("Blank CORS origin filtered — verify CORS_ALLOWED_ORIGIN env vars if cross-origin access is needed")
@@ -194,5 +194,15 @@ fun ApplicationConfig.corsConfig(): CorsConfig {
             } else true
         }
         ?: emptyList()
+
+    // Auto-include WEBHOOK_BASE_URL so same-origin works behind reverse proxies
+    // (the server sees HTTP internally, but the browser sends the external HTTPS origin).
+    val webhookOrigin = propertyOrNull("app.webhook.baseUrl")?.getString()?.trimEnd('/')
+    val origins = if (!webhookOrigin.isNullOrBlank() && webhookOrigin !in explicit) {
+        explicit + webhookOrigin
+    } else {
+        explicit
+    }
+
     return CorsConfig(allowedOrigins = origins)
 }
