@@ -198,11 +198,21 @@ fun ApplicationConfig.corsConfig(): CorsConfig {
     // Auto-include WEBHOOK_BASE_URL so same-origin works behind reverse proxies
     // (the server sees HTTP internally, but the browser sends the external HTTPS origin).
     val webhookOrigin = propertyOrNull("app.webhook.baseUrl")?.getString()?.trimEnd('/')
-    val origins = if (!webhookOrigin.isNullOrBlank() && webhookOrigin !in explicit) {
-        explicit + webhookOrigin
-    } else {
-        explicit
+    val autoOrigins = buildList {
+        if (!webhookOrigin.isNullOrBlank() && webhookOrigin !in explicit) {
+            add(webhookOrigin)
+        }
+        // Auto-include common webpack dev server ports for local split-mode development.
+        // The Wasm/JS dev server typically runs on :8081 while Ktor runs on :8080.
+        if (webhookOrigin != null && (webhookOrigin.contains("localhost") || webhookOrigin.contains("127.0.0.1"))) {
+            val devOrigins = listOf("http://localhost:8081", "http://127.0.0.1:8081")
+            for (devOrigin in devOrigins) {
+                if (devOrigin !in explicit && devOrigin != webhookOrigin) {
+                    add(devOrigin)
+                }
+            }
+        }
     }
 
-    return CorsConfig(allowedOrigins = origins)
+    return CorsConfig(allowedOrigins = explicit + autoOrigins)
 }

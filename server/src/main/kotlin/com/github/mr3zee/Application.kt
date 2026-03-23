@@ -166,12 +166,14 @@ fun Application.module() {
                     origin,
                 )
             }
+            val isHttp = origin.startsWith("http://")
             val host = origin
                 .removePrefix("https://")
                 .removePrefix("http://")
                 .trimEnd('/')
             require(host.isNotBlank()) { "CORS origin '$origin' does not contain a valid host" }
-            allowHost(host, schemes = listOf("https"))
+            val schemes = if (isHttp) listOf("http", "https") else listOf("https")
+            allowHost(host, schemes = schemes)
         }
         allowHeader(HttpHeaders.ContentType)
         allowHeader(HttpHeaders.Authorization)

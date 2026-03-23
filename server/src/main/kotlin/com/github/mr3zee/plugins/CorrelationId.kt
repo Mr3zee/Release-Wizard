@@ -19,6 +19,8 @@ val CorrelationId = createApplicationPlugin(name = "CorrelationId") {
             ?.takeIf { it.isNotBlank() && it.length <= 128 && it.matches(SAFE_ID_PATTERN) }
             ?: UUID.randomUUID().toString()
         call.attributes.put(CorrelationIdKey, correlationId)
-        call.response.header(RESPONSE_HEADER, correlationId)
+        if (!call.isHandled) {
+            call.response.header(RESPONSE_HEADER, correlationId)
+        }
     }
 }
