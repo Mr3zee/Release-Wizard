@@ -610,7 +610,7 @@ fun DagCanvas(
                 modifier = Modifier.testTag("canvas_hint_add_blocks"),
             )
         }
-    } else if (graph.edges.isEmpty()) {
+    } else if (graph.edges.isEmpty() && graph.blocks.none { it is Block.ContainerBlock && it.children.edges.isNotEmpty() }) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,

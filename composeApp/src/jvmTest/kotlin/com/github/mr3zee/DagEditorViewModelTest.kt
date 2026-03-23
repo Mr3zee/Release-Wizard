@@ -1019,6 +1019,155 @@ class DagEditorViewModelTest {
         assertEquals(relDx, relDxAfter, "Relative X between children should be preserved after uniform shift")
     }
 
+    // ==================== HIGH: Multiselect into container preserves inter-block edges ====================
+
+    @Test
+    fun `commitMove preserves edges between multiselected blocks when adding to container`() {
+        val (vm, blockId, containerId) = loadedViewModelWithContainerSetup()
+
+        // Add a second action block and connect them
+        vm.addBlock(BlockType.SLACK_MESSAGE, "Slack", 100f, 200f)
+        val slackId = vm.graph.value.blocks.filterIsInstance<Block.ActionBlock>().first { it.name == "Slack" }.id
+        vm.addEdge(blockId, slackId)
+
+        // Verify top-level edge exists
+        assertTrue(vm.graph.value.edges.any { it.fromBlockId == blockId && it.toBlockId == slackId })
+
+        // Select both and move into container
+        vm.selectBlock(blockId)
+        vm.toggleBlockSelection(slackId)
+        val cPos = vm.graph.value.positions[containerId] ?: error("No container position")
+        val bPos = vm.graph.value.positions[blockId] ?: error("No block position")
+        val dx = cPos.x + cPos.width / 2 - (bPos.x + bPos.width / 2)
+        val dy = cPos.y + cPos.headerHeight + 30f - (bPos.y + bPos.height / 2)
+        vm.moveBlock(blockId, dx, dy)
+        vm.moveBlock(slackId, dx, dy)
+        vm.updateDragFeedback(setOf(blockId, slackId))
+        val msg = vm.commitMove()
+
+        // Both blocks should be inside the container
+        val container = vm.graph.value.blocks.filterIsInstance<Block.ContainerBlock>().first()
+        assertTrue(container.children.blocks.any { it.id == blockId })
+        assertTrue(container.children.blocks.any { it.id == slackId })
+
+        // Edge between them should be preserved inside the container
+        assertTrue(
+            container.children.edges.any { it.fromBlockId == blockId && it.toBlockId == slackId },
+            "Edge between co-moved blocks should be preserved inside container"
+        )
+
+        // No top-level edges should remain
+        assertEquals(0, vm.graph.value.edges.size)
+
+        // No cross-boundary edges were dropped, so message should be null
+        assertNull(msg, "No cross-boundary edges should be reported when all connected blocks are moved together")
+    }
+
+    @Test
+    fun `commitMove drops only cross-boundary edges and preserves internal ones`() {
+        val (vm, blockId, containerId) = loadedViewModelWithContainerSetup()
+
+        // Add two more blocks
+        vm.addBlock(BlockType.SLACK_MESSAGE, "Slack", 100f, 200f)
+        val slackId = vm.graph.value.blocks.filterIsInstance<Block.ActionBlock>().first { it.name == "Slack" }.id
+        vm.addBlock(BlockType.GITHUB_ACTION, "GHA", 500f, 200f)
+        val userId = vm.graph.value.blocks.filterIsInstance<Block.ActionBlock>().first { it.name == "GHA" }.id
+
+        // Create edges: blockId → slackId (internal), blockId → userId (cross-boundary)
+        vm.addEdge(blockId, slackId)
+        vm.addEdge(blockId, userId)
+        assertEquals(2, vm.graph.value.edges.size)
+
+        // Move only blockId and slackId into container (userId stays top-level)
+        vm.selectBlock(blockId)
+        vm.toggleBlockSelection(slackId)
+        val cPos = vm.graph.value.positions[containerId] ?: error("No container position")
+        val bPos = vm.graph.value.positions[blockId] ?: error("No block position")
+        val dx = cPos.x + cPos.width / 2 - (bPos.x + bPos.width / 2)
+        val dy = cPos.y + cPos.headerHeight + 30f - (bPos.y + bPos.height / 2)
+        vm.moveBlock(blockId, dx, dy)
+        vm.moveBlock(slackId, dx, dy)
+        vm.updateDragFeedback(setOf(blockId, slackId))
+        val msg = vm.commitMove()
+
+        // Internal edge preserved inside container
+        val container = vm.graph.value.blocks.filterIsInstance<Block.ContainerBlock>().first()
+        assertTrue(
+            container.children.edges.any { it.fromBlockId == blockId && it.toBlockId == slackId },
+            "Internal edge should be preserved"
+        )
+
+        // Cross-boundary edge (blockId → userId) should be dropped
+        assertFalse(vm.graph.value.edges.any { it.fromBlockId == blockId })
+        assertNotNull(msg, "Should report 1 cross-boundary edge removed")
+        assertTrue(msg.contains("1 connection"))
+    }
+
+    // ==================== HIGH: Detach preserves edges between co-detached blocks ====================
+
+    @Test
+    fun `detach preserves edges between co-removed blocks as top-level edges`() {
+        val (vm, blockId, containerId) = loadedViewModelWithContainerSetup()
+
+        // Move block into container and add a second block inside
+        vm.dragBlockIntoContainer(blockId, containerId)
+        vm.addBlock(BlockType.SLACK_MESSAGE, "Slack", 100f, 100f)
+        val slackId = vm.graph.value.blocks.filterIsInstance<Block.ActionBlock>().first { it.name == "Slack" }.id
+        vm.dragBlockIntoContainer(slackId, containerId)
+
+        // Connect them inside the container
+        vm.addEdge(blockId, slackId)
+        val container = vm.graph.value.blocks.filterIsInstance<Block.ContainerBlock>().first()
+        assertTrue(container.children.edges.any { it.fromBlockId == blockId && it.toBlockId == slackId })
+
+        // Select both and drag outside
+        vm.selectBlock(blockId)
+        vm.toggleBlockSelection(slackId)
+        vm.moveBlock(blockId, -500f, 0f)
+        vm.moveBlock(slackId, -500f, 0f)
+        vm.updateDragFeedback(setOf(blockId, slackId))
+        val msg = vm.commitMove()
+
+        // Both at top-level
+        assertTrue(vm.graph.value.blocks.any { it.id == blockId && it !is Block.ContainerBlock })
+        assertTrue(vm.graph.value.blocks.any { it.id == slackId && it !is Block.ContainerBlock })
+
+        // Edge should be preserved as top-level edge
+        assertTrue(
+            vm.graph.value.edges.any { it.fromBlockId == blockId && it.toBlockId == slackId },
+            "Edge between co-detached blocks should be preserved as top-level edge"
+        )
+
+        // No cross-boundary edges dropped
+        assertNull(msg, "No cross-boundary edges should be reported")
+    }
+
+    // ==================== HIGH: Connector hint accounts for container-internal edges ====================
+
+    @Test
+    fun `graph with only container-internal edges is not considered edgeless`() {
+        val (vm, blockId, containerId) = loadedViewModelWithContainerSetup()
+
+        // Move block into container and add a second block inside
+        vm.dragBlockIntoContainer(blockId, containerId)
+        vm.addBlock(BlockType.SLACK_MESSAGE, "Slack", 100f, 100f)
+        val slackId = vm.graph.value.blocks.filterIsInstance<Block.ActionBlock>().first { it.name == "Slack" }.id
+        vm.dragBlockIntoContainer(slackId, containerId)
+
+        // Connect them inside the container
+        vm.addEdge(blockId, slackId)
+
+        // Top-level edges should be empty, but container has edges
+        assertTrue(vm.graph.value.edges.isEmpty(), "No top-level edges")
+        val container = vm.graph.value.blocks.filterIsInstance<Block.ContainerBlock>().first()
+        assertTrue(container.children.edges.isNotEmpty(), "Container should have internal edges")
+
+        // Verify the "has any edges" check (mirrors the DagCanvas hint condition)
+        val hasAnyEdges = vm.graph.value.edges.isNotEmpty() ||
+            vm.graph.value.blocks.any { it is Block.ContainerBlock && it.children.edges.isNotEmpty() }
+        assertTrue(hasAnyEdges, "Graph should be considered as having edges when container-internal edges exist")
+    }
+
     // ==================== HIGH: Save includes name (#18) ====================
 
     @Test

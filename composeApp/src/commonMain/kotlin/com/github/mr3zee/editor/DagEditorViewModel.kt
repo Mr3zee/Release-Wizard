@@ -565,21 +565,18 @@ class DagEditorViewModel(
             // Detach takes priority — push all matching children out at once (preserves relative positions)
             val selected = _selectedBlockIds.value
             val toDetach = selected.filter { _parentLookup.value[it] == draggedDetach }.toSet()
-            for (blockId in toDetach) {
-                droppedEdgeCount += countEdgesForBlock(blockId, inContainer = draggedDetach)
-            }
             if (toDetach.isNotEmpty()) {
-                removeBlocksFromContainer(toDetach, draggedDetach)
+                droppedEdgeCount = removeBlocksFromContainer(toDetach, draggedDetach)
             }
         } else if (draggedHover != null) {
-            // Top-level blocks being dragged into a container
+            // Top-level blocks being dragged into a container — batch move preserves inter-block edges
             val selected = _selectedBlockIds.value
-            for (blockId in selected) {
+            val toMove = selected.filter { blockId ->
                 val block = _graph.value.blocks.find { it.id == blockId }
-                if (block != null && block !is Block.ContainerBlock && _parentLookup.value[blockId] == null) {
-                    droppedEdgeCount += countEdgesForBlock(blockId, inContainer = null)
-                    moveBlockIntoContainer(blockId, draggedHover)
-                }
+                block != null && block !is Block.ContainerBlock && _parentLookup.value[blockId] == null
+            }.toSet()
+            if (toMove.isNotEmpty()) {
+                droppedEdgeCount = moveBlocksIntoContainer(toMove, draggedHover)
             }
         }
 
@@ -595,56 +592,81 @@ class DagEditorViewModel(
         } else null
     }
 
-    /** Count edges connected to a block. If inContainer is non-null, counts within that container's edges. */
-    private fun countEdgesForBlock(blockId: BlockId, inContainer: BlockId?): Int {
+    /**
+     * Move multiple blocks into a container at once, preserving edges between moved blocks.
+     * Returns the number of cross-boundary edges that were removed.
+     */
+    private fun moveBlocksIntoContainer(blockIds: Set<BlockId>, containerId: BlockId): Int {
         val g = _graph.value
-        return if (inContainer != null) {
-            val container = g.blocks.find { it.id == inContainer } as? Block.ContainerBlock ?: return 0
-            container.children.edges.count { it.fromBlockId == blockId || it.toBlockId == blockId }
-        } else {
-            g.edges.count { it.fromBlockId == blockId || it.toBlockId == blockId }
+        val container = g.blocks.find { it.id == containerId } as? Block.ContainerBlock ?: return 0
+        val containerPos = g.positions[containerId] ?: return 0
+
+        val movedBlocks = mutableListOf<Block>()
+        val movedPositions = mutableMapOf<BlockId, BlockPosition>()
+        val movedIds = mutableSetOf<BlockId>()
+
+        for (blockId in blockIds) {
+            val block = g.blocks.find { it.id == blockId } ?: continue
+            val blockPos = g.positions[blockId] ?: continue
+
+            // Convert absolute position to relative within container content area
+            val relX = blockPos.x - containerPos.x
+            val relY = blockPos.y - containerPos.y - containerPos.headerHeight
+            val relPos = BlockPosition(relX, relY, blockPos.width, blockPos.height)
+
+            movedIds.add(blockId)
+            movedBlocks.add(block)
+            movedPositions[blockId] = relPos
         }
-    }
 
-    private fun moveBlockIntoContainer(blockId: BlockId, containerId: BlockId) {
-        val g = _graph.value
-        val block = g.blocks.find { it.id == blockId } ?: return
-        val blockPos = g.positions[blockId] ?: return
-        val container = g.blocks.find { it.id == containerId } as? Block.ContainerBlock ?: return
-        val containerPos = g.positions[containerId] ?: return
+        if (movedIds.isEmpty()) return 0
 
-        // Convert absolute position to relative within container content area
-        val relX = blockPos.x - containerPos.x
-        val relY = blockPos.y - containerPos.y - containerPos.headerHeight
-        val relPos = BlockPosition(relX, relY, blockPos.width, blockPos.height)
+        // Classify top-level edges into three categories
+        val remainingEdges = mutableListOf<Edge>()
+        val internalEdges = mutableListOf<Edge>()  // both endpoints moved → go into container
+        var crossBoundaryCount = 0
 
-        // Remove from top-level
-        val newBlocks = g.blocks.filter { it.id != blockId }
-        val newPositions = g.positions - blockId
-        val newEdges = g.edges.filter { it.fromBlockId != blockId && it.toBlockId != blockId }
+        for (edge in g.edges) {
+            val fromMoved = edge.fromBlockId in movedIds
+            val toMoved = edge.toBlockId in movedIds
+            when {
+                fromMoved && toMoved -> internalEdges.add(edge)
+                !fromMoved && !toMoved -> remainingEdges.add(edge)
+                else -> crossBoundaryCount++
+            }
+        }
 
-        // Add to container children
+        // Remove moved blocks from top-level
+        val newBlocks = g.blocks.filter { it.id !in movedIds }
+        val newPositions = g.positions - movedIds
+
+        // Add to container children (including preserved internal edges)
         val updatedChildren = container.children.copy(
-            blocks = container.children.blocks + block,
-            positions = container.children.positions + (blockId to relPos),
+            blocks = container.children.blocks + movedBlocks,
+            edges = container.children.edges + internalEdges,
+            positions = container.children.positions + movedPositions,
         )
         val updatedContainer = container.copy(children = updatedChildren)
         val finalBlocks = newBlocks.map { if (it.id == containerId) updatedContainer else it }
 
-        _graph.value = g.copy(blocks = finalBlocks, edges = newEdges, positions = newPositions)
+        _graph.value = g.copy(blocks = finalBlocks, edges = remainingEdges, positions = newPositions)
 
         // Auto-resize container if needed
         autoResizeContainer(containerId)
+
+        return crossBoundaryCount
     }
 
     /**
      * Remove block(s) from container and push them outward past the nearest container border.
      * When removing multiple blocks, they are all pushed by the same delta to preserve relative positions.
+     * Edges between co-removed blocks are preserved as top-level edges.
+     * Returns the number of cross-boundary edges removed.
      */
-    private fun removeBlocksFromContainer(blockIds: Set<BlockId>, containerId: BlockId) {
+    private fun removeBlocksFromContainer(blockIds: Set<BlockId>, containerId: BlockId): Int {
         val g = _graph.value
-        val container = g.blocks.find { it.id == containerId } as? Block.ContainerBlock ?: return
-        val containerPos = g.positions[containerId] ?: return
+        val container = g.blocks.find { it.id == containerId } as? Block.ContainerBlock ?: return 0
+        val containerPos = g.positions[containerId] ?: return 0
 
         // Compute absolute positions and find the centroid of removed blocks
         data class RemovedBlock(val block: Block, val absPos: BlockPosition)
@@ -660,7 +682,7 @@ class DagEditorViewModel(
             sumCenterX += absX + childPos.width / 2
             sumCenterY += absY + childPos.height / 2
         }
-        if (removed.isEmpty()) return
+        if (removed.isEmpty()) return 0
 
         // Find bounding box of all removed blocks (absolute coords)
         var bbLeft = Float.MAX_VALUE; var bbTop = Float.MAX_VALUE
@@ -674,36 +696,58 @@ class DagEditorViewModel(
         val bbCenterX = (bbLeft + bbRight) / 2
         val bbCenterY = (bbTop + bbBottom) / 2
 
-        // Distance from bounding box edges to container borders
+        // Only push blocks if their bounding box still intersects the container
         val cLeft = containerPos.x; val cTop = containerPos.y
         val cRight = containerPos.x + containerPos.width; val cBottom = containerPos.y + containerPos.height
-        val distLeft = bbCenterX - cLeft
-        val distRight = cRight - bbCenterX
-        val distTop = bbCenterY - cTop
-        val distBottom = cBottom - bbCenterY
-        val minDist = minOf(distLeft, distRight, distTop, distBottom)
-        val pushPadding = 20f
+        val intersects = bbLeft < cRight && bbRight > cLeft && bbTop < cBottom && bbBottom > cTop
 
-        // Push ALL blocks so the entire bounding box clears the nearest border
         val pushDx: Float
         val pushDy: Float
-        when (minDist) {
-            distLeft -> { pushDx = cLeft - bbRight - pushPadding; pushDy = 0f }
-            distRight -> { pushDx = cRight - bbLeft + pushPadding; pushDy = 0f }
-            distTop -> { pushDx = 0f; pushDy = cTop - bbBottom - pushPadding }
-            else -> { pushDx = 0f; pushDy = cBottom - bbTop + pushPadding }
+        if (intersects) {
+            val distLeft = bbCenterX - cLeft
+            val distRight = cRight - bbCenterX
+            val distTop = bbCenterY - cTop
+            val distBottom = cBottom - bbCenterY
+            val minDist = minOf(distLeft, distRight, distTop, distBottom)
+            val pushPadding = 20f
+
+            // Push ALL blocks so the entire bounding box clears the nearest border
+            when (minDist) {
+                distLeft -> { pushDx = cLeft - bbRight - pushPadding; pushDy = 0f }
+                distRight -> { pushDx = cRight - bbLeft + pushPadding; pushDy = 0f }
+                distTop -> { pushDx = 0f; pushDy = cTop - bbBottom - pushPadding }
+                else -> { pushDx = 0f; pushDy = cBottom - bbTop + pushPadding }
+            }
+        } else {
+            pushDx = 0f
+            pushDy = 0f
+        }
+
+        // Classify container children edges
+        val removedIds = blockIds
+        val remainingChildEdges = mutableListOf<Edge>()
+        val internalEdges = mutableListOf<Edge>()  // edges between co-removed blocks → preserve as top-level
+        var crossBoundaryCount = 0
+
+        for (edge in container.children.edges) {
+            val fromRemoved = edge.fromBlockId in removedIds
+            val toRemoved = edge.toBlockId in removedIds
+            when {
+                fromRemoved && toRemoved -> internalEdges.add(edge)
+                !fromRemoved && !toRemoved -> remainingChildEdges.add(edge)
+                else -> crossBoundaryCount++
+            }
         }
 
         // Remove from container children
-        val removedIds = blockIds
         val updatedChildren = container.children.copy(
             blocks = container.children.blocks.filter { it.id !in removedIds },
             positions = container.children.positions.filterKeys { it !in removedIds },
-            edges = container.children.edges.filter { it.fromBlockId !in removedIds && it.toBlockId !in removedIds },
+            edges = remainingChildEdges,
         )
         val updatedContainer = container.copy(children = updatedChildren)
 
-        // Add to top-level with pushed positions
+        // Add to top-level with pushed positions and preserved internal edges
         var finalBlocks = g.blocks.map { if (it.id == containerId) updatedContainer else it }
         val finalPositions = g.positions.toMutableMap()
         for (rb in removed) {
@@ -711,7 +755,8 @@ class DagEditorViewModel(
             finalPositions[rb.block.id] = rb.absPos.copy(x = rb.absPos.x + pushDx, y = rb.absPos.y + pushDy)
         }
 
-        _graph.value = g.copy(blocks = finalBlocks, positions = finalPositions)
+        _graph.value = g.copy(blocks = finalBlocks, edges = g.edges + internalEdges, positions = finalPositions)
+        return crossBoundaryCount
     }
 
     /**
