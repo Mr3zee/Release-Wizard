@@ -80,7 +80,7 @@ fun ExecutionDagCanvas(
             .clipToBounds()
             .background(appColors.canvasBackground)
             .testTag("execution_dag_canvas")
-            // Scroll for zoom
+            // Scroll-wheel zoom + trackpad pinch
             .pointerInput(graph) {
                 awaitPointerEventScope {
                     while (true) {

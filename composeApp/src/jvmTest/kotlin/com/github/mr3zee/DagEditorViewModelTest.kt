@@ -1,0 +1,604 @@
+package com.github.mr3zee
+
+import com.github.mr3zee.api.ProjectApiClient
+import com.github.mr3zee.editor.DagEditorViewModel
+import com.github.mr3zee.editor.LockState
+import com.github.mr3zee.editor.ResizeEdge
+import com.github.mr3zee.model.*
+import io.ktor.http.*
+import kotlinx.coroutines.test.runTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+/**
+ * Unit tests for DagEditorViewModel — tests block resize, container interactions,
+ * cross-boundary edge prevention, deep block operations, and state management.
+ */
+class DagEditorViewModelTest {
+
+    // --- Helpers ---
+
+    private val projectJson = """{"project":{"id":"p1","name":"Test","description":"","dagGraph":{"blocks":[],"edges":[],"positions":{}},"parameters":[],"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}}"""
+    private val lockJson = """{"userId":"u1","username":"testuser","acquiredAt":"2026-03-13T00:00:00Z","expiresAt":"2026-03-13T00:05:00Z"}"""
+
+    private fun createViewModel(): DagEditorViewModel {
+        val client = mockHttpClient(mapOf(
+            "/projects/p1" to json(projectJson),
+            "/projects/p1/lock" to json(lockJson, method = HttpMethod.Post),
+            "/projects/p1/lock/heartbeat" to json(lockJson, method = HttpMethod.Put),
+        ))
+        return DagEditorViewModel(ProjectId("p1"), ProjectApiClient(client), autoSaveDebounceMs = 999_999L)
+    }
+
+    /** Create a VM that's already loaded, with a block and a container for testing. */
+    private fun loadedViewModelWithContainerSetup(): Triple<DagEditorViewModel, BlockId, BlockId> {
+        val vm = createViewModel()
+        vm.loadProject()
+        // Wait for lock
+        val start = System.currentTimeMillis()
+        while (vm.lockState.value !is LockState.Acquired && System.currentTimeMillis() - start < 3000) {
+            Thread.sleep(10)
+        }
+
+        // Add an action block and a container
+        vm.addBlock(BlockType.TEAMCITY_BUILD, "Build", 100f, 100f)
+        val blockId = vm.graph.value.blocks.filterIsInstance<Block.ActionBlock>().first().id
+
+        vm.addContainerBlock("Container", 300f, 50f)
+        val containerId = vm.graph.value.blocks.filterIsInstance<Block.ContainerBlock>().first().id
+
+        return Triple(vm, blockId, containerId)
+    }
+
+    /**
+     * Helper: select a block, move it so its center is inside a container's content area, and commit.
+     * This simulates the user drag-and-drop into a container.
+     */
+    private fun DagEditorViewModel.dragBlockIntoContainer(blockId: BlockId, containerId: BlockId) {
+        val cPos = graph.value.positions[containerId] ?: error("No container position for $containerId")
+        val bPos = graph.value.positions[blockId] ?: error("No block position for $blockId")
+        // Target: block center inside container content area
+        val targetCenterX = cPos.x + cPos.width / 2
+        val targetCenterY = cPos.y + BlockPosition.CONTAINER_HEADER_HEIGHT + (cPos.height - BlockPosition.CONTAINER_HEADER_HEIGHT) / 2
+        val dx = targetCenterX - (bPos.x + bPos.width / 2)
+        val dy = targetCenterY - (bPos.y + bPos.height / 2)
+        selectBlock(blockId)
+        moveBlock(blockId, dx, dy)
+        commitMove()
+    }
+
+    // ==================== CRITICAL: Cross-boundary edge prevention (#2) ====================
+
+    @Test
+    fun `addEdge rejects cross-boundary connection`() {
+        val (vm, blockId, containerId) = loadedViewModelWithContainerSetup()
+
+        // Move block into container
+        vm.dragBlockIntoContainer(blockId, containerId)
+
+        // Now blockId is inside the container. Add another top-level block.
+        vm.addBlock(BlockType.SLACK_MESSAGE, "Slack", 600f, 100f)
+        val topLevelId = vm.graph.value.blocks.filterIsInstance<Block.ActionBlock>().first { it.name == "Slack" }.id
+
+        // Try to connect child to top-level — should be rejected
+        val result = vm.addEdge(blockId, topLevelId)
+        assertEquals("Cannot connect blocks across container boundaries", result)
+    }
+
+    @Test
+    fun `addEdge succeeds within same container`() {
+        val (vm, blockId, containerId) = loadedViewModelWithContainerSetup()
+
+        // Move block into container
+        vm.dragBlockIntoContainer(blockId, containerId)
+
+        // Add second block and move into same container
+        vm.addBlock(BlockType.SLACK_MESSAGE, "Slack", 100f, 100f)
+        val slackId = vm.graph.value.blocks.filterIsInstance<Block.ActionBlock>().first { it.name == "Slack" }.id
+        vm.dragBlockIntoContainer(slackId, containerId)
+
+        // Connect within container
+        val result = vm.addEdge(blockId, slackId)
+        assertNull(result)
+
+        // Edge should be in container's children edges
+        val container = vm.graph.value.blocks.filterIsInstance<Block.ContainerBlock>().first()
+        assertTrue(container.children.edges.any { it.fromBlockId == blockId && it.toBlockId == slackId })
+    }
+
+    // ==================== CRITICAL: removeSelectedBlocks for children (#3) ====================
+
+    @Test
+    fun `removeSelectedBlocks deletes child inside container`() {
+        val (vm, blockId, containerId) = loadedViewModelWithContainerSetup()
+
+        // Move block into container
+        vm.dragBlockIntoContainer(blockId, containerId)
+
+        // Verify block is in container
+        val containerBefore = vm.graph.value.blocks.filterIsInstance<Block.ContainerBlock>().first()
+        assertEquals(1, containerBefore.children.blocks.size)
+
+        // Select and delete the child
+        vm.selectBlock(blockId)
+        vm.removeSelectedBlocks()
+
+        // Verify child is removed
+        val containerAfter = vm.graph.value.blocks.filterIsInstance<Block.ContainerBlock>().first()
+        assertEquals(0, containerAfter.children.blocks.size)
+    }
+
+    // ==================== CRITICAL: commitMove container entry (#4) ====================
+
+    @Test
+    fun `commitMove moves block into container`() {
+        val (vm, blockId, containerId) = loadedViewModelWithContainerSetup()
+
+        // Add an edge from blockId to container (top-level edge)
+        vm.addEdge(blockId, containerId)
+        val edgesBefore = vm.graph.value.edges.size
+        assertTrue(edgesBefore > 0)
+
+        // Select and move block center inside container content area
+        vm.selectBlock(blockId)
+        val cPos = vm.graph.value.positions[containerId] ?: error("No container position")
+        val bPos = vm.graph.value.positions[blockId] ?: error("No block position")
+        val targetCX = cPos.x + cPos.width / 2
+        val targetCY = cPos.y + BlockPosition.CONTAINER_HEADER_HEIGHT + (cPos.height - BlockPosition.CONTAINER_HEADER_HEIGHT) / 2
+        vm.moveBlock(blockId, targetCX - (bPos.x + bPos.width / 2), targetCY - (bPos.y + bPos.height / 2))
+
+        // commitMove should move block into container and strip cross-boundary edges
+        val msg = vm.commitMove()
+
+        // Block should now be inside container
+        val container = vm.graph.value.blocks.filterIsInstance<Block.ContainerBlock>().first()
+        assertTrue(container.children.blocks.any { it.id == blockId })
+        // Block should not be in top-level
+        assertTrue(vm.graph.value.blocks.none { it.id == blockId && it !is Block.ContainerBlock })
+        // Edge should be removed
+        assertEquals(0, vm.graph.value.edges.size)
+        // Message about dropped edges
+        assertNotNull(msg)
+        assertTrue(msg.contains("removed"))
+    }
+
+    // ==================== CRITICAL: commitMove container exit (#5) ====================
+
+    @Test
+    fun `commitMove removes block from container`() {
+        val (vm, blockId, containerId) = loadedViewModelWithContainerSetup()
+
+        // First move block into container
+        vm.dragBlockIntoContainer(blockId, containerId)
+
+        // Verify it's inside
+        val containerBefore = vm.graph.value.blocks.filterIsInstance<Block.ContainerBlock>().first()
+        assertEquals(1, containerBefore.children.blocks.size)
+
+        // Now drag it far outside the container
+        vm.selectBlock(blockId)
+        vm.moveBlock(blockId, -500f, -500f)
+        vm.commitMove()
+
+        // Block should be back at top-level
+        val containerAfter = vm.graph.value.blocks.filterIsInstance<Block.ContainerBlock>().first()
+        assertEquals(0, containerAfter.children.blocks.size)
+        assertTrue(vm.graph.value.blocks.any { it.id == blockId && it !is Block.ContainerBlock })
+    }
+
+    // ==================== HIGH: resizeBlock (#6) ====================
+
+    @Test
+    fun `resizeBlock Right increases width`() {
+        val (vm, blockId, _) = loadedViewModelWithContainerSetup()
+        val posBefore = vm.graph.value.positions[blockId] ?: error("No position")
+
+        vm.resizeBlock(blockId, ResizeEdge.Right, 50f, 0f)
+
+        val posAfter = vm.graph.value.positions[blockId] ?: error("No position")
+        assertEquals(posBefore.width + 50f, posAfter.width)
+        assertEquals(posBefore.x, posAfter.x) // x shouldn't change
+    }
+
+    @Test
+    fun `resizeBlock Left shifts x and increases width`() {
+        val (vm, blockId, _) = loadedViewModelWithContainerSetup()
+        val posBefore = vm.graph.value.positions[blockId] ?: error("No position")
+
+        vm.resizeBlock(blockId, ResizeEdge.Left, -30f, 0f)
+
+        val posAfter = vm.graph.value.positions[blockId] ?: error("No position")
+        assertEquals(posBefore.width + 30f, posAfter.width)
+        assertEquals(posBefore.x - 30f, posAfter.x)
+    }
+
+    @Test
+    fun `resizeBlock enforces minimum size`() {
+        val (vm, blockId, _) = loadedViewModelWithContainerSetup()
+
+        // Try to shrink way below minimum
+        vm.resizeBlock(blockId, ResizeEdge.Right, -500f, 0f)
+
+        val posAfter = vm.graph.value.positions[blockId] ?: error("No position")
+        assertEquals(BlockPosition.DEFAULT_BLOCK_WIDTH, posAfter.width)
+    }
+
+    @Test
+    fun `resizeBlock Bottom increases height`() {
+        val (vm, blockId, _) = loadedViewModelWithContainerSetup()
+        val posBefore = vm.graph.value.positions[blockId] ?: error("No position")
+
+        vm.resizeBlock(blockId, ResizeEdge.Bottom, 0f, 40f)
+
+        val posAfter = vm.graph.value.positions[blockId] ?: error("No position")
+        assertEquals(posBefore.height + 40f, posAfter.height)
+    }
+
+    @Test
+    fun `resizeBlock BottomRight increases both dimensions`() {
+        val (vm, blockId, _) = loadedViewModelWithContainerSetup()
+        val posBefore = vm.graph.value.positions[blockId] ?: error("No position")
+
+        vm.resizeBlock(blockId, ResizeEdge.BottomRight, 30f, 20f)
+
+        val posAfter = vm.graph.value.positions[blockId] ?: error("No position")
+        assertEquals(posBefore.width + 30f, posAfter.width)
+        assertEquals(posBefore.height + 20f, posAfter.height)
+    }
+
+    // ==================== HIGH: resizeBlock container with content minimum (#7) ====================
+
+    @Test
+    fun `resizeBlock container enforces content-fitting minimum`() {
+        val (vm, blockId, containerId) = loadedViewModelWithContainerSetup()
+
+        // Move block into container
+        vm.dragBlockIntoContainer(blockId, containerId)
+
+        // Try to shrink container way below child bounds
+        vm.resizeBlock(containerId, ResizeEdge.Right, -1000f, 0f)
+        vm.commitResize()
+
+        val containerPos = vm.graph.value.positions[containerId] ?: error("No container position")
+        // Container should not be smaller than child bounds + padding
+        val container = vm.graph.value.blocks.filterIsInstance<Block.ContainerBlock>().first()
+        val childPos = container.children.positions[blockId] ?: error("No child position")
+        assertTrue(containerPos.width >= childPos.x + childPos.width + 20f)
+    }
+
+    // ==================== HIGH: resizeBlock for container children (#8) ====================
+
+    @Test
+    fun `resizeBlock child triggers parent container auto-resize`() {
+        val (vm, blockId, containerId) = loadedViewModelWithContainerSetup()
+
+        // Move block into container
+        vm.dragBlockIntoContainer(blockId, containerId)
+
+        val containerWidthBefore = vm.graph.value.positions[containerId]?.width ?: error("No container position")
+
+        // Resize child to extend far past container bounds
+        vm.resizeBlock(blockId, ResizeEdge.Right, 500f, 0f)
+
+        val containerWidthAfter = vm.graph.value.positions[containerId]?.width ?: error("No container position")
+        assertTrue(containerWidthAfter > containerWidthBefore, "Container should auto-resize when child extends beyond bounds")
+    }
+
+    // ==================== HIGH: autoResizeContainer (#9) ====================
+
+    @Test
+    fun `autoResizeContainer expands when child moved past bounds`() {
+        val (vm, blockId, containerId) = loadedViewModelWithContainerSetup()
+
+        // Move block into container
+        vm.dragBlockIntoContainer(blockId, containerId)
+
+        val containerSizeBefore = vm.graph.value.positions[containerId] ?: error("No position")
+
+        // Move child to far right within container (past bounds)
+        vm.moveBlock(blockId, 500f, 0f)
+
+        val containerSizeAfter = vm.graph.value.positions[containerId] ?: error("No position")
+        assertTrue(containerSizeAfter.width > containerSizeBefore.width)
+    }
+
+    // ==================== HIGH: mapBlocksDeep / updateBlockField (#10) ====================
+
+    @Test
+    fun `updateBlockName works for child blocks inside container`() {
+        val (vm, blockId, containerId) = loadedViewModelWithContainerSetup()
+
+        // Move block into container
+        vm.dragBlockIntoContainer(blockId, containerId)
+
+        // Rename the child block
+        vm.updateBlockName(blockId, "Renamed Build")
+
+        // Find the child inside the container and verify
+        val container = vm.graph.value.blocks.filterIsInstance<Block.ContainerBlock>().first()
+        val child = container.children.blocks.find { it.id == blockId }
+        assertNotNull(child)
+        assertEquals("Renamed Build", child.name)
+    }
+
+    @Test
+    fun `updateBlockDescription works for child blocks inside container`() {
+        val (vm, blockId, containerId) = loadedViewModelWithContainerSetup()
+
+        // Move block into container
+        vm.dragBlockIntoContainer(blockId, containerId)
+
+        vm.updateBlockDescription(blockId, "New description")
+
+        val container = vm.graph.value.blocks.filterIsInstance<Block.ContainerBlock>().first()
+        val child = container.children.blocks.find { it.id == blockId }
+        assertNotNull(child)
+        assertEquals("New description", child.description)
+    }
+
+    // ==================== HIGH: selectEdge + removeSelectedEdge for container edges (#12) ====================
+
+    @Test
+    fun `selectEdge and removeSelectedEdge for container-internal edge`() {
+        val (vm, blockId, containerId) = loadedViewModelWithContainerSetup()
+
+        // Move block into container
+        vm.dragBlockIntoContainer(blockId, containerId)
+
+        // Add second block into container
+        vm.addBlock(BlockType.SLACK_MESSAGE, "Slack", 100f, 100f)
+        val slackId = vm.graph.value.blocks.filterIsInstance<Block.ActionBlock>().first { it.name == "Slack" }.id
+        vm.dragBlockIntoContainer(slackId, containerId)
+
+        // Create edge between children
+        vm.addEdge(blockId, slackId)
+        val container = vm.graph.value.blocks.filterIsInstance<Block.ContainerBlock>().first()
+        assertEquals(1, container.children.edges.size)
+
+        // Select the container-internal edge
+        vm.selectEdge(0, containerId)
+        assertEquals(0, vm.selectedEdgeIndex.value)
+        assertEquals(containerId, vm.selectedEdgeContainerId.value)
+
+        // Delete it
+        vm.removeSelectedEdge()
+
+        val containerAfter = vm.graph.value.blocks.filterIsInstance<Block.ContainerBlock>().first()
+        assertEquals(0, containerAfter.children.edges.size)
+        // Top-level edges should be unaffected
+        assertEquals(0, vm.graph.value.edges.size)
+    }
+
+    // ==================== MEDIUM: All resize edges (#13) ====================
+
+    @Test
+    fun `resizeBlock TopLeft shifts both position and size`() {
+        val (vm, blockId, _) = loadedViewModelWithContainerSetup()
+        val before = vm.graph.value.positions[blockId] ?: error("No position")
+
+        vm.resizeBlock(blockId, ResizeEdge.TopLeft, -20f, -15f)
+
+        val after = vm.graph.value.positions[blockId] ?: error("No position")
+        assertEquals(before.x - 20f, after.x)
+        assertEquals(before.y - 15f, after.y)
+        assertEquals(before.width + 20f, after.width)
+        assertEquals(before.height + 15f, after.height)
+    }
+
+    @Test
+    fun `resizeBlock Top only changes y and height`() {
+        val (vm, blockId, _) = loadedViewModelWithContainerSetup()
+        val before = vm.graph.value.positions[blockId] ?: error("No position")
+
+        vm.resizeBlock(blockId, ResizeEdge.Top, 0f, -25f)
+
+        val after = vm.graph.value.positions[blockId] ?: error("No position")
+        assertEquals(before.x, after.x)
+        assertEquals(before.y - 25f, after.y)
+        assertEquals(before.width, after.width)
+        assertEquals(before.height + 25f, after.height)
+    }
+
+    // ==================== MEDIUM: copySelected for container children (#15) ====================
+
+    @Test
+    fun `copySelected includes children from containers`() {
+        val (vm, blockId, containerId) = loadedViewModelWithContainerSetup()
+
+        // Move block into container
+        vm.dragBlockIntoContainer(blockId, containerId)
+
+        // Select and copy the child
+        vm.selectBlock(blockId)
+        vm.copySelected()
+
+        // Paste — should appear as top-level block with absolute position
+        val blockCountBefore = vm.graph.value.blocks.size
+        vm.pasteClipboard()
+
+        assertTrue(vm.graph.value.blocks.size > blockCountBefore, "Pasted block should be added at top-level")
+    }
+
+    // ==================== MEDIUM: selectAll includes children (#16) ====================
+
+    @Test
+    fun `selectAll includes container children`() {
+        val (vm, blockId, containerId) = loadedViewModelWithContainerSetup()
+
+        // Move block into container
+        vm.dragBlockIntoContainer(blockId, containerId)
+
+        vm.selectAll()
+
+        // Should include the container + the child inside it
+        assertTrue(vm.selectedBlockIds.value.contains(containerId))
+        assertTrue(vm.selectedBlockIds.value.contains(blockId))
+    }
+
+    // ==================== MEDIUM: moveBlock relative positioning (#18) ====================
+
+    @Test
+    fun `moveBlock applies delta to relative position for child`() {
+        val (vm, blockId, containerId) = loadedViewModelWithContainerSetup()
+
+        // Move block into container
+        vm.dragBlockIntoContainer(blockId, containerId)
+
+        val container = vm.graph.value.blocks.filterIsInstance<Block.ContainerBlock>().first()
+        val relPosBefore = container.children.positions[blockId] ?: error("No relative position")
+
+        // Move child by (30, 40)
+        vm.moveBlock(blockId, 30f, 40f)
+
+        val containerAfter = vm.graph.value.blocks.filterIsInstance<Block.ContainerBlock>().first()
+        val relPosAfter = containerAfter.children.positions[blockId] ?: error("No relative position")
+
+        assertEquals(relPosBefore.x + 30f, relPosAfter.x)
+        assertEquals(relPosBefore.y + 40f, relPosAfter.y)
+    }
+
+    // ==================== MEDIUM: Detach visual feedback (#19) ====================
+
+    @Test
+    fun `detachingFromContainerId set when child dragged outside`() {
+        val (vm, blockId, containerId) = loadedViewModelWithContainerSetup()
+
+        // Move block into container
+        vm.dragBlockIntoContainer(blockId, containerId)
+
+        // Drag child far outside
+        vm.moveBlock(blockId, -1000f, -1000f)
+
+        assertEquals(containerId, vm.detachingFromContainerId.value)
+    }
+
+    // ==================== MEDIUM: Hover visual feedback (#20) ====================
+
+    @Test
+    fun `hoveredContainerId set when block dragged over container`() {
+        val (vm, blockId, containerId) = loadedViewModelWithContainerSetup()
+
+        // Move block center into container content area
+        val cPos = vm.graph.value.positions[containerId] ?: error("No container position")
+        val bPos = vm.graph.value.positions[blockId] ?: error("No block position")
+        val dx = (cPos.x + cPos.width / 2) - (bPos.x + bPos.width / 2)
+        val dy = (cPos.y + BlockPosition.CONTAINER_HEADER_HEIGHT + (cPos.height - BlockPosition.CONTAINER_HEADER_HEIGHT) / 2) - (bPos.y + bPos.height / 2)
+        vm.moveBlock(blockId, dx, dy)
+
+        assertEquals(containerId, vm.hoveredContainerId.value)
+    }
+
+    // ==================== LOW: Duplicate edge prevention in container (#22) ====================
+
+    @Test
+    fun `addEdge prevents duplicates within container`() {
+        val (vm, blockId, containerId) = loadedViewModelWithContainerSetup()
+
+        // Move block into container
+        vm.dragBlockIntoContainer(blockId, containerId)
+
+        // Add second block into container
+        vm.addBlock(BlockType.SLACK_MESSAGE, "Slack", 100f, 100f)
+        val slackId = vm.graph.value.blocks.filterIsInstance<Block.ActionBlock>().first { it.name == "Slack" }.id
+        vm.dragBlockIntoContainer(slackId, containerId)
+
+        // Add edge twice
+        vm.addEdge(blockId, slackId)
+        vm.addEdge(blockId, slackId)
+
+        val container = vm.graph.value.blocks.filterIsInstance<Block.ContainerBlock>().first()
+        assertEquals(1, container.children.edges.size)
+    }
+
+    // ==================== LOW: commitMove returns null when no edges dropped (#23) ====================
+
+    @Test
+    fun `commitMove returns null when no container membership changes`() {
+        val (vm, blockId, _) = loadedViewModelWithContainerSetup()
+
+        vm.moveBlock(blockId, 10f, 10f)
+        val result = vm.commitMove()
+
+        assertNull(result)
+    }
+
+    // ==================== LOW: commitMove returns correct edge count message (#24) ====================
+
+    @Test
+    fun `commitMove reports edge count when moving into container`() {
+        val (vm, blockId, containerId) = loadedViewModelWithContainerSetup()
+
+        // Add another block and connect both to blockId
+        vm.addBlock(BlockType.SLACK_MESSAGE, "Slack", 500f, 100f)
+        val slackId = vm.graph.value.blocks.filterIsInstance<Block.ActionBlock>().first { it.name == "Slack" }.id
+        vm.addEdge(blockId, slackId)
+        vm.addEdge(blockId, containerId)
+
+        val edgeCount = vm.graph.value.edges.count { it.fromBlockId == blockId || it.toBlockId == blockId }
+        assertTrue(edgeCount >= 2)
+
+        // Select and move block into container
+        vm.selectBlock(blockId)
+        val cPos = vm.graph.value.positions[containerId] ?: error("No container position")
+        val bPos = vm.graph.value.positions[blockId] ?: error("No block position")
+        val targetCX = cPos.x + cPos.width / 2
+        val targetCY = cPos.y + BlockPosition.CONTAINER_HEADER_HEIGHT + (cPos.height - BlockPosition.CONTAINER_HEADER_HEIGHT) / 2
+        vm.moveBlock(blockId, targetCX - (bPos.x + bPos.width / 2), targetCY - (bPos.y + bPos.height / 2))
+        val msg = vm.commitMove()
+
+        assertNotNull(msg)
+        assertTrue(msg.contains("removed"))
+    }
+
+    // ==================== LOW: parentLookup correctness (#25) ====================
+
+    @Test
+    fun `parentLookup updated after container membership change`() {
+        val (vm, blockId, containerId) = loadedViewModelWithContainerSetup()
+
+        // Initially top-level
+        assertNull(vm.parentLookup.value[blockId])
+
+        // Move into container
+        vm.dragBlockIntoContainer(blockId, containerId)
+
+        // Now should have parent
+        assertEquals(containerId, vm.parentLookup.value[blockId])
+
+        // Move out
+        vm.moveBlock(blockId, -500f, -500f)
+        vm.commitMove()
+
+        assertNull(vm.parentLookup.value[blockId])
+    }
+
+    // ==================== LOW: Paste preserves width/height (#26) ====================
+
+    @Test
+    fun `paste preserves custom block dimensions`() {
+        val (vm, blockId, _) = loadedViewModelWithContainerSetup()
+
+        // Resize block to custom dimensions
+        vm.resizeBlock(blockId, ResizeEdge.Right, 100f, 0f)
+        vm.resizeBlock(blockId, ResizeEdge.Bottom, 0f, 50f)
+        vm.commitResize()
+
+        val originalPos = vm.graph.value.positions[blockId] ?: error("No position")
+
+        // Copy and paste
+        vm.selectBlock(blockId)
+        vm.copySelected()
+        vm.pasteClipboard()
+
+        // Find the new pasted block (most recently selected)
+        val pastedId = vm.selectedBlockIds.value.firstOrNull { it != blockId }
+        assertNotNull(pastedId, "Pasted block should be selected")
+
+        val pastedPos = vm.graph.value.positions[pastedId] ?: error("No pasted position")
+        assertEquals(originalPos.width, pastedPos.width)
+        assertEquals(originalPos.height, pastedPos.height)
+    }
+}

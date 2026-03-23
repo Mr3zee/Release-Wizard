@@ -492,6 +492,8 @@ class DagEditorViewModel(
             _graph.value = g.copy(
                 blocks = g.blocks.map { if (it.id == parentId) updatedContainer else it },
             )
+            // Continuously auto-resize parent container while child is being moved
+            autoResizeContainer(parentId)
 
             // Check if block is being dragged outside the container bounds
             val containerPos = g.positions[parentId]
@@ -555,6 +557,9 @@ class DagEditorViewModel(
                 }
             }
         }
+
+        // Auto-resize any container whose children extend beyond its bounds
+        autoResizeAllContainers()
 
         pushUndoState(_graph.value)
         revalidate()
@@ -655,6 +660,15 @@ class DagEditorViewModel(
         }
     }
 
+    /** Auto-resize all containers whose children extend beyond their bounds. */
+    private fun autoResizeAllContainers() {
+        for (block in _graph.value.blocks) {
+            if (block is Block.ContainerBlock && block.children.blocks.isNotEmpty()) {
+                autoResizeContainer(block.id)
+            }
+        }
+    }
+
     fun resizeBlock(blockId: BlockId, edge: ResizeEdge, dx: Float, dy: Float) {
         if (isReadOnly.value) return
         val g = _graph.value
@@ -670,10 +684,29 @@ class DagEditorViewModel(
             )
             val updatedContainer = container.copy(children = updatedChildren)
             _graph.value = g.copy(blocks = g.blocks.map { if (it.id == parentId) updatedContainer else it })
+            // Continuously auto-resize parent container while child is being resized
+            autoResizeContainer(parentId)
         } else {
             val pos = g.positions[blockId] ?: return
             val block = g.blocks.find { it.id == blockId }
-            val newPos = computeResizedPosition(pos, edge, dx, dy, isContainer = block is Block.ContainerBlock)
+            // For containers, enforce content-fitting minimum so children aren't clipped
+            val contentMinW: Float
+            val contentMinH: Float
+            if (block is Block.ContainerBlock && block.children.blocks.isNotEmpty()) {
+                val padding = 20f
+                contentMinW = block.children.blocks.maxOf { child ->
+                    val cp = block.children.positions[child.id] ?: return@maxOf 0f
+                    cp.x + cp.width + padding
+                }.coerceAtLeast(BlockPosition.DEFAULT_CONTAINER_WIDTH)
+                contentMinH = block.children.blocks.maxOf { child ->
+                    val cp = block.children.positions[child.id] ?: return@maxOf 0f
+                    cp.y + cp.height + BlockPosition.CONTAINER_HEADER_HEIGHT + padding
+                }.coerceAtLeast(BlockPosition.DEFAULT_CONTAINER_HEIGHT)
+            } else {
+                contentMinW = 0f
+                contentMinH = 0f
+            }
+            val newPos = computeResizedPosition(pos, edge, dx, dy, isContainer = block is Block.ContainerBlock, contentMinW, contentMinH)
             _graph.value = g.copy(positions = g.positions + (blockId to newPos))
         }
         _isDirty.value = true
@@ -681,9 +714,12 @@ class DagEditorViewModel(
 
     private fun computeResizedPosition(
         pos: BlockPosition, edge: ResizeEdge, dx: Float, dy: Float, isContainer: Boolean,
+        contentMinW: Float = 0f, contentMinH: Float = 0f,
     ): BlockPosition {
-        val minW = if (isContainer) BlockPosition.DEFAULT_CONTAINER_WIDTH else BlockPosition.DEFAULT_BLOCK_WIDTH
-        val minH = if (isContainer) BlockPosition.DEFAULT_CONTAINER_HEIGHT else BlockPosition.DEFAULT_BLOCK_HEIGHT
+        val defaultMinW = if (isContainer) BlockPosition.DEFAULT_CONTAINER_WIDTH else BlockPosition.DEFAULT_BLOCK_WIDTH
+        val defaultMinH = if (isContainer) BlockPosition.DEFAULT_CONTAINER_HEIGHT else BlockPosition.DEFAULT_BLOCK_HEIGHT
+        val minW = maxOf(defaultMinW, contentMinW)
+        val minH = maxOf(defaultMinH, contentMinH)
 
         val (newX, newWidth) = when (edge) {
             ResizeEdge.Left, ResizeEdge.TopLeft, ResizeEdge.BottomLeft -> {
@@ -713,6 +749,7 @@ class DagEditorViewModel(
     }
 
     fun commitResize() {
+        autoResizeAllContainers()
         pushUndoState(_graph.value)
         revalidate()
         scheduleAutoSave()

@@ -278,7 +278,6 @@
     <string name="editor_zoom_fit">Reset view</string>
     <string name="editor_zoom_in">Zoom in</string>
     <string name="editor_zoom_out">Zoom out</string>
-    <string name="editor_snap_to_grid">Snap to grid</string>
     <string name="editor_collapse_toolbar">Collapse toolbar</string>
     <string name="editor_expand_toolbar">Expand toolbar</string>
     <string name="editor_collapse_properties">Collapse properties</string>

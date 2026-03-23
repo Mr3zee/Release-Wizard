@@ -302,7 +302,6 @@ object RickRollPack {
             "editor_validation_too_many_blocks" to $$"Too many blocks: %1$d (max %2$d) \u2014 never gonna fit them all",
             "editor_validation_too_many_edges" to $$"Too many edges: %1$d (max %2$d) \u2014 too many connections to love",
             "editor_validation_too_many_parameters" to $$"Too many parameters (max %1$d) \u2014 full commitment to less",
-            "editor_snap_to_grid" to "Never Gonna Let Grid Down",
             "editor_zoom_fit" to "Full Commitment (Reset view)",
             "editor_zoom_in" to "Never Gonna Zoom You Down",
             "editor_zoom_out" to "Never Gonna Zoom You Up",

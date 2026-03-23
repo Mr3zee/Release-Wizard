@@ -557,4 +557,33 @@ class SerializationTest {
         val encoded = json.encodeToString(Block.serializer(), block)
         assertTrue(encoded.contains("\"description\":\"Deploy to production\""))
     }
+
+    @Test
+    fun `BlockPosition backward-compat deserialization without width and height`() {
+        val legacyJson = """{"x":100.0,"y":50.0}"""
+        val pos = json.decodeFromString<BlockPosition>(legacyJson)
+        assertEquals(100f, pos.x)
+        assertEquals(50f, pos.y)
+        assertEquals(BlockPosition.DEFAULT_BLOCK_WIDTH, pos.width)
+        assertEquals(BlockPosition.DEFAULT_BLOCK_HEIGHT, pos.height)
+    }
+
+    @Test
+    fun `BlockPosition with explicit width and height round trip`() {
+        val pos = BlockPosition(100f, 50f, 300f, 150f)
+        val encoded = json.encodeToString(BlockPosition.serializer(), pos)
+        val decoded = json.decodeFromString<BlockPosition>(encoded)
+        assertEquals(pos, decoded)
+    }
+
+    @Test
+    fun `DagGraph with legacy positions without width and height`() {
+        val legacyJson = """{"blocks":[],"edges":[],"positions":{"b1":{"x":100.0,"y":50.0}}}"""
+        val graph = json.decodeFromString<DagGraph>(legacyJson)
+        val pos = graph.positions[BlockId("b1")]
+        assertEquals(100f, pos?.x)
+        assertEquals(50f, pos?.y)
+        assertEquals(BlockPosition.DEFAULT_BLOCK_WIDTH, pos?.width)
+        assertEquals(BlockPosition.DEFAULT_BLOCK_HEIGHT, pos?.height)
+    }
 }

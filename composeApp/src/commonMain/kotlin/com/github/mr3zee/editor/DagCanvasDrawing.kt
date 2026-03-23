@@ -100,7 +100,10 @@ internal fun handleScrollZoom(
     density: Float,
 ): Pair<Float, Offset>? {
     if (scrollY == 0f) return null
-    val factor = if (scrollY < 0) 1.03f else 1f / 1.03f
+    // Proportional zoom: larger scroll delta = faster zoom.
+    // scrollY sign: negative = zoom in, positive = zoom out (macOS convention).
+    // Works for both discrete scroll wheel ticks and continuous trackpad pinch.
+    val factor = (1f - scrollY * 0.03f).coerceIn(0.5f, 2f)
     val newZoom = (zoom * factor).coerceIn(MIN_ZOOM, MAX_ZOOM)
     val logicalBefore = Offset(
         (pointerPos.x - panOffset.x) / (density * zoom),
@@ -290,7 +293,7 @@ internal fun DrawScope.drawContainerBlock(
     val cornerRadius = transform.toScreen(8f)
     val headerHeight = transform.toScreen(BlockPosition.CONTAINER_HEADER_HEIGHT)
 
-    // Subtle fill at 5% opacity (distinguishes container area from empty canvas)
+    // Subtle fill at 8% opacity (distinguishes container area from empty canvas)
     drawRoundRect(
         color = colors.containerBlock.copy(alpha = 0.08f),
         topLeft = Offset(screenX, screenY),
@@ -337,11 +340,12 @@ internal fun DrawScope.drawContainerBlock(
     }
     drawPath(headerPath, color = colors.containerHeaderBg)
 
-    // Divider line between header and content
+    // Divider line between header and content (inset by corner radius to avoid overshoot)
+    val dividerInset = cornerRadius * 0.3f
     drawLine(
         color = colors.containerBorder,
-        start = Offset(screenX, screenY + headerHeight),
-        end = Offset(screenX + screenW, screenY + headerHeight),
+        start = Offset(screenX + dividerInset, screenY + headerHeight),
+        end = Offset(screenX + screenW - dividerInset, screenY + headerHeight),
         strokeWidth = transform.toScreen(1f),
     )
 
@@ -371,15 +375,42 @@ internal fun DrawScope.drawContainerBlock(
         topLeft = Offset(screenX + transform.toScreen(10f), screenY + (headerHeight - nameLayout.size.height) / 2),
     )
 
-    // Draw count badge
+    // Draw count badge with pill background
+    val badgePadH = transform.toScreen(4f)
+    val badgePadV = transform.toScreen(2f)
+    val badgeY = screenY + (headerHeight - countLayout.size.height) / 2
+    drawRoundRect(
+        color = colors.containerBorder.copy(alpha = 0.2f),
+        topLeft = Offset(countX - badgePadH, badgeY - badgePadV),
+        size = Size(countLayout.size.width + badgePadH * 2, countLayout.size.height.toFloat() + badgePadV * 2),
+        cornerRadius = CornerRadius(transform.toScreen(4f)),
+    )
     drawText(
         countLayout,
-        topLeft = Offset(countX, screenY + (headerHeight - countLayout.size.height) / 2),
+        topLeft = Offset(countX, badgeY),
     )
+
+    // Empty container placeholder
+    if (childCount == 0) {
+        val hintSize = (10f * zoom).coerceIn(4f, 28f)
+        val hintLayout = textMeasurer.measure(
+            "Drop blocks here",
+            style = TextStyle(fontSize = hintSize.sp, color = colors.chromeTextTertiary),
+            maxLines = 1,
+        )
+        val contentCenterY = screenY + headerHeight + (screenH - headerHeight) / 2
+        drawText(
+            hintLayout,
+            topLeft = Offset(
+                screenX + (screenW - hintLayout.size.width) / 2,
+                contentCenterY - hintLayout.size.height / 2,
+            ),
+        )
+    }
 }
 
 /** Compute the Y offset for port placement. Always centered on the block height. */
-internal fun portYOffset(position: BlockPosition, isContainer: Boolean): Float =
+internal fun portYOffset(position: BlockPosition): Float =
     position.height / 2
 
 internal fun DrawScope.drawPorts(
@@ -388,10 +419,9 @@ internal fun DrawScope.drawPorts(
     isInputHovered: Boolean,
     isOutputHovered: Boolean,
     colors: AppColors,
-    isContainer: Boolean = false,
 ) {
     val portScreenRadius = transform.toScreen(PORT_RADIUS)
-    val yOff = portYOffset(position, isContainer)
+    val yOff = portYOffset(position)
 
     val inX = transform.toScreenX(position.x)
     val inY = transform.toScreenY(position.y + yOff)
@@ -436,13 +466,11 @@ internal fun DrawScope.drawEdge(
     toPos: BlockPosition,
     isSelected: Boolean,
     colors: AppColors,
-    isFromContainer: Boolean = false,
-    isToContainer: Boolean = false,
 ) {
     val startX = transform.toScreenX(fromPos.x + fromPos.width)
-    val startY = transform.toScreenY(fromPos.y + portYOffset(fromPos, isFromContainer))
+    val startY = transform.toScreenY(fromPos.y + portYOffset(fromPos))
     val endX = transform.toScreenX(toPos.x)
-    val endY = transform.toScreenY(toPos.y + portYOffset(toPos, isToContainer))
+    val endY = transform.toScreenY(toPos.y + portYOffset(toPos))
 
     val dx = endX - startX
     val cp1x = startX + dx * 0.4f

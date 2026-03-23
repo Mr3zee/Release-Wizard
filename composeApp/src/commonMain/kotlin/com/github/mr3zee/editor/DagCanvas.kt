@@ -20,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -85,7 +86,7 @@ private fun hitTest(
     // Check ports: top-level blocks first, then container children
     for (block in graph.blocks) {
         val pos = graph.positions[block.id] ?: continue
-        val yOff = portYOffset(pos, block is Block.ContainerBlock)
+        val yOff = portYOffset(pos)
         val outPort = Offset(pos.x + pos.width, pos.y + yOff)
         if ((logicalPos - outPort).getDistance() <= portRadius) return HitTarget.OutputPort(block.id)
         val inPort = Offset(pos.x, pos.y + yOff)
@@ -94,7 +95,7 @@ private fun hitTest(
     for (container in containers) {
         for (child in container.children.blocks) {
             val absPos = childAbsPos(container, child.id) ?: continue
-            val yOff = portYOffset(absPos, child is Block.ContainerBlock)
+            val yOff = portYOffset(absPos)
             val outPort = Offset(absPos.x + absPos.width, absPos.y + yOff)
             if ((logicalPos - outPort).getDistance() <= portRadius) return HitTarget.OutputPort(child.id)
             val inPort = Offset(absPos.x, absPos.y + yOff)
@@ -121,7 +122,7 @@ private fun hitTest(
         if (edge != null) return HitTarget.ResizeHandleHit(container.id, edge)
     }
 
-    // Check block body: action blocks first, then children, then containers
+    // Check block body: action blocks first, then children
     for (block in actionBlocks.asReversed()) {
         val pos = graph.positions[block.id] ?: continue
         if (logicalPos.x in pos.x..(pos.x + pos.width) && logicalPos.y in pos.y..(pos.y + pos.height)) {
@@ -136,26 +137,19 @@ private fun hitTest(
             }
         }
     }
-    for (container in containers.asReversed()) {
-        val pos = graph.positions[container.id] ?: continue
-        if (logicalPos.x in pos.x..(pos.x + pos.width) && logicalPos.y in pos.y..(pos.y + pos.height)) {
-            return HitTarget.BlockHit(container.id)
-        }
-    }
 
-    // Check edges: top-level, then container children edges
+    // Check edges: top-level first, then container children edges.
+    // Edges must be checked BEFORE container body — otherwise clicking an edge
+    // inside a container hits the container body instead.
     for ((index, edge) in graph.edges.withIndex()) {
         val fromPos = graph.positions[edge.fromBlockId] ?: continue
         val toPos = graph.positions[edge.toBlockId] ?: continue
-        val fromBlock = graph.blocks.find { it.id == edge.fromBlockId }
-        val toBlock = graph.blocks.find { it.id == edge.toBlockId }
-        val start = Offset(fromPos.x + fromPos.width, fromPos.y + portYOffset(fromPos, fromBlock is Block.ContainerBlock))
-        val end = Offset(toPos.x, toPos.y + portYOffset(toPos, toBlock is Block.ContainerBlock))
+        val start = Offset(fromPos.x + fromPos.width, fromPos.y + portYOffset(fromPos))
+        val end = Offset(toPos.x, toPos.y + portYOffset(toPos))
         if (isNearBezier(logicalPos, start, end, threshold = edgeThreshold)) {
             return HitTarget.EdgeHit(index)
         }
     }
-    // Container children edges
     for (container in containers) {
         val cPos = graph.positions[container.id] ?: continue
         val contentOffsetX = cPos.x
@@ -165,11 +159,19 @@ private fun hitTest(
             val toChild = container.children.positions[edge.toBlockId] ?: continue
             val absFrom = BlockPosition(contentOffsetX + fromChild.x, contentOffsetY + fromChild.y, fromChild.width, fromChild.height)
             val absTo = BlockPosition(contentOffsetX + toChild.x, contentOffsetY + toChild.y, toChild.width, toChild.height)
-            val start = Offset(absFrom.x + absFrom.width, absFrom.y + portYOffset(absFrom, false))
-            val end = Offset(absTo.x, absTo.y + portYOffset(absTo, false))
+            val start = Offset(absFrom.x + absFrom.width, absFrom.y + portYOffset(absFrom))
+            val end = Offset(absTo.x, absTo.y + portYOffset(absTo))
             if (isNearBezier(logicalPos, start, end, threshold = edgeThreshold)) {
                 return HitTarget.EdgeHit(index, containerId = container.id)
             }
+        }
+    }
+
+    // Container body is the deepest layer — checked last
+    for (container in containers.asReversed()) {
+        val pos = graph.positions[container.id] ?: continue
+        if (logicalPos.x in pos.x..(pos.x + pos.width) && logicalPos.y in pos.y..(pos.y + pos.height)) {
+            return HitTarget.BlockHit(container.id)
         }
     }
 
@@ -269,14 +271,18 @@ fun DagCanvas(
     val actionBlocks = remember(graph) { graph.blocks.filter { it !is Block.ContainerBlock } }
     val currentContainers by rememberUpdatedState(containers)
     val currentActionBlocks by rememberUpdatedState(actionBlocks)
-
     // Pre-resolve block type labels for canvas (stringResource requires composable context)
-    val blockLabels: Map<BlockId, String> = buildMap {
-        for (block in graph.blocks) {
-            put(block.id, block.typeLabel())
-            if (block is Block.ContainerBlock) {
-                for (child in block.children.blocks) {
-                    put(child.id, child.typeLabel())
+    // Pre-resolve type labels. Uses key() to avoid rebuilding on hover-only recompositions.
+    // typeLabel() is @Composable (calls packStringResource), so it must run in composable context.
+    var blockLabels by remember { mutableStateOf<Map<BlockId, String>>(emptyMap()) }
+    key(graph) {
+        blockLabels = buildMap {
+            for (block in graph.blocks) {
+                put(block.id, block.typeLabel())
+                if (block is Block.ContainerBlock) {
+                    for (child in block.children.blocks) {
+                        put(child.id, child.typeLabel())
+                    }
                 }
             }
         }
@@ -290,9 +296,7 @@ fun DagCanvas(
             .alpha(if (isReadOnly) 0.6f else 1f)
             .background(appColors.canvasBackground)
             .pointerHoverIcon(cursorIcon)
-            // Scroll for zoom + hover tracking
-            // (macOS trackpad pinch generates scroll events, so this covers both
-            // scroll-wheel zoom and pinch-to-zoom on Desktop)
+            // Scroll-wheel zoom + trackpad pinch-to-zoom + hover tracking
             .pointerInput(Unit) {
                 awaitPointerEventScope {
                     while (true) {
@@ -502,18 +506,30 @@ fun DagCanvas(
         for ((index, edge) in graph.edges.withIndex()) {
             val fromPos = graph.positions[edge.fromBlockId] ?: continue
             val toPos = graph.positions[edge.toBlockId] ?: continue
-            val isSelected = index == selectedEdgeIndex
-            val fromIsContainer = graph.blocks.find { it.id == edge.fromBlockId } is Block.ContainerBlock
-            val toIsContainer = graph.blocks.find { it.id == edge.toBlockId } is Block.ContainerBlock
-            drawEdge(drawTransform, fromPos, toPos, isSelected, appColors, fromIsContainer, toIsContainer)
+            val isSelected = index == selectedEdgeIndex && selectedEdgeContainerId == null
+            drawEdge(drawTransform, fromPos, toPos, isSelected, appColors)
         }
 
         // Draft edge (red when hovering an incompatible port)
         connectionDraft?.let { draft ->
-            val fromPos = graph.positions[draft.fromBlockId] ?: return@let
-            val fromIsContainer = graph.blocks.find { it.id == draft.fromBlockId } is Block.ContainerBlock
+            // Resolve position: check top-level first, then inside containers
+            val fromPos = graph.positions[draft.fromBlockId] ?: run {
+                // Child block — compute absolute position from container
+                var resolved: BlockPosition? = null
+                for (c in containers) {
+                    val cPos = graph.positions[c.id] ?: continue
+                    val childPos = c.children.positions[draft.fromBlockId] ?: continue
+                    resolved = BlockPosition(
+                        cPos.x + childPos.x,
+                        cPos.y + BlockPosition.CONTAINER_HEADER_HEIGHT + childPos.y,
+                        childPos.width, childPos.height,
+                    )
+                    break
+                }
+                resolved ?: return@let
+            }
             val startScreenX = drawTransform.toScreenX(fromPos.x + fromPos.width)
-            val startScreenY = drawTransform.toScreenY(fromPos.y + portYOffset(fromPos, fromIsContainer))
+            val startScreenY = drawTransform.toScreenY(fromPos.y + portYOffset(fromPos))
             val currentHover = hoveredPort
             val isInvalidTarget = currentHover is HitTarget.InputPort && (
                 parentLookup[draft.fromBlockId] != parentLookup[currentHover.blockId] ||
@@ -537,7 +553,7 @@ fun DagCanvas(
             val currentHoveredPort = hoveredPort
             val isInputHovered = currentHoveredPort is HitTarget.InputPort && currentHoveredPort.blockId == block.id
             val isOutputHovered = currentHoveredPort is HitTarget.OutputPort && currentHoveredPort.blockId == block.id
-            drawPorts(drawTransform, pos, isInputHovered, isOutputHovered, appColors, isContainer = block is Block.ContainerBlock)
+            drawPorts(drawTransform, pos, isInputHovered, isOutputHovered, appColors)
         }
     }
 
@@ -589,7 +605,7 @@ fun DagCanvas(
                         val newZoom = (zoom * 1.2f).coerceIn(MIN_ZOOM, MAX_ZOOM)
                         zoom = newZoom
                     },
-                    modifier = Modifier.size(32.dp).testTag("zoom_in_button"),
+                    modifier = Modifier.size(32.dp).focusProperties { canFocus = false }.testTag("zoom_in_button"),
                 ) {
                     Icon(Icons.Default.Add, contentDescription = packStringResource(Res.string.editor_zoom_in), modifier = Modifier.size(16.dp))
                 }
@@ -600,7 +616,7 @@ fun DagCanvas(
                         val newZoom = (zoom / 1.2f).coerceIn(MIN_ZOOM, MAX_ZOOM)
                         zoom = newZoom
                     },
-                    modifier = Modifier.size(32.dp).testTag("zoom_out_button"),
+                    modifier = Modifier.size(32.dp).focusProperties { canFocus = false }.testTag("zoom_out_button"),
                 ) {
                     Icon(Icons.Default.Remove, contentDescription = packStringResource(Res.string.editor_zoom_out), modifier = Modifier.size(16.dp))
                 }
@@ -612,7 +628,7 @@ fun DagCanvas(
                 panOffset = Offset.Zero
             },
             variant = RwButtonVariant.Ghost,
-            modifier = Modifier.testTag("zoom_fit_button"),
+            modifier = Modifier.focusProperties { canFocus = false }.testTag("zoom_fit_button"),
         ) {
             Text(packStringResource(Res.string.editor_zoom_fit), style = AppTypography.caption)
         }

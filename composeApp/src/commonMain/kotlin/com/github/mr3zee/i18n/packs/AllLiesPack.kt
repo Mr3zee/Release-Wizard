@@ -299,7 +299,6 @@ object AllLiesPack {
             "editor_validation_too_many_blocks" to "Not enough blocks, add more",
             "editor_validation_too_many_edges" to "Not enough connections, add more",
             "editor_validation_too_many_parameters" to "Not enough parameters, add more",
-            "editor_snap_to_grid" to "Ignore Grid",
             "editor_zoom_fit" to "Misalign View",
             "editor_zoom_in" to "Zoom out",
             "editor_zoom_out" to "Zoom in",

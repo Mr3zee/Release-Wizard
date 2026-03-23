@@ -40,6 +40,7 @@ import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwInlineConfirmation
 import com.github.mr3zee.components.RwTooltip
 import com.github.mr3zee.dag.ValidationError
+import com.github.mr3zee.model.Block
 import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.theme.AppTypography
@@ -116,7 +117,15 @@ fun DagEditorScreen(
     }
 
     val selectedBlock = remember(selectedBlockIds, graph) {
-        if (selectedBlockIds.size == 1) graph.blocks.find { it.id == selectedBlockIds.first() } else null
+        if (selectedBlockIds.size != 1) null
+        else {
+            val targetId = selectedBlockIds.first()
+            // Search top-level, then inside containers
+            graph.blocks.find { it.id == targetId }
+                ?: graph.blocks.filterIsInstance<Block.ContainerBlock>().firstNotNullOfOrNull { container ->
+                    container.children.blocks.find { it.id == targetId }
+                }
+        }
     }
 
     val currentIsDirty by rememberUpdatedState(isDirty)
@@ -196,7 +205,7 @@ fun DagEditorScreen(
             .onKeyEvent { event ->
                 if (event.type == KeyEventType.KeyDown) {
                     when {
-                        !isReadOnly && (event.key == Key.Delete || event.key == Key.Backspace) -> {
+                        !isReadOnly && !isConfirmationVisible && (event.key == Key.Delete || event.key == Key.Backspace) -> {
                             if (selectedBlockIds.isNotEmpty()) {
                                 viewModel.removeSelectedBlocks()
                                 true
