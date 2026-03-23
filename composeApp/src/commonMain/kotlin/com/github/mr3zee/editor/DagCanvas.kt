@@ -21,8 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.ui.input.pointer.isCtrlPressed
 import androidx.compose.ui.input.pointer.isMetaPressed
 import androidx.compose.ui.input.pointer.pointerInput
@@ -204,7 +204,13 @@ fun DagCanvas(
                         while (true) {
                             val moveEvent = awaitPointerEvent()
                             val moveChange = moveEvent.changes.firstOrNull() ?: break
-                            if (!moveChange.pressed) {
+                            // Detect release: check pressed state, event type, and exit.
+                            // macOS trackpad may use different release signaling than mouse.
+                            val isReleased = !moveChange.pressed ||
+                                moveEvent.type == PointerEventType.Release ||
+                                moveEvent.type == PointerEventType.Exit ||
+                                moveChange.changedToUpIgnoreConsumed()
+                            if (isReleased) {
                                 // Released
                                 if (!wasDragged) {
                                     val isModifierHeld = down.keyboardModifiers.isCtrlPressed ||
