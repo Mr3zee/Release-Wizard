@@ -299,6 +299,7 @@ object GenZPack {
             "editor_validation_too_many_blocks" to "Too many blocks bestie, that's not it",
             "editor_validation_too_many_edges" to "Too many edges no cap",
             "editor_validation_too_many_parameters" to "Too many parameters fr fr",
+            "editor_snap_to_grid" to "Grid Check",
             "editor_zoom_fit" to "Reset the Vibes",
             "editor_zoom_in" to "Zoom in bestie",
             "editor_zoom_out" to "Zoom out no cap",

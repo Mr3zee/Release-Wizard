@@ -301,6 +301,7 @@ object HelldiversPack {
             "editor_validation_too_many_blocks" to $$"Too many units: %1$d (max %2$d). Reduce force size, Citizen!",
             "editor_validation_too_many_edges" to $$"Too many supply lines: %1$d (max %2$d)",
             "editor_validation_too_many_parameters" to $$"Too many operational parameters (max %1$d)",
+            "editor_snap_to_grid" to "Engage Grid Lock",
             "editor_zoom_fit" to "Reset Tactical View",
             "editor_zoom_in" to "Magnify Target",
             "editor_zoom_out" to "Widen Scope",

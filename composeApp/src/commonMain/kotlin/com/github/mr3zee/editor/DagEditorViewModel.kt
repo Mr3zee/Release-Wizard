@@ -76,6 +76,14 @@ class DagEditorViewModel(
     private val _detachingFromContainerId = MutableStateFlow<BlockId?>(null)
     val detachingFromContainerId: StateFlow<BlockId?> = _detachingFromContainerId
 
+    // Snap-to-grid toggle
+    private val _snapToGrid = MutableStateFlow(false)
+    val snapToGrid: StateFlow<Boolean> = _snapToGrid
+
+    fun toggleSnapToGrid() {
+        _snapToGrid.value = !_snapToGrid.value
+    }
+
     private val _isDirty = MutableStateFlow(false)
     val isDirty: StateFlow<Boolean> = _isDirty
 
@@ -466,7 +474,13 @@ class DagEditorViewModel(
             // Child block: update position within container's children graph
             val container = g.blocks.find { it.id == parentId } as? Block.ContainerBlock ?: return
             val childPos = container.children.positions[blockId] ?: return
-            val newChildPos = childPos.copy(x = childPos.x + dx, y = childPos.y + dy)
+            val rawX = childPos.x + dx
+            val rawY = childPos.y + dy
+            val newChildPos = if (_snapToGrid.value) {
+                childPos.copy(x = snapToGrid(rawX), y = snapToGrid(rawY))
+            } else {
+                childPos.copy(x = rawX, y = rawY)
+            }
             val updatedChildren = container.children.copy(
                 positions = container.children.positions + (blockId to newChildPos),
             )
@@ -487,7 +501,13 @@ class DagEditorViewModel(
         } else {
             // Top-level block: update position in root graph
             val current = g.positions[blockId] ?: return
-            val newPos = current.copy(x = current.x + dx, y = current.y + dy)
+            val rawX = current.x + dx
+            val rawY = current.y + dy
+            val newPos = if (_snapToGrid.value) {
+                current.copy(x = snapToGrid(rawX), y = snapToGrid(rawY))
+            } else {
+                current.copy(x = rawX, y = rawY)
+            }
             _graph.value = g.copy(positions = g.positions + (blockId to newPos))
 
             // Check if a non-container block is being dragged over a container
@@ -691,7 +711,11 @@ class DagEditorViewModel(
             else -> pos.y to pos.height
         }
 
-        return BlockPosition(newX, newY, newWidth, newHeight)
+        return if (_snapToGrid.value) {
+            BlockPosition(snapToGrid(newX), snapToGrid(newY), snapToGrid(newWidth), snapToGrid(newHeight))
+        } else {
+            BlockPosition(newX, newY, newWidth, newHeight)
+        }
     }
 
     fun commitResize() {

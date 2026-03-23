@@ -28,6 +28,11 @@ internal const val MIN_ZOOM = 0.25f
 internal const val MAX_ZOOM = 4f
 internal const val RESIZE_HANDLE_WIDTH = 6f
 
+/** Snap a value to the nearest grid line. */
+internal fun snapToGrid(value: Float): Float {
+    return (value / GRID_SIZE).let { kotlin.math.round(it) } * GRID_SIZE
+}
+
 enum class ResizeEdge {
     Top, Bottom, Left, Right,
     TopLeft, TopRight, BottomLeft, BottomRight;
@@ -345,17 +350,36 @@ internal fun DrawScope.drawContainerBlock(
         strokeWidth = transform.toScreen(1f),
     )
 
-    // Container name in header
+    // Child count badge (right-aligned in header)
+    val childCount = container.children.blocks.size
+    val countSize = (10f * zoom).coerceIn(4f, 28f)
+    val countText = "$childCount block${if (childCount != 1) "s" else ""}"
+    val countLayout = textMeasurer.measure(
+        countText,
+        style = TextStyle(fontSize = countSize.sp, color = colors.chromeTextSecondary),
+        maxLines = 1,
+    )
+    val countRightPadding = transform.toScreen(10f)
+    val countX = screenX + screenW - countLayout.size.width - countRightPadding
+
+    // Container name in header (constrained to leave room for count badge)
     val nameSize = (12f * zoom).coerceIn(5f, 36f)
+    val nameMaxWidth = (countX - screenX - transform.toScreen(20f)).toInt().coerceAtLeast(1)
     val nameLayout = textMeasurer.measure(
         container.name,
         style = TextStyle(fontSize = nameSize.sp, color = colors.chromeTextPrimary),
         maxLines = 1,
-        constraints = androidx.compose.ui.unit.Constraints(maxWidth = (screenW - transform.toScreen(20f)).toInt().coerceAtLeast(1)),
+        constraints = androidx.compose.ui.unit.Constraints(maxWidth = nameMaxWidth),
     )
     drawText(
         nameLayout,
         topLeft = Offset(screenX + transform.toScreen(10f), screenY + (headerHeight - nameLayout.size.height) / 2),
+    )
+
+    // Draw count badge
+    drawText(
+        countLayout,
+        topLeft = Offset(countX, screenY + (headerHeight - countLayout.size.height) / 2),
     )
 }
 

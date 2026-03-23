@@ -299,6 +299,7 @@ object RickAndMortyPack {
             "editor_validation_too_many_blocks" to "Too many blocks, *burp* Morty",
             "editor_validation_too_many_edges" to "Too many edges, Morty. Even I have *burp* limits.",
             "editor_validation_too_many_parameters" to "Too many parameters, *burp* Morty",
+            "editor_snap_to_grid" to "Snap to *burp* Grid",
             "editor_zoom_fit" to "Reset View, *burp*",
             "editor_zoom_in" to "Enhance, Morty!",
             "editor_zoom_out" to "Zoom out, *burp*",

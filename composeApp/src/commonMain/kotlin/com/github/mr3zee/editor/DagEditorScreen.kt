@@ -81,6 +81,7 @@ fun DagEditorScreen(
     val hoveredContainerId by viewModel.hoveredContainerId.collectAsState()
     val detachingFromContainerId by viewModel.detachingFromContainerId.collectAsState()
     val parentLookup by viewModel.parentLookup.collectAsState()
+    val snapToGrid by viewModel.snapToGrid.collectAsState()
 
     val appColors = LocalAppColors.current
 
@@ -461,6 +462,8 @@ fun DagEditorScreen(
                     hoveredContainerId = hoveredContainerId,
                     detachingFromContainerId = detachingFromContainerId,
                     parentLookup = parentLookup,
+                    snapToGrid = snapToGrid,
+                    onToggleSnapToGrid = { viewModel.toggleSnapToGrid() },
                     isReadOnly = isReadOnly,
                     modifier = Modifier
                         .weight(1f)

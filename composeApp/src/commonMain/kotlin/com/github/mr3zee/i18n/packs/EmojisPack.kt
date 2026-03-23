@@ -297,6 +297,7 @@ object EmojisPack {
             "editor_validation_too_many_blocks" to $$"\ud83e\uddf1\ud83d\udcc8 %1$d (\ud83d\udcaf %2$d)",
             "editor_validation_too_many_edges" to $$"\u2194\ufe0f\ud83d\udcc8 %1$d (\ud83d\udcaf %2$d)",
             "editor_validation_too_many_parameters" to $$"\u2699\ufe0f\ud83d\udcc8 (\ud83d\udcaf %1$d)",
+            "editor_snap_to_grid" to "\ud83e\uddf2\ud83d\udcce",
             "editor_zoom_fit" to "\ud83d\udd0d\ud83d\udd04",
             "editor_zoom_in" to "\ud83d\udd0d\u2795",
             "editor_zoom_out" to "\ud83d\udd0d\u2796",

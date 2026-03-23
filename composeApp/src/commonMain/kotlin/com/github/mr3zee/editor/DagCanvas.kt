@@ -46,6 +46,7 @@ import com.github.mr3zee.util.typeLabel
 import releasewizard.composeapp.generated.resources.Res
 import releasewizard.composeapp.generated.resources.editor_empty_canvas_hint
 import releasewizard.composeapp.generated.resources.editor_empty_canvas_no_blocks
+import releasewizard.composeapp.generated.resources.editor_snap_to_grid
 import releasewizard.composeapp.generated.resources.editor_zoom_fit
 import releasewizard.composeapp.generated.resources.editor_zoom_in
 import releasewizard.composeapp.generated.resources.editor_zoom_out
@@ -227,6 +228,8 @@ fun DagCanvas(
     hoveredContainerId: BlockId? = null,
     detachingFromContainerId: BlockId? = null,
     parentLookup: Map<BlockId, BlockId> = emptyMap(),
+    snapToGrid: Boolean = false,
+    onToggleSnapToGrid: () -> Unit = {},
     isReadOnly: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
@@ -594,6 +597,15 @@ fun DagCanvas(
             modifier = Modifier.testTag("zoom_fit_button"),
         ) {
             Text(packStringResource(Res.string.editor_zoom_fit), style = AppTypography.caption)
+        }
+        RwTooltip(tooltip = packStringResource(Res.string.editor_snap_to_grid)) {
+            RwButton(
+                onClick = onToggleSnapToGrid,
+                variant = if (snapToGrid) RwButtonVariant.Secondary else RwButtonVariant.Ghost,
+                modifier = Modifier.testTag("snap_to_grid_button"),
+            ) {
+                Text(packStringResource(Res.string.editor_snap_to_grid), style = AppTypography.caption)
+            }
         }
     }
     } // Box
