@@ -497,38 +497,43 @@ internal fun DrawScope.drawEdge(
     val dx = endX - startX
     val cp1x = startX + dx * 0.4f
     val cp2x = endX - dx * 0.4f
+    val arrowSize = transform.toScreen(8f)
+    val edgeColor = if (isSelected) colors.edgeSelected else colors.edgeDefault
 
-    val path = Path().apply {
+    // Compute arrow direction from full curve (sampled at t=0.9)
+    val t = 0.9f; val inv = 1f - t
+    val nearX = inv*inv*inv*startX + 3*inv*inv*t*cp1x + 3*inv*t*t*cp2x + t*t*t*endX
+    val nearY = inv*inv*inv*startY + 3*inv*inv*t*startY + 3*inv*t*t*endY + t*t*t*endY
+    val adx = endX - nearX; val ady = endY - nearY
+    val len = kotlin.math.sqrt(adx * adx + ady * ady).coerceAtLeast(0.001f)
+    val nx = adx / len; val ny = ady / len
+
+    // Visible curve ends at arrow base (so stroke doesn't poke past the arrowhead)
+    val cropX = endX - arrowSize * 0.7f * nx
+    val cropY = endY - arrowSize * 0.7f * ny
+    val visiblePath = Path().apply {
         moveTo(startX, startY)
-        cubicTo(cp1x, startY, cp2x, endY, endX, endY)
+        cubicTo(cp1x, startY, cp2x, endY, cropX, cropY)
     }
 
-    // Scale stroke widths with zoom for consistent visual weight
     val baseStroke = transform.toScreen(2.5f)
     val selectedStroke = transform.toScreen(3f)
-
-    // Glow effect for selected edges (outer pass at 30% alpha, wider stroke)
     if (isSelected) {
-        drawPath(
-            path,
-            color = colors.edgeGlow,
-            style = Stroke(width = transform.toScreen(5f)),
-        )
+        drawPath(visiblePath, color = colors.edgeGlow, style = Stroke(width = transform.toScreen(5f)))
     }
-
     drawPath(
-        path,
+        visiblePath,
         color = if (isSelected) colors.edgeSelected else colors.edgeDefault,
         style = Stroke(width = if (isSelected) selectedStroke else baseStroke),
     )
 
-    // Triangle arrowhead at end
-    val arrowSize = transform.toScreen(8f)
-    val edgeColor = if (isSelected) colors.edgeSelected else colors.edgeDefault
+    // Arrowhead: tip at port, base behind it along approach direction
     val arrowPath = Path().apply {
         moveTo(endX, endY)
-        lineTo(endX - arrowSize, endY - arrowSize * 0.5f)
-        lineTo(endX - arrowSize, endY + arrowSize * 0.5f)
+        lineTo(endX - arrowSize * nx + arrowSize * 0.5f * ny,
+               endY - arrowSize * ny - arrowSize * 0.5f * nx)
+        lineTo(endX - arrowSize * nx - arrowSize * 0.5f * ny,
+               endY - arrowSize * ny + arrowSize * 0.5f * nx)
         close()
     }
     drawPath(arrowPath, color = edgeColor)
