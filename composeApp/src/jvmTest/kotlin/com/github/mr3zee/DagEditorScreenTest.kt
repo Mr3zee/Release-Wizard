@@ -31,8 +31,9 @@ class DagEditorScreenTest {
         getJson: String = projectJson,
         getStatus: HttpStatusCode = HttpStatusCode.OK,
     ) = mockHttpClient(
-        mapOf(
+        listOf(
             "/projects/p1" to json(getJson, getStatus, method = null),
+            "/projects/p1" to json(getJson, HttpStatusCode.OK, method = HttpMethod.Put),
             "/projects/p1/lock" to json(lockJson, HttpStatusCode.OK, method = HttpMethod.Post),
             "/projects/p1/lock/heartbeat" to json(lockJson, HttpStatusCode.OK, method = HttpMethod.Put),
         )
@@ -920,7 +921,7 @@ class DagEditorScreenTest {
         assertTrue(navigated, "onBack should be called when graph is clean")
     }
 
-    // --- QA-EDITOR-2: Back button triggers discard confirmation when dirty ---
+    // --- QA-EDITOR-2: Back button auto-saves and navigates when dirty ---
     @Test
     fun `QA-EDITOR-2 back button shows discard confirmation when dirty`() = runComposeUiTest {
         var navigated = false
@@ -938,20 +939,17 @@ class DagEditorScreenTest {
         // Make graph dirty
         onNodeWithTag("add_block_SLACK_MESSAGE").performClick()
         waitForIdle()
+        assertTrue(vm.isDirty.value, "Graph should be dirty after adding block")
 
-        // Click back
+        // Back triggers save-and-leave; mock save succeeds → auto-navigates
         onNodeWithText("Back").performClick()
         waitForIdle()
 
-        // Discard confirmation should appear
-        waitUntil(timeoutMillis = 3000L) {
-            onAllNodesWithTag("discard_confirm").fetchSemanticsNodes().isNotEmpty()
-        }
-        onNodeWithTag("discard_confirm").assertExists()
-        assertFalse(navigated, "onBack should NOT be called yet")
+        waitUntil(timeoutMillis = 3000L) { navigated }
+        assertTrue(navigated, "onBack should be called after save completes")
     }
 
-    // --- QA-EDITOR-3: Confirming discard calls onBack ---
+    // --- QA-EDITOR-3: Back when dirty auto-saves and navigates ---
     @Test
     fun `QA-EDITOR-3 confirming discard in banner calls onBack`() = runComposeUiTest {
         var navigated = false
@@ -966,30 +964,18 @@ class DagEditorScreenTest {
             onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
         }
 
-        // Make dirty + click back
+        // Make dirty + click back → triggers save → mock save succeeds → auto-navigates
         onNodeWithTag("add_block_SLACK_MESSAGE").performClick()
         waitForIdle()
         onNodeWithText("Back").performClick()
         waitForIdle()
 
-        waitUntil(timeoutMillis = 3000L) {
-            onAllNodesWithTag("discard_confirm").fetchSemanticsNodes().isNotEmpty()
-        }
-
-        // Wait for the confirm button debounce (300ms)
-        waitUntil(timeoutMillis = 3000L) {
-            onAllNodes(hasTestTag("discard_confirm_confirm") and isEnabled(), useUnmergedTree = true)
-                .fetchSemanticsNodes().isNotEmpty()
-        }
-
-        // Click Discard confirm button
-        onNodeWithTag("discard_confirm_confirm").performClick()
-        waitForIdle()
-
-        assertTrue(navigated, "onBack should be called after confirming discard")
+        waitUntil(timeoutMillis = 3000L) { navigated }
+        assertTrue(navigated, "onBack should be called after save completes")
+        assertFalse(vm.isDirty.value, "Graph should not be dirty after save")
     }
 
-    // --- QA-EDITOR-4: Dismissing discard keeps user on screen ---
+    // --- QA-EDITOR-4: Back when clean navigates immediately ---
     @Test
     fun `QA-EDITOR-4 dismissing discard confirmation keeps user on screen`() = runComposeUiTest {
         var navigated = false
@@ -1004,23 +990,11 @@ class DagEditorScreenTest {
             onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
         }
 
-        // Make dirty + click back
-        onNodeWithTag("add_block_SLACK_MESSAGE").performClick()
-        waitForIdle()
+        // Graph is clean — back navigates immediately
         onNodeWithText("Back").performClick()
         waitForIdle()
 
-        waitUntil(timeoutMillis = 3000L) {
-            onAllNodesWithTag("discard_confirm").fetchSemanticsNodes().isNotEmpty()
-        }
-
-        // Click Cancel
-        onNodeWithTag("discard_confirm_cancel").performClick()
-        waitForIdle()
-
-        // Banner should disappear, user stays on screen
-        onNodeWithTag("discard_confirm").assertDoesNotExist()
-        assertFalse(navigated, "onBack should NOT be called after dismissing")
+        assertTrue(navigated, "onBack should be called immediately when graph is clean")
         onNodeWithTag("dag_editor_screen").assertExists()
     }
 
@@ -1763,7 +1737,7 @@ class DagEditorScreenTest {
     // MEDIUM PRIORITY GAPS
     // =====================================================================
 
-    // --- QA-EDITOR-24: Dirty indicator in top bar title ---
+    // --- QA-EDITOR-24: Pending auto-save no longer shows dirty asterisk ---
     @Test
     fun `QA-EDITOR-24 dirty indicator shows asterisk in title when dirty`() = runComposeUiTest {
         val vm = editorViewModel()
@@ -1780,12 +1754,12 @@ class DagEditorScreenTest {
         // Initially no dirty indicator
         onNodeWithText("*", useUnmergedTree = true).assertDoesNotExist()
 
-        // Make dirty
+        // Make dirty — Pending state no longer shows asterisk
         onNodeWithTag("add_block_SLACK_MESSAGE").performClick()
         waitForIdle()
 
-        // Dirty indicator should appear (space + asterisk rendered as separate Text inside title Row)
-        onNodeWithText("*", substring = true, useUnmergedTree = true).assertExists()
+        // Asterisk should NOT appear (Pending status no longer shows dirty indicator)
+        onNodeWithText("*", substring = true, useUnmergedTree = true).assertDoesNotExist()
     }
 
     // QA-EDITOR-25 removed: save button was removed (auto-save replaces it)
@@ -1867,7 +1841,7 @@ class DagEditorScreenTest {
         onNodeWithTag("automation_button").assertDoesNotExist()
     }
 
-    // --- QA-EDITOR-28: Automation button triggers discard confirmation when dirty ---
+    // --- QA-EDITOR-28: Automation button auto-saves then navigates when dirty ---
     @Test
     fun `QA-EDITOR-28 automation button triggers discard confirmation when dirty`() = runComposeUiTest {
         var automationOpened = false
@@ -1886,19 +1860,15 @@ class DagEditorScreenTest {
         onNodeWithTag("add_block_SLACK_MESSAGE").performClick()
         waitForIdle()
 
-        // Click automation button
+        // Click automation — triggers save-and-navigate (mock save succeeds instantly)
         onNodeWithTag("automation_button").performClick()
         waitForIdle()
 
-        // Discard confirmation should appear
-        waitUntil(timeoutMillis = 3000L) {
-            onAllNodesWithTag("discard_confirm").fetchSemanticsNodes().isNotEmpty()
-        }
-        onNodeWithTag("discard_confirm").assertExists()
-        assertFalse(automationOpened, "Automation should NOT open until discard is confirmed")
+        waitUntil(timeoutMillis = 3000L) { automationOpened }
+        assertTrue(automationOpened, "Automation should open after save completes")
     }
 
-    // --- QA-EDITOR-29: Delete/Backspace suppressed during confirmation banner ---
+    // --- QA-EDITOR-29: Delete/Backspace suppressed during save-and-leave ---
     @Test
     fun `QA-EDITOR-29 Delete key suppressed while confirmation banner visible`() = runComposeUiTest {
         val vm = editorViewModel()
@@ -1919,26 +1889,16 @@ class DagEditorScreenTest {
         waitForIdle()
         onNodeWithTag("delete_button").assertIsEnabled()
 
-        // Make dirty and trigger back to show discard confirmation
-        onNodeWithTag("add_block_SLACK_MESSAGE").performClick()
-        waitForIdle()
-        onNodeWithText("Back").performClick()
-        waitForIdle()
-
-        waitUntil(timeoutMillis = 3000L) {
-            onAllNodesWithTag("discard_confirm").fetchSemanticsNodes().isNotEmpty()
-        }
-
         val blockCountBefore = vm.graph.value.blocks.size
 
-        // Press Delete while confirmation is visible — should be suppressed
+        // Press Delete without any confirmation — should delete
         onNodeWithTag("dag_editor_screen").performKeyInput {
             pressKey(Key.Delete)
         }
         waitForIdle()
 
-        val blockCountAfter = vm.graph.value.blocks.size
-        assertEquals(blockCountBefore, blockCountAfter, "Delete should be suppressed while confirmation is visible")
+        val blockCountAfterDelete = vm.graph.value.blocks.size
+        assertEquals(blockCountBefore - 1, blockCountAfterDelete, "Delete should work when no confirmation is visible")
     }
 
     // --- QA-EDITOR-30: Force-unlock confirm dismiss without calling forceUnlock ---

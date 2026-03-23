@@ -36,7 +36,11 @@ import com.github.mr3zee.i18n.LanguagePack
 import com.github.mr3zee.theme.AppTheme
 import com.github.mr3zee.theme.ThemePreference
 import io.ktor.client.*
+import io.ktor.client.engine.mock.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.cookies.*
 import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -278,11 +282,48 @@ class AppNavigationTest {
 
     @Test
     fun `login flow navigates to project list`() = runComposeUiTest {
-        val client = mockHttpClient(mapOf(
-            "/auth/me" to json("Not authenticated", HttpStatusCode.Unauthorized),
-            "/auth/login" to json("""{"username":"admin"}"""),
-            "/projects" to json("""{"projects":[]}"""),
-        ))
+        // Login now calls /auth/me after successful auth, so the mock must return
+        // 401 before login (to show login screen) and 200 after login (to set user).
+        var loggedIn = false
+        val meSuccessJson = """{"username":"admin","id":"u1","teams":[]}"""
+        val client = HttpClient(MockEngine { request ->
+            val path = request.url.encodedPath
+            val method = request.method
+            when {
+                path == "/api/v1/auth/me" && !loggedIn -> respond(
+                    content = "Not authenticated",
+                    status = HttpStatusCode.Unauthorized,
+                    headers = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                path == "/api/v1/auth/me" && loggedIn -> respond(
+                    content = meSuccessJson,
+                    status = HttpStatusCode.OK,
+                    headers = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                path == "/api/v1/auth/login" && method == HttpMethod.Post -> {
+                    loggedIn = true
+                    respond(
+                        content = """{"username":"admin"}""",
+                        status = HttpStatusCode.OK,
+                        headers = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                    )
+                }
+                path == "/api/v1/projects" -> respond(
+                    content = """{"projects":[]}""",
+                    status = HttpStatusCode.OK,
+                    headers = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                else -> respond(
+                    content = "{}",
+                    status = HttpStatusCode.OK,
+                    headers = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+            }
+        }) {
+            install(ContentNegotiation) { json(AppJson) }
+            install(HttpCookies)
+            expectSuccess = true
+        }
 
         setContent { TestApp(client) }
 

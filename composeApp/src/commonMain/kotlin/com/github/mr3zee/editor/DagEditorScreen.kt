@@ -92,12 +92,31 @@ fun DagEditorScreen(
     var showForceUnlockDialog by remember { mutableStateOf(false) }
     var pendingLockLostNavigation by remember { mutableStateOf<(() -> Unit)?>(null) }
 
+    // "Saving before leaving" state: destination to navigate to after save completes
+    var pendingSaveAndLeave by remember { mutableStateOf<(() -> Unit)?>(null) }
+
     val isConfirmationVisible = pendingDiscardNavigation != null || pendingLockLostNavigation != null || showForceUnlockDialog
 
     val snackbarHostState = remember { SnackbarHostState() }
     val snackbarScope = rememberCoroutineScope()
     val dismissLabel = packStringResource(Res.string.common_dismiss)
     val resolvedError = error?.resolve()
+
+    // Auto-navigate after save-and-leave completes (or cancel on error)
+    LaunchedEffect(pendingSaveAndLeave, isDirty, isSaving, error) {
+        val nav = pendingSaveAndLeave ?: return@LaunchedEffect
+        when {
+            // Save completed successfully
+            !isDirty && !isSaving -> {
+                pendingSaveAndLeave = null
+                nav()
+            }
+            // Save failed — cancel pending leave, error snackbar will show
+            !isSaving && error != null -> {
+                pendingSaveAndLeave = null
+            }
+        }
+    }
 
     // Show transient errors via snackbar
     LaunchedEffect(error) {
@@ -132,15 +151,21 @@ fun DagEditorScreen(
     val currentLockState by rememberUpdatedState(lockState)
     val currentIsSaving by rememberUpdatedState(isSaving)
     val currentAutoSaveStatus by rememberUpdatedState(autoSaveStatus)
+    val currentPendingSaveAndLeave by rememberUpdatedState(pendingSaveAndLeave)
     val guardedNavigate: (() -> Unit) -> Unit = remember {
         { destination ->
             when {
-                currentIsSaving -> { /* block navigation while save is in-flight */ }
+                // Already saving-and-leaving: second press shows discard warning
+                currentPendingSaveAndLeave != null || currentIsSaving -> {
+                    pendingDiscardNavigation = destination
+                }
                 currentLockState is LockState.LockLost && currentIsDirty -> {
                     pendingLockLostNavigation = destination
                 }
                 currentIsDirty -> {
-                    pendingDiscardNavigation = destination
+                    // Force save and show saving status; navigate on completion
+                    viewModel.save()
+                    pendingSaveAndLeave = destination
                 }
                 else -> {
                     destination()
@@ -238,8 +263,27 @@ fun DagEditorScreen(
                 },
                 navigationIcon = {
                     RwButton(onClick = handleBack, variant = RwButtonVariant.Ghost) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
-                        Text(packStringResource(Res.string.common_back))
+                        if (pendingSaveAndLeave != null) {
+                            // Debounced saving indicator — only show after 300ms to avoid flash for quick saves
+                            var showSavingIndicator by remember { mutableStateOf(false) }
+                            LaunchedEffect(Unit) {
+                                kotlinx.coroutines.delay(300L)
+                                showSavingIndicator = true
+                            }
+                            if (showSavingIndicator) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                                Text(packStringResource(Res.string.common_saving))
+                            } else {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
+                                Text(packStringResource(Res.string.common_back))
+                            }
+                        } else {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = packStringResource(Res.string.common_navigate_back))
+                            Text(packStringResource(Res.string.common_back))
+                        }
                     }
                 },
                 actions = {
