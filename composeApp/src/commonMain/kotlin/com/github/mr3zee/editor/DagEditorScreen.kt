@@ -183,6 +183,11 @@ fun DagEditorScreen(
     }
     val editorFocusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { editorFocusRequester.requestFocus() }
+    // Re-acquire focus when canvas selection changes (e.g., after clicking a block
+    // while a text field in the properties panel had focus)
+    LaunchedEffect(selectedBlockIds, selectedEdgeIndex) {
+        editorFocusRequester.requestFocus()
+    }
 
     ProvideShortcutActions(shortcutActions) {
 
