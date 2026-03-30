@@ -470,6 +470,9 @@ fun Application.module() {
                             val user = authService.register(seedUsername, seedPassword)
                             if (user != null) {
                                 environment.log.info("Seed admin user '$seedUsername' created (first user = auto-approved ADMIN)")
+                                if (devModeConfig.enabled) {
+                                    seedDevConnections(koin, user.id, devModeConfig, environment.log)
+                                }
                             } else {
                                 environment.log.warn("Failed to create seed admin user '$seedUsername'")
                             }
@@ -640,6 +643,65 @@ fun Application.configureRouting(
 
     if (hasFrontend) {
         environment.log.info("Frontend bundle detected — serving SPA from classpath:static/")
+    }
+}
+
+private suspend fun seedDevConnections(
+    koin: org.koin.core.Koin,
+    userId: com.github.mr3zee.model.UserId,
+    devModeConfig: DevModeConfig,
+    log: org.slf4j.Logger,
+) {
+    try {
+        val teamRepo = koin.get<com.github.mr3zee.teams.TeamRepository>()
+        val connRepo = koin.get<com.github.mr3zee.connections.ConnectionsRepository>()
+
+        val team = teamRepo.createTeamWithMember(
+            name = "Dev Team",
+            description = "Auto-created for local development",
+            userId = userId.value,
+            role = com.github.mr3zee.model.TeamRole.TEAM_LEAD,
+        )
+        log.info("Seed dev team '{}' created", team.name)
+
+        val teamId = team.id.value
+
+        connRepo.create(
+            name = "Test Panel \u2014 TeamCity",
+            type = com.github.mr3zee.model.ConnectionType.TEAMCITY,
+            config = com.github.mr3zee.model.ConnectionConfig.TeamCityConfig(
+                serverUrl = devModeConfig.teamcityBaseUrl,
+                token = "dev",
+                pollingIntervalSeconds = 5,
+            ),
+            teamId = teamId,
+        )
+
+        connRepo.create(
+            name = "Test Panel \u2014 Slack",
+            type = com.github.mr3zee.model.ConnectionType.SLACK,
+            config = com.github.mr3zee.model.ConnectionConfig.SlackConfig(
+                webhookUrl = "${devModeConfig.slackWebhookBaseUrl}/T00/B00/dev",
+            ),
+            teamId = teamId,
+        )
+
+        connRepo.create(
+            name = "Test Panel \u2014 GitHub",
+            type = com.github.mr3zee.model.ConnectionType.GITHUB,
+            config = com.github.mr3zee.model.ConnectionConfig.GitHubConfig(
+                baseUrl = devModeConfig.githubApiBaseUrl,
+                owner = "owner",
+                repo = "repo",
+                token = "dev",
+                pollingIntervalSeconds = 5,
+            ),
+            teamId = teamId,
+        )
+
+        log.info("Seed dev connections created (TeamCity, Slack, GitHub) in team '{}'", team.name)
+    } catch (e: Exception) {
+        log.warn("Failed to seed dev connections", e)
     }
 }
 
