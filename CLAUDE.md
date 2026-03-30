@@ -32,6 +32,7 @@ Dependencies flow: `composeApp` → `shared`, `server` → `shared`. No dependen
 ```bash
 ./gradlew :composeApp:run               # Desktop app
 ./gradlew :server:run                    # Server (requires PostgreSQL)
+./gradlew :testPanel:run                 # Test Panel (mocks TeamCity, Slack, GitHub on :8111)
 ./gradlew :composeApp:wasmJsBrowserDevelopmentRun  # Web (Wasm)
 ./gradlew :shared:jvmTest               # Shared tests
 ./gradlew :server:test                   # Server unit/route tests (H2)

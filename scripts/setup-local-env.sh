@@ -39,3 +39,4 @@ fi
 
 echo "Done. Generated .env with fresh secrets."
 echo "Run: source .env && ./gradlew :server:run"
+echo "For mock services: ./gradlew :testPanel:run (then set DEV_MODE=true in .env)"

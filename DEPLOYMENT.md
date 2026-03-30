@@ -149,6 +149,12 @@ OAuth users created via Google sign-in have no password. They can:
 | `APP_VERSION` | `dev` | No | Version string |
 | `GOOGLE_OAUTH_CLIENT_ID` | — | No | Google OAuth client ID. Leave blank to disable Google sign-in |
 | `GOOGLE_OAUTH_CLIENT_SECRET` | — | No | Google OAuth client secret |
+| `SEED_ADMIN_USERNAME` | — | No | Auto-create admin user on first run (local dev). Only runs when no users exist |
+| `SEED_ADMIN_PASSWORD` | — | No | Password for seed admin user |
+| `DEV_MODE` | `false` | No | Enable dev mode: relaxes connection validation, seeds dev team + connections |
+| `DEV_SLACK_WEBHOOK_BASE_URL` | `http://localhost:8111/services` | No | Slack webhook URL prefix to allow in dev mode |
+| `DEV_GITHUB_API_BASE_URL` | `http://localhost:8111` | No | GitHub API base URL to allow in dev mode |
+| `DEV_TEAMCITY_BASE_URL` | `http://localhost:8111` | No | TeamCity base URL to allow in dev mode |
 
 ## Container Image
 

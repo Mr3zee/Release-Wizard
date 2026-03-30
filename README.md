@@ -98,6 +98,20 @@ source .env && ./gradlew :server:run
 ./gradlew :composeApp:wasmJsBrowserDevelopmentRun
 ```
 
+### Test Panel (Mock Services)
+
+A Compose Desktop app that mocks TeamCity, Slack, and GitHub APIs on `localhost:8111` for local integration testing without real external services.
+
+```bash
+# Terminal 1 — start the test panel
+./gradlew :testPanel:run
+
+# Terminal 2 — start the server with DEV_MODE
+source .env && DEV_MODE=true ./gradlew :server:run
+```
+
+When `DEV_MODE=true` and the seed admin is configured, the server auto-creates a "Dev Team" with three connections pre-configured to point to the test panel. The test panel UI lets you manually control build states, view Slack messages, manage GitHub workflow runs, and send webhook status updates.
+
 ### Split Mode (Frontend Hot-Reload)
 
 Run backend and frontend in separate terminals for faster UI iteration:
