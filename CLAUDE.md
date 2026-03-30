@@ -55,6 +55,7 @@ Blocks form a DAG. Each node is either a **Container** (holds a sub-graph) or an
 - WebSocket SharedFlow: always subscribe before querying snapshot to prevent race conditions
 - `useUnmergedTree = true` when asserting testTags inside Card/Surface/merged containers
 - Never use `LazyColumn`/`LazyRow` inside `DropdownMenu` — causes intrinsic measurement crash in tests. Use `Column` + `verticalScroll` + `heightIn(max = ...)` instead (see **jetpack-compose-expert** skill → KMP reference)
+- When adding new env vars to `application.yaml`, also add them to `serverEnvVars` in `server/build.gradle.kts` — otherwise they won't be forwarded to the JVM process at runtime
 - Server conventions (Exposed 1.x packages, Koin wiring, WebSocket testing) → see **ktor-microservice** skill
 - Compose UI patterns, canvas testing, and gotchas → see **jetpack-compose-expert** skill
 - Manual UI verification → see **compose-ui-test-server** skill
