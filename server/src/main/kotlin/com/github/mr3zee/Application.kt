@@ -441,8 +441,8 @@ fun Application.module() {
     }
 
     if (devModeConfig.enabled) {
-        environment.log.warn("DEV_MODE is enabled — connection validation is relaxed (Slack URL check, GitHub base URL, SSRF protection disabled). " +
-            "Do NOT use in production.")
+        environment.log.warn("DEV_MODE is enabled — SSRF allowlist includes dev URLs. Do NOT use in production. " +
+            "Slack: ${devModeConfig.slackWebhookBaseUrl}, GitHub: ${devModeConfig.githubApiBaseUrl}, TeamCity: ${devModeConfig.teamcityBaseUrl}")
     }
 
     if (authConfig.pepperSecret != null) {

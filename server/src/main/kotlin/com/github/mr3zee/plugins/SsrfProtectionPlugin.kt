@@ -3,8 +3,24 @@ package com.github.mr3zee.plugins
 import com.github.mr3zee.connections.ConnectionTester.Companion.validateHostNotPrivate
 import io.ktor.client.plugins.api.*
 import org.slf4j.LoggerFactory
+import java.net.URI
 
 private val log = LoggerFactory.getLogger("com.github.mr3zee.plugins.SsrfProtectionPlugin")
+
+class SsrfProtectionConfig {
+    internal val allowedHosts = mutableSetOf<String>()
+
+    fun allowUrl(url: String) {
+        val host = try {
+            URI(url).host
+        } catch (_: Exception) {
+            null
+        }
+        if (host != null) {
+            allowedHosts.add(host)
+        }
+    }
+}
 
 /**
  * CONN-C1: HttpClient plugin that validates every outgoing request URL against private/internal
@@ -13,12 +29,14 @@ private val log = LoggerFactory.getLogger("com.github.mr3zee.plugins.SsrfProtect
  * Installed on the shared HttpClient so all outgoing requests (to TeamCity, GitHub,
  * Slack, Maven repos, etc.) are checked at request time — not just at connection-test time.
  */
-val SsrfProtection = createClientPlugin("SsrfProtection") {
+val SsrfProtection = createClientPlugin("SsrfProtection", ::SsrfProtectionConfig) {
+    val allowed = pluginConfig.allowedHosts.toSet()
     onRequest { request, _ ->
         val host = request.url.host
         if (host.isEmpty()) {
             throw IllegalArgumentException("SSRF protection: request URL has no host")
         }
+        if (host in allowed) return@onRequest
         try {
             validateHostNotPrivate(host)
         } catch (e: IllegalArgumentException) {

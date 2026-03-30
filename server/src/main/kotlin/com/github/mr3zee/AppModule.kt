@@ -42,8 +42,13 @@ fun appModule(
                     trustManager = null // null = use JVM default trust manager (verifies certificates)
                 }
             }
-            if (!devModeConfig.enabled) {
-                install(SsrfProtection)
+            // CONN-C1: SSRF protection at HTTP client level — validates every outgoing request
+            install(SsrfProtection) {
+                if (devModeConfig.enabled) {
+                    allowUrl(devModeConfig.slackWebhookBaseUrl)
+                    allowUrl(devModeConfig.githubApiBaseUrl)
+                    allowUrl(devModeConfig.teamcityBaseUrl)
+                }
             }
             install(ContentNegotiation) {
                 json(AppJson)

@@ -37,11 +37,22 @@ data class WebhookConfig(
     val baseUrl: String,
 )
 
-data class DevModeConfig(val enabled: Boolean)
+data class DevModeConfig(
+    val enabled: Boolean,
+    val slackWebhookBaseUrl: String = "http://localhost:8111/services",
+    val githubApiBaseUrl: String = "http://localhost:8111",
+    val teamcityBaseUrl: String = "http://localhost:8111",
+)
 
 fun ApplicationConfig.devModeConfig(): DevModeConfig {
     val enabled = propertyOrNull("app.devMode")?.getString()?.toBooleanStrictOrNull() ?: false
-    return DevModeConfig(enabled = enabled)
+    if (!enabled) return DevModeConfig(enabled = false)
+    return DevModeConfig(
+        enabled = true,
+        slackWebhookBaseUrl = propertyOrNull("app.dev.slackWebhookBaseUrl")?.getString() ?: "http://localhost:8111/services",
+        githubApiBaseUrl = propertyOrNull("app.dev.githubApiBaseUrl")?.getString() ?: "http://localhost:8111",
+        teamcityBaseUrl = propertyOrNull("app.dev.teamcityBaseUrl")?.getString() ?: "http://localhost:8111",
+    )
 }
 
 data class OAuthConfig(

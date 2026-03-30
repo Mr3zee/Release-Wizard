@@ -43,12 +43,14 @@ class ConnectionTester(
 
     private fun testSlack(config: ConnectionConfig.SlackConfig): ConnectionTestResult {
         val url = config.webhookUrl
-        if (devModeConfig.enabled) {
-            return ConnectionTestResult(success = true, message = "Webhook URL format is valid (dev mode)")
-        }
-        if (!url.startsWith("https://hooks.slack.com/")) {
+        val isDevUrl = devModeConfig.enabled && url.startsWith(devModeConfig.slackWebhookBaseUrl)
+        if (!isDevUrl && !url.startsWith("https://hooks.slack.com/")) {
             return ConnectionTestResult(success = false, message = "Invalid Slack webhook URL: must start with https://hooks.slack.com/")
         }
+        if (isDevUrl) {
+            return ConnectionTestResult(success = true, message = "Webhook URL accepted (dev mode: ${devModeConfig.slackWebhookBaseUrl})")
+        }
+        // CONN-H2: Also validate against SSRF (DNS rebinding, IP spoofing)
         return try {
             validateUrlNotPrivate(url)
             ConnectionTestResult(success = true, message = "Webhook URL format is valid")
@@ -82,7 +84,8 @@ class ConnectionTester(
     }
 
     private suspend fun testGitHub(config: ConnectionConfig.GitHubConfig): ConnectionTestResult {
-        if (!devModeConfig.enabled && config.baseUrl != "https://api.github.com") {
+        val isDevUrl = devModeConfig.enabled && config.baseUrl.startsWith(devModeConfig.githubApiBaseUrl)
+        if (!isDevUrl && config.baseUrl != "https://api.github.com") {
             try {
                 validateUrlNotPrivate(config.baseUrl)
             } catch (e: IllegalArgumentException) {
