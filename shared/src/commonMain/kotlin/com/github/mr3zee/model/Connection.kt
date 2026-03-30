@@ -37,6 +37,7 @@ sealed class ConnectionConfig {
         val owner: String,
         val repo: String,
         val pollingIntervalSeconds: Int = 30,
+        val baseUrl: String = "https://api.github.com",
     ) : ConnectionConfig()
 
 }

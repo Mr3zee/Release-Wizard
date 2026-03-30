@@ -17,6 +17,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import com.github.mr3zee.AppJson
+import com.github.mr3zee.DevModeConfig
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import org.yaml.snakeyaml.LoaderOptions
@@ -31,6 +32,7 @@ import java.net.URI
  */
 class ConnectionTester(
     private val httpClient: HttpClient,
+    private val devModeConfig: DevModeConfig = DevModeConfig(enabled = false),
 ) {
     private val log = LoggerFactory.getLogger(ConnectionTester::class.java)
     suspend fun test(config: ConnectionConfig): ConnectionTestResult = when (config) {
@@ -41,10 +43,12 @@ class ConnectionTester(
 
     private fun testSlack(config: ConnectionConfig.SlackConfig): ConnectionTestResult {
         val url = config.webhookUrl
+        if (devModeConfig.enabled) {
+            return ConnectionTestResult(success = true, message = "Webhook URL format is valid (dev mode)")
+        }
         if (!url.startsWith("https://hooks.slack.com/")) {
             return ConnectionTestResult(success = false, message = "Invalid Slack webhook URL: must start with https://hooks.slack.com/")
         }
-        // CONN-H2: Also validate against SSRF (DNS rebinding, IP spoofing)
         return try {
             validateUrlNotPrivate(url)
             ConnectionTestResult(success = true, message = "Webhook URL format is valid")
@@ -78,10 +82,17 @@ class ConnectionTester(
     }
 
     private suspend fun testGitHub(config: ConnectionConfig.GitHubConfig): ConnectionTestResult {
+        if (!devModeConfig.enabled && config.baseUrl != "https://api.github.com") {
+            try {
+                validateUrlNotPrivate(config.baseUrl)
+            } catch (e: IllegalArgumentException) {
+                return ConnectionTestResult(success = false, message = e.message ?: "Invalid base URL")
+            }
+        }
         return try {
             val owner = encodePathSegment(config.owner)
             val repo = encodePathSegment(config.repo)
-            val response = httpClient.get("https://api.github.com/repos/$owner/$repo") {
+            val response = httpClient.get("${config.baseUrl}/repos/$owner/$repo") {
                 header("Authorization", "Bearer ${config.token}")
                 header("Accept", "application/vnd.github+json")
             }
@@ -224,7 +235,7 @@ class ConnectionTester(
     suspend fun fetchGitHubWorkflows(config: ConnectionConfig.GitHubConfig): ExternalConfigsResponse {
         val owner = encodePathSegment(config.owner)
         val repo = encodePathSegment(config.repo)
-        val response = httpClient.get("https://api.github.com/repos/$owner/$repo/actions/workflows") {
+        val response = httpClient.get("${config.baseUrl}/repos/$owner/$repo/actions/workflows") {
             parameter("per_page", 100)
             header("Authorization", "Bearer ${config.token}")
             header("Accept", "application/vnd.github+json")
@@ -257,7 +268,7 @@ class ConnectionTester(
         val owner = encodePathSegment(config.owner)
         val repo = encodePathSegment(config.repo)
         val encodedFile = encodePathSegment(workflowFile)
-        val response = httpClient.get("https://api.github.com/repos/$owner/$repo/contents/.github/workflows/$encodedFile") {
+        val response = httpClient.get("${config.baseUrl}/repos/$owner/$repo/contents/.github/workflows/$encodedFile") {
             header("Authorization", "Bearer ${config.token}")
             header("Accept", "application/vnd.github+json")
         }

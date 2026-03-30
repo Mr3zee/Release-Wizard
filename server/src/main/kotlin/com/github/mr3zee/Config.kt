@@ -37,6 +37,13 @@ data class WebhookConfig(
     val baseUrl: String,
 )
 
+data class DevModeConfig(val enabled: Boolean)
+
+fun ApplicationConfig.devModeConfig(): DevModeConfig {
+    val enabled = propertyOrNull("app.devMode")?.getString()?.toBooleanStrictOrNull() ?: false
+    return DevModeConfig(enabled = enabled)
+}
+
 data class OAuthConfig(
     val googleClientId: String?,
     val googleClientSecret: String?,

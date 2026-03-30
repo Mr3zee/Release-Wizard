@@ -51,7 +51,7 @@ class GitHubPublicationExecutor(
             ?: throw IllegalArgumentException("GitHub Publication requires 'tagName' parameter")
 
         // Check if release already exists by tag
-        val checkResponse = httpClient.get("https://api.github.com/repos/${config.owner}/${config.repo}/releases/tags/$tagName") {
+        val checkResponse = httpClient.get("${config.baseUrl}/repos/${config.owner}/${config.repo}/releases/tags/$tagName") {
             header("Authorization", "Bearer ${config.token}")
             header("Accept", "application/vnd.github+json")
         }
@@ -88,7 +88,7 @@ class GitHubPublicationExecutor(
             prerelease = prerelease,
         )
 
-        val response = httpClient.post("https://api.github.com/repos/${config.owner}/${config.repo}/releases") {
+        val response = httpClient.post("${config.baseUrl}/repos/${config.owner}/${config.repo}/releases") {
             header("Authorization", "Bearer ${config.token}")
             header("Accept", "application/vnd.github+json")
             contentType(ContentType.Application.Json)

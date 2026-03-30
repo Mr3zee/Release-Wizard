@@ -21,6 +21,7 @@ fun appModule(
     passwordPolicyConfig: PasswordPolicyConfig = PasswordPolicyConfig(minLength = 16, requireUppercase = true, requireDigit = true, requireSpecial = true),
     useFlyway: Boolean = true,
     oauthConfig: OAuthConfig = OAuthConfig(null, null),
+    devModeConfig: DevModeConfig = DevModeConfig(enabled = false),
 ) = module {
     single { dbConfig }
     single { encryptionConfig }
@@ -28,6 +29,7 @@ fun appModule(
     single { webhookConfig }
     single { passwordPolicyConfig }
     single { oauthConfig }
+    single { devModeConfig }
     single<DataSource> { dataSource(get()) }
     single<Database> { initDatabase(get(), useFlyway) }
     single { EncryptionService(get()) }
@@ -40,8 +42,9 @@ fun appModule(
                     trustManager = null // null = use JVM default trust manager (verifies certificates)
                 }
             }
-            // CONN-C1: SSRF protection at HTTP client level — validates every outgoing request
-            install(SsrfProtection)
+            if (!devModeConfig.enabled) {
+                install(SsrfProtection)
+            }
             install(ContentNegotiation) {
                 json(AppJson)
             }

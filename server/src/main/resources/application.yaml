@@ -13,11 +13,12 @@ ktor:
 #                  BROWSER_SESSION_TTL_SECONDS, DESKTOP_SESSION_TTL_SECONDS,
 #                  BROWSER_ABSOLUTE_LIFETIME_SECONDS, DESKTOP_ABSOLUTE_LIFETIME_SECONDS,
 #                  PASSWORD_PEPPER, PASSWORD_PEPPER_OLD,
-#                  GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET
+#                  GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, DEV_MODE
 # JB Cloud Console: map DB0_URL_JDBC → DB_URL, DB0_USERNAME → DB_USER, DB0_PASSWORD → DB_PASSWORD
 # via customEnv in Helm additional params (see DEPLOYMENT.md).
 app:
   version: "$APP_VERSION:dev"
+  devMode: "$DEV_MODE:false"
   database:
     url: "$DB_URL:jdbc:postgresql://localhost:5432/release_wizard"
     user: "$DB_USER:postgres"

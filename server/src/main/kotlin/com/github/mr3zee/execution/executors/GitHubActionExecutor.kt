@@ -85,7 +85,7 @@ class GitHubActionExecutor(
             ?: throw IllegalArgumentException("GitHub Action requires 'ref' parameter")
 
         val encodedWorkflow = encodePathSegment(workflowFile)
-        val baseUrl = "https://api.github.com/repos/${encodePathSegment(config.owner)}/${encodePathSegment(config.repo)}"
+        val baseUrl = "${config.baseUrl}/repos/${encodePathSegment(config.owner)}/${encodePathSegment(config.repo)}"
 
         // EXEC-H1: Capture timestamp BEFORE dispatch so we don't miss the run due to network latency
         val dispatchedAt = Clock.System.now()
@@ -129,13 +129,14 @@ class GitHubActionExecutor(
             token = config.token,
             runId = runId,
             intervalSeconds = config.pollingIntervalSeconds,
+            baseUrl = config.baseUrl,
         ) { _, _ ->
-            // On each tick, discover/refresh job statuses
             val jobs = buildPollingService.discoverGitHubJobs(
                 owner = config.owner,
                 repo = config.repo,
                 token = config.token,
                 runId = runId,
+                baseUrl = config.baseUrl,
             )
             if (jobs.isNotEmpty()) {
                 scope?.updateSubBuilds(jobs)
@@ -208,7 +209,7 @@ class GitHubActionExecutor(
 
         try {
             val response = httpClient.post(
-                "https://api.github.com/repos/${config.owner}/${config.repo}/actions/runs/$runId/cancel"
+                "${config.baseUrl}/repos/${encodePathSegment(config.owner)}/${encodePathSegment(config.repo)}/actions/runs/$runId/cancel"
             ) {
                 header("Authorization", "Bearer ${config.token}")
                 header("Accept", "application/vnd.github+json")

@@ -91,6 +91,7 @@ fun Application.module() {
     val passwordPolicyConfig = environment.config.passwordPolicyConfig()
     val corsConfig = environment.config.corsConfig()
     val oauthConfig = environment.config.oauthConfig()
+    val devModeConfig = environment.config.devModeConfig()
 
     val appVersion = environment.config.propertyOrNull("app.version")?.getString() ?: "dev"
 
@@ -99,7 +100,7 @@ fun Application.module() {
     install(Koin) {
         slf4jLogger()
         modules(
-            appModule(dbConfig, encryptionConfig, authConfig, webhookConfig, passwordPolicyConfig, oauthConfig = oauthConfig),
+            appModule(dbConfig, encryptionConfig, authConfig, webhookConfig, passwordPolicyConfig, oauthConfig = oauthConfig, devModeConfig = devModeConfig),
             auditModule,
             authModule,
             projectsModule,
@@ -433,6 +434,11 @@ fun Application.module() {
     if (!secureCookie) {
         environment.log.warn("SECURE_COOKIE is disabled — session cookies will not have the Secure flag. " +
             "This should only be used for local development.")
+    }
+
+    if (devModeConfig.enabled) {
+        environment.log.warn("DEV_MODE is enabled — connection validation is relaxed (Slack URL check, GitHub base URL, SSRF protection disabled). " +
+            "Do NOT use in production.")
     }
 
     if (authConfig.pepperSecret != null) {

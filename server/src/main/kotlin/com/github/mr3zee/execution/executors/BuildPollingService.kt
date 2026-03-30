@@ -215,9 +215,10 @@ class BuildPollingService(
         repo: String,
         token: String,
         runId: String,
+        baseUrl: String,
     ): List<SubBuild> {
         return try {
-            val url = "https://api.github.com/repos/$owner/$repo/actions/runs/$runId/jobs?per_page=100"
+            val url = "$baseUrl/repos/$owner/$repo/actions/runs/$runId/jobs?per_page=100"
             val response = httpClient.get(url) {
                 header("Authorization", "Bearer $token")
                 header("Accept", "application/vnd.github+json")
@@ -243,7 +244,6 @@ class BuildPollingService(
                 val status = job["status"]?.jsonPrimitive?.contentOrNull
                 val conclusion = job["conclusion"]?.jsonPrimitive?.contentOrNull
                 val htmlUrl = job["html_url"]?.jsonPrimitive?.contentOrNull
-                    ?.takeIf { it.startsWith("https://github.com/") }
 
                 val subStatus = mapGitHubJobStatus(status, conclusion)
 
@@ -307,11 +307,12 @@ class BuildPollingService(
         token: String,
         runId: String,
         intervalSeconds: Int,
+        baseUrl: String,
         queueTimeout: Duration = QUEUE_TIMEOUT,
         maxPollDuration: Duration = MAX_POLL_DURATION,
         onUpdate: suspend (status: String, conclusion: String?) -> Unit = { _, _ -> },
     ): Map<String, String> {
-        val baseUrl = "https://api.github.com/repos/$owner/$repo"
+        val repoUrl = "$baseUrl/repos/$owner/$repo"
         var queuedSince: TimeMark? = null
         // EXEC-M1: Track total poll duration to prevent indefinite blocking
         val pollStart = TimeSource.Monotonic.markNow()
@@ -321,7 +322,7 @@ class BuildPollingService(
                 throw RuntimeException("GitHub Actions run $runId exceeded maximum poll duration of $maxPollDuration")
             }
             try {
-                val response = httpClient.get("$baseUrl/actions/runs/$runId") {
+                val response = httpClient.get("$repoUrl/actions/runs/$runId") {
                     header("Authorization", "Bearer $token")
                     header("Accept", "application/vnd.github+json")
                 }
@@ -359,7 +360,7 @@ class BuildPollingService(
                         return mapOf(
                             "runId" to runId,
                             "runUrl" to (json["html_url"]?.jsonPrimitive?.content
-                                ?: "https://github.com/$owner/$repo/actions/runs/$runId"),
+                                ?: "$baseUrl/$owner/$repo/actions/runs/$runId"),
                             "runStatus" to (conclusion ?: "unknown"),
                         )
                     }

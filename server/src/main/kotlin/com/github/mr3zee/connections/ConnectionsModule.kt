@@ -5,5 +5,5 @@ import org.koin.dsl.module
 val connectionsModule = module {
     single<ConnectionsRepository> { ExposedConnectionsRepository(get(), get()) }
     single<ConnectionsService> { DefaultConnectionsService(get(), get(), get(), get()) }
-    single { ConnectionTester(get()) }
+    single { ConnectionTester(get(), get()) }
 }
