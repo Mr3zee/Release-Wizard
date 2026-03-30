@@ -35,6 +35,7 @@ val ALL_TABLES = arrayOf(
     AccountLockoutTable,
     PasswordResetTokenTable,
     OAuthAccountTable,
+    UserNotificationTable,
 )
 
 fun dataSource(config: DatabaseConfig): DataSource {
@@ -106,6 +107,7 @@ private val PARTIAL_INDEX_NAMES = setOf(
     "uq_join_request_pending_team_user",
     "uq_swt_active_release_block",
     "idx_users_pending_approval",
+    "idx_user_notifications_unread",
 )
 
 /**
@@ -135,6 +137,10 @@ private fun createPartialIndexes(ds: DataSource) {
         """CREATE INDEX IF NOT EXISTS idx_users_pending_approval
            ON users (created_at)
            WHERE approved = false""",
+        // NOTIF-M1: Efficient unread count per user
+        """CREATE INDEX IF NOT EXISTS idx_user_notifications_unread
+           ON user_notifications (user_id)
+           WHERE read = false""",
     )
     ds.connection.use { conn ->
         // Ensure DDL commits immediately regardless of pool autoCommit setting

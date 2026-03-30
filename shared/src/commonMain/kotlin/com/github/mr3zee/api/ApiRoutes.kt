@@ -115,6 +115,13 @@ object ApiRoutes {
         fun byId(projectId: String, triggerId: String) = "${byProject(projectId)}/$triggerId"
     }
 
+    object UserNotifications {
+        const val BASE = "$API_V1/user-notifications"
+        const val UNREAD_COUNT = "$BASE/unread-count"
+        const val MARK_ALL_READ = "$BASE/mark-all-read"
+        fun markRead(id: String) = "$BASE/$id/read"
+    }
+
     object Tags {
         const val BASE = "$API_V1/tags"
     }

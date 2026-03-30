@@ -86,6 +86,13 @@ class NavigationController(
                 return@withMutableSnapshot
             }
 
+            // Notifications is a top-level personal screen with no parent section
+            if (screen is Screen.Notifications) {
+                _backStack.add(Screen.ProjectList)
+                _backStack.add(screen)
+                return@withMutableSnapshot
+            }
+
             // 1. Always start with home
             _backStack.add(Screen.ProjectList)
 

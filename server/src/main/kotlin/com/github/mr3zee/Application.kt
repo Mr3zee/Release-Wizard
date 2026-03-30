@@ -43,6 +43,9 @@ import com.github.mr3zee.teams.teamsModule
 import com.github.mr3zee.triggers.triggerRoutes
 import com.github.mr3zee.triggers.triggerWebhookRoutes
 import com.github.mr3zee.triggers.triggersModule
+import com.github.mr3zee.usernotifications.UserNotificationGenerator
+import com.github.mr3zee.usernotifications.userNotificationRoutes
+import com.github.mr3zee.usernotifications.userNotificationsModule
 import com.github.mr3zee.webhooks.StatusWebhookService
 import com.github.mr3zee.webhooks.webhookRoutes
 import com.github.mr3zee.webhooks.webhooksModule
@@ -114,6 +117,7 @@ fun Application.module() {
             mavenTriggerModule,
             tagsModule,
             teamsModule,
+            userNotificationsModule,
             module { single { executionScope } },
         )
     }
@@ -484,6 +488,12 @@ fun Application.module() {
                 listener.start(engine, scope)
             }
 
+            // Start user notification generator before recovery so events during recovery are captured
+            val notifGenerator = koin.getOrNull<UserNotificationGenerator>()
+            if (notifGenerator != null && engine != null && scope != null) {
+                notifGenerator.start(engine, scope)
+            }
+
             // Then run recovery asynchronously (events emitted here will be captured by listener)
             val recoveryService = koin.getOrNull<RecoveryService>()
             if (recoveryService != null && scope != null) {
@@ -547,6 +557,22 @@ fun Application.module() {
                     }
                 }
             }
+
+            // Periodic cleanup of old user notifications (runs every hour)
+            if (notifGenerator != null && scope != null) {
+                scope.launch {
+                    while (true) {
+                        delay(3_600_000L.milliseconds)
+                        try {
+                            notifGenerator.cleanup()
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            environment.log.error("User notification cleanup failed", e)
+                        }
+                    }
+                }
+            }
         } catch (e: Exception) {
             // INFRA-H4: Log critical startup failure — server may be in a broken state
             environment.log.error("CRITICAL: Application startup failed — some services may be unavailable", e)
@@ -592,6 +618,7 @@ fun Application.configureRouting(
                 triggerRoutes()
                 mavenTriggerRoutes()
                 tagRoutes()
+                userNotificationRoutes()
             }
         }
 

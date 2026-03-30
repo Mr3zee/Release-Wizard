@@ -28,7 +28,7 @@ fun Screen.toNavSection(): NavSection? = when (this) {
 }
 
 /** True if this screen is a top-level section (sidebar visible). */
-fun Screen.isTopLevel(): Boolean = toNavSection() != null
+fun Screen.isTopLevel(): Boolean = toNavSection() != null || this is Screen.Notifications
 
 /**
  * Returns the parent [NavSection] for any screen.
@@ -48,4 +48,5 @@ fun Screen.parentSection(): NavSection? = when (this) {
     is Screen.Profile -> null
     is Screen.ResetPassword -> null
     is Screen.AdminUsers -> null
+    is Screen.Notifications -> null
 }

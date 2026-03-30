@@ -22,6 +22,7 @@ object ReleaseTable : UUIDTable("releases") {
     val dagSnapshot = jsonb<DagGraph>("dag_snapshot", AppJson)
     val parameters = jsonb("parameters", AppJson, ListSerializer(Parameter.serializer()))
     val teamId = reference("team_id", TeamTable, onDelete = ReferenceOption.RESTRICT)
+    val createdByUserId = reference("created_by_user_id", UserTable, onDelete = ReferenceOption.SET_NULL).nullable()
     val createdAt = timestamp("created_at").nullable()
     val startedAt = timestamp("started_at").nullable()
     val finishedAt = timestamp("finished_at").nullable()

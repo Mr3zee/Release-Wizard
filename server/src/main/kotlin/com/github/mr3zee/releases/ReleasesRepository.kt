@@ -55,6 +55,7 @@ interface ReleasesRepository {
         dagSnapshot: DagGraph,
         parameters: List<Parameter>,
         teamId: String,
+        createdByUserId: String? = null,
     ): Release
     suspend fun updateStatus(id: ReleaseId, status: ReleaseStatus): Boolean
     suspend fun setStarted(id: ReleaseId): Boolean

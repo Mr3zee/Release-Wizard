@@ -63,4 +63,4 @@ private val EXEMPT_PATHS = setOf(
 )
 
 private fun isExemptFromApprovalGate(path: String): Boolean =
-    path in EXEMPT_PATHS
+    path in EXEMPT_PATHS || path == ApiRoutes.UserNotifications.BASE || path.startsWith(ApiRoutes.UserNotifications.BASE + "/")

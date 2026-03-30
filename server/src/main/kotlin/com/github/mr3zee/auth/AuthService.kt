@@ -36,6 +36,7 @@ interface AuthService {
     suspend fun getUserById(id: UserId): User?
     suspend fun getUserByUsername(username: String): User?
     suspend fun listUsers(): List<User>
+    suspend fun listAdminUserIds(): List<String>
     suspend fun updateUserRole(id: UserId, role: UserRole): Boolean
 
     /**
@@ -327,6 +328,12 @@ class DatabaseAuthService(
         users.map { user ->
             user.copy(oauthProviders = oauthByUserId[user.id.value].orEmpty())
         }
+    }
+
+    override suspend fun listAdminUserIds(): List<String> = dbQuery {
+        UserTable.select(UserTable.id)
+            .where { UserTable.role eq UserRole.ADMIN }
+            .map { it[UserTable.id].value.toString() }
     }
 
     override suspend fun updateUserRole(id: UserId, role: UserRole): Boolean = dbQuery {

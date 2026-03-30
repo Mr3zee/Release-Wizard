@@ -66,6 +66,9 @@ import kotlin.time.Duration.Companion.milliseconds
  */
 val LocalPasswordPolicyHint = compositionLocalOf<String?> { null }
 
+/** Polling interval for unread notification badge (ms). Extracted for test overridability. */
+const val NOTIFICATION_POLL_INTERVAL_MS = 15_000L
+
 @Composable
 fun App() {
     val httpClient = remember { createHttpClient() }
@@ -80,6 +83,7 @@ fun App() {
     val scheduleApiClient = remember { ScheduleApiClient(httpClient) }
     val webhookTriggerApiClient = remember { WebhookTriggerApiClient(httpClient) }
     val mavenTriggerApiClient = remember { MavenTriggerApiClient(httpClient) }
+    val userNotificationApiClient = remember { com.github.mr3zee.api.UserNotificationApiClient(httpClient) }
 
     val activeTeamId = remember { MutableStateFlow<TeamId?>(null) }
 
@@ -118,6 +122,15 @@ fun App() {
         profileViewModel.onUsernameChanged = { updatedUserInfo ->
             authViewModel.updateUser(updatedUserInfo)
         }
+    }
+
+    // Unread notification count for sidebar badge
+    var unreadNotificationCount by remember { mutableStateOf(0L) }
+    val notificationsViewModel = remember {
+        com.github.mr3zee.notifications.NotificationsViewModel(
+            apiClient = userNotificationApiClient,
+            onUnreadCountChanged = { count -> unreadNotificationCount = count },
+        )
     }
 
     val user by authViewModel.user.collectAsState()
@@ -165,6 +178,23 @@ fun App() {
             } else {
                 navController.resetTo(Screen.TeamList)
             }
+        }
+    }
+
+    // Badge polling: poll unread notification count when authenticated
+    LaunchedEffect(user) {
+        val currentUser = user ?: return@LaunchedEffect
+        if (!currentUser.approved) return@LaunchedEffect
+        // Initial fetch
+        try {
+            unreadNotificationCount = userNotificationApiClient.getUnreadCount().count
+        } catch (_: Exception) { /* ignore */ }
+        // Periodic polling
+        while (true) {
+            delay(NOTIFICATION_POLL_INTERVAL_MS.milliseconds)
+            try {
+                unreadNotificationCount = userNotificationApiClient.getUnreadCount().count
+            } catch (_: Exception) { /* ignore */ }
         }
     }
 
@@ -237,6 +267,7 @@ fun App() {
     val logout = {
         authViewModel.logout()
         activeTeamId.value = null
+        unreadNotificationCount = 0
         navController.resetTo(Screen.ProjectList)
         router.replacePath("/projects")
     }
@@ -244,6 +275,7 @@ fun App() {
     val accountDeleted = {
         authViewModel.onAccountDeleted()
         activeTeamId.value = null
+        unreadNotificationCount = 0
         navController.resetTo(Screen.ProjectList)
         router.replacePath("/projects")
     }
@@ -264,6 +296,7 @@ fun App() {
                         onToggleTheme = toggleTheme,
                         onToggleShortcutsOverlay = { showShortcutsOverlay = !showShortcutsOverlay },
                         isShortcutsOverlayOpen = showShortcutsOverlay,
+                        onNavigateToNotifications = { navController.navigate(Screen.Notifications) },
                     )
                 },
             color = MaterialTheme.colorScheme.background,
@@ -330,6 +363,9 @@ fun App() {
                             sidebarVisible = currentScreen.isTopLevel(),
                             currentSection = currentScreen.toNavSection(),
                             isProfileActive = currentScreen is Screen.Profile || currentScreen is Screen.AdminUsers,
+                            isNotificationsActive = currentScreen is Screen.Notifications,
+                            unreadNotificationCount = unreadNotificationCount,
+                            onNotificationsClick = { navController.navigate(Screen.Notifications) },
                             onSectionClick = { section ->
                                 if (!shortcutActionsState.value.hasDialogOpen) {
                                     navController.navigateToSection(section)
@@ -388,6 +424,7 @@ fun App() {
                                 onRefreshUser = { authViewModel.refreshUser() },
                                 profileViewModel = profileViewModel,
                                 authApiClient = authApiClient,
+                                notificationsViewModel = notificationsViewModel,
                             )
                         }
                     }

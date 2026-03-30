@@ -21,4 +21,5 @@ sealed class Screen {
     data object Profile : Screen()
     data class ResetPassword(val token: String) : Screen()
     data object AdminUsers : Screen()
+    data object Notifications : Screen()
 }

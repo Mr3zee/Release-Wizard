@@ -137,6 +137,7 @@ class DefaultReleasesService(
             dagSnapshot = project.dagGraph,
             parameters = mergedParams,
             teamId = projectTeamId,
+            createdByUserId = session.userId,
         )
 
         // Set tags (merge default tags from project with request tags)
@@ -214,6 +215,7 @@ class DefaultReleasesService(
             dagSnapshot = original.dagSnapshot,
             parameters = original.parameters,
             teamId = releaseTeamId,
+            createdByUserId = session.userId,
         )
 
         // Copy tags from the original release

@@ -28,6 +28,7 @@ fun handleGlobalKeyEvent(
     onToggleTheme: () -> Unit,
     onToggleShortcutsOverlay: () -> Unit,
     isShortcutsOverlayOpen: Boolean,
+    onNavigateToNotifications: () -> Unit = {},
 ): Boolean {
     if (event.type != KeyEventType.KeyDown) return false
 
@@ -49,6 +50,7 @@ fun handleGlobalKeyEvent(
             Key.Two -> { onNavigateToSection(NavSection.RELEASES); return true }
             Key.Three -> { onNavigateToSection(NavSection.CONNECTIONS); return true }
             Key.Four -> { onNavigateToSection(NavSection.TEAMS); return true }
+            Key.Five -> { onNavigateToNotifications(); return true }
             Key.DirectionLeft -> { onGoBack(); return true }
         }
     }

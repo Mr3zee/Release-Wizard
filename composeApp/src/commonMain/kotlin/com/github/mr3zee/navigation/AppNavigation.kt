@@ -52,6 +52,7 @@ fun AppNavigation(
     onRefreshUser: () -> Unit,
     profileViewModel: ProfileViewModel? = null,
     authApiClient: AuthApiClient? = null,
+    notificationsViewModel: com.github.mr3zee.notifications.NotificationsViewModel? = null,
 ) {
     val isTeamLead = userTeams.any { it.role == TeamRole.TEAM_LEAD }
     // Track teams created in this session so the UI shows "Member" immediately,
@@ -247,6 +248,15 @@ fun AppNavigation(
             AdminUsersScreen(
                 viewModel = viewModel,
                 currentUserId = currentUserId,
+                onBack = { onGoBack() },
+            )
+        }
+        is Screen.Notifications -> {
+            val vm = notificationsViewModel ?: return
+            LaunchedEffect(Unit) { vm.loadIfNeeded() }
+            com.github.mr3zee.notifications.NotificationsScreen(
+                viewModel = vm,
+                onNavigate = onNavigate,
                 onBack = { onGoBack() },
             )
         }

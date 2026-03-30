@@ -5,5 +5,5 @@ import org.koin.dsl.module
 val teamsModule = module {
     single<TeamRepository> { ExposedTeamRepository(get()) }
     single { TeamAccessService(get()) }
-    single<TeamService> { DefaultTeamService(get(), get(), get(), get()) }
+    single<TeamService> { DefaultTeamService(get(), get(), get(), get(), get()) }
 }

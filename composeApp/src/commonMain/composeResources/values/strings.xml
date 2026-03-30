@@ -698,4 +698,16 @@
     <string name="loading_connections">Loading connections</string>
     <string name="loading_audit">Loading audit events</string>
     <string name="loading_login">Signing in</string>
+    <string name="loading_notifications">Loading notifications</string>
+
+    <!-- ==================== User Notifications ==================== -->
+    <string name="notifications_title">Notifications</string>
+    <string name="notifications_empty">No notifications yet.</string>
+    <string name="notifications_empty_hint">You\u0027ll see approval requests, release completions, team invites, and role changes here.</string>
+    <string name="notifications_mark_all_read">Mark all as read</string>
+    <string name="notifications_mark_as_read">Mark as read</string>
+    <string name="notifications_unread">Unread</string>
+
+    <!-- ==================== Keyboard Shortcuts: Notifications ==================== -->
+    <string name="shortcut_nav_notifications">Notifications</string>
 </resources>

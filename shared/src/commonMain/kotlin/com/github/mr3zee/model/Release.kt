@@ -13,4 +13,5 @@ data class Release(
     val tags: List<String> = emptyList(),
     val startedAt: Instant? = null,
     val finishedAt: Instant? = null,
+    val createdByUserId: String? = null,
 )

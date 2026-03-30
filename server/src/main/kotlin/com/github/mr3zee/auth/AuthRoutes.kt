@@ -15,6 +15,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
+import kotlinx.coroutines.launch
 import org.koin.ktor.ext.inject
 import org.slf4j.LoggerFactory
 import kotlin.time.Clock
@@ -31,6 +32,8 @@ fun Route.authRoutes() {
     val webhookConfig by inject<WebhookConfig>()
     val oauthService by inject<OAuthService>()
     val oauthConfig by inject<com.github.mr3zee.OAuthConfig>()
+    val notificationGenerator by inject<com.github.mr3zee.usernotifications.UserNotificationGenerator>()
+    val executionScope by inject<kotlinx.coroutines.CoroutineScope>()
 
     // Public: password policy + available OAuth providers (no auth needed)
     rateLimit(RateLimitName("authenticated-api")) {
@@ -154,6 +157,20 @@ fun Route.authRoutes() {
                 )
 
                 log.info("User '{}' registered with role {} (approved={})", user.username, user.role, user.approved)
+
+                // Fire-and-forget admin notification for unapproved registrations
+                if (!user.approved) {
+                    executionScope.launch {
+                        try {
+                            notificationGenerator.onAccountPendingApproval(user.username)
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+                            log.warn("Failed to generate admin notification for registration: {}", e.message)
+                        }
+                    }
+                }
+
                 call.respond(HttpStatusCode.Created, UserInfo(username = user.username, id = user.id.value, role = user.role, approved = user.approved))
             } else {
                 log.warn("Registration rejected: username '{}' already taken", trimmedUsername)

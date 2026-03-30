@@ -38,7 +38,10 @@ class DefaultTeamService(
     private val teamAccessService: TeamAccessService,
     private val auditService: AuditService,
     private val authService: com.github.mr3zee.auth.AuthService,
+    private val notificationGenerator: com.github.mr3zee.usernotifications.UserNotificationGenerator,
 ) : TeamService {
+
+    private val log = org.slf4j.LoggerFactory.getLogger(DefaultTeamService::class.java)
 
     override suspend fun createTeam(request: CreateTeamRequest, session: UserSession): TeamResponse {
         val name = sanitizeName(request.name)
@@ -117,6 +120,16 @@ class DefaultTeamService(
         // TEAM-C1: Atomic role update with last-lead protection in a single transaction
         teamRepository.updateMemberRoleAtomic(teamId, userId, request.role)
         auditService.log(teamId, session, AuditAction.MEMBER_ROLE_CHANGED, AuditTargetType.USER, userId, "Changed role to ${request.role}")
+        try {
+            val team = teamRepository.findById(teamId)
+            if (team != null) {
+                notificationGenerator.onMemberRoleChanged(userId, teamId, team.name, request.role)
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+            log.warn("Failed to generate role-changed notification: {}", e.message)
+        }
     }
 
     override suspend fun removeMember(teamId: TeamId, userId: String, session: UserSession) {
@@ -155,6 +168,16 @@ class DefaultTeamService(
         }
         val invite = teamRepository.createInvite(teamId, userId, session.userId)
         auditService.log(teamId, session, AuditAction.INVITE_SENT, AuditTargetType.USER, userId, "Invited user '${request.username}' to team")
+        try {
+            val team = teamRepository.findById(teamId)
+            if (team != null) {
+                notificationGenerator.onTeamInviteReceived(userId, teamId, team.name)
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+            log.warn("Failed to generate invite notification for user {} in team {}: {}", userId, teamId.value, e.message)
+        }
         return invite
     }
 
@@ -209,12 +232,32 @@ class DefaultTeamService(
         val requestUserId = teamRepository.approveJoinRequestAtomic(teamId, requestId, session.userId, TeamRole.COLLABORATOR)
         auditService.log(teamId, session, AuditAction.JOIN_REQUEST_APPROVED, AuditTargetType.USER, requestUserId, "Approved join request")
         auditService.log(teamId, session, AuditAction.MEMBER_JOINED, AuditTargetType.USER, requestUserId, "Joined team via approved join request")
+        try {
+            val team = teamRepository.findById(teamId)
+            if (team != null) {
+                notificationGenerator.onJoinRequestDecided(requestUserId, teamId, team.name, approved = true)
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+            log.warn("Failed to generate join-request-approved notification: {}", e.message)
+        }
     }
 
     override suspend fun rejectJoinRequest(teamId: TeamId, requestId: String, session: UserSession) {
         val request = validatePendingJoinRequest(teamId, requestId, session)
         teamRepository.updateJoinRequestStatus(requestId, JoinRequestStatus.REJECTED, session.userId)
         auditService.log(teamId, session, AuditAction.JOIN_REQUEST_REJECTED, AuditTargetType.USER, request.userId.value, "Rejected join request")
+        try {
+            val team = teamRepository.findById(teamId)
+            if (team != null) {
+                notificationGenerator.onJoinRequestDecided(request.userId.value, teamId, team.name, approved = false)
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+            log.warn("Failed to generate join-request-rejected notification: {}", e.message)
+        }
     }
 
     // My Invites (user-facing)

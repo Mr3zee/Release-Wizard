@@ -39,6 +39,7 @@ fun Key.displayName(): String = when (this) {
     Key.Two -> "2"
     Key.Three -> "3"
     Key.Four -> "4"
+    Key.Five -> "5"
     Key.A -> "A"
     Key.C -> "C"
     Key.D -> "D"
@@ -80,6 +81,7 @@ val AllShortcuts: List<KeyboardShortcut> = listOf(
     KeyboardShortcut("nav.releases", Key.Two, setOf(ShortcutModifier.ALT), ShortcutCategory.NAVIGATION, "shortcut_nav_releases"),
     KeyboardShortcut("nav.connections", Key.Three, setOf(ShortcutModifier.ALT), ShortcutCategory.NAVIGATION, "shortcut_nav_connections"),
     KeyboardShortcut("nav.teams", Key.Four, setOf(ShortcutModifier.ALT), ShortcutCategory.NAVIGATION, "shortcut_nav_teams"),
+    KeyboardShortcut("nav.notifications", Key.Five, setOf(ShortcutModifier.ALT), ShortcutCategory.NAVIGATION, "shortcut_nav_notifications"),
     KeyboardShortcut("nav.back", Key.DirectionLeft, setOf(ShortcutModifier.ALT), ShortcutCategory.NAVIGATION, "shortcut_nav_back"),
 
     // Actions

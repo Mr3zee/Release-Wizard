@@ -30,6 +30,7 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
             parameters = this[ReleaseTable.parameters],
             startedAt = this[ReleaseTable.startedAt],
             finishedAt = this[ReleaseTable.finishedAt],
+            createdByUserId = this[ReleaseTable.createdByUserId]?.value?.toString(),
         )
     }
 
@@ -229,6 +230,7 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
         dagSnapshot: DagGraph,
         parameters: List<Parameter>,
         teamId: String,
+        createdByUserId: String?,
     ): Release = dbQuery {
         val id = UUID.randomUUID()
         val now = Clock.System.now()
@@ -239,6 +241,7 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
             it[ReleaseTable.dagSnapshot] = dagSnapshot
             it[ReleaseTable.parameters] = parameters
             it[ReleaseTable.teamId] = UUID.fromString(teamId)
+            it[ReleaseTable.createdByUserId] = createdByUserId?.let { uid -> UUID.fromString(uid) }
             it[ReleaseTable.createdAt] = now
             it[ReleaseTable.startedAt] = null
             it[ReleaseTable.finishedAt] = null
@@ -249,6 +252,7 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
             status = ReleaseStatus.PENDING,
             dagSnapshot = dagSnapshot,
             parameters = parameters,
+            createdByUserId = createdByUserId,
         )
     }
 

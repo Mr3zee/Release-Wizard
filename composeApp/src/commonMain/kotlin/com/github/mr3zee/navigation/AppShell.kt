@@ -72,6 +72,9 @@ fun AppShell(
     username: String? = null,
     isProfileActive: Boolean = false,
     onProfileClick: () -> Unit = {},
+    isNotificationsActive: Boolean = false,
+    unreadNotificationCount: Long = 0,
+    onNotificationsClick: () -> Unit = {},
     onSignOut: () -> Unit,
     content: @Composable () -> Unit,
 ) {
@@ -195,8 +198,14 @@ fun AppShell(
 
                     Spacer(Modifier.weight(1f))
 
-                    // ── Profile ──────────────────────────────────
+                    // ── Notifications + Profile ──────────────────────────────
                     HorizontalDivider(color = colors.chromeBorder)
+                    com.github.mr3zee.notifications.NotificationBellItem(
+                        unreadCount = unreadNotificationCount,
+                        isActive = isNotificationsActive,
+                        isCollapsed = collapsed,
+                        onClick = onNotificationsClick,
+                    )
                     SidebarNavItem(
                         icon = Icons.Outlined.AccountCircle,
                         activeIcon = Icons.Filled.AccountCircle,
