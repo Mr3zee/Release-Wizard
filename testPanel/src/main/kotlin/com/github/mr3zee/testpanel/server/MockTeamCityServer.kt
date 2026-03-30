@@ -13,6 +13,7 @@ import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,6 +32,7 @@ class TestPanelServer(private val state: TestPanelState) {
             configureSerialization()
             configureCors()
             configureStatusPages()
+            configureResponseDelay(state)
             configureRequestLogging(state)
             configureAuth(state)
             configureRoutes(state)
@@ -81,6 +83,15 @@ private fun Application.configureStatusPages() {
                 text = cause.message ?: "Internal server error",
                 status = HttpStatusCode.InternalServerError,
             )
+        }
+    }
+}
+
+private fun Application.configureResponseDelay(state: TestPanelState) {
+    intercept(ApplicationCallPipeline.Plugins) {
+        val delayMs = state.currentState().serverConfig.responseDelayMs
+        if (delayMs > 0) {
+            delay(delayMs)
         }
     }
 }

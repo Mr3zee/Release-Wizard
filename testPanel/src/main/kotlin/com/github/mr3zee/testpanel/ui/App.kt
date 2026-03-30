@@ -15,7 +15,8 @@ import com.github.mr3zee.testpanel.model.TestPanelState
 import com.github.mr3zee.testpanel.server.TestPanelServer
 
 enum class NavSection(val label: String, val group: String) {
-    SERVER("Server", "TEAMCITY"),
+    SERVER("Server", "SERVER"),
+    RELEASE_TRIGGER("Release Trigger", "RELEASE WIZARD"),
     PROJECTS("Projects", "TEAMCITY"),
     BUILD_TYPES("Build Configs", "TEAMCITY"),
     BUILD_QUEUE("Build Queue", "TEAMCITY"),
@@ -121,6 +122,7 @@ fun TestPanelApp(
             ) {
                 when (selectedSection) {
                     NavSection.SERVER -> ServerControlPanel(state, server)
+                    NavSection.RELEASE_TRIGGER -> ReleaseTriggerPanel(state)
                     NavSection.PROJECTS -> ProjectsPanel(state)
                     NavSection.BUILD_TYPES -> BuildTypesPanel(state)
                     NavSection.BUILD_QUEUE -> BuildQueuePanel(state)

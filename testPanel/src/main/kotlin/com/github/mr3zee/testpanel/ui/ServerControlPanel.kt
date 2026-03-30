@@ -66,6 +66,22 @@ fun ServerControlPanel(
                     modifier = Modifier.fillMaxWidth(),
                 )
 
+                var delayText by remember(config.responseDelayMs) { mutableStateOf(config.responseDelayMs.toString()) }
+
+                OutlinedTextField(
+                    value = delayText,
+                    onValueChange = {
+                        delayText = it
+                        val ms = it.toLongOrNull()
+                        if (ms != null && ms >= 0) {
+                            state.updateServerConfig(config.copy(responseDelayMs = ms))
+                        }
+                    },
+                    label = { Text("Response Delay (ms, 0 = instant)") },
+                    singleLine = true,
+                    modifier = Modifier.width(250.dp),
+                )
+
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,

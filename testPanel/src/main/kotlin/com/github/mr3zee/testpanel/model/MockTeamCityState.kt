@@ -28,6 +28,7 @@ data class PanelState(
     val ghReleases: List<GhRelease> = emptyList(),
     val nextGhReleaseId: Int = 1,
     val webhookSendHistory: List<WebhookSendRecord> = emptyList(),
+    val triggerHistory: List<TriggerRecord> = emptyList(),
 )
 
 class TestPanelState {
@@ -408,6 +409,18 @@ class TestPanelState {
 
     fun clearWebhookHistory() {
         _state.update { it.copy(webhookSendHistory = emptyList()) }
+    }
+
+    // --- Release Trigger ---
+
+    fun addTriggerRecord(record: TriggerRecord) {
+        _state.update { state ->
+            state.copy(triggerHistory = (state.triggerHistory + record).takeLast(100))
+        }
+    }
+
+    fun clearTriggerHistory() {
+        _state.update { it.copy(triggerHistory = emptyList()) }
     }
 
     // --- Request Log ---

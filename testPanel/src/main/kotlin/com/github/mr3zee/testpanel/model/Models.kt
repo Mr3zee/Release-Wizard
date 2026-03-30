@@ -58,6 +58,7 @@ data class TcArtifactTemplate(
 data class ServerConfig(
     val port: Int = 8111,
     val acceptedToken: String = "",
+    val responseDelayMs: Long = 0,
 )
 
 @Serializable
@@ -145,5 +146,15 @@ data class WebhookSendRecord(
     val status: String,
     val description: String? = null,
     val responseCode: Int? = null,
+    val sentAt: String,
+)
+
+// --- Release Trigger ---
+
+@Serializable
+data class TriggerRecord(
+    val url: String,
+    val responseCode: Int? = null,
+    val responseBody: String? = null,
     val sentAt: String,
 )

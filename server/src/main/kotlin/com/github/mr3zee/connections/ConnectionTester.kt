@@ -62,7 +62,10 @@ class ConnectionTester(
 
     private suspend fun testTeamCity(config: ConnectionConfig.TeamCityConfig): ConnectionTestResult {
         return try {
-            validateUrlNotPrivate(config.serverUrl)
+            val isDevUrl = devModeConfig.enabled && config.serverUrl.startsWith(devModeConfig.teamcityBaseUrl)
+            if (!isDevUrl) {
+                validateUrlNotPrivate(config.serverUrl)
+            }
             val response = httpClient.get("${config.serverUrl}/app/rest/server") {
                 header("Authorization", "Bearer ${config.token}")
                 header("Accept", "application/json")
@@ -113,7 +116,10 @@ class ConnectionTester(
     }
 
     suspend fun fetchTeamCityBuildTypes(config: ConnectionConfig.TeamCityConfig): ExternalConfigsResponse {
-        validateUrlNotPrivate(config.serverUrl)
+        val isDevUrl = devModeConfig.enabled && config.serverUrl.startsWith(devModeConfig.teamcityBaseUrl)
+        if (!isDevUrl) {
+            validateUrlNotPrivate(config.serverUrl)
+        }
         val serverUrl = config.serverUrl
 
         // Fetch projects and build types in parallel — they are independent
@@ -189,7 +195,10 @@ class ConnectionTester(
         config: ConnectionConfig.TeamCityConfig,
         buildTypeId: String,
     ): ExternalConfigParametersResponse {
-        validateUrlNotPrivate(config.serverUrl)
+        val isDevUrl = devModeConfig.enabled && config.serverUrl.startsWith(devModeConfig.teamcityBaseUrl)
+        if (!isDevUrl) {
+            validateUrlNotPrivate(config.serverUrl)
+        }
 
         val encodedBuildTypeId = encodePathSegment("id:$buildTypeId")
         val response = httpClient.get("${config.serverUrl}/app/rest/buildTypes/$encodedBuildTypeId/parameters") {

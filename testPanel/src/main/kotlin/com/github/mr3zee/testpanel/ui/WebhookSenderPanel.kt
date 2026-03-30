@@ -38,15 +38,32 @@ fun WebhookSenderPanel(state: TestPanelState) {
         onDispose { httpClient.close() }
     }
 
-    // Extract builds that have webhook URL and token in trigger properties
+    // Extract builds that have webhook URL and token in trigger properties (latest first)
     val webhookBuilds = builds.filter { build ->
         build.triggerProperties.containsKey("env.RELEASE_WIZARD_WEBHOOK_URL") &&
                 build.triggerProperties.containsKey("env.RELEASE_WIZARD_WEBHOOK_TOKEN")
     }
 
-    // Send form state
+    // Auto-pick URL and token from the latest build that has them
+    val latestWebhookBuild = webhookBuilds.lastOrNull()
+    val autoUrl = latestWebhookBuild?.triggerProperties?.get("env.RELEASE_WIZARD_WEBHOOK_URL").orEmpty()
+    val autoToken = latestWebhookBuild?.triggerProperties?.get("env.RELEASE_WIZARD_WEBHOOK_TOKEN").orEmpty()
+
+    // Track which auto-picked build we've applied, so we update when a new build arrives
+    var appliedBuildId by remember { mutableStateOf<Int?>(null) }
     var url by remember { mutableStateOf("") }
     var token by remember { mutableStateOf("") }
+
+    // When a new build with webhook params appears, auto-populate
+    LaunchedEffect(latestWebhookBuild?.id) {
+        if (latestWebhookBuild != null && latestWebhookBuild.id != appliedBuildId) {
+            url = autoUrl
+            token = autoToken
+            appliedBuildId = latestWebhookBuild.id
+        }
+    }
+
+    // Send form state
     var statusText by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
@@ -67,67 +84,23 @@ fun WebhookSenderPanel(state: TestPanelState) {
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            // Auto-extract section
-            if (webhookBuilds.isNotEmpty()) {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Text(
-                            "Builds with Webhook Config",
-                            style = MaterialTheme.typography.titleSmall,
-                        )
-                        Text(
-                            "These builds have RELEASE_WIZARD_WEBHOOK_URL and TOKEN in their trigger properties.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-
-                        for (build in webhookBuilds) {
-                            val buildUrl = build.triggerProperties["env.RELEASE_WIZARD_WEBHOOK_URL"].orEmpty()
-                            val buildToken = build.triggerProperties["env.RELEASE_WIZARD_WEBHOOK_TOKEN"].orEmpty()
-                            val btName = mockState.buildTypes.find { it.id == build.buildTypeId }?.name
-                                ?: build.buildTypeId
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(Modifier.weight(1f)) {
-                                    Text(
-                                        "$btName #${build.number}",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                    )
-                                    Text(
-                                        "URL: $buildUrl",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontFamily = FontFamily.Monospace,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                TextButton(
-                                    onClick = {
-                                        url = buildUrl
-                                        token = buildToken
-                                    },
-                                ) {
-                                    Text("Use")
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
             // Send form
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Text("Send Webhook Update", style = MaterialTheme.typography.titleSmall)
+                    Text("Send Status Update", style = MaterialTheme.typography.titleSmall)
+
+                    if (latestWebhookBuild != null) {
+                        val btName = mockState.buildTypes.find { it.id == latestWebhookBuild.buildTypeId }?.name
+                            ?: latestWebhookBuild.buildTypeId
+                        Text(
+                            "Auto-filled from $btName #${latestWebhookBuild.number}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
 
                     OutlinedTextField(
                         value = url,
@@ -143,6 +116,38 @@ fun WebhookSenderPanel(state: TestPanelState) {
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
+
+                    // Build picker when multiple builds have webhook config
+                    if (webhookBuilds.size > 1) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                "Other builds:",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            for (build in webhookBuilds.reversed()) {
+                                if (build.id == latestWebhookBuild?.id && url == autoUrl && token == autoToken) continue
+                                val btName = mockState.buildTypes.find { it.id == build.buildTypeId }?.name
+                                    ?: build.buildTypeId
+                                TextButton(
+                                    onClick = {
+                                        url = build.triggerProperties["env.RELEASE_WIZARD_WEBHOOK_URL"].orEmpty()
+                                        token = build.triggerProperties["env.RELEASE_WIZARD_WEBHOOK_TOKEN"].orEmpty()
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                ) {
+                                    Text(
+                                        "$btName #${build.number}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     OutlinedTextField(
                         value = statusText,
                         onValueChange = { statusText = it },

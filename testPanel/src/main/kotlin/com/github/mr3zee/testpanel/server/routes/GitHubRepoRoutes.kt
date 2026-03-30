@@ -13,10 +13,11 @@ fun Routing.gitHubRepoRoutes(state: TestPanelState) {
         val repo = call.parameters["repo"] ?: ""
         val repoKey = "$owner/$repo"
 
+        // Always return success for repo existence check — auto-register unknown repos
+        // so that "test connection" works without manual setup in the test panel.
         val exists = state.currentState().ghRepos.any { "${it.owner}/${it.repo}" == repoKey }
         if (!exists) {
-            call.respondText("Repository not found: $repoKey", status = HttpStatusCode.NotFound)
-            return@get
+            state.addGhRepo(com.github.mr3zee.testpanel.model.GhRepo(owner = owner, repo = repo))
         }
 
         call.respond(
