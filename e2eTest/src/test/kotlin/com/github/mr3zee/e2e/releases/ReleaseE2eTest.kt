@@ -2,10 +2,11 @@ package com.github.mr3zee.e2e.releases
 
 import androidx.compose.ui.test.*
 import com.github.mr3zee.api.ApiRoutes
+import com.github.mr3zee.api.LoginRequest
 import com.github.mr3zee.api.UserInfo
+import io.ktor.http.*
 import com.github.mr3zee.createTestProjectWithBlocks
 import com.github.mr3zee.e2e.E2eTestBase
-import com.github.mr3zee.login
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import kotlin.test.Test
@@ -15,7 +16,7 @@ class ReleaseE2eTest : E2eTestBase() {
 
     @Test
     fun `navigate to release list`() = runComposeUiTest {
-        directClient.login("rel-nav-user", "TestPass123")
+        loginAndApprove("rel-nav-user", "TestPass123")
 
         loginAndCreateTeamViaUi("rel-nav-user", "TestPass123", "Release Team")
         navigateToSection("sidebar_nav_releases", "release_list_screen")
@@ -25,12 +26,15 @@ class ReleaseE2eTest : E2eTestBase() {
 
     @Test
     fun `start release from UI`() = runComposeUiTest {
-        directClient.login("rel-start-user", "TestPass123")
+        loginAndApprove("rel-start-user", "TestPass123")
 
         loginAndCreateTeamViaUi("rel-start-user", "TestPass123", "Start Release Team")
 
         // Re-login directClient to get fresh session with team info
-        directClient.login("rel-start-user", "TestPass123")
+        directClient.post(ApiRoutes.Auth.LOGIN) {
+            contentType(ContentType.Application.Json)
+            setBody(LoginRequest(username = "rel-start-user", password = "TestPass123"))
+        }
         val userInfo = directClient.get(ApiRoutes.Auth.ME).body<UserInfo>()
         val teamId = userInfo.teams.first().teamId
 

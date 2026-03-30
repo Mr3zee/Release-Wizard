@@ -261,9 +261,10 @@ private fun NotificationItem(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
-                    if (notification.teamName != null) {
+                    val teamNameValue = notification.teamName
+                    if (teamNameValue != null) {
                         RwBadge(
-                            text = notification.teamName,
+                            text = teamNameValue,
                             color = MaterialTheme.colorScheme.primary,
                         )
                     }

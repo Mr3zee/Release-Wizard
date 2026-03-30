@@ -2,7 +2,6 @@ package com.github.mr3zee.e2e.projects
 
 import androidx.compose.ui.test.*
 import com.github.mr3zee.e2e.E2eTestBase
-import com.github.mr3zee.login
 import kotlin.test.Test
 
 @OptIn(ExperimentalTestApi::class)
@@ -10,7 +9,7 @@ class ProjectE2eTest : E2eTestBase() {
 
     @Test
     fun `create project through UI`() = runComposeUiTest {
-        directClient.login("proj-create-user", "TestPass123")
+        loginAndApprove("proj-create-user", "TestPass123")
 
         loginAndCreateTeamViaUi("proj-create-user", "TestPass123", "Proj Team")
 
@@ -35,7 +34,7 @@ class ProjectE2eTest : E2eTestBase() {
 
     @Test
     fun `open project in DAG editor`() = runComposeUiTest {
-        directClient.login("proj-editor-user", "TestPass123")
+        loginAndApprove("proj-editor-user", "TestPass123")
 
         loginAndCreateTeamViaUi("proj-editor-user", "TestPass123", "Editor Team")
 

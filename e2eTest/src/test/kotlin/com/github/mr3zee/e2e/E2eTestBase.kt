@@ -4,18 +4,28 @@ import androidx.compose.ui.test.*
 import com.github.mr3zee.App
 import com.github.mr3zee.AppJson
 import com.github.mr3zee.CsrfTokenTestPlugin
+import com.github.mr3zee.api.ApiRoutes
+import com.github.mr3zee.api.UserInfo
 import com.github.mr3zee.testDbConfig
 import com.github.mr3zee.testModule
 import io.ktor.client.HttpClient
+import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.api.createClientPlugin
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.cookies.HttpCookies
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.http.ContentType
 import io.ktor.http.URLProtocol
+import io.ktor.http.contentType
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.engine.EmbeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.serialization.kotlinx.json.json
+import com.github.mr3zee.api.RegisterRequest
+import com.github.mr3zee.api.LoginRequest
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
 import org.junit.BeforeClass
@@ -33,6 +43,9 @@ import java.net.ServerSocket
  * Each test method gets its own [directClient] (via @Before/@After) with a fresh cookie jar,
  * so login sessions don't leak between tests. Database state IS shared within a class
  * because the server runs continuously with the same H2 instance.
+ *
+ * A bootstrap admin user is registered during server startup. Non-admin users registered
+ * by tests require approval — use [approveUser] via the [adminClient].
  */
 abstract class E2eTestBase {
     protected lateinit var directClient: HttpClient
@@ -41,6 +54,13 @@ abstract class E2eTestBase {
         @JvmStatic
         protected var port: Int = 0
         private var server: EmbeddedServer<*, *>? = null
+
+        /** Admin client with a persistent session — available for the entire class lifecycle. */
+        @JvmStatic
+        protected lateinit var adminClient: HttpClient
+
+        private const val ADMIN_USERNAME = "e2e-bootstrap-admin"
+        private const val ADMIN_PASSWORD = "AdminPass123"
 
         @JvmStatic
         @BeforeClass
@@ -55,11 +75,25 @@ abstract class E2eTestBase {
             server = srv
 
             waitForServerReady()
+
+            // Register bootstrap admin (first user → auto-approved admin)
+            adminClient = buildHttpClient()
+            runBlocking {
+                adminClient.post("http://127.0.0.1:$port${ApiRoutes.Auth.REGISTER}") {
+                    contentType(ContentType.Application.Json)
+                    setBody(RegisterRequest(username = ADMIN_USERNAME, password = ADMIN_PASSWORD))
+                }
+                adminClient.post("http://127.0.0.1:$port${ApiRoutes.Auth.LOGIN}") {
+                    contentType(ContentType.Application.Json)
+                    setBody(LoginRequest(username = ADMIN_USERNAME, password = ADMIN_PASSWORD))
+                }
+            }
         }
 
         @JvmStatic
         @AfterClass
         fun stopServer() {
+            adminClient.close()
             server?.stop(gracePeriodMillis = 1000, timeoutMillis = 2000)
             server = null
             System.clearProperty("release.wizard.server.url")
@@ -87,30 +121,56 @@ abstract class E2eTestBase {
             }
             error("Server did not become ready within 10 seconds. Last error: ${lastException?.message}")
         }
+
+        private fun buildHttpClient(): HttpClient {
+            val testPort = port
+            val baseUrlPlugin = createClientPlugin("BaseUrl") {
+                onRequest { request, _ ->
+                    request.url.protocol = URLProtocol.HTTP
+                    request.url.host = "127.0.0.1"
+                    request.url.port = testPort
+                }
+            }
+            return HttpClient(CIO) {
+                install(ContentNegotiation) { json(AppJson) }
+                install(HttpCookies)
+                install(CsrfTokenTestPlugin)
+                install(baseUrlPlugin)
+            }
+        }
     }
 
     @Before
     fun setupClient() {
-        val testPort = port
-        val baseUrlPlugin = createClientPlugin("BaseUrl") {
-            onRequest { request, _ ->
-                request.url.protocol = URLProtocol.HTTP
-                request.url.host = "127.0.0.1"
-                request.url.port = testPort
-            }
-        }
-
-        directClient = HttpClient(CIO) {
-            install(ContentNegotiation) { json(AppJson) }
-            install(HttpCookies)
-            install(CsrfTokenTestPlugin)
-            install(baseUrlPlugin)
-        }
+        directClient = buildHttpClient()
     }
 
     @After
     fun teardownClient() {
         directClient.close()
+    }
+
+    /**
+     * Register + login a user via [directClient], then approve them via [adminClient].
+     * Use this instead of raw `directClient.login()` for non-admin users.
+     */
+    protected suspend fun loginAndApprove(username: String, password: String) {
+        // Register (idempotent — error on duplicate is fine)
+        directClient.post(ApiRoutes.Auth.REGISTER) {
+            contentType(ContentType.Application.Json)
+            setBody(RegisterRequest(username = username, password = password))
+        }
+        // Single login to get session + user id
+        val userInfo = directClient.post(ApiRoutes.Auth.LOGIN) {
+            contentType(ContentType.Application.Json)
+            setBody(LoginRequest(username = username, password = password))
+        }.body<UserInfo>()
+        val userId = userInfo.id ?: error("Expected user ID after login")
+
+        // Approve via admin
+        adminClient.post(ApiRoutes.Auth.approveUser(userId)) {
+            contentType(ContentType.Application.Json)
+        }
     }
 
     /**
@@ -156,7 +216,7 @@ abstract class E2eTestBase {
 
         // After login, user lands on team_list (login response has no teams)
         if (onAllNodesWithTag("team_list_screen").fetchSemanticsNodes().isNotEmpty()) {
-            // Create team through UI — this sets activeTeamId and navigates to project_list
+            // Create team through UI — this sets activeTeamId and navigates to team_detail
             onNodeWithTag("create_team_fab").performClick()
             waitForIdle()
             waitUntil(timeoutMillis = 5_000L) {
@@ -167,8 +227,18 @@ abstract class E2eTestBase {
             onNodeWithTag("create_team_confirm").performClick()
 
             waitUntil(timeoutMillis = 15_000L) {
-                onAllNodesWithTag("project_list_screen").fetchSemanticsNodes().isNotEmpty()
+                onAllNodesWithTag("team_detail_screen").fetchSemanticsNodes().isNotEmpty()
             }
+
+            // team_detail is not top-level, so sidebar is hidden.
+            // Navigate back to team_list (top-level) first, then use sidebar.
+            onNodeWithTag("back_button", useUnmergedTree = true).performClick()
+            waitUntil(timeoutMillis = 15_000L) {
+                onAllNodesWithTag("team_list_screen").fetchSemanticsNodes().isNotEmpty()
+            }
+
+            // Now sidebar is visible — navigate to project list
+            navigateToSection("sidebar_nav_projects", "project_list_screen")
         }
     }
 
@@ -177,6 +247,9 @@ abstract class E2eTestBase {
      */
     @OptIn(ExperimentalTestApi::class)
     protected fun ComposeUiTest.navigateToSection(sidebarTag: String, screenTag: String) {
+        waitUntil(timeoutMillis = 10_000L) {
+            onAllNodesWithTag(sidebarTag, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
         onNodeWithTag(sidebarTag, useUnmergedTree = true).performClick()
         waitUntil(timeoutMillis = 15_000L) {
             onAllNodesWithTag(screenTag).fetchSemanticsNodes().isNotEmpty()
@@ -212,4 +285,3 @@ abstract class E2eTestBase {
         }
     }
 }
-

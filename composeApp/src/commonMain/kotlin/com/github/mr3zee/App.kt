@@ -342,11 +342,12 @@ fun App() {
                         )
                     }
                     user != null && user?.teams?.isNotEmpty() == true && currentTeamId == null -> {
-                        // Waiting for team auto-selection from LaunchedEffect(user)
+                        // Set activeTeamId immediately; recomposition will exit this branch next frame
                         LaunchedEffect(Unit) {
-                            delay(3000L.milliseconds)
-                            // If still no team selected after 3s, something went wrong — show teams list
-                            if (activeTeamId.value == null) {
+                            val firstTeam = user?.teams?.firstOrNull()?.teamId
+                            if (firstTeam != null) {
+                                activeTeamId.value = firstTeam
+                            } else {
                                 navController.resetTo(Screen.TeamList)
                             }
                         }

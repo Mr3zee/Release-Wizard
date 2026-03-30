@@ -188,6 +188,7 @@ private fun Application.testModuleWithLowRateLimit() {
             com.github.mr3zee.mavenpublication.mavenTriggerModule,
             com.github.mr3zee.tags.tagsModule,
             com.github.mr3zee.teams.teamsModule,
+            com.github.mr3zee.usernotifications.userNotificationsModule,
             module { single { executionScope } },
             testOverrideModule,
         )

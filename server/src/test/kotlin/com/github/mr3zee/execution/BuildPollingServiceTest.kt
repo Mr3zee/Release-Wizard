@@ -111,6 +111,7 @@ class BuildPollingServiceTest {
                 token = "ghp_test",
                 runId = "789",
                 intervalSeconds = 1,
+                baseUrl = "https://api.github.com",
                 onUpdate = { status, _ -> statusesObserved.add(status) },
             )
         } ?: error("GH poll timed out")
@@ -209,6 +210,7 @@ class BuildPollingServiceTest {
                 token = "ghp_test",
                 runId = "789",
                 intervalSeconds = 1,
+                baseUrl = "https://api.github.com",
             )
         } ?: error("GH poll timed out")
 
@@ -253,6 +255,7 @@ class BuildPollingServiceTest {
             repo = "r",
             token = "ghp_test",
             runId = "789",
+            baseUrl = "https://api.github.com",
         )
 
         assertEquals(11, jobs.size)
@@ -333,6 +336,7 @@ class BuildPollingServiceTest {
             repo = "r",
             token = "ghp_test",
             runId = "789",
+            baseUrl = "https://api.github.com",
         )
 
         assertTrue(jobs.isEmpty(), "Should return empty list when no jobs")
@@ -359,6 +363,7 @@ class BuildPollingServiceTest {
             repo = "r",
             token = "ghp_test",
             runId = "789",
+            baseUrl = "https://api.github.com",
         )
 
         assertTrue(jobs.isEmpty(), "Should return empty list on server error")
@@ -385,6 +390,7 @@ class BuildPollingServiceTest {
             repo = "r",
             token = "ghp_test",
             runId = "789",
+            baseUrl = "https://api.github.com",
         )
 
         assertTrue(jobs.isEmpty(), "Should return empty list when rate limited")
@@ -447,6 +453,7 @@ class BuildPollingServiceTest {
                 token = "ghp_test",
                 runId = "789",
                 intervalSeconds = 1,
+                baseUrl = "https://api.github.com",
                 queueTimeout = 3.seconds,
             )
         }

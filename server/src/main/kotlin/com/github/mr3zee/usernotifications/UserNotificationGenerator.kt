@@ -76,6 +76,7 @@ class UserNotificationGenerator(
                 val memberMatchesRole = when (rule.requiredRole) {
                     UserRole.ADMIN -> member.role == TeamRole.TEAM_LEAD // Team leads are the closest match
                     UserRole.USER -> true // All members match USER role
+                    null -> false
                 }
                 if (memberMatchesRole) {
                     recipientUserIds.add(member.userId.value)

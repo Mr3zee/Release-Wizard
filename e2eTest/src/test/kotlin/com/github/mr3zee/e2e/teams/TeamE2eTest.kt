@@ -2,10 +2,10 @@ package com.github.mr3zee.e2e.teams
 
 import androidx.compose.ui.test.*
 import com.github.mr3zee.api.ApiRoutes
+import com.github.mr3zee.api.LoginRequest
 import com.github.mr3zee.api.RegisterRequest
 import com.github.mr3zee.api.UserInfo
 import com.github.mr3zee.e2e.E2eTestBase
-import com.github.mr3zee.login
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
@@ -16,7 +16,7 @@ class TeamCreateE2eTest : E2eTestBase() {
 
     @Test
     fun `create team through UI`() = runComposeUiTest {
-        directClient.login("team-create-user", "TestPass123")
+        loginAndApprove("team-create-user", "TestPass123")
 
         loginViaUi("team-create-user", "TestPass123")
 
@@ -33,8 +33,9 @@ class TeamCreateE2eTest : E2eTestBase() {
         waitForIdle()
         onNodeWithTag("create_team_confirm").performClick()
 
+        // Team creation now navigates to team detail
         waitUntil(timeoutMillis = 10_000L) {
-            onAllNodesWithTag("project_list_screen").fetchSemanticsNodes().isNotEmpty()
+            onAllNodesWithTag("team_detail_screen").fetchSemanticsNodes().isNotEmpty()
         }
     }
 }
@@ -44,14 +45,17 @@ class TeamDetailE2eTest : E2eTestBase() {
 
     @Test
     fun `view team detail and audit log`() = runComposeUiTest {
-        directClient.login("detail-user", "TestPass123")
+        loginAndApprove("detail-user", "TestPass123")
 
         loginAndCreateTeamViaUi("detail-user", "TestPass123", "Detail Team")
         navigateToSection("sidebar_nav_teams", "team_list_screen")
 
         // Get team ID from server to click the correct team item by testTag
         // (text-based click doesn't propagate through merged semantic tree)
-        directClient.login("detail-user", "TestPass123")
+        directClient.post(ApiRoutes.Auth.LOGIN) {
+            contentType(ContentType.Application.Json)
+            setBody(LoginRequest(username = "detail-user", password = "TestPass123"))
+        }
         val userInfo = directClient.get(ApiRoutes.Auth.ME).body<UserInfo>()
         val teamId = userInfo.teams.first().teamId.value
 
@@ -80,7 +84,7 @@ class TeamInviteE2eTest : E2eTestBase() {
 
     @Test
     fun `invite user to team via manage screen`() = runComposeUiTest {
-        directClient.login("invite-leader", "TestPass123")
+        loginAndApprove("invite-leader", "TestPass123")
 
         // Register the invite target (without logging in as them)
         directClient.post(ApiRoutes.Auth.REGISTER) {
@@ -92,7 +96,10 @@ class TeamInviteE2eTest : E2eTestBase() {
         navigateToSection("sidebar_nav_teams", "team_list_screen")
 
         // Re-login directClient to get fresh session with updated teams
-        directClient.login("invite-leader", "TestPass123")
+        directClient.post(ApiRoutes.Auth.LOGIN) {
+            contentType(ContentType.Application.Json)
+            setBody(LoginRequest(username = "invite-leader", password = "TestPass123"))
+        }
         val userInfo = directClient.get(ApiRoutes.Auth.ME).body<UserInfo>()
         val teamId = userInfo.teams.first().teamId.value
 

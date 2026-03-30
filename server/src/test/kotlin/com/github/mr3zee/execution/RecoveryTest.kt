@@ -425,7 +425,7 @@ class InMemoryReleasesRepository : ReleasesRepository {
     override suspend fun findByStatuses(statuses: Set<ReleaseStatus>) =
         releases.values.filter { it.status in statuses }
 
-    override suspend fun create(projectTemplateId: ProjectId, dagSnapshot: DagGraph, parameters: List<Parameter>, teamId: String): Release {
+    override suspend fun create(projectTemplateId: ProjectId, dagSnapshot: DagGraph, parameters: List<Parameter>, teamId: String, createdByUserId: String?): Release {
         val release = Release(
             id = ReleaseId(UUID.randomUUID().toString()),
             projectTemplateId = projectTemplateId,

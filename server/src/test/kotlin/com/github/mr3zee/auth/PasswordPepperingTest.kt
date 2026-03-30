@@ -66,32 +66,36 @@ class PasswordPepperingTest {
     @Test
     fun `password reset works with pepper`() = testApplication {
         application { testModule(authConfig = testAuthConfig(pepperSecret = TEST_PEPPER)) }
-        val client = jsonClient()
-        client.login(username = "resetuser", password = "original123")
+        val adminClient = jsonClient()
+        adminClient.login(username = "adminreset", password = "adminpass123")
 
-        // Get user ID from /me
-        val meResponse = client.get(ApiRoutes.Auth.ME)
-        val userInfo = meResponse.body<UserInfo>()
-        val userId = userInfo.id ?: error("Expected user ID")
-
-        // Generate password reset token (admin operation — first user is admin)
-        val generateResponse = client.post(ApiRoutes.Auth.GENERATE_PASSWORD_RESET) {
+        // Register a second user whose password will be reset
+        val client2 = jsonClient()
+        val regResponse = client2.post(ApiRoutes.Auth.REGISTER) {
             contentType(ContentType.Application.Json)
-            setBody(GeneratePasswordResetRequest(userId = userId))
+            setBody(RegisterRequest(username = "resetuser", password = "original123"))
+        }
+        assertEquals(HttpStatusCode.Created, regResponse.status)
+        val targetUser = regResponse.body<UserInfo>()
+        val targetUserId = targetUser.id ?: error("Expected user ID")
+
+        // Generate password reset token (admin operation — cannot self-reset)
+        val generateResponse = adminClient.post(ApiRoutes.Auth.GENERATE_PASSWORD_RESET) {
+            contentType(ContentType.Application.Json)
+            setBody(GeneratePasswordResetRequest(userId = targetUserId))
         }
         assertEquals(HttpStatusCode.OK, generateResponse.status)
         val resetLink = generateResponse.body<PasswordResetLinkResponse>()
 
         // Use the reset token to set a new password
-        val resetResponse = client.post(ApiRoutes.Auth.RESET_PASSWORD) {
+        val resetResponse = client2.post(ApiRoutes.Auth.RESET_PASSWORD) {
             contentType(ContentType.Application.Json)
             setBody(ResetPasswordRequest(token = resetLink.token, newPassword = "resetpass789"))
         }
         assertEquals(HttpStatusCode.OK, resetResponse.status)
 
         // Login with new password should work
-        client.post(ApiRoutes.Auth.LOGOUT)
-        val loginResponse = client.post(ApiRoutes.Auth.LOGIN) {
+        val loginResponse = client2.post(ApiRoutes.Auth.LOGIN) {
             contentType(ContentType.Application.Json)
             setBody(LoginRequest(username = "resetuser", password = "resetpass789"))
         }

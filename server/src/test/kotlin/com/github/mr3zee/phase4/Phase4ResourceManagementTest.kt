@@ -92,6 +92,7 @@ class Phase4ResourceManagementTest {
                 token = "ghp_test",
                 runId = "789",
                 intervalSeconds = 1,
+                baseUrl = "https://api.github.com",
                 maxPollDuration = 2.seconds,
             )
         }

@@ -2,7 +2,6 @@ package com.github.mr3zee.e2e.connections
 
 import androidx.compose.ui.test.*
 import com.github.mr3zee.e2e.E2eTestBase
-import com.github.mr3zee.login
 import kotlin.test.Test
 
 @OptIn(ExperimentalTestApi::class)
@@ -10,7 +9,7 @@ class ConnectionE2eTest : E2eTestBase() {
 
     @Test
     fun `navigate to connections screen`() = runComposeUiTest {
-        directClient.login("conn-nav-user", "TestPass123")
+        loginAndApprove("conn-nav-user", "TestPass123")
 
         loginAndCreateTeamViaUi("conn-nav-user", "TestPass123", "Conn Team")
         navigateToSection("sidebar_nav_connections", "connection_list_screen")
@@ -20,7 +19,7 @@ class ConnectionE2eTest : E2eTestBase() {
 
     @Test
     fun `create slack connection through UI`() = runComposeUiTest {
-        directClient.login("conn-create-user", "TestPass123")
+        loginAndApprove("conn-create-user", "TestPass123")
 
         loginAndCreateTeamViaUi("conn-create-user", "TestPass123", "Conn Create Team")
         navigateToSection("sidebar_nav_connections", "connection_list_screen")

@@ -23,6 +23,7 @@ import com.github.mr3zee.schedules.schedulesModule
 import com.github.mr3zee.tags.tagsModule
 import com.github.mr3zee.teams.teamsModule
 import com.github.mr3zee.triggers.triggersModule
+import com.github.mr3zee.usernotifications.userNotificationsModule
 import com.github.mr3zee.webhooks.webhooksModule
 import com.github.mr3zee.execution.BlockExecutor
 import com.github.mr3zee.execution.StubBlockExecutor
@@ -141,6 +142,7 @@ fun Application.testModule(
             mavenTriggerModule,
             tagsModule,
             teamsModule,
+            userNotificationsModule,
             module { single { executionScope } },
             testOverrideModule,
         )
@@ -156,7 +158,7 @@ fun Application.testModule(
 
     install(RateLimit) {
         register(RateLimitName("login")) {
-            rateLimiter(limit = 10, refillPeriod = 60.seconds)
+            rateLimiter(limit = 100, refillPeriod = 60.seconds)
             requestKey { call -> call.request.local.remoteHost }
         }
         register(RateLimitName("webhook")) {

@@ -1,7 +1,8 @@
 -- User notifications table for personal notification system
 CREATE TABLE IF NOT EXISTS user_notifications (
     id UUID PRIMARY KEY,
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL,
+    CONSTRAINT fk_user_notifications_user_id__id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE RESTRICT,
     type VARCHAR(32) NOT NULL,
     team_id VARCHAR(36),
     team_name VARCHAR(255),
@@ -19,6 +20,7 @@ CREATE INDEX IF NOT EXISTS idx_user_notifications_user_timestamp
 -- Add created_by_user_id to releases (nullable FK, SET NULL on user deletion)
 DO $$ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='releases' AND column_name='created_by_user_id') THEN
-        ALTER TABLE releases ADD COLUMN created_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL;
+        ALTER TABLE releases ADD COLUMN created_by_user_id UUID;
+        ALTER TABLE releases ADD CONSTRAINT fk_releases_created_by_user_id__id FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL ON UPDATE RESTRICT;
     END IF;
 END $$;
