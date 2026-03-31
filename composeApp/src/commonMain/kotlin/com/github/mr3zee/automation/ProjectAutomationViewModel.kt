@@ -6,11 +6,13 @@ import com.github.mr3zee.api.CreateMavenTriggerRequest
 import com.github.mr3zee.api.CreateScheduleRequest
 import com.github.mr3zee.api.CreateTriggerRequest
 import com.github.mr3zee.api.MavenTriggerApiClient
+import com.github.mr3zee.api.ProjectApiClient
 import com.github.mr3zee.api.ScheduleApiClient
 import com.github.mr3zee.api.TriggerResponse
 import com.github.mr3zee.api.WebhookTriggerApiClient
 import com.github.mr3zee.api.toUiMessage
 import com.github.mr3zee.model.MavenTrigger
+import com.github.mr3zee.model.Parameter
 import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.model.Schedule
 import com.github.mr3zee.util.UiMessage
@@ -22,6 +24,7 @@ import kotlinx.coroutines.launch
 
 class ProjectAutomationViewModel(
     val projectId: ProjectId,
+    private val projectApiClient: ProjectApiClient,
     private val scheduleClient: ScheduleApiClient,
     private val webhookClient: WebhookTriggerApiClient,
     private val mavenClient: MavenTriggerApiClient,
@@ -35,6 +38,12 @@ class ProjectAutomationViewModel(
 
     private val _mavenTriggers = MutableStateFlow<List<MavenTrigger>>(emptyList())
     val mavenTriggers: StateFlow<List<MavenTrigger>> = _mavenTriggers
+
+    private val _projectParameters = MutableStateFlow<List<Parameter>>(emptyList())
+    val projectParameters: StateFlow<List<Parameter>> = _projectParameters
+
+    private val _projectName = MutableStateFlow("")
+    val projectName: StateFlow<String> = _projectName
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
@@ -57,6 +66,13 @@ class ProjectAutomationViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             try {
+                try {
+                    val project = projectApiClient.getProject(projectId)
+                    _projectParameters.value = project.parameters
+                    _projectName.value = project.name
+                } catch (_: Exception) {
+                    // Project params are optional for the automation screen to function
+                }
                 _schedules.value = scheduleClient.listSchedules(projectId)
                 _webhookTriggers.value = webhookClient.listTriggers(projectId)
                 _mavenTriggers.value = mavenClient.listMavenTriggers(projectId)

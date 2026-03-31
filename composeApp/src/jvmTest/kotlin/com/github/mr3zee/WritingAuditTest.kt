@@ -340,6 +340,7 @@ class WritingAuditTest {
     // ══════════════════════════════════════════════════════════════
 
     private fun emptyAutomationClient() = mockHttpClient(mapOf(
+        "/projects/p1" to json("""{"project":{"id":"p1","name":"Test","dagGraph":{"blocks":[],"edges":[],"positions":{}},"parameters":[],"defaultTags":[],"createdAt":"2025-01-01T00:00:00Z","updatedAt":"2025-01-01T00:00:00Z"}}"""),
         "/projects/p1/schedules" to json("""{"schedules":[]}"""),
         "/projects/p1/triggers" to json("""{"triggers":[]}"""),
         "/projects/p1/maven-triggers" to json("""{"triggers":[]}"""),
@@ -349,6 +350,7 @@ class WritingAuditTest {
     fun `automation screen shows Invalid format for bad cron expression`() = runComposeUiTest {
         val vm = ProjectAutomationViewModel(
             projectId = ProjectId("p1"),
+            projectApiClient = ProjectApiClient(emptyAutomationClient()),
             scheduleClient = ScheduleApiClient(emptyAutomationClient()),
             webhookClient = WebhookTriggerApiClient(emptyAutomationClient()),
             mavenClient = MavenTriggerApiClient(emptyAutomationClient()),

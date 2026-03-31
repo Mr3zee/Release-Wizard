@@ -9,6 +9,7 @@ data class TriggerEntity(
     val secret: String,
     val enabled: Boolean,
     val parametersTemplate: List<Parameter>,
+    val releaseNameTemplate: String = "",
 )
 
 interface TriggerRepository {
@@ -19,6 +20,7 @@ interface TriggerRepository {
         projectId: ProjectId,
         secret: String,
         parametersTemplate: List<Parameter>,
+        releaseNameTemplate: String = "",
     ): TriggerEntity
     suspend fun update(id: String, enabled: Boolean?): TriggerEntity?
     suspend fun delete(id: String): Boolean

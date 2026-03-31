@@ -3,6 +3,7 @@ package com.github.mr3zee
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.*
 import com.github.mr3zee.api.MavenTriggerApiClient
+import com.github.mr3zee.api.ProjectApiClient
 import com.github.mr3zee.api.ScheduleApiClient
 import com.github.mr3zee.api.TeamApiClient
 import com.github.mr3zee.api.WebhookTriggerApiClient
@@ -26,6 +27,7 @@ class Phase1BugFixTest {
     private val projectId = ProjectId("p1")
 
     private fun emptyAutomationClient() = mockHttpClient(mapOf(
+        "/projects/p1" to json("""{"project":{"id":"p1","name":"Test","dagGraph":{"blocks":[],"edges":[],"positions":{}},"parameters":[],"defaultTags":[],"createdAt":"2025-01-01T00:00:00Z","updatedAt":"2025-01-01T00:00:00Z"}}"""),
         "/projects/p1/schedules" to json("""{"schedules":[]}"""),
         "/projects/p1/triggers" to json("""{"triggers":[]}"""),
         "/projects/p1/maven-triggers" to json("""{"triggers":[]}"""),
@@ -33,6 +35,7 @@ class Phase1BugFixTest {
 
     private fun makeAutomationViewModel(client: HttpClient) = ProjectAutomationViewModel(
         projectId = projectId,
+        projectApiClient = ProjectApiClient(client),
         scheduleClient = ScheduleApiClient(client),
         webhookClient = WebhookTriggerApiClient(client),
         mavenClient = MavenTriggerApiClient(client),

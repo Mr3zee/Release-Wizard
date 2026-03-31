@@ -117,6 +117,7 @@ class NavigationController(
                 is Screen.TeamManage -> _backStack.add(Screen.TeamDetail(screen.teamId))
                 is Screen.AuditLog -> _backStack.add(Screen.TeamDetail(screen.teamId))
                 is Screen.ProjectAutomation -> _backStack.add(Screen.ProjectEditor(screen.projectId))
+                is Screen.StartRelease -> {} // parent is ReleaseList, already added in step 2
                 is Screen.AdminUsers -> _backStack.add(Screen.Profile)
                 else -> {}
             }

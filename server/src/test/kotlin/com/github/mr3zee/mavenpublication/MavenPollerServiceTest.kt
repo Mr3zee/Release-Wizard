@@ -154,7 +154,7 @@ class MavenPollerServiceTest {
             },
             fetcher = fetcherReturning(setOf("1.0.0", "1.1.0", "1.2.0")),
             releasesService = object : StubReleasesService() {
-                override suspend fun startScheduledRelease(projectId: ProjectId, parameters: List<Parameter>): Release {
+                override suspend fun startScheduledRelease(projectId: ProjectId, parameters: List<Parameter>, name: String?): Release {
                     if (parameters.first().value == "1.1.0") throw RuntimeException("Simulated failure for 1.1.0")
                     return stubRelease()
                 }
@@ -187,7 +187,7 @@ class MavenPollerServiceTest {
 
     private fun releasesCapturing(fired: MutableList<Pair<ProjectId, List<Parameter>>>): ReleasesService =
         object : StubReleasesService() {
-            override suspend fun startScheduledRelease(projectId: ProjectId, parameters: List<Parameter>): Release {
+            override suspend fun startScheduledRelease(projectId: ProjectId, parameters: List<Parameter>, name: String?): Release {
                 fired += projectId to parameters
                 return stubRelease()
             }
@@ -213,7 +213,7 @@ class MavenPollerServiceTest {
     }
 
     open class StubReleasesService : ReleasesService {
-        override suspend fun startScheduledRelease(projectId: ProjectId, parameters: List<Parameter>): Release = error("override me")
+        override suspend fun startScheduledRelease(projectId: ProjectId, parameters: List<Parameter>, name: String?): Release = error("override me")
         override suspend fun listReleases(session: UserSession, teamId: TeamId?, offset: Int, limit: Int, search: String?, status: ReleaseStatus?, projectTemplateId: ProjectId?, tag: String?): Pair<List<Release>, Long> = error("stub")
         override suspend fun getRelease(id: ReleaseId, session: UserSession): Release? = error("stub")
         override suspend fun getBlockExecutions(releaseId: ReleaseId, session: UserSession): List<BlockExecution> = error("stub")

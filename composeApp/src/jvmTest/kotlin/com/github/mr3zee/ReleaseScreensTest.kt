@@ -1914,7 +1914,7 @@ class ReleaseScreensTest {
         onNodeWithTag("no_projects_message", useUnmergedTree = true).assertExists()
     }
 
-    // QA-RELLIST-12: StartReleaseInlineForm confirm button disabled without selection
+    // QA-RELLIST-12: Project picker shows dropdown when FAB clicked
     @Test
     fun `start release confirm button disabled when no project selected`() = runComposeUiTest {
         val projects = """[
@@ -1937,11 +1937,11 @@ class ReleaseScreensTest {
         waitUntil(timeoutMillis = 3000L) {
             onAllNodesWithTag("start_release_form", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
-        // Confirm should be disabled before selecting a project
-        onNodeWithTag("start_release_confirm", useUnmergedTree = true).assertIsNotEnabled()
+        // Project dropdown should exist in the picker form
+        onNodeWithTag("project_dropdown", useUnmergedTree = true).assertExists()
     }
 
-    // QA-RELLIST-13: StartReleaseInlineForm confirm enabled after selecting project
+    // QA-RELLIST-13: Selecting project in picker navigates to start release screen
     @Test
     fun `start release confirm button enabled after selecting project`() = runComposeUiTest {
         val projects = """[
@@ -1950,9 +1950,15 @@ class ReleaseScreensTest {
         val client = releaseListClient(projects = projects)
         val vm = ReleaseListViewModel(ReleaseApiClient(client), ProjectApiClient(client), MutableStateFlow(TeamId("test-team")), pollingIntervalMs = pollingDisabled)
 
+        var startReleaseProjectId: com.github.mr3zee.model.ProjectId? = null
         setContent {
             MaterialTheme {
-                ReleaseListScreen(viewModel = vm, onViewRelease = {}, onBack = {})
+                ReleaseListScreen(
+                    viewModel = vm,
+                    onViewRelease = {},
+                    onStartRelease = { startReleaseProjectId = it },
+                    onBack = {},
+                )
             }
         }
 
@@ -1973,8 +1979,8 @@ class ReleaseScreensTest {
         onNodeWithTag("project_option_p1", useUnmergedTree = true).performClick()
         waitForIdle()
 
-        // Confirm should now be enabled
-        onNodeWithTag("start_release_confirm", useUnmergedTree = true).assertIsEnabled()
+        // Should have navigated to start release with the project ID
+        assertEquals(com.github.mr3zee.model.ProjectId("p1"), startReleaseProjectId)
     }
 
     // QA-RELLIST-14: Project filter chips appear when projects are loaded

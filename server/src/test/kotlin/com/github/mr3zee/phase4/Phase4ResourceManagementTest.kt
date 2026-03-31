@@ -314,7 +314,7 @@ class Phase4ResourceManagementTest {
                 )
             }),
             releasesService = object : MavenPollerServiceTest.StubReleasesService() {
-                override suspend fun startScheduledRelease(projectId: ProjectId, parameters: List<Parameter>): Release {
+                override suspend fun startScheduledRelease(projectId: ProjectId, parameters: List<Parameter>, name: String?): Release {
                     fired += projectId to parameters
                     return Release(
                         id = ReleaseId("00000000-0000-0000-0000-000000000099"),

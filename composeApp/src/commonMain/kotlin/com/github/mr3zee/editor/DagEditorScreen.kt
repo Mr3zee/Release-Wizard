@@ -77,7 +77,7 @@ fun DagEditorScreen(
     viewModel: DagEditorViewModel,
     onBack: () -> Unit,
     onOpenAutomation: (() -> Unit)? = null,
-    onStartRelease: ((String) -> Unit)? = null,
+    onStartRelease: (() -> Unit)? = null,
 ) {
     val project by viewModel.project.collectAsState()
     val graph by viewModel.graph.collectAsState()
@@ -356,8 +356,7 @@ fun DagEditorScreen(
                         RwTooltip(tooltip = packStringResource(Res.string.editor_start_release)) {
                             RwButton(
                                 onClick = {
-                                    val name = project?.name ?: return@RwButton
-                                    guardedNavigate { onStartRelease(name) }
+                                    guardedNavigate { onStartRelease() }
                                 },
                                 variant = RwButtonVariant.Ghost,
                                 enabled = validationErrors.isEmpty(),

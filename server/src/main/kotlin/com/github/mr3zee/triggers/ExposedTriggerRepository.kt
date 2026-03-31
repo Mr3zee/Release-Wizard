@@ -22,6 +22,7 @@ class ExposedTriggerRepository(private val db: Database) : TriggerRepository {
             secret = this[TriggerTable.secret],
             enabled = this[TriggerTable.enabled],
             parametersTemplate = this[TriggerTable.parametersTemplate],
+            releaseNameTemplate = this[TriggerTable.releaseNameTemplate],
         )
     }
 
@@ -48,6 +49,7 @@ class ExposedTriggerRepository(private val db: Database) : TriggerRepository {
         projectId: ProjectId,
         secret: String,
         parametersTemplate: List<Parameter>,
+        releaseNameTemplate: String,
     ): TriggerEntity = dbQuery {
         val id = UUID.randomUUID()
         TriggerTable.insert {
@@ -56,6 +58,7 @@ class ExposedTriggerRepository(private val db: Database) : TriggerRepository {
             it[TriggerTable.secret] = secret
             it[TriggerTable.enabled] = true
             it[TriggerTable.parametersTemplate] = parametersTemplate
+            it[TriggerTable.releaseNameTemplate] = releaseNameTemplate
         }
         TriggerEntity(
             id = id.toString(),
@@ -63,6 +66,7 @@ class ExposedTriggerRepository(private val db: Database) : TriggerRepository {
             secret = secret,
             enabled = true,
             parametersTemplate = parametersTemplate,
+            releaseNameTemplate = releaseNameTemplate,
         )
     }
 

@@ -13,6 +13,7 @@ fun Screen.toUrlPath(): String = when (this) {
         "/projects/$id/edit"
     }
     is Screen.ProjectAutomation -> "/projects/${projectId.value}/automation"
+    is Screen.StartRelease -> "/projects/${projectId.value}/start-release"
     Screen.ReleaseList -> "/releases"
     is Screen.ReleaseView -> "/releases/${releaseId.value}"
     Screen.ConnectionList -> "/connections"
@@ -52,6 +53,10 @@ fun parseUrlPath(path: String): Screen? {
         // /projects/{id}/automation
         segments.size == 3 && segments[0] == "projects" && segments[2] == "automation" -> {
             Screen.ProjectAutomation(projectId = ProjectId(segments[1]))
+        }
+        // /projects/{id}/start-release
+        segments.size == 3 && segments[0] == "projects" && segments[2] == "start-release" -> {
+            Screen.StartRelease(projectId = ProjectId(segments[1]))
         }
         // /releases
         segments == listOf("releases") -> Screen.ReleaseList

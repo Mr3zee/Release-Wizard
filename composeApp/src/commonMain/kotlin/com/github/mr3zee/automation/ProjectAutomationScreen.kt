@@ -50,8 +50,10 @@ import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.i18n.packPluralStringResource
 import com.github.mr3zee.i18n.packStringResource
 import com.github.mr3zee.model.MavenTrigger
+import com.github.mr3zee.model.Parameter
 import com.github.mr3zee.model.Schedule
 import com.github.mr3zee.theme.AppTypography
+import com.github.mr3zee.theme.LocalAppColors
 import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.copyToClipboard
 import com.github.mr3zee.util.resolve
@@ -112,12 +114,15 @@ fun ProjectAutomationScreen(
     val schedules by viewModel.schedules.collectAsState()
     val webhookTriggers by viewModel.webhookTriggers.collectAsState()
     val mavenTriggers by viewModel.mavenTriggers.collectAsState()
+    val projectParameters by viewModel.projectParameters.collectAsState()
+    val projectName by viewModel.projectName.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
     val error by viewModel.error.collectAsState()
 
     // Inline form visibility (local UI state)
     var showCreateSchedule by remember { mutableStateOf(false) }
+    var showCreateWebhook by remember { mutableStateOf(false) }
     var showCreateMaven by remember { mutableStateOf(false) }
 
     // Delete confirmation state — lifted to screen level
@@ -228,6 +233,8 @@ fun ProjectAutomationScreen(
                     CreateScheduleInlineForm(
                         visible = showCreateSchedule,
                         isSaving = isSaving,
+                        projectParameters = projectParameters,
+                        projectName = projectName,
                         onConfirm = { request ->
                             viewModel.createSchedule(request)
                             showCreateSchedule = false
@@ -280,10 +287,22 @@ fun ProjectAutomationScreen(
                     title = packStringResource(Res.string.automation_webhook_section),
                     addButtonLabel = packStringResource(Res.string.automation_add_webhook),
                     addButtonTestTag = "add_webhook_button",
-                    onAdd = { if (!isSaving) viewModel.createWebhookTrigger(CreateTriggerRequest()) },
+                    onAdd = { showCreateWebhook = true },
                     leadingIcon = { Icon(Icons.Default.Link, contentDescription = packStringResource(Res.string.automation_webhook_section), modifier = Modifier.size(20.dp)) },
                     addButtonEnabled = !isSaving,
                 ) {
+                    CreateTriggerInlineForm(
+                        visible = showCreateWebhook,
+                        isSaving = isSaving,
+                        projectParameters = projectParameters,
+                        projectName = projectName,
+                        onConfirm = { request ->
+                            showCreateWebhook = false
+                            viewModel.createWebhookTrigger(request)
+                        },
+                        onDismiss = { showCreateWebhook = false },
+                    )
+
                     // Persistent webhook secret card — shown until user clicks dismiss
                     val secret = pendingWebhookSecret
                     if (secret != null) {
@@ -518,12 +537,16 @@ private fun WebhookSecretInlineCard(
 private fun CreateScheduleInlineForm(
     visible: Boolean,
     isSaving: Boolean,
+    projectParameters: List<Parameter>,
+    projectName: String,
     onConfirm: (CreateScheduleRequest) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var cronExpression by remember { mutableStateOf("") }
     var presetsExpanded by remember { mutableStateOf(false) }
     var selectedPresetLabel by remember { mutableStateOf("") }
+    var releaseNameTemplate by remember { mutableStateOf("") }
+    var params by remember { mutableStateOf(projectParameters) }
 
     // Reset form state when it becomes visible
     LaunchedEffect(visible) {
@@ -531,6 +554,8 @@ private fun CreateScheduleInlineForm(
             cronExpression = ""
             presetsExpanded = false
             selectedPresetLabel = ""
+            releaseNameTemplate = projectName
+            params = projectParameters
         }
     }
 
@@ -542,6 +567,7 @@ private fun CreateScheduleInlineForm(
 
     val isCronValid = remember(cronExpression) { isValidCron(cronExpression) }
     val showValidation = cronExpression.isNotBlank()
+    val allParamsFilled = remember(params) { params.all { it.value.isNotBlank() } }
 
     val nextRunHint = cronDescription(cronExpression)
 
@@ -553,10 +579,16 @@ private fun CreateScheduleInlineForm(
         actions = {
             RwButton(
                 onClick = {
-                    onConfirm(CreateScheduleRequest(cronExpression = cronExpression.trim()))
+                    onConfirm(
+                        CreateScheduleRequest(
+                            cronExpression = cronExpression.trim(),
+                            parameters = params,
+                            releaseNameTemplate = releaseNameTemplate,
+                        )
+                    )
                 },
                 variant = RwButtonVariant.Primary,
-                enabled = isCronValid && !isSaving,
+                enabled = isCronValid && allParamsFilled && !isSaving,
                 modifier = Modifier.testTag("schedule_create_button"),
             ) {
                 Text(packStringResource(Res.string.common_create))
@@ -640,6 +672,123 @@ private fun CreateScheduleInlineForm(
             singleLine = true,
             modifier = Modifier.fillMaxWidth().testTag("schedule_cron_input"),
         )
+
+        ReleaseConfigFields(
+            releaseNameTemplate = releaseNameTemplate,
+            onReleaseNameChange = { releaseNameTemplate = it },
+            parameters = params,
+            onParameterChange = { key, value ->
+                params = params.map { if (it.key == key) it.copy(value = value) else it }
+            },
+        )
+    }
+}
+
+// ── Create Webhook Trigger Inline Form ──
+
+@Composable
+private fun CreateTriggerInlineForm(
+    visible: Boolean,
+    isSaving: Boolean,
+    projectParameters: List<Parameter>,
+    projectName: String,
+    onConfirm: (CreateTriggerRequest) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var releaseNameTemplate by remember { mutableStateOf("") }
+    var params by remember { mutableStateOf(projectParameters) }
+
+    LaunchedEffect(visible) {
+        if (visible) {
+            releaseNameTemplate = projectName
+            params = projectParameters
+        }
+    }
+
+    val allParamsFilled = remember(params) { params.all { it.value.isNotBlank() } }
+
+    RwInlineForm(
+        visible = visible,
+        title = packStringResource(Res.string.automation_add_webhook),
+        onDismiss = onDismiss,
+        testTag = "create_webhook_form",
+        actions = {
+            RwButton(
+                onClick = {
+                    onConfirm(
+                        CreateTriggerRequest(
+                            parametersTemplate = params,
+                            releaseNameTemplate = releaseNameTemplate,
+                        )
+                    )
+                },
+                variant = RwButtonVariant.Primary,
+                enabled = allParamsFilled && !isSaving,
+                modifier = Modifier.testTag("webhook_create_button"),
+            ) {
+                Text(packStringResource(Res.string.common_create))
+            }
+        },
+    ) {
+        ReleaseConfigFields(
+            releaseNameTemplate = releaseNameTemplate,
+            onReleaseNameChange = { releaseNameTemplate = it },
+            parameters = params,
+            onParameterChange = { key, value ->
+                params = params.map { if (it.key == key) it.copy(value = value) else it }
+            },
+        )
+    }
+}
+
+// ── Shared Release Config Fields (name + parameters) ──
+
+@Composable
+private fun ReleaseConfigFields(
+    releaseNameTemplate: String,
+    onReleaseNameChange: (String) -> Unit,
+    parameters: List<Parameter>,
+    onParameterChange: (String, String) -> Unit,
+) {
+    RwTextField(
+        value = releaseNameTemplate,
+        onValueChange = onReleaseNameChange,
+        label = packStringResource(Res.string.start_release_name_label),
+        placeholder = packStringResource(Res.string.start_release_name_placeholder),
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth().testTag("automation_release_name"),
+    )
+
+    if (parameters.isNotEmpty()) {
+        Spacer(Modifier.height(Spacing.xs))
+        Text(
+            packStringResource(Res.string.start_release_parameters_section),
+            style = AppTypography.subheading,
+            color = LocalAppColors.current.chromeTextSecondary,
+            modifier = Modifier.testTag("automation_params_header"),
+        )
+
+        parameters.forEach { param ->
+            val isEmpty = param.value.isBlank()
+            RwTextField(
+                value = param.value,
+                onValueChange = { onParameterChange(param.key, it) },
+                label = param.label.ifBlank { param.key },
+                placeholder = param.key,
+                singleLine = true,
+                isError = isEmpty,
+                supportingText = when {
+                    isEmpty -> {
+                        { Text(packStringResource(Res.string.start_release_param_required), style = AppTypography.caption) }
+                    }
+                    param.description.isNotBlank() -> {
+                        { Text(param.description, style = AppTypography.caption) }
+                    }
+                    else -> null
+                },
+                modifier = Modifier.fillMaxWidth().testTag("automation_param_${param.key}"),
+            )
+        }
     }
 }
 

@@ -398,6 +398,10 @@
     <string name="start_release_name_label">Release name</string>
     <string name="start_release_name_placeholder">e.g., v2.5.0 Release</string>
     <string name="start_release_no_projects">No projects available. Create a project first.</string>
+    <string name="start_release_parameters_section">Parameters</string>
+    <string name="start_release_param_required">Required</string>
+    <string name="start_release_loading">Loading project…</string>
+    <string name="start_release_project_not_found">Project not found</string>
 
     <!-- ==================== Teams ==================== -->
     <string name="teams_title">Teams</string>

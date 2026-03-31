@@ -3,6 +3,7 @@ package com.github.mr3zee
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.*
 import com.github.mr3zee.api.MavenTriggerApiClient
+import com.github.mr3zee.api.ProjectApiClient
 import com.github.mr3zee.api.ScheduleApiClient
 import com.github.mr3zee.api.WebhookTriggerApiClient
 import com.github.mr3zee.automation.ProjectAutomationScreen
@@ -29,6 +30,7 @@ class ProjectAutomationScreenTest {
 
     // ── Shared JSON fragments ──
 
+    private val projectJson = """{"project":{"id":"p1","name":"Test","dagGraph":{"blocks":[],"edges":[],"positions":{}},"parameters":[],"defaultTags":[],"createdAt":"2025-01-01T00:00:00Z","updatedAt":"2025-01-01T00:00:00Z"}}"""
     private val emptySchedulesJson = """{"schedules":[]}"""
     private val emptyTriggersJson = """{"triggers":[]}"""
 
@@ -68,12 +70,14 @@ class ProjectAutomationScreenTest {
     // ── Client factories ──
 
     private fun emptyClient() = mockHttpClient(mapOf(
+        "/projects/p1" to json(projectJson),
         "/projects/p1/schedules" to json("""{"schedules":[]}"""),
         "/projects/p1/triggers" to json("""{"triggers":[]}"""),
         "/projects/p1/maven-triggers" to json("""{"triggers":[]}"""),
     ))
 
     private fun populatedClient() = mockHttpClient(mapOf(
+        "/projects/p1" to json(projectJson),
         "/projects/p1/schedules" to json("""{"schedules":[$scheduleS1Json]}"""),
         "/projects/p1/triggers" to json("""{"triggers":[$webhookT1Json]}"""),
         "/projects/p1/maven-triggers" to json("""{"triggers":[$mavenM1Json]}"""),
@@ -187,6 +191,7 @@ class ProjectAutomationScreenTest {
 
     private fun makeViewModel(client: HttpClient) = ProjectAutomationViewModel(
         projectId = projectId,
+        projectApiClient = ProjectApiClient(mockHttpClient(mapOf("/projects/p1" to json(projectJson)))),
         scheduleClient = ScheduleApiClient(client),
         webhookClient = WebhookTriggerApiClient(client),
         mavenClient = MavenTriggerApiClient(client),
@@ -571,8 +576,12 @@ class ProjectAutomationScreenTest {
             onAllNodesWithTag("add_webhook_button", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
 
-        // Click add webhook — triggers immediate creation
+        // Click add webhook — opens inline form, then submit
         onNodeWithTag("add_webhook_button", useUnmergedTree = true).performClick()
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("webhook_create_button", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithTag("webhook_create_button", useUnmergedTree = true).performClick()
 
         // Secret card should appear with the secret value
         waitUntil(timeoutMillis = 3000L) {
@@ -597,8 +606,12 @@ class ProjectAutomationScreenTest {
             onAllNodesWithTag("add_webhook_button", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
 
-        // Create webhook to show secret card
+        // Create webhook to show secret card: open form then submit
         onNodeWithTag("add_webhook_button", useUnmergedTree = true).performClick()
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("webhook_create_button", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithTag("webhook_create_button", useUnmergedTree = true).performClick()
 
         waitUntil(timeoutMillis = 3000L) {
             onAllNodesWithTag("webhook_secret_card", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
@@ -951,8 +964,12 @@ class ProjectAutomationScreenTest {
             onAllNodesWithTag("add_webhook_button", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
 
-        // Click add webhook — triggers immediate creation
+        // Click add webhook — opens inline form, then submit
         onNodeWithTag("add_webhook_button", useUnmergedTree = true).performClick()
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("webhook_create_button", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithTag("webhook_create_button", useUnmergedTree = true).performClick()
 
         // Error snackbar should appear
         waitUntil(timeoutMillis = 5000L) {

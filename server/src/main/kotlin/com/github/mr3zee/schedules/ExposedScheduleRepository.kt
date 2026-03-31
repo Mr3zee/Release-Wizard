@@ -22,6 +22,7 @@ class ExposedScheduleRepository(private val db: Database) : ScheduleRepository {
             projectId = ProjectId(this[ScheduleTable.projectId].value.toString()),
             cronExpression = this[ScheduleTable.cronExpression],
             parameters = this[ScheduleTable.parameters],
+            releaseNameTemplate = this[ScheduleTable.releaseNameTemplate],
             enabled = this[ScheduleTable.enabled],
             createdBy = this[ScheduleTable.createdBy]?.value?.toString(),
             nextRunAt = this[ScheduleTable.nextRunAt],
@@ -65,6 +66,7 @@ class ExposedScheduleRepository(private val db: Database) : ScheduleRepository {
         projectId: ProjectId,
         cronExpression: String,
         parameters: List<Parameter>,
+        releaseNameTemplate: String,
         enabled: Boolean,
         createdBy: String,
         nextRunAt: Instant?,
@@ -75,6 +77,7 @@ class ExposedScheduleRepository(private val db: Database) : ScheduleRepository {
             it[ScheduleTable.projectId] = UUID.fromString(projectId.value)
             it[ScheduleTable.cronExpression] = cronExpression
             it[ScheduleTable.parameters] = parameters
+            it[ScheduleTable.releaseNameTemplate] = releaseNameTemplate
             it[ScheduleTable.enabled] = enabled
             it[ScheduleTable.createdBy] = UUID.fromString(createdBy)
             it[ScheduleTable.nextRunAt] = nextRunAt
@@ -85,6 +88,7 @@ class ExposedScheduleRepository(private val db: Database) : ScheduleRepository {
             projectId = projectId,
             cronExpression = cronExpression,
             parameters = parameters,
+            releaseNameTemplate = releaseNameTemplate,
             enabled = enabled,
             createdBy = createdBy,
             nextRunAt = nextRunAt,

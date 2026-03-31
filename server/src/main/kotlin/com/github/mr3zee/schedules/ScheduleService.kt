@@ -79,6 +79,7 @@ class DefaultScheduleService(
             projectId = projectId,
             cronExpression = request.cronExpression,
             parameters = request.parameters,
+            releaseNameTemplate = request.releaseNameTemplate,
             enabled = request.enabled,
             createdBy = session.userId,
             nextRunAt = nextRunAt,
@@ -132,5 +133,6 @@ private fun ScheduleEntity.toModel() = Schedule(
     projectId = projectId,
     cronExpression = cronExpression,
     parameters = parameters,
+    releaseNameTemplate = releaseNameTemplate,
     enabled = enabled,
 )

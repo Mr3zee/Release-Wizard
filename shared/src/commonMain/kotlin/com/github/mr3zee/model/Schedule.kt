@@ -8,5 +8,6 @@ data class Schedule(
     val projectId: ProjectId,
     val cronExpression: String,
     val parameters: List<Parameter> = emptyList(),
+    val releaseNameTemplate: String = "",
     val enabled: Boolean = true,
 )

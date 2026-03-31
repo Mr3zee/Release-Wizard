@@ -93,7 +93,7 @@ class SchedulerService(
     }
 
     private suspend fun fireSchedule(schedule: ScheduleEntity) {
-        releasesService.startScheduledRelease(schedule.projectId, schedule.parameters)
+        releasesService.startScheduledRelease(schedule.projectId, schedule.parameters, schedule.releaseNameTemplate)
     }
 
     private suspend fun advanceNextRun(schedule: ScheduleEntity) {

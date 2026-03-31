@@ -2816,14 +2816,14 @@ class DagEditorScreenTest {
 
     @Test
     fun `start release button exists when onStartRelease is provided`() = runComposeUiTest {
-        var startReleaseCalled: String? = null
+        var startReleaseCalled = false
         val vm = editorViewModel()
         setContent {
             MaterialTheme {
                 DagEditorScreen(
                     viewModel = vm,
                     onBack = {},
-                    onStartRelease = { name -> startReleaseCalled = name },
+                    onStartRelease = { startReleaseCalled = true },
                 )
             }
         }
@@ -2836,7 +2836,7 @@ class DagEditorScreenTest {
         onNodeWithTag("start_release_button").performClick()
         waitForIdle()
 
-        assertEquals("Test Project", startReleaseCalled)
+        assertTrue(startReleaseCalled)
     }
 
     @Test

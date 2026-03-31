@@ -18,6 +18,7 @@ sealed class Screen {
     data object MyInvites : Screen()
     data class AuditLog(val teamId: TeamId) : Screen()
     data class ProjectAutomation(val projectId: ProjectId) : Screen()
+    data class StartRelease(val projectId: ProjectId) : Screen()
     data object Profile : Screen()
     data class ResetPassword(val token: String) : Screen()
     data object AdminUsers : Screen()

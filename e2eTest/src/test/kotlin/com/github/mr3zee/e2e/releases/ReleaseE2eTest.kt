@@ -44,7 +44,7 @@ class ReleaseE2eTest : E2eTestBase() {
         // Navigate to releases
         navigateToSection("sidebar_nav_releases", "release_list_screen")
 
-        // Click start release
+        // Click start release → opens project picker
         onNodeWithTag("start_release_fab").performClick()
         waitForIdle()
 
@@ -52,7 +52,7 @@ class ReleaseE2eTest : E2eTestBase() {
             onAllNodesWithTag("start_release_form").fetchSemanticsNodes().isNotEmpty()
         }
 
-        // Select the project using its testTag
+        // Select the project → navigates to start release screen
         onNodeWithTag("project_dropdown").performClick()
         waitForIdle()
         waitUntil(timeoutMillis = 5_000L) {
@@ -60,7 +60,11 @@ class ReleaseE2eTest : E2eTestBase() {
                 .fetchSemanticsNodes().isNotEmpty()
         }
         onNodeWithTag("project_option_$projectId", useUnmergedTree = true).performClick()
-        waitForIdle()
+
+        // Wait for start release screen
+        waitUntil(timeoutMillis = 10_000L) {
+            onAllNodesWithTag("start_release_screen").fetchSemanticsNodes().isNotEmpty()
+        }
 
         // Start the release
         onNodeWithTag("start_release_confirm").performClick()

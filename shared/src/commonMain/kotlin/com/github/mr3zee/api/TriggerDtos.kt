@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class CreateTriggerRequest(
     val parametersTemplate: List<Parameter> = emptyList(),
+    val releaseNameTemplate: String = "",
 )
 
 @Serializable

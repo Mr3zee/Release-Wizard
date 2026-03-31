@@ -41,6 +41,7 @@ fun Screen.parentSection(): NavSection? = when (this) {
     is Screen.ProjectEditor, is Screen.ProjectAutomation -> NavSection.PROJECTS
     is Screen.ReleaseList -> NavSection.RELEASES
     is Screen.ReleaseView -> NavSection.RELEASES
+    is Screen.StartRelease -> NavSection.RELEASES
     is Screen.ConnectionList -> NavSection.CONNECTIONS
     is Screen.ConnectionForm -> NavSection.CONNECTIONS
     is Screen.TeamList -> NavSection.TEAMS

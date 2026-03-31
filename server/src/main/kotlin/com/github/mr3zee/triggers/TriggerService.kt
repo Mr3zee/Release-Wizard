@@ -66,6 +66,7 @@ class DefaultTriggerService(
             projectId = projectId,
             secret = secretHash,
             parametersTemplate = request.parametersTemplate,
+            releaseNameTemplate = request.releaseNameTemplate,
         )
         val projectTeamId = projectsRepository.findTeamId(projectId)
         if (projectTeamId != null) {
@@ -121,7 +122,7 @@ class DefaultTriggerService(
         }
 
         log.info("Webhook fired: trigger {} for project {}", triggerId, trigger.projectId.value)
-        releasesService.startScheduledRelease(trigger.projectId, trigger.parametersTemplate)
+        releasesService.startScheduledRelease(trigger.projectId, trigger.parametersTemplate, trigger.releaseNameTemplate)
         return true
     }
 

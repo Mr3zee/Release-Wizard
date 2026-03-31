@@ -12,6 +12,7 @@ object ScheduleTable : UUIDTable("schedules") {
     val projectId = reference("project_id", ProjectTemplateTable, onDelete = ReferenceOption.CASCADE)
     val cronExpression = varchar("cron_expression", 255)
     val parameters = jsonb("parameters", AppJson, ListSerializer(Parameter.serializer()))
+    val releaseNameTemplate = varchar("release_name_template", 255).default("")
     val enabled = bool("enabled").default(true)
     val createdBy = reference("created_by", UserTable, onDelete = ReferenceOption.SET_NULL).nullable()
     val nextRunAt = timestamp("next_run_at").nullable()

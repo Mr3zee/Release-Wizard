@@ -8,6 +8,7 @@ import kotlinx.serialization.Serializable
 data class CreateScheduleRequest(
     val cronExpression: String,
     val parameters: List<Parameter> = emptyList(),
+    val releaseNameTemplate: String = "",
     val enabled: Boolean = true,
 )
 

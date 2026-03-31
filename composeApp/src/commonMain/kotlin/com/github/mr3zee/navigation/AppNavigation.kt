@@ -25,10 +25,8 @@ import com.github.mr3zee.profile.ProfileScreen
 import com.github.mr3zee.profile.ProfileViewModel
 import com.github.mr3zee.projects.ProjectListScreen
 import com.github.mr3zee.projects.ProjectListViewModel
-import com.github.mr3zee.api.CreateReleaseRequest
 import com.github.mr3zee.releases.*
 import com.github.mr3zee.teams.*
-import kotlinx.coroutines.launch
 
 @Composable
 fun AppNavigation(
@@ -87,7 +85,6 @@ fun AppNavigation(
                     onDispose { viewModel.releaseLock() }
                 }
 
-                val startReleaseScope = rememberCoroutineScope()
                 // DagEditorScreen handles its own Ctrl+S/Z/C/V/A/Delete via onKeyEvent
                 DagEditorScreen(
                     viewModel = viewModel,
@@ -98,18 +95,8 @@ fun AppNavigation(
                     onOpenAutomation = {
                         onNavigate(Screen.ProjectAutomation(projectId))
                     },
-                    onStartRelease = { name ->
-                        startReleaseScope.launch {
-                            try {
-                                val response = releaseApiClient.startRelease(
-                                    CreateReleaseRequest(projectTemplateId = projectId, name = name)
-                                )
-                                onNavigate(Screen.ReleaseView(response.release.id))
-                            } catch (e: Exception) {
-                                if (e is kotlinx.coroutines.CancellationException) throw e
-                                // Start-release errors are non-critical; the user stays on the editor screen
-                            }
-                        }
+                    onStartRelease = {
+                        onNavigate(Screen.StartRelease(projectId))
                     },
                 )
             } else {
@@ -133,6 +120,7 @@ fun AppNavigation(
         is Screen.ReleaseList -> ReleaseListScreen(
             viewModel = releaseListViewModel,
             onViewRelease = { onNavigate(Screen.ReleaseView(it)) },
+            onStartRelease = { projectId -> onNavigate(Screen.StartRelease(projectId)) },
             isTeamLead = isTeamLead,
         )
         is Screen.ReleaseView -> {
@@ -165,8 +153,9 @@ fun AppNavigation(
                 onResumeRelease = { viewModel.resumeRelease() },
                 onStopBlock = { viewModel.stopBlock(it) },
                 onRerun = {
-                    viewModel.rerunRelease { newReleaseId ->
-                        onReplaceCurrent(Screen.ReleaseView(newReleaseId))
+                    val projectId = viewModel.release.value?.projectTemplateId
+                    if (projectId != null) {
+                        onReplaceCurrent(Screen.StartRelease(projectId))
                     }
                 },
                 onArchive = { viewModel.archiveRelease() },
@@ -240,6 +229,7 @@ fun AppNavigation(
             val viewModel = remember(currentScreen.projectId) {
                 ProjectAutomationViewModel(
                     projectId = currentScreen.projectId,
+                    projectApiClient = projectApiClient,
                     scheduleClient = scheduleApiClient,
                     webhookClient = webhookTriggerApiClient,
                     mavenClient = mavenTriggerApiClient,
@@ -278,6 +268,16 @@ fun AppNavigation(
                 viewModel = vm,
                 onNavigate = onNavigate,
                 onBack = { onGoBack() },
+            )
+        }
+        is Screen.StartRelease -> {
+            val viewModel = remember(currentScreen.projectId) {
+                StartReleaseViewModel(currentScreen.projectId, projectApiClient, releaseApiClient)
+            }
+            StartReleaseScreen(
+                viewModel = viewModel,
+                onBack = { onGoBack() },
+                onReleaseStarted = { releaseId -> onReplaceCurrent(Screen.ReleaseView(releaseId)) },
             )
         }
         is Screen.ResetPassword -> {

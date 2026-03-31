@@ -12,6 +12,7 @@ object TriggerTable : UUIDTable("triggers") {
     val secret = varchar("secret", 255)
     val enabled = bool("enabled").default(true)
     val parametersTemplate = jsonb("parameters_template", AppJson, ListSerializer(Parameter.serializer()))
+    val releaseNameTemplate = varchar("release_name_template", 255).default("")
 
     init {
         index(false, projectId)

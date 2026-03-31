@@ -35,7 +35,7 @@ interface ReleasesService {
     /** REL-H2: Access-controlled block execution retrieval. */
     suspend fun getBlockExecutions(releaseId: ReleaseId, session: UserSession): List<BlockExecution>
     suspend fun startRelease(request: CreateReleaseRequest, session: UserSession): Release
-    suspend fun startScheduledRelease(projectId: ProjectId, parameters: List<Parameter>): Release
+    suspend fun startScheduledRelease(projectId: ProjectId, parameters: List<Parameter>, name: String? = null): Release
     suspend fun rerunRelease(id: ReleaseId, session: UserSession): Release
     suspend fun cancelRelease(id: ReleaseId, session: UserSession): Boolean
     suspend fun archiveRelease(id: ReleaseId, session: UserSession): Boolean
@@ -132,7 +132,7 @@ class DefaultReleasesService(
 
         val mergedParams = mergeParameters(project.parameters, request.parameters)
 
-        val releaseName = request.name.ifBlank { project.name }
+        val releaseName = request.name.ifBlank { project.name }.take(255)
 
         val release = repository.create(
             projectTemplateId = project.id,
@@ -157,7 +157,7 @@ class DefaultReleasesService(
         return release.copy(tags = tags)
     }
 
-    override suspend fun startScheduledRelease(projectId: ProjectId, parameters: List<Parameter>): Release {
+    override suspend fun startScheduledRelease(projectId: ProjectId, parameters: List<Parameter>, name: String?): Release {
         val project = projectsRepository.findById(projectId)
             ?: throw IllegalArgumentException("Project not found: ${projectId.value}")
 
@@ -175,7 +175,7 @@ class DefaultReleasesService(
             dagSnapshot = project.dagGraph,
             parameters = mergedParams,
             teamId = projectTeamId,
-            name = project.name,
+            name = (name?.takeIf { it.isNotBlank() } ?: project.name).take(255),
         )
 
         // Apply project's default tags to scheduled releases
