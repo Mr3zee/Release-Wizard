@@ -599,7 +599,7 @@ internal fun DrawScope.drawRunningIndicator(
     // Glow behind the dot
     drawCircle(
         color = colors.runningSpinner.copy(alpha = 0.4f),
-        radius = clampedRadius * 3f,
+        radius = maxOf(clampedRadius * 3f, 8f),
         center = Offset(dotX, dotY),
     )
     drawCircle(

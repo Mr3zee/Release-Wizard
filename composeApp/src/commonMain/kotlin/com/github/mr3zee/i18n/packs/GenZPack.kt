@@ -351,6 +351,8 @@ object GenZPack {
             "notifications_mark_all_read" to "Slay all as read",
             "notifications_mark_as_read" to "Slay as read",
             "notifications_unread" to "No cap, unread",
+            "notifications_delete" to "Yeet notification",
+            "notifications_delete_all_read" to "Yeet the read ones",
             "projects_connections" to "Connections",
             "projects_create_project" to "Manifest a Project",
             "projects_delete_confirmation" to $$"Fr fr you wanna unalive \"%1$s\"?",

@@ -719,6 +719,8 @@
     <string name="notifications_mark_all_read">Mark all as read</string>
     <string name="notifications_mark_as_read">Mark as read</string>
     <string name="notifications_unread">Unread</string>
+    <string name="notifications_delete">Delete notification</string>
+    <string name="notifications_delete_all_read">Clear read notifications</string>
 
     <!-- ==================== Keyboard Shortcuts: Notifications ==================== -->
     <string name="shortcut_nav_notifications">Notifications</string>

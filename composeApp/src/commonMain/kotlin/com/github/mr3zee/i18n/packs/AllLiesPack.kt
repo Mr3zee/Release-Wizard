@@ -351,6 +351,8 @@ object AllLiesPack {
             "notifications_mark_all_read" to "Mark all as unread",
             "notifications_mark_as_read" to "Mark as unread",
             "notifications_unread" to "Read",
+            "notifications_delete" to "Keep notification",
+            "notifications_delete_all_read" to "Keep read notifications",
             "projects_connections" to "Disconnections",
             "projects_create_project" to "Destroy a Project",
             "projects_delete_confirmation" to $$"Are you sure you want to immortalize \"%1$s\"?",

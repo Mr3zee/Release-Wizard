@@ -8,6 +8,13 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.koin.ktor.ext.inject
+import java.util.UUID
+
+private fun isValidUuid(value: String): Boolean = try {
+    UUID.fromString(value); true
+} catch (_: IllegalArgumentException) {
+    false
+}
 
 fun Route.userNotificationRoutes() {
     val service by inject<UserNotificationService>()
@@ -30,6 +37,9 @@ fun Route.userNotificationRoutes() {
         val session = call.userSession()
         val notificationId = call.parameters["id"]
             ?: return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Missing notification ID", code = "BAD_REQUEST"))
+        if (!isValidUuid(notificationId)) {
+            return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Invalid notification ID", code = "BAD_REQUEST"))
+        }
         val updated = service.markAsRead(notificationId, session.userId)
         if (updated) {
             call.respond(HttpStatusCode.OK, mapOf("status" to "read"))
@@ -41,6 +51,27 @@ fun Route.userNotificationRoutes() {
     post(ApiRoutes.UserNotifications.MARK_ALL_READ) {
         val session = call.userSession()
         val count = service.markAllAsRead(session.userId)
-        call.respond(HttpStatusCode.OK, mapOf("status" to "read", "count" to count))
+        call.respond(HttpStatusCode.OK, mapOf("status" to "read", "count" to count.toString()))
+    }
+
+    delete(ApiRoutes.UserNotifications.DELETE_ALL_READ) {
+        val session = call.userSession()
+        val count = service.deleteAllRead(session.userId)
+        call.respond(HttpStatusCode.OK, mapOf("status" to "deleted", "count" to count.toString()))
+    }
+
+    delete(ApiRoutes.UserNotifications.BASE + "/{id}") {
+        val session = call.userSession()
+        val notificationId = call.parameters["id"]
+            ?: return@delete call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Missing notification ID", code = "BAD_REQUEST"))
+        if (!isValidUuid(notificationId)) {
+            return@delete call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Invalid notification ID", code = "BAD_REQUEST"))
+        }
+        val deleted = service.deleteNotification(notificationId, session.userId)
+        if (deleted) {
+            call.respond(HttpStatusCode.OK, mapOf("status" to "deleted"))
+        } else {
+            call.respond(HttpStatusCode.NotFound, ErrorResponse(error = "Notification not found", code = "NOT_FOUND"))
+        }
     }
 }

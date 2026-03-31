@@ -120,6 +120,8 @@ object ApiRoutes {
         const val UNREAD_COUNT = "$BASE/unread-count"
         const val MARK_ALL_READ = "$BASE/mark-all-read"
         fun markRead(id: String) = "$BASE/$id/read"
+        fun byId(id: String) = "$BASE/$id"
+        const val DELETE_ALL_READ = "$BASE/clear-read"
     }
 
     object Tags {

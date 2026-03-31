@@ -1,5 +1,8 @@
 package com.github.mr3zee.notifications
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -12,10 +15,12 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.outlined.Approval
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.GroupAdd
 import androidx.compose.material.icons.outlined.ManageAccounts
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.PersonAdd
+import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.RocketLaunch
 import androidx.compose.material.icons.outlined.SupervisedUserCircle
 import androidx.compose.material3.*
@@ -90,7 +95,9 @@ fun NotificationsScreen(
         viewModel.dismissError()
     }
 
-    val hasUnread = notifications.any { !it.read }
+    val colors = LocalAppColors.current
+    val hasUnread = remember(notifications) { notifications.any { !it.read } }
+    val hasRead = remember(notifications) { notifications.any { it.read } }
 
     val shortcutActions = remember { ShortcutActions(onRefresh = { viewModel.refresh() }) }
     ProvideShortcutActions(shortcutActions) {
@@ -105,7 +112,7 @@ fun NotificationsScreen(
                 isManualRefresh = isManualRefresh,
                 isLoading = isLoading,
                 extraActions = {
-                    if (hasUnread) {
+                    AnimatedVisibility(visible = hasUnread, enter = fadeIn(), exit = fadeOut()) {
                         RwTooltip(tooltip = packStringResource(Res.string.notifications_mark_all_read)) {
                             RwIconButton(
                                 onClick = { viewModel.markAllAsRead() },
@@ -114,6 +121,21 @@ fun NotificationsScreen(
                                 Icon(
                                     Icons.Filled.CheckCircle,
                                     contentDescription = packStringResource(Res.string.notifications_mark_all_read),
+                                    tint = colors.chromeTextSecondary,
+                                )
+                            }
+                        }
+                    }
+                    AnimatedVisibility(visible = hasRead, enter = fadeIn(), exit = fadeOut()) {
+                        RwTooltip(tooltip = packStringResource(Res.string.notifications_delete_all_read)) {
+                            RwIconButton(
+                                onClick = { viewModel.deleteAllRead() },
+                                modifier = Modifier.testTag("delete_all_read_button"),
+                            ) {
+                                Icon(
+                                    Icons.Outlined.DeleteSweep,
+                                    contentDescription = packStringResource(Res.string.notifications_delete_all_read),
+                                    tint = colors.chromeTextSecondary,
                                 )
                             }
                         }
@@ -165,7 +187,8 @@ fun NotificationsScreen(
                                     }
                                 },
                                 onMarkRead = { viewModel.markAsRead(notification.id) },
-                                modifier = Modifier.widthIn(max = 1200.dp),
+                                onDelete = { viewModel.deleteNotification(notification.id) },
+                                modifier = Modifier.widthIn(max = 1200.dp).animateItem(),
                             )
                         }
                         loadMoreItem(pagination, isLoadingMore, onLoadMore = { viewModel.loadMore() })
@@ -187,6 +210,7 @@ private fun NotificationItem(
     notification: UserNotification,
     onClick: () -> Unit,
     onMarkRead: () -> Unit,
+    onDelete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalAppColors.current
@@ -276,21 +300,28 @@ private fun NotificationItem(
                 }
             }
 
-            // Mark-as-read icon (only for unread)
+            // Action icons
+            Spacer(Modifier.width(Spacing.sm))
             if (isUnread) {
-                Spacer(Modifier.width(Spacing.sm))
                 RwTooltip(tooltip = packStringResource(Res.string.notifications_mark_as_read)) {
-                    RwIconButton(
-                        onClick = {
-                            onMarkRead()
-                        },
-                    ) {
+                    RwIconButton(onClick = onMarkRead) {
                         Icon(
                             Icons.Outlined.CheckCircle,
                             contentDescription = packStringResource(Res.string.notifications_mark_as_read),
                             modifier = Modifier.size(20.dp),
+                            tint = colors.chromeTextSecondary,
                         )
                     }
+                }
+            }
+            RwTooltip(tooltip = packStringResource(Res.string.notifications_delete)) {
+                RwIconButton(onClick = onDelete) {
+                    Icon(
+                        Icons.Outlined.Close,
+                        contentDescription = packStringResource(Res.string.notifications_delete),
+                        modifier = Modifier.size(20.dp),
+                        tint = colors.chromeTextSecondary,
+                    )
                 }
             }
         }

@@ -20,6 +20,8 @@ interface UserNotificationRepository {
     suspend fun countUnread(userId: String): Long
     suspend fun markAsRead(id: String, userId: String): Boolean
     suspend fun markAllAsRead(userId: String): Int
+    suspend fun deleteByIdAndUser(id: String, userId: String): Boolean
+    suspend fun deleteAllRead(userId: String): Int
     suspend fun existsByUserAndTypeAndTarget(userId: String, type: UserNotificationType, targetType: String, targetId: String): Boolean
     suspend fun deleteOlderThan(cutoff: Instant): Int
     suspend fun deleteExcessPerUser(userId: String, maxCount: Int): Int
@@ -139,6 +141,22 @@ class ExposedUserNotificationRepository(private val db: Database) : UserNotifica
             (UserNotificationTable.userId eq userUuid) and (UserNotificationTable.read eq false)
         }) {
             it[read] = true
+        }
+    }
+
+    override suspend fun deleteByIdAndUser(id: String, userId: String): Boolean = dbQuery {
+        val notifUuid = UUID.fromString(id)
+        val userUuid = UUID.fromString(userId)
+        val deleted = UserNotificationTable.deleteWhere {
+            (UserNotificationTable.id eq notifUuid) and (UserNotificationTable.userId eq userUuid)
+        }
+        deleted > 0
+    }
+
+    override suspend fun deleteAllRead(userId: String): Int = dbQuery {
+        val userUuid = UUID.fromString(userId)
+        UserNotificationTable.deleteWhere {
+            (UserNotificationTable.userId eq userUuid) and (UserNotificationTable.read eq true)
         }
     }
 

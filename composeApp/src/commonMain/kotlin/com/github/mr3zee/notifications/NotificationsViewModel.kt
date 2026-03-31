@@ -103,35 +103,68 @@ class NotificationsViewModel(
     }
 
     fun markAsRead(notificationId: String) {
-        // Capture snapshot before optimistic update (for revert on failure)
-        val original = _notifications.value
-        _notifications.value = original.map {
+        _notifications.value = _notifications.value.map {
             if (it.id == notificationId) it.copy(read = true) else it
         }
+        onUnreadCountChanged(_notifications.value.count { !it.read }.toLong())
         viewModelScope.launch {
             try {
                 apiClient.markAsRead(notificationId)
-                // Update unread count
-                val countResponse = apiClient.getUnreadCount()
-                onUnreadCountChanged(countResponse.count)
             } catch (e: Exception) {
-                // Revert to snapshot on failure
-                _notifications.value = original
+                // Revert: set this notification back to unread
+                _notifications.value = _notifications.value.map {
+                    if (it.id == notificationId) it.copy(read = false) else it
+                }
+                onUnreadCountChanged(_notifications.value.count { !it.read }.toLong())
             }
         }
     }
 
     fun markAllAsRead() {
-        // Optimistic update
-        val original = _notifications.value
+        val unreadIds = _notifications.value.filter { !it.read }.map { it.id }.toSet()
         _notifications.value = _notifications.value.map { it.copy(read = true) }
+        onUnreadCountChanged(0)
         viewModelScope.launch {
             try {
                 apiClient.markAllAsRead()
-                onUnreadCountChanged(0)
             } catch (e: Exception) {
-                // Revert on failure
-                _notifications.value = original
+                // Revert: restore original read state for the items that were unread
+                _notifications.value = _notifications.value.map {
+                    if (it.id in unreadIds) it.copy(read = false) else it
+                }
+                onUnreadCountChanged(_notifications.value.count { !it.read }.toLong())
+            }
+        }
+    }
+
+    fun deleteNotification(notificationId: String) {
+        val removed = _notifications.value.find { it.id == notificationId } ?: return
+        val removedIndex = _notifications.value.indexOf(removed)
+        _notifications.value = _notifications.value.filter { it.id != notificationId }
+        onUnreadCountChanged(_notifications.value.count { !it.read }.toLong())
+        viewModelScope.launch {
+            try {
+                apiClient.deleteNotification(notificationId)
+            } catch (e: Exception) {
+                // Revert: re-insert the removed item at its original position
+                val current = _notifications.value.toMutableList()
+                current.add(removedIndex.coerceAtMost(current.size), removed)
+                _notifications.value = current
+                onUnreadCountChanged(_notifications.value.count { !it.read }.toLong())
+            }
+        }
+    }
+
+    fun deleteAllRead() {
+        val removedItems = _notifications.value.filter { it.read }
+        _notifications.value = _notifications.value.filter { !it.read }
+        viewModelScope.launch {
+            try {
+                apiClient.deleteAllRead()
+            } catch (e: Exception) {
+                // Revert: merge removed items back, sort by timestamp descending
+                _notifications.value = (_notifications.value + removedItems)
+                    .sortedByDescending { it.timestamp }
             }
         }
     }

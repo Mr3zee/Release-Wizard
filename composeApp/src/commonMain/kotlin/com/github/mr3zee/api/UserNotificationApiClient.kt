@@ -27,4 +27,12 @@ class UserNotificationApiClient(private val client: HttpClient) {
     suspend fun markAllAsRead() {
         client.post(serverUrl(ApiRoutes.UserNotifications.MARK_ALL_READ))
     }
+
+    suspend fun deleteNotification(notificationId: String) {
+        client.delete(serverUrl(ApiRoutes.UserNotifications.byId(notificationId)))
+    }
+
+    suspend fun deleteAllRead() {
+        client.delete(serverUrl(ApiRoutes.UserNotifications.DELETE_ALL_READ))
+    }
 }

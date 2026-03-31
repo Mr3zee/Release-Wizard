@@ -353,6 +353,8 @@ object RickAndMortyPack {
             "notifications_mark_all_read" to "Read all, *burp* Morty",
             "notifications_mark_as_read" to "Yeah yeah, *burp* read",
             "notifications_unread" to "Unread, *burp*",
+            "notifications_delete" to "Delete, *burp* Morty",
+            "notifications_delete_all_read" to "Wipe the read ones, Morty",
             "projects_connections" to "Connections",
             "projects_create_project" to "Create a *burp* project",
             "projects_delete_confirmation" to $$"Delete \"%1$s\"? Nobody *burp* exists on purpose, Morty.",

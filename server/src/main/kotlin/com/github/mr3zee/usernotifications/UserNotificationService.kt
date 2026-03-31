@@ -10,6 +10,8 @@ interface UserNotificationService {
     suspend fun getUnreadCount(userId: String): UnreadCountResponse
     suspend fun markAsRead(notificationId: String, userId: String): Boolean
     suspend fun markAllAsRead(userId: String): Int
+    suspend fun deleteNotification(notificationId: String, userId: String): Boolean
+    suspend fun deleteAllRead(userId: String): Int
 }
 
 class DefaultUserNotificationService(
@@ -34,5 +36,13 @@ class DefaultUserNotificationService(
 
     override suspend fun markAllAsRead(userId: String): Int {
         return repository.markAllAsRead(userId)
+    }
+
+    override suspend fun deleteNotification(notificationId: String, userId: String): Boolean {
+        return repository.deleteByIdAndUser(notificationId, userId)
+    }
+
+    override suspend fun deleteAllRead(userId: String): Int {
+        return repository.deleteAllRead(userId)
     }
 }

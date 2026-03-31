@@ -356,6 +356,8 @@ object RickRollPack {
             "notifications_mark_all_read" to "Never gonna give up reading all",
             "notifications_mark_as_read" to "Never gonna give up reading",
             "notifications_unread" to "Never gonna be read",
+            "notifications_delete" to "Never gonna let you stay",
+            "notifications_delete_all_read" to "Never gonna keep the read ones around",
             "projects_connections" to "Connections",
             "projects_create_project" to "We're No Strangers (Create Project)",
             "projects_delete_confirmation" to $$"Never gonna give up \"%1$s\"? Say goodbye?",

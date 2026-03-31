@@ -355,6 +355,8 @@ object HelldiversPack {
             "notifications_mark_all_read" to "Acknowledge all transmissions",
             "notifications_mark_as_read" to "Acknowledge transmission",
             "notifications_unread" to "Unacknowledged",
+            "notifications_delete" to "Purge transmission",
+            "notifications_delete_all_read" to "Purge acknowledged transmissions",
             "projects_connections" to "Supply Lines",
             "projects_create_project" to "Requisition New Campaign",
             "projects_delete_confirmation" to $$"Confirm orbital strike on \"%1$s\"? This action serves democracy.",

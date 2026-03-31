@@ -351,6 +351,8 @@ object EmojisPack {
             "notifications_mark_all_read" to "\u2705\ud83d\udd14\ud83d\udcda",
             "notifications_mark_as_read" to "\u2705\ud83d\udd14",
             "notifications_unread" to "\ud83d\udd35",
+            "notifications_delete" to "\ud83d\uddd1\ufe0f\ud83d\udd14",
+            "notifications_delete_all_read" to "\ud83d\uddd1\ufe0f\u2705\ud83d\udd14",
             "projects_connections" to "\ud83d\udd17",
             "projects_create_project" to "\u2728\ud83c\udd95\ud83d\udcc1",
             "projects_delete_confirmation" to $$"\ud83d\uddd1\ufe0f\ud83d\udd25 \"%1$s\" \u2753",
