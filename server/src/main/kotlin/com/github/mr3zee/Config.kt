@@ -65,6 +65,11 @@ data class OAuthConfig(
     override fun toString() = "OAuthConfig(googleClientId=$googleClientId, googleClientSecret=****)"
 }
 
+data class PatConfig(
+    val maxPerUser: Int = 25,
+    val maxExpiryDays: Int = 365,
+)
+
 data class CorsConfig(
     val allowedOrigins: List<String>,
 )
@@ -233,4 +238,11 @@ fun ApplicationConfig.corsConfig(): CorsConfig {
     }
 
     return CorsConfig(allowedOrigins = explicit + autoOrigins)
+}
+
+fun ApplicationConfig.patConfig(): PatConfig {
+    return PatConfig(
+        maxPerUser = propertyOrNull("app.auth.pat.maxPerUser")?.getString()?.toIntOrNull() ?: 25,
+        maxExpiryDays = propertyOrNull("app.auth.pat.maxExpiryDays")?.getString()?.toIntOrNull() ?: 365,
+    )
 }

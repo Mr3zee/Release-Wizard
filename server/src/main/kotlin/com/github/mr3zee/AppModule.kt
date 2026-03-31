@@ -22,6 +22,7 @@ fun appModule(
     useFlyway: Boolean = true,
     oauthConfig: OAuthConfig = OAuthConfig(null, null),
     devModeConfig: DevModeConfig = DevModeConfig(enabled = false),
+    patConfig: PatConfig = PatConfig(),
 ) = module {
     single { dbConfig }
     single { encryptionConfig }
@@ -30,6 +31,7 @@ fun appModule(
     single { passwordPolicyConfig }
     single { oauthConfig }
     single { devModeConfig }
+    single { patConfig }
     single<DataSource> { dataSource(get()) }
     single<Database> { initDatabase(get(), useFlyway) }
     single { EncryptionService(get()) }

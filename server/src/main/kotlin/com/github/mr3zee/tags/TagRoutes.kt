@@ -5,12 +5,12 @@ import com.github.mr3zee.api.ApiRoutes
 import com.github.mr3zee.api.RenameTagRequest
 import com.github.mr3zee.api.TagListResponse
 import com.github.mr3zee.auth.UserSession
+import com.github.mr3zee.auth.userSession
 import com.github.mr3zee.model.UserRole
 import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.ktor.server.sessions.*
 import org.koin.ktor.ext.inject
 
 fun Route.tagRoutes() {
@@ -49,8 +49,7 @@ fun Route.tagRoutes() {
 }
 
 private fun RoutingContext.requireTagAdmin(): UserSession {
-    val session = call.sessions.get<UserSession>()
-        ?: throw ForbiddenException("Not authenticated")
+    val session = call.userSession()
     if (session.role != UserRole.ADMIN) {
         throw ForbiddenException("Admin access required for tag management")
     }

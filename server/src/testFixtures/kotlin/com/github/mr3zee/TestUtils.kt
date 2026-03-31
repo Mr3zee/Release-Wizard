@@ -55,6 +55,7 @@ import io.ktor.server.websocket.*
 import io.ktor.util.*
 import kotlinx.serialization.SerializationException
 import org.koin.dsl.module
+import org.koin.java.KoinJavaComponent.getKoin
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
 import kotlin.time.Duration.Companion.milliseconds
@@ -171,19 +172,19 @@ fun Application.testModule(
         }
         register(RateLimitName("create-team")) {
             rateLimiter(limit = 10, refillPeriod = 60.seconds)
-            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.request.local.remoteHost }
+            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.principal<UserSession>()?.userId ?: call.request.local.remoteHost }
         }
         register(RateLimitName("create-project")) {
             rateLimiter(limit = 10, refillPeriod = 60.seconds)
-            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.request.local.remoteHost }
+            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.principal<UserSession>()?.userId ?: call.request.local.remoteHost }
         }
         register(RateLimitName("test-connection")) {
             rateLimiter(limit = 5, refillPeriod = 60.seconds)
-            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.request.local.remoteHost }
+            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.principal<UserSession>()?.userId ?: call.request.local.remoteHost }
         }
         register(RateLimitName("authenticated-api")) {
             rateLimiter(limit = 200, refillPeriod = 60.seconds)
-            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.request.local.remoteHost }
+            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.principal<UserSession>()?.userId ?: call.request.local.remoteHost }
         }
         register(RateLimitName("password-reset")) {
             rateLimiter(limit = 5, refillPeriod = 60.seconds)
@@ -206,6 +207,8 @@ fun Application.testModule(
             }
         }
     }
+    val resolvedPatService = try { getKoin().getOrNull<com.github.mr3zee.auth.PatService>() } catch (_: Exception) { null }
+
     install(Authentication) {
         session<UserSession>("session-auth") {
             validate { it }
@@ -219,6 +222,12 @@ fun Application.testModule(
                         correlationId = correlationId,
                     ),
                 )
+            }
+        }
+        bearer("pat-auth") {
+            authenticate { credential ->
+                val patService = resolvedPatService ?: return@authenticate null
+                patService.validate(credential.token)
             }
         }
     }

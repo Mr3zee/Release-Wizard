@@ -5,6 +5,7 @@ import com.github.mr3zee.ForbiddenException
 import com.github.mr3zee.api.ApiRoutes
 import com.github.mr3zee.api.ReleaseEvent
 import com.github.mr3zee.auth.UserSession
+import com.github.mr3zee.auth.userSession
 import com.github.mr3zee.execution.ExecutionEngine
 import com.github.mr3zee.model.ReleaseId
 import com.github.mr3zee.model.isTerminal
@@ -79,8 +80,10 @@ fun Route.releaseWebSocketRoutes() {
 
             val releaseId = ReleaseId(idParam)
 
-            // Check ownership — session is available since WS routes are inside authenticate("session-auth")
-            val session = call.sessions.get<UserSession>() ?: run {
+            // Check ownership — session is available since WS routes are inside authenticate("session-auth", "pat-auth")
+            val session = try {
+                call.userSession()
+            } catch (_: IllegalStateException) {
                 close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Not authenticated"))
                 return@webSocket
             }

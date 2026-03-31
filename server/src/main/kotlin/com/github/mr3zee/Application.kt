@@ -3,10 +3,12 @@ package com.github.mr3zee
 import com.github.mr3zee.api.ErrorResponse
 import com.github.mr3zee.auth.AccountLockoutRepository
 import com.github.mr3zee.auth.AuthService
+import com.github.mr3zee.auth.PatService
 import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.auth.authModule
 import com.github.mr3zee.auth.authRoutes
 import com.github.mr3zee.auth.oauthRoutes
+import com.github.mr3zee.auth.patRoutes
 import com.github.mr3zee.connections.connectionRoutes
 import com.github.mr3zee.connections.connectionsModule
 import com.github.mr3zee.execution.ExecutionEngine
@@ -95,6 +97,7 @@ fun Application.module() {
     val corsConfig = environment.config.corsConfig()
     val oauthConfig = environment.config.oauthConfig()
     val devModeConfig = environment.config.devModeConfig()
+    val patConfig = environment.config.patConfig()
 
     val appVersion = environment.config.propertyOrNull("app.version")?.getString() ?: "dev"
 
@@ -103,7 +106,7 @@ fun Application.module() {
     install(Koin) {
         slf4jLogger()
         modules(
-            appModule(dbConfig, encryptionConfig, authConfig, webhookConfig, passwordPolicyConfig, oauthConfig = oauthConfig, devModeConfig = devModeConfig),
+            appModule(dbConfig, encryptionConfig, authConfig, webhookConfig, passwordPolicyConfig, oauthConfig = oauthConfig, devModeConfig = devModeConfig, patConfig = patConfig),
             auditModule,
             authModule,
             projectsModule,
@@ -209,15 +212,15 @@ fun Application.module() {
         }
         register(RateLimitName("create-team")) {
             rateLimiter(limit = 10, refillPeriod = 60.seconds)
-            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.request.local.remoteHost }
+            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.principal<UserSession>()?.userId ?: call.request.local.remoteHost }
         }
         register(RateLimitName("create-project")) {
             rateLimiter(limit = 10, refillPeriod = 60.seconds)
-            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.request.local.remoteHost }
+            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.principal<UserSession>()?.userId ?: call.request.local.remoteHost }
         }
         register(RateLimitName("test-connection")) {
             rateLimiter(limit = 5, refillPeriod = 60.seconds)
-            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.request.local.remoteHost }
+            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.principal<UserSession>()?.userId ?: call.request.local.remoteHost }
         }
         register(RateLimitName("password-reset")) {
             rateLimiter(limit = 5, refillPeriod = 60.seconds)
@@ -225,7 +228,7 @@ fun Application.module() {
         }
         register(RateLimitName("authenticated-api")) {
             rateLimiter(limit = 200, refillPeriod = 60.seconds)
-            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.request.local.remoteHost }
+            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.principal<UserSession>()?.userId ?: call.request.local.remoteHost }
         }
     }
 
@@ -265,6 +268,7 @@ fun Application.module() {
     val resolvedHttpClient = getKoin().get<HttpClient>()
     val resolvedWebhookConfig = getKoin().get<WebhookConfig>()
     val resolvedAuthConfig = getKoin().get<AuthConfig>()
+    val resolvedPatService = getKoin().get<PatService>()
 
     install(Authentication) {
         session<UserSession>("session-auth") {
@@ -279,6 +283,12 @@ fun Application.module() {
                         correlationId = correlationId,
                     ),
                 )
+            }
+        }
+
+        bearer("pat-auth") {
+            authenticate { credential ->
+                resolvedPatService.validate(credential.token)
             }
         }
 
@@ -546,6 +556,30 @@ fun Application.module() {
                 }
             }
 
+            // Periodic cleanup of expired/revoked PATs (runs daily)
+            val patService = koin.getOrNull<PatService>()
+            if (patService != null && scope != null) {
+                scope.launch {
+                    try {
+                        patService.deleteExpiredAndRevoked()
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        environment.log.error("Initial PAT cleanup failed", e)
+                    }
+                    while (true) {
+                        delay(PatService.CLEANUP_INTERVAL)
+                        try {
+                            patService.deleteExpiredAndRevoked()
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            environment.log.warn("PAT cleanup failed", e)
+                        }
+                    }
+                }
+            }
+
             // Periodic cleanup of expired account lockout records
             val lockoutRepo = koin.getOrNull<AccountLockoutRepository>()
             if (lockoutRepo != null && scope != null) {
@@ -607,7 +641,7 @@ fun Application.configureRouting(
         }
         webhookRoutes()
         triggerWebhookRoutes()
-        authenticate("session-auth") {
+        authenticate("session-auth", "pat-auth") {
             rateLimit(RateLimitName("authenticated-api")) {
                 teamRoutes()
                 myInviteRoutes()
@@ -622,6 +656,7 @@ fun Application.configureRouting(
                 mavenTriggerRoutes()
                 tagRoutes()
                 userNotificationRoutes()
+                patRoutes()
             }
         }
 

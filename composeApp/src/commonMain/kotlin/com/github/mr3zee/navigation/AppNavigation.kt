@@ -22,6 +22,7 @@ import com.github.mr3zee.model.TeamRole
 import com.github.mr3zee.profile.AdminUsersScreen
 import com.github.mr3zee.profile.AdminUsersViewModel
 import com.github.mr3zee.profile.ProfileScreen
+import com.github.mr3zee.profile.PatViewModel
 import com.github.mr3zee.profile.ProfileViewModel
 import com.github.mr3zee.projects.ProjectListScreen
 import com.github.mr3zee.projects.ProjectListViewModel
@@ -52,6 +53,7 @@ fun AppNavigation(
     onTeamChanged: (TeamId) -> Unit,
     onRefreshUser: () -> Unit,
     profileViewModel: ProfileViewModel? = null,
+    patViewModel: PatViewModel? = null,
     authApiClient: AuthApiClient? = null,
     notificationsViewModel: com.github.mr3zee.notifications.NotificationsViewModel? = null,
 ) {
@@ -243,8 +245,14 @@ fun AppNavigation(
         is Screen.Profile -> {
             val vm = profileViewModel ?: return
             LaunchedEffect(Unit) { vm.loadProfile() }
+            LaunchedEffect(Unit) { patViewModel?.loadTokens() }
+            // Clear sensitive plaintext token from memory when navigating away
+            DisposableEffect(Unit) {
+                onDispose { patViewModel?.dismissNewlyCreatedToken() }
+            }
             ProfileScreen(
                 viewModel = vm,
+                patViewModel = patViewModel,
                 currentUserRole = currentUserRole,
                 onBack = { onGoBack() },
                 onNavigateToTeam = { onNavigate(Screen.TeamDetail(it)) },

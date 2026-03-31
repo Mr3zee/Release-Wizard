@@ -145,7 +145,7 @@ class OAuthIntegrationTest {
             }
             register(RateLimitName("authenticated-api")) {
                 rateLimiter(limit = 200, refillPeriod = 60.seconds)
-                requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.request.local.remoteHost }
+                requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.principal<UserSession>()?.userId ?: call.request.local.remoteHost }
             }
             register(RateLimitName("webhook")) {
                 rateLimiter(limit = 30, refillPeriod = 60.seconds)

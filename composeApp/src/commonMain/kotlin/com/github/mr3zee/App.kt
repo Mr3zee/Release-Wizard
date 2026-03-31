@@ -18,6 +18,7 @@ import com.github.mr3zee.api.AuthApiClient
 import releasewizard.composeapp.generated.resources.*
 import com.github.mr3zee.api.ConnectionApiClient
 import com.github.mr3zee.api.MavenTriggerApiClient
+import com.github.mr3zee.api.PatApiClient
 import com.github.mr3zee.api.ProjectApiClient
 import com.github.mr3zee.api.ReleaseApiClient
 import com.github.mr3zee.api.ScheduleApiClient
@@ -33,6 +34,7 @@ import com.github.mr3zee.util.RuntimeContext
 import com.github.mr3zee.util.UiMessage
 import com.github.mr3zee.util.currentRuntimeContext
 import com.github.mr3zee.connections.ConnectionsViewModel
+import com.github.mr3zee.profile.PatViewModel
 import com.github.mr3zee.profile.ProfileViewModel
 import com.github.mr3zee.profile.ResetPasswordScreen
 import com.github.mr3zee.profile.ResetPasswordViewModel
@@ -116,6 +118,9 @@ fun App() {
         if (reqText.isNotEmpty()) parts += packStringResource(Res.string.auth_policy_including, reqText)
         parts.joinToString(", ")
     }
+
+    val patApiClient = remember { PatApiClient(httpClient) }
+    val patViewModel = remember { PatViewModel(patApiClient) }
 
     val profileViewModel = remember { ProfileViewModel(authApiClient) }
     LaunchedEffect(profileViewModel) {
@@ -425,6 +430,7 @@ fun App() {
                                 },
                                 onRefreshUser = { authViewModel.refreshUser() },
                                 profileViewModel = profileViewModel,
+                                patViewModel = patViewModel,
                                 authApiClient = authApiClient,
                                 notificationsViewModel = notificationsViewModel,
                             )

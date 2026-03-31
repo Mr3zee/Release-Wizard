@@ -6,6 +6,7 @@ import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.model.ClientType
 import com.github.mr3zee.model.UserId
 import io.ktor.server.application.*
+import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.sessions.*
@@ -117,13 +118,21 @@ val SessionTtl = createApplicationPlugin(name = "SessionTtl") {
             call.sessions.get<UserSession>()
         } catch (_: SessionNotYetConfiguredException) {
             null
-        } ?: return@onCallRespond
+        }
+
         // Only add cache/CSRF headers for API responses — static assets are managed by CachingHeaders plugin
         if (!call.request.path().startsWith("/api/")) return@onCallRespond
-        if (session.csrfToken.isNotEmpty()) {
-            call.response.header(CSRF_TOKEN_HEADER, session.csrfToken)
+
+        if (session != null) {
+            // Session-based auth: send CSRF token + cache headers
+            if (session.csrfToken.isNotEmpty()) {
+                call.response.header(CSRF_TOKEN_HEADER, session.csrfToken)
+            }
+            call.response.header("Cache-Control", "no-store")
+            call.response.header("Vary", "Cookie")
+        } else if (call.principal<UserSession>() != null) {
+            // PAT-based auth: no CSRF token needed, but still prevent caching
+            call.response.header("Cache-Control", "no-store")
         }
-        call.response.header("Cache-Control", "no-store")
-        call.response.header("Vary", "Cookie")
     }
 }

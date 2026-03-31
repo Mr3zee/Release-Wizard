@@ -128,6 +128,13 @@ object ApiRoutes {
         const val BASE = "$API_V1/tags"
     }
 
+    object Pats {
+        const val BASE = "$API_V1/auth/me/tokens"
+        fun byId(id: String) = "$BASE/$id"
+        fun forUser(userId: String) = "$API_V1/auth/users/$userId/tokens"
+        fun forUserById(userId: String, tokenId: String) = "${forUser(userId)}/$tokenId"
+    }
+
     const val HEALTH = "/health"
     const val HEALTHZ = "/healthz"
 }

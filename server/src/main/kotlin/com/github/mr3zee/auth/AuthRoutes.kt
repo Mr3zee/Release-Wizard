@@ -183,7 +183,7 @@ fun Route.authRoutes() {
     }
 
     // AUTH-H1: /me moved inside authenticate block to use proper session validation
-    authenticate("session-auth") {
+    authenticate("session-auth", "pat-auth") {
         get(ApiRoutes.Auth.ME) {
             val session = call.userSession()
             // Fetch full user from DB to include createdAt

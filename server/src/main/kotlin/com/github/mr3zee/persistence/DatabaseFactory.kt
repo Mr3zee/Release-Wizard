@@ -36,6 +36,7 @@ val ALL_TABLES = arrayOf(
     PasswordResetTokenTable,
     OAuthAccountTable,
     UserNotificationTable,
+    PatTable,
 )
 
 fun dataSource(config: DatabaseConfig): DataSource {

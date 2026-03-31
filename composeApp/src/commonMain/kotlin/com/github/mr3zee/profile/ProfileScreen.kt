@@ -87,6 +87,7 @@ sealed class DeleteState {
 @Composable
 fun ProfileScreen(
     viewModel: ProfileViewModel,
+    patViewModel: PatViewModel? = null,
     currentUserRole: UserRole?,
     onBack: () -> Unit,
     onNavigateToTeam: (TeamId) -> Unit,
@@ -188,7 +189,8 @@ fun ProfileScreen(
         }
     }
 
-    val isDialogOpen = showChangeUsername || showChangePassword || deleteState != DeleteState.Idle
+    var patFormOpen by remember { mutableStateOf(false) }
+    val isDialogOpen = showChangeUsername || showChangePassword || deleteState != DeleteState.Idle || patFormOpen
     val shortcutActions = remember(isDialogOpen) {
         ShortcutActions(
             onRefresh = { viewModel.loadProfile() },
@@ -406,6 +408,20 @@ fun ProfileScreen(
                             confirmNewPassword = ""
                         },
                         hasPassword = userInfo?.hasPassword != false,
+                    )
+                }
+
+                // ── Access Tokens ──────────────────────────────────
+                if (patViewModel != null) {
+                    Spacer(modifier = Modifier.height(Spacing.md))
+                    AccessTokensSection(
+                        patViewModel = patViewModel,
+                        snackbarHostState = snackbarHostState,
+                        onFormOpenChanged = { patFormOpen = it },
+                        modifier = Modifier
+                            .widthIn(max = 800.dp)
+                            .fillMaxWidth()
+                            .padding(horizontal = Spacing.lg),
                     )
                 }
 

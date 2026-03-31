@@ -213,19 +213,19 @@ private fun Application.testModuleWithLowRateLimit() {
         }
         register(RateLimitName("create-team")) {
             rateLimiter(limit = 10, refillPeriod = 60.seconds)
-            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.request.local.remoteHost }
+            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.principal<UserSession>()?.userId ?: call.request.local.remoteHost }
         }
         register(RateLimitName("create-project")) {
             rateLimiter(limit = 10, refillPeriod = 60.seconds)
-            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.request.local.remoteHost }
+            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.principal<UserSession>()?.userId ?: call.request.local.remoteHost }
         }
         register(RateLimitName("test-connection")) {
             rateLimiter(limit = 5, refillPeriod = 60.seconds)
-            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.request.local.remoteHost }
+            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.principal<UserSession>()?.userId ?: call.request.local.remoteHost }
         }
         register(RateLimitName("authenticated-api")) {
             rateLimiter(limit = 3, refillPeriod = 60.seconds)
-            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.request.local.remoteHost }
+            requestKey { call -> call.sessions.get<UserSession>()?.userId ?: call.principal<UserSession>()?.userId ?: call.request.local.remoteHost }
         }
         register(RateLimitName("password-reset")) {
             rateLimiter(limit = 5, refillPeriod = 60.seconds)
@@ -256,6 +256,9 @@ private fun Application.testModuleWithLowRateLimit() {
                     ErrorResponse(error = "Not authenticated", code = "UNAUTHORIZED", correlationId = correlationId),
                 )
             }
+        }
+        bearer("pat-auth") {
+            authenticate { null }
         }
     }
     install(SessionTtl)

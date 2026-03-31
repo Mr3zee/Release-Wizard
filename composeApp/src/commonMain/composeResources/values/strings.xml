@@ -675,6 +675,36 @@
     <string name="profile_submit_username">Save Changes</string>
     <string name="profile_submit_password">Save Changes</string>
 
+    <!-- ==================== Access Tokens (PAT) ==================== -->
+    <string name="pat_section_title">Access Tokens</string>
+    <string name="pat_section_description">Use tokens to authenticate API requests from CLI and scripts.</string>
+    <string name="pat_empty">No access tokens created yet.</string>
+    <string name="pat_create_button">Create Token</string>
+    <string name="pat_create_form_title">Create Access Token</string>
+    <string name="pat_token_name_label">Token Name</string>
+    <string name="pat_expiry_label">Expiration</string>
+    <string name="pat_expiry_30d">30 days</string>
+    <string name="pat_expiry_60d">60 days</string>
+    <string name="pat_expiry_90d">90 days</string>
+    <string name="pat_expiry_1y">1 year</string>
+    <string name="pat_expiry_never">No expiration</string>
+    <string name="pat_expiry_custom">Custom</string>
+    <string name="pat_expiry_custom_days_label">Days (1–365)</string>
+    <string name="pat_expiry_never_warning">Non-expiring tokens are less secure</string>
+    <string name="pat_token_warning">This is the only time this token will be shown. Save it now — it cannot be retrieved later.</string>
+    <string name="pat_token_saved">I\'ve saved this token</string>
+    <string name="pat_token_copied">Token copied to clipboard</string>
+    <string name="pat_revoke">Revoke</string>
+    <string name="pat_revoke_confirm">Revoke token \"%1$s\"? This cannot be undone.</string>
+    <string name="pat_revoked">Token revoked</string>
+    <string name="pat_last_used">Last used: %1$s</string>
+    <string name="pat_never_used">Never used</string>
+    <string name="pat_created">Created: %1$s</string>
+    <string name="pat_status_active">Active</string>
+    <string name="pat_status_expired">Expired</string>
+    <string name="pat_status_revoked">Revoked</string>
+    <string name="pat_status_expires">Expires: %1$s</string>
+
     <!-- ==================== Reset Password ==================== -->
     <string name="reset_password_title">Reset Password</string>
     <string name="reset_password_validating">Validating reset link\u2026</string>

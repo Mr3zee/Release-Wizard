@@ -1,16 +1,20 @@
 package com.github.mr3zee.auth
 
 import io.ktor.server.application.ApplicationCall
+import io.ktor.server.auth.principal
 import io.ktor.server.sessions.get
 import io.ktor.server.sessions.sessions
 import java.security.SecureRandom
 
 /**
  * Extracts the UserSession from an authenticated route.
- * Should only be called within authenticate("session-auth") blocks.
+ * Checks session cookie first (session-auth), then auth principal (pat-auth).
+ * Should only be called within authenticate("session-auth", "pat-auth") blocks.
  */
 fun ApplicationCall.userSession(): UserSession =
-    sessions.get<UserSession>() ?: error("UserSession not found — this should only be called within authenticated routes")
+    sessions.get<UserSession>()
+        ?: principal<UserSession>()
+        ?: error("UserSession not found — this should only be called within authenticated routes")
 
 private val csrfRandom = SecureRandom()
 
