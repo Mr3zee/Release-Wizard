@@ -14,7 +14,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -28,6 +27,10 @@ import com.github.mr3zee.components.RwButtonVariant
 import com.github.mr3zee.components.RwInlineConfirmation
 import com.github.mr3zee.components.RwMarkdownText
 import com.github.mr3zee.components.RwTooltip
+import androidx.compose.foundation.shape.CircleShape
+import com.github.mr3zee.editor.ResizeEdge
+import com.github.mr3zee.editor.resizeEdgeCursor
+import com.github.mr3zee.theme.LocalAppColors
 import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.model.*
@@ -450,7 +453,7 @@ private fun BlockDetailPanel(
                         }
                     }
                 }
-                .pointerHoverIcon(PointerIcon.Hand),
+                .pointerHoverIcon(resizeEdgeCursor(ResizeEdge.Top)),
             contentAlignment = Alignment.Center,
         ) {
             Box(
@@ -619,14 +622,36 @@ private fun BlockDetailPanel(
                 )
             }
 
-            val genericOutputs = execution.outputs.filterKeys { it != BlockExecution.ARTIFACTS_OUTPUT_KEY }
-            if (genericOutputs.isNotEmpty()) {
+            // Split outputs map into inputs (prefixed "inputs.") and outputs (non-prefixed, excluding "outputs." duplicates)
+            val inputEntries = execution.outputs
+                .filterKeys { it.startsWith("inputs.") }
+                .mapKeys { (k, _) -> k.removePrefix("inputs.") }
+            val outputEntries = execution.outputs
+                .filterKeys { !it.startsWith("inputs.") && !it.startsWith("outputs.") && it != BlockExecution.ARTIFACTS_OUTPUT_KEY }
+
+            if (inputEntries.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(Spacing.sm))
+                Text(
+                    text = packStringResource(Res.string.releases_block_inputs),
+                    style = AppTypography.label,
+                    modifier = Modifier.testTag("block_inputs_label"),
+                )
+                inputEntries.forEach { (key, value) ->
+                    Text(
+                        text = packStringResource(Res.string.releases_block_output_entry, key, value),
+                        style = AppTypography.bodySmall,
+                        modifier = Modifier.padding(start = Spacing.md),
+                    )
+                }
+            }
+            if (outputEntries.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(Spacing.sm))
                 Text(
                     text = packStringResource(Res.string.releases_block_outputs),
                     style = AppTypography.label,
+                    modifier = Modifier.testTag("block_outputs_label"),
                 )
-                genericOutputs.forEach { (key, value) ->
+                outputEntries.forEach { (key, value) ->
                     Text(
                         text = packStringResource(Res.string.releases_block_output_entry, key, value),
                         style = AppTypography.bodySmall,
@@ -652,17 +677,48 @@ private fun BlockDetailPanel(
                     Spacer(modifier = Modifier.height(Spacing.xs))
                 }
 
+                val appColors = LocalAppColors.current
+                val gateLabel = when (execution.gatePhase) {
+                    GatePhase.PRE -> packStringResource(Res.string.releases_gate_pre_label)
+                    GatePhase.POST -> packStringResource(Res.string.releases_gate_post_label)
+                    null -> null
+                }
+                val gateColor = when (execution.gatePhase) {
+                    GatePhase.PRE -> appColors.gateIndicator
+                    GatePhase.POST -> appColors.gateIndicatorPost
+                    null -> MaterialTheme.colorScheme.onSurfaceVariant
+                }
                 val phaseContext = when (execution.gatePhase) {
                     GatePhase.PRE -> packStringResource(Res.string.releases_gate_phase_pre)
                     GatePhase.POST -> packStringResource(Res.string.releases_gate_phase_post)
                     null -> packStringResource(Res.string.releases_gate_phase_unknown)
                 }
-                Text(
-                    text = phaseContext,
-                    style = AppTypography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.testTag("gate_phase_text"),
-                )
+                ) {
+                    if (gateLabel != null) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .background(gateColor, CircleShape),
+                        )
+                        Spacer(modifier = Modifier.width(Spacing.xs))
+                        Text(
+                            text = gateLabel,
+                            style = AppTypography.caption,
+                            fontWeight = FontWeight.SemiBold,
+                            color = gateColor,
+                            modifier = Modifier.testTag("gate_phase_label"),
+                        )
+                        Spacer(modifier = Modifier.width(Spacing.sm))
+                    }
+                    Text(
+                        text = phaseContext,
+                        style = AppTypography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
 
                 // Approval progress
                 val gate = when (execution.gatePhase) {

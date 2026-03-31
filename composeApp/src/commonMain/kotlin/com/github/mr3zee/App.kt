@@ -432,6 +432,7 @@ fun App() {
                                 profileViewModel = profileViewModel,
                                 patViewModel = patViewModel,
                                 authApiClient = authApiClient,
+                                patApiClient = patApiClient,
                                 notificationsViewModel = notificationsViewModel,
                             )
                         }

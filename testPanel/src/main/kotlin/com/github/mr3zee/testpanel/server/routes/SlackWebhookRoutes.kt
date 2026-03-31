@@ -6,8 +6,10 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
 
 fun Routing.slackWebhookRoutes(state: TestPanelState) {
     post("/services/{path...}") {
@@ -21,6 +23,13 @@ fun Routing.slackWebhookRoutes(state: TestPanelState) {
         }
 
         state.addSlackMessage(text)
-        call.respondText("ok", status = HttpStatusCode.OK)
+
+        val now = System.currentTimeMillis()
+        val ts = "${now / 1000}.${"%06d".format(now % 1000 * 1000)}"
+        val responseJson = buildJsonObject {
+            put("ok", true)
+            put("ts", ts)
+        }
+        call.respondText(responseJson.toString(), ContentType.Application.Json, HttpStatusCode.OK)
     }
 }

@@ -690,3 +690,43 @@ internal fun DrawScope.drawBlockStatusIcon(
         }
     }
 }
+
+/**
+ * Draws a pulsing highlight ring around the active gate badge to indicate
+ * which gate (pre or post) is currently waiting for approval.
+ */
+internal fun DrawScope.drawActiveGateHighlight(
+    transform: CanvasTransform,
+    position: BlockPosition,
+    gatePhase: GatePhase,
+    colors: AppColors,
+    pulseAlpha: Float,
+) {
+    val screenX = transform.toScreenX(position.x)
+    val screenY = transform.toScreenY(position.y)
+    val screenW = transform.toScreen(position.width)
+    val badgeRadius = transform.toScreen(6f)
+
+    val center = when (gatePhase) {
+        GatePhase.PRE -> Offset(screenX + badgeRadius * 2, screenY)
+        GatePhase.POST -> Offset(screenX + screenW - badgeRadius * 2, screenY)
+    }
+    val color = when (gatePhase) {
+        GatePhase.PRE -> colors.gateIndicator
+        GatePhase.POST -> colors.gateIndicatorPost
+    }
+
+    // Outer pulsing glow
+    drawCircle(
+        color = color.copy(alpha = 0.25f * pulseAlpha),
+        radius = badgeRadius * 3f,
+        center = center,
+    )
+    // Bright ring
+    drawCircle(
+        color = color.copy(alpha = 0.6f + 0.4f * pulseAlpha),
+        radius = badgeRadius * 1.8f,
+        center = center,
+        style = Stroke(width = transform.toScreen(2f)),
+    )
+}

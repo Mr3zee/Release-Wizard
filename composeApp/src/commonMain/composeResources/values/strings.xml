@@ -253,7 +253,7 @@
     <string name="editor_autosave_saved">Saved</string>
     <string name="editor_autosave_failed_retrying">Save failed, retrying\u2026</string>
     <string name="editor_autosave_failed_exhausted">Auto-save failed</string>
-    <string name="editor_unsaved_navigate_warning">Changes haven\'t been saved yet — leave anyway?</string>
+    <string name="editor_unsaved_navigate_warning">Changes haven&apos;t been saved yet — leave anyway?</string>
     <string name="editor_lock_self_session">You are editing this project in another session</string>
     <string name="editor_lock_by_other">This project is being edited by %1$s</string>
     <string name="editor_lock_acquire_failed">Could not acquire the editing lock. Someone else may be editing, or there may be a connection issue. Try again.</string>
@@ -333,6 +333,7 @@
     <string name="releases_block_status">Status: %1$s</string>
     <string name="releases_webhook_no_updates_running">No status updates received yet</string>
     <string name="releases_webhook_no_updates_finished">No status updates were reported by this build</string>
+    <string name="releases_block_inputs">Inputs</string>
     <string name="releases_block_outputs">Outputs</string>
     <string name="releases_block_output_entry">%1$s: %2$s</string>
     <string name="releases_approval_progress">%1$d of %2$d approvals received</string>
@@ -694,7 +695,7 @@
     <string name="pat_expiry_custom_days_label">Days (1–365)</string>
     <string name="pat_expiry_never_warning">Non-expiring tokens are less secure</string>
     <string name="pat_token_warning">This is the only time this token will be shown. Save it now — it cannot be retrieved later.</string>
-    <string name="pat_token_saved">I\'ve saved this token</string>
+    <string name="pat_token_saved">I&apos;ve saved this token</string>
     <string name="pat_token_copied">Token copied to clipboard</string>
     <string name="pat_revoke">Revoke</string>
     <string name="pat_revoke_confirm">Revoke token \"%1$s\"? This cannot be undone.</string>
@@ -736,6 +737,11 @@
     <string name="admin_users_reject">Reject</string>
     <string name="admin_users_reject_confirm">This will permanently delete %1$s\u0027s account. They will need to register again.</string>
     <string name="admin_users_approved_success">%1$s has been approved</string>
+    <string name="admin_users_tokens_button">Tokens</string>
+    <string name="admin_users_tokens_loading">Loading tokens\u2026</string>
+    <string name="admin_users_tokens_empty">No access tokens</string>
+    <string name="admin_users_token_revoked">Token revoked</string>
+    <string name="admin_users_revoke_token_confirm">Revoke token \u201c%1$s\u201d? This cannot be undone.</string>
 
     <!-- ==================== Pending Approval Screen ==================== -->
     <string name="pending_approval_title">Registration Pending</string>

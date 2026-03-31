@@ -3,16 +3,25 @@ package com.github.mr3zee.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.mr3zee.api.AuthApiClient
+import com.github.mr3zee.api.PatApiClient
+import com.github.mr3zee.api.PatInfo
 import com.github.mr3zee.api.toUiMessage
 import com.github.mr3zee.model.User
 import com.github.mr3zee.util.UiMessage
 import com.github.mr3zee.util.copyToClipboard
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+sealed class AdminSuccessEvent {
+    data class UserApproved(val username: String) : AdminSuccessEvent()
+    data object TokenRevoked : AdminSuccessEvent()
+}
 
 class AdminUsersViewModel(
     private val authApiClient: AuthApiClient,
+    private val patApiClient: PatApiClient,
 ) : ViewModel() {
 
     private val _users = MutableStateFlow<List<User>?>(null)
@@ -33,8 +42,8 @@ class AdminUsersViewModel(
     private val _generatedLinks = MutableStateFlow<Map<String, String>>(emptyMap())
     val generatedLinks: StateFlow<Map<String, String>> = _generatedLinks
 
-    private val _successMessage = MutableStateFlow<String?>(null)
-    val successMessage: StateFlow<String?> = _successMessage
+    private val _successEvent = MutableStateFlow<AdminSuccessEvent?>(null)
+    val successEvent: StateFlow<AdminSuccessEvent?> = _successEvent
 
     init {
         loadUsers()
@@ -71,7 +80,7 @@ class AdminUsersViewModel(
             _error.value = null
             try {
                 authApiClient.approveUser(userId)
-                _successMessage.value = username
+                _successEvent.value = AdminSuccessEvent.UserApproved(username)
                 loadUsers()
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
@@ -92,7 +101,7 @@ class AdminUsersViewModel(
     }
 
     fun dismissSuccess() {
-        _successMessage.value = null
+        _successEvent.value = null
     }
 
     fun generateResetLink(userId: String) {
@@ -111,5 +120,40 @@ class AdminUsersViewModel(
 
     fun dismissError() {
         _error.value = null
+    }
+
+    // --- Admin PAT management ---
+
+    private val _userTokens = MutableStateFlow<Map<String, List<PatInfo>?>>(emptyMap())
+    val userTokens: StateFlow<Map<String, List<PatInfo>?>> = _userTokens
+
+    private val _loadingTokensFor = MutableStateFlow<Set<String>>(emptySet())
+    val loadingTokensFor: StateFlow<Set<String>> = _loadingTokensFor
+
+    fun loadUserTokens(userId: String) {
+        viewModelScope.launch {
+            _loadingTokensFor.update { it + userId }
+            try {
+                val tokens = patApiClient.listUserTokens(userId)
+                _userTokens.update { it + (userId to tokens) }
+            } catch (e: Exception) {
+                _error.value = e.toUiMessage()
+            } finally {
+                _loadingTokensFor.update { it - userId }
+            }
+        }
+    }
+
+    fun revokeUserToken(userId: String, tokenId: String) {
+        viewModelScope.launch {
+            _error.value = null
+            try {
+                patApiClient.revokeUserToken(userId, tokenId)
+                _successEvent.value = AdminSuccessEvent.TokenRevoked
+                loadUserTokens(userId)
+            } catch (e: Exception) {
+                _error.value = e.toUiMessage()
+            }
+        }
     }
 }

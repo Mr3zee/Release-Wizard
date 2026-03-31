@@ -55,6 +55,7 @@ fun AppNavigation(
     profileViewModel: ProfileViewModel? = null,
     patViewModel: PatViewModel? = null,
     authApiClient: AuthApiClient? = null,
+    patApiClient: com.github.mr3zee.api.PatApiClient? = null,
     notificationsViewModel: com.github.mr3zee.notifications.NotificationsViewModel? = null,
 ) {
     val isTeamLead = userTeams.any { it.role == TeamRole.TEAM_LEAD }
@@ -263,7 +264,8 @@ fun AppNavigation(
         }
         is Screen.AdminUsers -> {
             val client = authApiClient ?: return
-            val viewModel = remember { AdminUsersViewModel(client) }
+            val patClient = patApiClient ?: return
+            val viewModel = remember { AdminUsersViewModel(client, patClient) }
             AdminUsersScreen(
                 viewModel = viewModel,
                 currentUserId = currentUserId,

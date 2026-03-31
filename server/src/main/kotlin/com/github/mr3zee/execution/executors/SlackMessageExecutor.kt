@@ -12,13 +12,15 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.slf4j.LoggerFactory
 
 /**
  * Sends a message via Slack incoming webhook.
  *
  * Params: text (required)
- * Outputs: messageTs = "sent"
+ * Outputs: messageTs = timestamp (epoch seconds with microseconds, e.g. "1234567890.123456")
  */
 class SlackMessageExecutor(
     private val httpClient: HttpClient,
@@ -58,14 +60,26 @@ class SlackMessageExecutor(
             setBody(AppJson.encodeToString(payload))
         }
 
+        val responseBody = response.bodyAsText()
         if (!response.status.isSuccess()) {
-            val errorBody = response.bodyAsText()
-            log.warn("Slack webhook failed: {} - {}", response.status, errorBody)
+            log.warn("Slack webhook failed: {} - {}", response.status, responseBody)
             throw RuntimeException("Slack webhook failed (HTTP ${response.status.value})")
         }
 
+        // Try to extract ts from response body (JSON responses from chat.postMessage or mock servers).
+        // Incoming webhooks return plain "ok", so fall back to current epoch time in Slack ts format.
+        val messageTs = try {
+            val json = AppJson.parseToJsonElement(responseBody).jsonObject
+            json["ts"]?.jsonPrimitive?.content
+        } catch (_: Exception) {
+            null
+        } ?: run {
+            val now = System.currentTimeMillis()
+            "${now / 1000}.${"%06d".format(now % 1000 * 1000)}"
+        }
+
         return buildMap {
-            put(com.github.mr3zee.model.SlackOutputs.MESSAGE_TS, "sent")
+            put(com.github.mr3zee.model.SlackOutputs.MESSAGE_TS, messageTs)
         }
     }
 }

@@ -72,7 +72,8 @@ class ExecutorsTest {
         )
 
         assertEquals("https://hooks.slack.com/test", capturedUrl)
-        assertEquals("sent", outputs["messageTs"])
+        val messageTs = outputs["messageTs"] ?: error("messageTs output should be present")
+        assertTrue(messageTs.matches(Regex("\\d+\\.\\d+")), "messageTs should be epoch timestamp format, got: $messageTs")
         val body = capturedBody ?: error("capturedBody should have been set by the mock client")
         assertTrue(body.contains("Deploy complete!"))
     }

@@ -69,7 +69,8 @@ class SlackMessageExecutorIntegrationTest {
             context = context(),
         )
 
-        assertEquals("sent", outputs["messageTs"])
+        val messageTs = outputs["messageTs"] ?: error("messageTs output should be present")
+        assertTrue(messageTs.matches(Regex("\\d+\\.\\d+")), "messageTs should be epoch timestamp format, got: $messageTs")
 
         // Verify message arrived via Bot API
         val message = (client ?: error("HttpClient not initialized")).findSlackMessageByText(

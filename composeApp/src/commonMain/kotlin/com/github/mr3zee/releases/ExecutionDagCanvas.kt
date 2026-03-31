@@ -58,6 +58,9 @@ fun ExecutionDagCanvas(
     val drawTransform = CanvasTransform(zoom, panOffset, density)
 
     val hasRunningBlocks = remember(blockExecutions) { blockExecutions.any { it.status == BlockStatus.RUNNING } }
+    val hasWaitingGates = remember(blockExecutions) {
+        blockExecutions.any { it.status == BlockStatus.WAITING_FOR_INPUT && it.gatePhase != null }
+    }
     val infiniteTransition = rememberInfiniteTransition(label = "running_indicator")
     val runningPhase by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -68,11 +71,21 @@ fun ExecutionDagCanvas(
         ),
         label = "running_phase",
     )
+    val gatePulse by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "gate_pulse",
+    )
 
     // Pre-resolve block type labels in composable context (typeLabel() uses string resources)
     val blockLabels = graph.blocks.associate { block -> block.id to block.typeLabel() }
 
     val effectiveRunningPhase = if (hasRunningBlocks) runningPhase else 0f
+    val effectiveGatePulse = if (hasWaitingGates) gatePulse else 0f
 
     Canvas(
         modifier = modifier
@@ -167,6 +180,12 @@ fun ExecutionDagCanvas(
             }
             if (execution?.status == BlockStatus.RUNNING && hasRunningBlocks) {
                 drawRunningIndicator(drawTransform, pos, effectiveRunningPhase, appColors)
+            }
+            val waitingGatePhase = execution?.let {
+                if (it.status == BlockStatus.WAITING_FOR_INPUT) it.gatePhase else null
+            }
+            if (waitingGatePhase != null) {
+                drawActiveGateHighlight(drawTransform, pos, waitingGatePhase, appColors, effectiveGatePulse)
             }
         }
     }
