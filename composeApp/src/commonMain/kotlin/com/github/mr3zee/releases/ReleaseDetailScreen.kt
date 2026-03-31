@@ -1,9 +1,12 @@
 package com.github.mr3zee.releases
 
 import androidx.compose.foundation.VerticalScrollbar
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.rememberScrollbarAdapter
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -11,9 +14,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.RwButton
 import com.github.mr3zee.components.RwButtonVariant
@@ -45,13 +53,13 @@ private sealed class ActiveConfirmation {
     data object CancelRelease : ActiveConfirmation()
     data object StopRelease : ActiveConfirmation()
     data class StopBlock(val blockId: BlockId) : ActiveConfirmation()
-    data class ApproveBlock(val blockId: BlockId, val gateMessage: String) : ActiveConfirmation()
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReleaseDetailScreen(
     release: Release?,
+    projectName: String? = null,
     blockExecutions: List<BlockExecution>,
     isConnected: Boolean,
     reconnectAttempt: Int = 0,
@@ -69,6 +77,7 @@ fun ReleaseDetailScreen(
 ) {
     var selectedBlockId by remember(release?.id) { mutableStateOf<BlockId?>(null) }
     var activeConfirmation by remember { mutableStateOf<ActiveConfirmation>(ActiveConfirmation.None) }
+    var panelHeight by remember { mutableStateOf(350.dp) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val resolvedError = error?.resolve()
@@ -98,7 +107,8 @@ fun ReleaseDetailScreen(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
                         val titleText = if (release != null) {
-                            packStringResource(Res.string.releases_release_title, release.id.value.take(8))
+                            val displayName = projectName ?: release.id.value.take(8)
+                            packStringResource(Res.string.releases_release_title, displayName)
                         } else {
                             packStringResource(Res.string.releases_detail_title)
                         }
@@ -295,16 +305,10 @@ fun ReleaseDetailScreen(
                             execution = execution,
                             releaseStatus = release.status,
                             activeConfirmation = activeConfirmation,
-                            onApprove = {
-                                val gateMessage = execution.gateMessage ?: defaultApproveMessage
-                                activeConfirmation = ActiveConfirmation.ApproveBlock(blockId, gateMessage)
-                            },
+                            panelHeight = panelHeight,
+                            onPanelHeightChange = { panelHeight = it },
+                            onApprove = { onApproveBlock(blockId) },
                             onStopBlock = { activeConfirmation = ActiveConfirmation.StopBlock(blockId) },
-                            onConfirmApprove = {
-                                val approveBlockId = (activeConfirmation as? ActiveConfirmation.ApproveBlock)?.blockId
-                                activeConfirmation = ActiveConfirmation.None
-                                if (approveBlockId != null) onApproveBlock(approveBlockId)
-                            },
                             onConfirmStopBlock = {
                                 val stopBlockId = (activeConfirmation as? ActiveConfirmation.StopBlock)?.blockId
                                 activeConfirmation = ActiveConfirmation.None
@@ -394,13 +398,18 @@ private fun BlockDetailPanel(
     execution: BlockExecution,
     releaseStatus: ReleaseStatus = ReleaseStatus.RUNNING,
     activeConfirmation: ActiveConfirmation,
+    panelHeight: Dp,
+    onPanelHeightChange: (Dp) -> Unit,
     onApprove: () -> Unit,
     onStopBlock: () -> Unit = {},
-    onConfirmApprove: () -> Unit,
     onConfirmStopBlock: () -> Unit,
     onDismissConfirmation: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val density = LocalDensity.current
+    val currentPanelHeight by rememberUpdatedState(panelHeight)
+    val currentOnChange by rememberUpdatedState(onPanelHeightChange)
+
     Surface(
         tonalElevation = 2.dp,
         modifier = Modifier
@@ -408,17 +417,44 @@ private fun BlockDetailPanel(
             .testTag("block_detail_panel"),
     ) {
         val execScrollState = rememberScrollState()
-        Box(modifier = Modifier.heightIn(max = 350.dp)) {
+        Column {
+        // Drag handle
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(12.dp)
+                .pointerInput(Unit) {
+                    detectVerticalDragGestures { _, dragAmount ->
+                        with(density) {
+                            currentOnChange((currentPanelHeight - dragAmount.toDp()).coerceIn(150.dp, 600.dp))
+                        }
+                    }
+                }
+                .pointerHoverIcon(PointerIcon.Hand),
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(32.dp)
+                    .height(4.dp)
+                    .background(
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                        RoundedCornerShape(2.dp),
+                    ),
+            )
+        }
+        Box(modifier = Modifier.heightIn(max = panelHeight)) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(execScrollState)
-                .padding(Spacing.lg),
+                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
         ) {
+            // Header row: name + type | status + duration | close
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -434,6 +470,11 @@ private fun BlockDetailPanel(
                         modifier = Modifier.testTag("block_type_label"),
                     )
                 }
+                Text(
+                    text = execution.status.displayName(),
+                    style = AppTypography.label,
+                    modifier = Modifier.testTag("block_status_text"),
+                )
                 RwButton(onClick = onDismiss, variant = RwButtonVariant.Ghost) {
                     Text(packStringResource(Res.string.common_close))
                 }
@@ -459,25 +500,6 @@ private fun BlockDetailPanel(
                 isDestructive = true,
                 testTag = "confirm_stop_block",
                 modifier = Modifier.padding(vertical = Spacing.xs),
-            )
-
-            // Approve block inline confirmation
-            val approveConfirmation = activeConfirmation as? ActiveConfirmation.ApproveBlock
-            RwInlineConfirmation(
-                visible = approveConfirmation != null && approveConfirmation.blockId == execution.blockId,
-                message = approveConfirmation?.gateMessage ?: "",
-                confirmLabel = packStringResource(Res.string.common_approve),
-                onConfirm = onConfirmApprove,
-                onDismiss = onDismissConfirmation,
-                isDestructive = false,
-                testTag = "confirm_approve_block",
-                modifier = Modifier.padding(vertical = Spacing.xs),
-            )
-
-            Text(
-                text = packStringResource(Res.string.releases_block_status, execution.status.displayName()),
-                style = AppTypography.body,
-                modifier = Modifier.testTag("block_status_text"),
             )
 
             // Duration / elapsed time
@@ -617,10 +639,9 @@ private fun BlockDetailPanel(
                 )
 
                 // Approval progress
-                val actionBlock = block as? Block.ActionBlock
                 val gate = when (execution.gatePhase) {
-                    GatePhase.PRE -> actionBlock?.preGate
-                    GatePhase.POST -> actionBlock?.postGate
+                    GatePhase.PRE -> block.preGate
+                    GatePhase.POST -> block.postGate
                     null -> null // gatePhase should always be set; don't guess
                 }
                 gate?.let { g ->
@@ -663,7 +684,10 @@ private fun BlockDetailPanel(
                 }
 
                 Spacer(modifier = Modifier.height(Spacing.xs))
-                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     RwButton(
                         onClick = onApprove,
                         modifier = Modifier.testTag("approve_block_button"),
@@ -671,6 +695,7 @@ private fun BlockDetailPanel(
                     ) {
                         Text(packStringResource(Res.string.common_approve))
                     }
+                    Spacer(modifier = Modifier.weight(1f))
                     if (releaseStatus == ReleaseStatus.RUNNING) {
                         RwButton(
                             onClick = onStopBlock,
@@ -687,13 +712,15 @@ private fun BlockDetailPanel(
             // Stop button for running blocks (without gate)
             if (execution.status == BlockStatus.RUNNING && releaseStatus == ReleaseStatus.RUNNING) {
                 Spacer(modifier = Modifier.height(Spacing.sm))
-                RwButton(
-                    onClick = onStopBlock,
-                    modifier = Modifier.testTag("stop_block_button"),
-                    variant = RwButtonVariant.Ghost,
-                    contentColor = MaterialTheme.colorScheme.error,
-                ) {
-                    Text(packStringResource(Res.string.releases_stop))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    RwButton(
+                        onClick = onStopBlock,
+                        modifier = Modifier.testTag("stop_block_button"),
+                        variant = RwButtonVariant.Ghost,
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ) {
+                        Text(packStringResource(Res.string.releases_stop))
+                    }
                 }
             }
         }
@@ -701,6 +728,7 @@ private fun BlockDetailPanel(
             modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
             adapter = rememberScrollbarAdapter(execScrollState),
         )
+        }
         }
     }
 }

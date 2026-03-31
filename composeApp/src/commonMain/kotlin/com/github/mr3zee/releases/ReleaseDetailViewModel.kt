@@ -2,6 +2,7 @@ package com.github.mr3zee.releases
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.github.mr3zee.api.ProjectApiClient
 import com.github.mr3zee.api.ReleaseApiClient
 import com.github.mr3zee.api.ReleaseEvent
 import com.github.mr3zee.api.toUiMessage
@@ -18,10 +19,14 @@ import kotlin.time.Duration.Companion.milliseconds
 class ReleaseDetailViewModel(
     private val releaseId: ReleaseId,
     private val releaseApiClient: ReleaseApiClient,
+    private val projectApiClient: ProjectApiClient,
 ) : ViewModel() {
 
     private val _release = MutableStateFlow<Release?>(null)
     val release: StateFlow<Release?> = _release
+
+    private val _projectName = MutableStateFlow<String?>(null)
+    val projectName: StateFlow<String?> = _projectName
 
     private val _blockExecutions = MutableStateFlow<List<BlockExecution>>(emptyList())
     val blockExecutions: StateFlow<List<BlockExecution>> = _blockExecutions
@@ -102,6 +107,16 @@ class ReleaseDetailViewModel(
             is ReleaseEvent.Snapshot -> {
                 _release.value = event.release
                 _blockExecutions.value = event.blockExecutions
+                if (_projectName.value == null) {
+                    viewModelScope.launch {
+                        try {
+                            val project = projectApiClient.getProject(event.release.projectTemplateId)
+                            _projectName.value = project.name
+                        } catch (_: Exception) {
+                            // Project name is best-effort; fall back to ID
+                        }
+                    }
+                }
             }
             is ReleaseEvent.ReleaseStatusChanged -> {
                 _release.value = _release.value?.copy(

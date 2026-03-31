@@ -163,7 +163,7 @@ fun ExecutionDagCanvas(
             }
             drawBlock(drawTransform, block, pos, isSelected = block.id == selectedBlockId, textMeasurer, zoom, appColors, blockLabels[block.id] ?: "", fillColor)
             if (execution != null) {
-                drawBlockStatusIcon(drawTransform, pos, execution.status, appColors)
+                drawBlockStatusIcon(drawTransform, pos, execution.status, appColors, execution.gatePhase)
             }
             if (execution?.status == BlockStatus.RUNNING && hasRunningBlocks) {
                 drawRunningIndicator(drawTransform, pos, effectiveRunningPhase, appColors)

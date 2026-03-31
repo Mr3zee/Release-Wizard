@@ -247,24 +247,22 @@ internal fun DrawScope.drawBlock(
     )
 
     // Gate badge indicators
-    if (block is Block.ActionBlock) {
-        val badgeRadius = transform.toScreen(5f)
-        val strokeWidth = transform.toScreen(1.5f)
-        if (block.preGate != null) {
-            // Pre-gate: filled circle at top-left corner
+    val preGate = block.preGate
+    val postGate = block.postGate
+    if (preGate != null || postGate != null) {
+        val badgeRadius = transform.toScreen(6f)
+        if (preGate != null) {
             drawCircle(
                 color = colors.gateIndicator,
                 radius = badgeRadius,
                 center = Offset(screenX + badgeRadius * 2, screenY),
             )
         }
-        if (block.postGate != null) {
-            // Post-gate: ring at top-right corner (visually distinct from pre-gate)
+        if (postGate != null) {
             drawCircle(
-                color = colors.gateIndicator,
+                color = colors.gateIndicatorPost,
                 radius = badgeRadius,
                 center = Offset(screenX + screenW - badgeRadius * 2, screenY),
-                style = Stroke(width = strokeWidth),
             )
         }
     }
@@ -414,6 +412,25 @@ internal fun DrawScope.drawContainerBlock(
                 contentCenterY - hintLayout.size.height / 2,
             ),
         )
+    }
+
+    // Gate badge indicators
+    if (container.preGate != null || container.postGate != null) {
+        val badgeRadius = transform.toScreen(6f)
+        if (container.preGate != null) {
+            drawCircle(
+                color = colors.gateIndicator,
+                radius = badgeRadius,
+                center = Offset(screenX + badgeRadius * 2, screenY),
+            )
+        }
+        if (container.postGate != null) {
+            drawCircle(
+                color = colors.gateIndicatorPost,
+                radius = badgeRadius,
+                center = Offset(screenX + screenW - badgeRadius * 2, screenY),
+            )
+        }
     }
 }
 
@@ -597,6 +614,7 @@ internal fun DrawScope.drawBlockStatusIcon(
     position: BlockPosition,
     status: BlockStatus,
     colors: AppColors,
+    gatePhase: GatePhase? = null,
 ) {
     val screenX = transform.toScreenX(position.x)
     val screenY = transform.toScreenY(position.y)
@@ -612,7 +630,11 @@ internal fun DrawScope.drawBlockStatusIcon(
         BlockStatus.SUCCEEDED -> colors.blockStatusSucceeded
         BlockStatus.FAILED -> colors.blockStatusFailed
         BlockStatus.WAITING -> colors.blockStatusWaiting
-        BlockStatus.WAITING_FOR_INPUT -> colors.blockStatusWaitingForInput
+        BlockStatus.WAITING_FOR_INPUT -> when (gatePhase) {
+            GatePhase.PRE -> colors.gateIndicator
+            GatePhase.POST -> colors.gateIndicatorPost
+            null -> colors.blockStatusWaitingForInput
+        }
         BlockStatus.RUNNING -> return // spinner dot handles this
         BlockStatus.STOPPED -> colors.blockStatusStopped
     }

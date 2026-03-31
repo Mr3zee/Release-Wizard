@@ -15,7 +15,6 @@ private val NEVER_OVERRIDE = setOf(
     "connections_tc_token",
     "connections_slack_webhook_url",
     "connections_tc_server_url",
-    "editor_template_button",
     "editor_prop_remove",
     "editor_dirty_indicator",
 )

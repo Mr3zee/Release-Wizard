@@ -6,13 +6,8 @@ import com.github.mr3zee.api.MavenTriggerApiClient
 import com.github.mr3zee.api.ScheduleApiClient
 import com.github.mr3zee.api.TeamApiClient
 import com.github.mr3zee.api.WebhookTriggerApiClient
-import androidx.compose.foundation.layout.Box
 import com.github.mr3zee.automation.ProjectAutomationScreen
 import com.github.mr3zee.automation.ProjectAutomationViewModel
-import com.github.mr3zee.editor.TemplatePickerDropdown
-import com.github.mr3zee.model.Block
-import com.github.mr3zee.model.BlockId
-import com.github.mr3zee.model.BlockType
 import com.github.mr3zee.model.Parameter
 import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.model.TeamId
@@ -120,64 +115,6 @@ class Phase1BugFixTest {
         }
         onNodeWithTag("audit_event_list").assertExists()
         onNodeWithTag("audit_event_e1", useUnmergedTree = true).assertExists()
-    }
-
-    // ── 1F: TemplatePickerDropdown Test ──
-
-    @Test
-    fun `1F template picker dropdown renders without crash`() = runComposeUiTest {
-        val params = listOf(
-            Parameter(key = "version", value = "1.0.0"),
-            Parameter(key = "branch", value = "main"),
-        )
-        val predecessors = listOf(
-            Block.ActionBlock(
-                id = BlockId("b1"),
-                name = "Build",
-                type = BlockType.TEAMCITY_BUILD,
-            )
-        )
-
-        setContent {
-            MaterialTheme {
-                Box {
-                    TemplatePickerDropdown(
-                        expanded = true,
-                        parameters = params,
-                        predecessors = predecessors,
-                        onSelect = {},
-                        onDismiss = {},
-                    )
-                }
-            }
-        }
-
-        // The dropdown renders without intrinsic measurement crash
-        onNodeWithTag("template_picker_dropdown").assertExists()
-        // Parameter suggestions appear
-        onNodeWithTag("template_item_version", useUnmergedTree = true).assertExists()
-        onNodeWithTag("template_item_branch", useUnmergedTree = true).assertExists()
-    }
-
-    @Test
-    fun `1F template picker dropdown shows empty state`() = runComposeUiTest {
-        setContent {
-            MaterialTheme {
-                Box {
-                    TemplatePickerDropdown(
-                        expanded = true,
-                        parameters = emptyList(),
-                        predecessors = emptyList(),
-                        onSelect = {},
-                        onDismiss = {},
-                    )
-                }
-            }
-        }
-
-        onNodeWithTag("template_picker_dropdown").assertExists()
-        // No template items should be present
-        onAllNodes(hasTestTag("template_item_version")).assertCountEquals(0)
     }
 
     // ── 1C: Invite Dialog Inline Error Tests ──

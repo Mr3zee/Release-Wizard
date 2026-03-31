@@ -381,6 +381,13 @@ class ExternalConfigDiscoveryTest {
         vm.selectExternalConfig(BlockId("b1"), "Proj_Build")
         waitForIdle()
 
+        // Navigate to Parameters tab where refresh button lives
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("properties_tab_1").fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithTag("properties_tab_1").performClick()
+        waitForIdle()
+
         // Refresh parameters button should appear
         waitUntil(timeoutMillis = 3000L) {
             onAllNodesWithTag("refresh_parameters_button", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()

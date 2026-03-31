@@ -1,6 +1,10 @@
 package com.github.mr3zee.editor
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.FocusInteraction
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.layout.*
@@ -8,12 +12,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
@@ -26,10 +33,12 @@ import com.github.mr3zee.components.RwDropdownMenuItem
 import com.github.mr3zee.components.RwCheckbox
 import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwMarkdownField
+import com.github.mr3zee.components.RwSegmentedTabRow
 import com.github.mr3zee.components.RwTextField
-import com.github.mr3zee.components.RwTooltip
 import com.github.mr3zee.model.*
+import com.github.mr3zee.theme.AppShapes
 import com.github.mr3zee.theme.AppTypography
+import com.github.mr3zee.theme.LocalAppColors
 import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.displayName
 import com.github.mr3zee.i18n.packPluralStringResource
@@ -60,6 +69,7 @@ fun BlockPropertiesPanel(
     onUpdateInjectWebhookUrl: (BlockId, Boolean) -> Unit = { _, _ -> },
     projectDescription: String = "",
     onUpdateProjectDescription: (String) -> Unit = {},
+    onUpdateProjectParameters: (List<Parameter>) -> Unit = {},
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
@@ -75,14 +85,6 @@ fun BlockPropertiesPanel(
             .verticalScroll(scrollState)
             .padding(Spacing.md),
     ) {
-        if (block != null) {
-            Text(
-                packStringResource(Res.string.editor_prop_title),
-                style = AppTypography.subheading,
-                modifier = Modifier.padding(bottom = Spacing.sm),
-            )
-        }
-
         if (block == null) {
             // Project description editor when no block is selected
             Text(
@@ -102,6 +104,52 @@ fun BlockPropertiesPanel(
                 modifier = Modifier.fillMaxWidth().testTag("project_description_field"),
                 testTag = "project_description_field",
             )
+
+            Spacer(Modifier.height(Spacing.lg))
+
+            // Project parameters editor
+            Text(
+                packStringResource(Res.string.editor_project_parameters_header),
+                style = AppTypography.subheading,
+            )
+            Spacer(Modifier.height(Spacing.xs))
+
+            var projParams by remember(projectParameters) { mutableStateOf(projectParameters) }
+            if (projParams != projectParameters) projParams = projectParameters
+
+            projParams.forEachIndexed { index, param ->
+                key(index) {
+                    SimpleParameterCard(
+                        parameter = param,
+                        keyPlaceholder = packStringResource(Res.string.editor_project_param_key),
+                        valuePlaceholder = packStringResource(Res.string.editor_project_param_value),
+                        onUpdate = { updated ->
+                            projParams = projParams.toMutableList().apply { set(index, updated) }
+                            onUpdateProjectParameters(projParams)
+                        },
+                        onRemove = {
+                            projParams = projParams.toMutableList().apply { removeAt(index) }
+                            onUpdateProjectParameters(projParams)
+                        },
+                        enabled = enabled,
+                        removeTestTag = "remove_project_param_$index",
+                    )
+                    Spacer(Modifier.height(Spacing.sm))
+                }
+            }
+
+            RwButton(
+                onClick = {
+                    projParams = projParams + Parameter(key = "", value = "")
+                    onUpdateProjectParameters(projParams)
+                },
+                variant = RwButtonVariant.Secondary,
+                enabled = enabled,
+                modifier = Modifier.fillMaxWidth().testTag("add_project_parameter_button"),
+            ) {
+                Text(packStringResource(Res.string.editor_project_add_parameter))
+            }
+
             return@Column
         }
 
@@ -120,53 +168,147 @@ fun BlockPropertiesPanel(
             modifier = Modifier.fillMaxWidth().testTag("block_name_field"),
         )
 
-        Spacer(Modifier.height(Spacing.lg))
+        Spacer(Modifier.height(Spacing.sm))
 
         when (block) {
             is Block.ActionBlock -> {
-                ActionBlockProperties(
-                    block = block,
-                    graph = graph,
-                    projectParameters = projectParameters,
-                    connections = connections,
-                    externalConfigs = externalConfigs,
-                    isFetchingConfigs = isFetchingConfigs,
-                    configFetchError = configFetchError,
-                    isFetchingConfigParams = isFetchingConfigParams,
-                    onUpdateType = onUpdateType,
-                    onUpdateConnectionId = onUpdateConnectionId,
-                    onSelectConfig = onSelectConfig,
-                    onRefreshConfigs = onRefreshConfigs,
-                    onRefreshConfigParams = onRefreshConfigParams,
-                    onUpdateParameters = onUpdateParameters,
-                    onUpdateTimeout = onUpdateTimeout,
-                    onUpdatePreGate = onUpdatePreGate,
-                    onUpdatePostGate = onUpdatePostGate,
-                    onUpdateInjectWebhookUrl = onUpdateInjectWebhookUrl,
-                    enabled = enabled,
+                var selectedTab by remember(block.id) { mutableStateOf(0) }
+
+                val configKey = block.type.configIdParameterKey()
+                val isSlack = block.type == BlockType.SLACK_MESSAGE
+                val visibleParamCount = remember(block.parameters, configKey, isSlack) {
+                    block.parameters.count { p ->
+                        (configKey == null || p.key != configKey) &&
+                            (!isSlack || p.key != "text")
+                    }
+                }
+                val gateCount = listOfNotNull(block.preGate, block.postGate).size
+
+                val paramsLabel = if (visibleParamCount > 0) {
+                    "${packStringResource(Res.string.editor_tab_parameters)} ($visibleParamCount)"
+                } else {
+                    packStringResource(Res.string.editor_tab_parameters)
+                }
+                val gatesLabel = if (gateCount > 0) {
+                    "${packStringResource(Res.string.editor_tab_gates)} ($gateCount)"
+                } else {
+                    packStringResource(Res.string.editor_tab_gates)
+                }
+                val tabLabels = listOf(
+                    packStringResource(Res.string.editor_tab_overview),
+                    paramsLabel,
+                    gatesLabel,
                 )
+                RwSegmentedTabRow(
+                    tabs = tabLabels,
+                    selectedIndex = selectedTab,
+                    onTabSelected = { selectedTab = it },
+                    enabled = enabled,
+                    testTagPrefix = "properties_tab",
+                )
+                Spacer(Modifier.height(Spacing.sm))
+
+                when (selectedTab) {
+                    0 -> OverviewTabContent(
+                        block = block,
+                        connections = connections,
+                        externalConfigs = externalConfigs,
+                        isFetchingConfigs = isFetchingConfigs,
+                        configFetchError = configFetchError,
+                        onUpdateType = onUpdateType,
+                        onUpdateConnectionId = onUpdateConnectionId,
+                        onSelectConfig = onSelectConfig,
+                        onRefreshConfigs = onRefreshConfigs,
+                        onUpdateInjectWebhookUrl = onUpdateInjectWebhookUrl,
+                        onUpdateParameters = onUpdateParameters,
+                        onUpdateTimeout = onUpdateTimeout,
+                        onUpdateDescription = onUpdateDescription,
+                        enabled = enabled,
+                    )
+                    1 -> ParametersTabContent(
+                        block = block,
+                        graph = graph,
+                        projectParameters = projectParameters,
+                        isFetchingConfigParams = isFetchingConfigParams,
+                        onRefreshConfigParams = onRefreshConfigParams,
+                        onUpdateParameters = onUpdateParameters,
+                        enabled = enabled,
+                    )
+                    2 -> GatesTabContent(
+                        block = block,
+                        graph = graph,
+                        projectParameters = projectParameters,
+                        onUpdatePreGate = onUpdatePreGate,
+                        onUpdatePostGate = onUpdatePostGate,
+                        enabled = enabled,
+                    )
+                }
             }
             is Block.ContainerBlock -> {
-                Text(
-                    packStringResource(Res.string.editor_prop_container_type),
-                    style = AppTypography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                var containerTab by remember(block.id) { mutableStateOf(0) }
+                val gateCount = listOfNotNull(block.preGate, block.postGate).size
+                val gatesLabel = if (gateCount > 0) {
+                    "${packStringResource(Res.string.editor_tab_gates)} ($gateCount)"
+                } else {
+                    packStringResource(Res.string.editor_tab_gates)
+                }
+                RwSegmentedTabRow(
+                    tabs = listOf(packStringResource(Res.string.editor_tab_overview), gatesLabel),
+                    selectedIndex = containerTab,
+                    onTabSelected = { containerTab = it },
+                    enabled = enabled,
+                    testTagPrefix = "container_tab",
                 )
-                Text(
-                    packPluralStringResource(Res.plurals.child_blocks, block.children.blocks.size, block.children.blocks.size),
-                    style = AppTypography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Spacer(Modifier.height(Spacing.sm))
+
+                when (containerTab) {
+                    0 -> {
+                        Text(
+                            packStringResource(Res.string.editor_prop_container_type),
+                            style = AppTypography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            packPluralStringResource(Res.plurals.child_blocks, block.children.blocks.size, block.children.blocks.size),
+                            style = AppTypography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.height(Spacing.lg))
+                        BlockDescriptionSection(
+                            block = block,
+                            enabled = enabled,
+                            onUpdateDescription = onUpdateDescription,
+                        )
+                    }
+                    1 -> {
+                        val predecessors = remember(graph, block.id) {
+                            com.github.mr3zee.dag.findPredecessors(graph, block.id)
+                        }
+                        SingleGateEditor(
+                            label = packStringResource(Res.string.editor_gate_pre_label),
+                            gate = block.preGate,
+                            blockId = block.id,
+                            projectParameters = projectParameters,
+                            predecessors = predecessors,
+                            onUpdate = { onUpdatePreGate(block.id, it) },
+                            enabled = enabled,
+                            testTagPrefix = "pre_gate",
+                        )
+                        Spacer(Modifier.height(Spacing.lg))
+                        SingleGateEditor(
+                            label = packStringResource(Res.string.editor_gate_post_label),
+                            gate = block.postGate,
+                            blockId = block.id,
+                            projectParameters = projectParameters,
+                            predecessors = predecessors,
+                            onUpdate = { onUpdatePostGate(block.id, it) },
+                            enabled = enabled,
+                            testTagPrefix = "post_gate",
+                        )
+                    }
+                }
             }
         }
-
-        // Description — collapsible section after type-specific config
-        Spacer(Modifier.height(Spacing.lg))
-        BlockDescriptionSection(
-            block = block,
-            enabled = enabled,
-            onUpdateDescription = onUpdateDescription,
-        )
     }
     VerticalScrollbar(
         modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
@@ -250,30 +392,26 @@ private fun BlockDescriptionSection(
 }
 
 @Composable
-private fun ActionBlockProperties(
+private fun OverviewTabContent(
     block: Block.ActionBlock,
-    graph: DagGraph,
-    projectParameters: List<Parameter>,
     connections: List<Connection>,
     externalConfigs: List<ExternalConfig>,
     isFetchingConfigs: Boolean,
     configFetchError: String?,
-    isFetchingConfigParams: Boolean,
     onUpdateType: (BlockId, BlockType) -> Unit,
     onUpdateConnectionId: (BlockId, ConnectionId?) -> Unit,
     onSelectConfig: (BlockId, String) -> Unit,
     onRefreshConfigs: (BlockId) -> Unit,
-    onRefreshConfigParams: (BlockId) -> Unit,
+    onUpdateInjectWebhookUrl: (BlockId, Boolean) -> Unit,
     onUpdateParameters: (BlockId, List<Parameter>) -> Unit,
     onUpdateTimeout: (BlockId, Long?) -> Unit,
-    onUpdatePreGate: (BlockId, Gate?) -> Unit,
-    onUpdatePostGate: (BlockId, Gate?) -> Unit,
-    onUpdateInjectWebhookUrl: (BlockId, Boolean) -> Unit = { _, _ -> },
-    enabled: Boolean = true,
+    onUpdateDescription: (BlockId, String) -> Unit,
+    enabled: Boolean,
 ) {
     // Type selector
     var typeExpanded by remember(block.id) { mutableStateOf(false) }
     Text(packStringResource(Res.string.editor_prop_type), style = AppTypography.label)
+    Spacer(Modifier.height(Spacing.xs))
     Box {
         RwButton(
             onClick = { typeExpanded = true },
@@ -301,7 +439,7 @@ private fun ActionBlockProperties(
 
     Spacer(Modifier.height(Spacing.lg))
 
-    // Connection selector — shown for block types that need a connection
+    // Connection selector
     val requiredConnectionType = block.type.requiredConnectionType()
     if (requiredConnectionType != null) {
         val filteredConnections = remember(connections, requiredConnectionType) {
@@ -313,6 +451,7 @@ private fun ActionBlockProperties(
         var connExpanded by remember(block.id) { mutableStateOf(false) }
 
         Text(packStringResource(Res.string.editor_prop_connection), style = AppTypography.label)
+        Spacer(Modifier.height(Spacing.xs))
         Box {
             RwButton(
                 onClick = { connExpanded = true },
@@ -357,7 +496,7 @@ private fun ActionBlockProperties(
         Spacer(Modifier.height(Spacing.lg))
     }
 
-    // External config selector — shown for block types with configIdParameterKey and a selected connection
+    // External config selector
     val configKey = block.type.configIdParameterKey()
     if (configKey != null && block.connectionId != null) {
         val selectedConfigId = block.parameters.find { it.key == configKey }?.value
@@ -378,6 +517,7 @@ private fun ActionBlockProperties(
     if (block.type == BlockType.TEAMCITY_BUILD) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             modifier = Modifier.fillMaxWidth(),
         ) {
             RwCheckbox(
@@ -401,12 +541,11 @@ private fun ActionBlockProperties(
         Spacer(Modifier.height(Spacing.lg))
     }
 
-    // Slack Message — dedicated text field (manages the "text" parameter)
+    // Slack Message
     if (block.type == BlockType.SLACK_MESSAGE) {
         var slackMessage by remember(block.id) {
             mutableStateOf(block.parameters.find { it.key == "text" }?.value ?: "")
         }
-        // Sync if the block's parameters change externally
         val currentTextValue = block.parameters.find { it.key == "text" }?.value ?: ""
         if (slackMessage != currentTextValue) slackMessage = currentTextValue
 
@@ -466,24 +605,29 @@ private fun ActionBlockProperties(
         modifier = Modifier.fillMaxWidth().testTag("block_timeout_field"),
     )
 
+    // Description
     Spacer(Modifier.height(Spacing.lg))
+    BlockDescriptionSection(
+        block = block,
+        enabled = enabled,
+        onUpdateDescription = onUpdateDescription,
+    )
+}
 
-    // Compute predecessors for template picker (shared by gates and parameters)
+@Composable
+private fun ParametersTabContent(
+    block: Block.ActionBlock,
+    graph: DagGraph,
+    projectParameters: List<Parameter>,
+    isFetchingConfigParams: Boolean,
+    onRefreshConfigParams: (BlockId) -> Unit,
+    onUpdateParameters: (BlockId, List<Parameter>) -> Unit,
+    enabled: Boolean,
+) {
+    val configKey = block.type.configIdParameterKey()
     val predecessors = remember(graph, block.id) {
         com.github.mr3zee.dag.findPredecessors(graph, block.id)
     }
-
-    // Approval Gates
-    GateConfigSection(
-        block = block,
-        projectParameters = projectParameters,
-        predecessors = predecessors,
-        onUpdatePreGate = onUpdatePreGate,
-        onUpdatePostGate = onUpdatePostGate,
-        enabled = enabled,
-    )
-
-    Spacer(Modifier.height(Spacing.lg))
 
     // Parameters header with refresh button
     Row(
@@ -567,6 +711,44 @@ private fun ActionBlockProperties(
 }
 
 @Composable
+private fun GatesTabContent(
+    block: Block.ActionBlock,
+    graph: DagGraph,
+    projectParameters: List<Parameter>,
+    onUpdatePreGate: (BlockId, Gate?) -> Unit,
+    onUpdatePostGate: (BlockId, Gate?) -> Unit,
+    enabled: Boolean,
+) {
+    val predecessors = remember(graph, block.id) {
+        com.github.mr3zee.dag.findPredecessors(graph, block.id)
+    }
+
+    SingleGateEditor(
+        label = packStringResource(Res.string.editor_gate_pre_label),
+        gate = block.preGate,
+        blockId = block.id,
+        projectParameters = projectParameters,
+        predecessors = predecessors,
+        onUpdate = { onUpdatePreGate(block.id, it) },
+        enabled = enabled,
+        testTagPrefix = "pre_gate",
+    )
+
+    Spacer(Modifier.height(Spacing.lg))
+
+    SingleGateEditor(
+        label = packStringResource(Res.string.editor_gate_post_label),
+        gate = block.postGate,
+        blockId = block.id,
+        projectParameters = projectParameters,
+        predecessors = predecessors,
+        onUpdate = { onUpdatePostGate(block.id, it) },
+        enabled = enabled,
+        testTagPrefix = "post_gate",
+    )
+}
+
+@Composable
 private fun ExternalConfigSelector(
     configs: List<ExternalConfig>,
     selectedConfigId: String?,
@@ -594,7 +776,7 @@ private fun ExternalConfigSelector(
     }
 
     Text(packStringResource(Res.string.editor_config_selector), style = AppTypography.label)
-
+    Spacer(Modifier.height(Spacing.xs))
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
@@ -681,67 +863,6 @@ private fun ExternalConfigSelector(
 }
 
 @Composable
-private fun GateConfigSection(
-    block: Block.ActionBlock,
-    projectParameters: List<Parameter>,
-    predecessors: List<Block>,
-    onUpdatePreGate: (BlockId, Gate?) -> Unit,
-    onUpdatePostGate: (BlockId, Gate?) -> Unit,
-    enabled: Boolean,
-) {
-    var expanded by remember(block.id) { mutableStateOf(false) }
-    val gateCount = listOfNotNull(block.preGate, block.postGate).size
-    val gateHeader = if (gateCount > 0) {
-        packStringResource(Res.string.editor_gate_section_header_count, gateCount)
-    } else {
-        packStringResource(Res.string.editor_gate_section_header)
-    }
-    RwButton(
-        onClick = { expanded = !expanded },
-        variant = RwButtonVariant.Secondary,
-        enabled = enabled,
-        modifier = Modifier.fillMaxWidth().testTag("gate_section_toggle"),
-    ) {
-        Text(gateHeader, style = AppTypography.label)
-        Spacer(Modifier.width(Spacing.xs))
-        Icon(
-            imageVector = if (expanded) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = null,
-            modifier = Modifier.size(16.dp),
-        )
-    }
-
-    if (expanded) {
-        Spacer(Modifier.height(Spacing.sm))
-        Column(modifier = Modifier.testTag("gate_section_content")) {
-            SingleGateEditor(
-                label = packStringResource(Res.string.editor_gate_pre_label),
-                gate = block.preGate,
-                blockId = block.id,
-                projectParameters = projectParameters,
-                predecessors = predecessors,
-                onUpdate = { onUpdatePreGate(block.id, it) },
-                enabled = enabled,
-                testTagPrefix = "pre_gate",
-            )
-
-            Spacer(Modifier.height(Spacing.sm))
-            SingleGateEditor(
-                label = packStringResource(Res.string.editor_gate_post_label),
-                gate = block.postGate,
-                blockId = block.id,
-                projectParameters = projectParameters,
-                predecessors = predecessors,
-                onUpdate = { onUpdatePostGate(block.id, it) },
-                enabled = enabled,
-                testTagPrefix = "post_gate",
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
 private fun SingleGateEditor(
     label: String,
     gate: Gate?,
@@ -755,10 +876,10 @@ private fun SingleGateEditor(
     val isEnabled = gate != null
     var message by remember(blockId, isEnabled) { mutableStateOf(gate?.message ?: "") }
     var requiredCount by remember(blockId, isEnabled) { mutableStateOf(gate?.approvalRule?.requiredCount?.toString() ?: "1") }
-    var showTemplatePicker by remember(blockId) { mutableStateOf(false) }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
         modifier = Modifier.fillMaxWidth(),
     ) {
         RwCheckbox(
@@ -777,51 +898,23 @@ private fun SingleGateEditor(
     }
 
     if (isEnabled) {
-        Row(
+        Spacer(Modifier.height(Spacing.sm))
+        TemplateAutocompleteField(
+            value = message,
+            onValueChange = { text ->
+                message = text
+                onUpdate(gate.copy(message = text))
+            },
+            projectParameters = projectParameters,
+            predecessors = predecessors,
+            placeholder = packStringResource(Res.string.editor_gate_message),
+            singleLine = true,
+            enabled = enabled,
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TemplateAutocompleteField(
-                value = message,
-                onValueChange = { text ->
-                    message = text
-                    onUpdate(gate.copy(message = text))
-                },
-                projectParameters = projectParameters,
-                predecessors = predecessors,
-                label = { Text(packStringResource(Res.string.editor_gate_message)) },
-                singleLine = true,
-                enabled = enabled,
-                modifier = Modifier.weight(1f),
-                textStyle = AppTypography.bodySmall,
-                testTag = "${testTagPrefix}_message_field",
-            )
-            Box {
-                RwTooltip(tooltip = packStringResource(Res.string.editor_template_tooltip)) {
-                    RwButton(
-                        onClick = { showTemplatePicker = true },
-                        variant = RwButtonVariant.Ghost,
-                        enabled = enabled,
-                        contentPadding = PaddingValues(Spacing.xs),
-                        modifier = Modifier.testTag("${testTagPrefix}_template_button"),
-                    ) {
-                        Text(packStringResource(Res.string.editor_template_button), style = AppTypography.bodySmall)
-                    }
-                }
-                TemplatePickerDropdown(
-                    expanded = showTemplatePicker,
-                    parameters = projectParameters,
-                    predecessors = predecessors,
-                    onSelect = { expr ->
-                        message = insertExpressionSafely(message, expr)
-                        onUpdate(gate.copy(message = message))
-                        showTemplatePicker = false
-                    },
-                    onDismiss = { showTemplatePicker = false },
-                )
-            }
-        }
+            textStyle = AppTypography.bodySmall,
+            testTag = "${testTagPrefix}_message_field",
+        )
+        Spacer(Modifier.height(Spacing.sm))
 
         val countValue = requiredCount.toIntOrNull()
         val isCountError = countValue == null || countValue < 1
@@ -845,7 +938,84 @@ private fun SingleGateEditor(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+private fun SimpleParameterCard(
+    parameter: Parameter,
+    keyPlaceholder: String,
+    valuePlaceholder: String,
+    onUpdate: (Parameter) -> Unit,
+    onRemove: () -> Unit,
+    enabled: Boolean = true,
+    removeTestTag: String = "remove_parameter_button",
+    valueField: @Composable (() -> Unit)? = null,
+) {
+    val colors = LocalAppColors.current
+    var isHovered by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .onPointerEvent(PointerEventType.Enter) { isHovered = true }
+            .onPointerEvent(PointerEventType.Exit) { isHovered = false },
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, colors.inputBorder, AppShapes.sm)
+                .padding(Spacing.sm),
+        ) {
+            if (parameter.label.isNotEmpty()) {
+                Text(parameter.label, style = AppTypography.label)
+                Spacer(Modifier.height(Spacing.xs))
+            }
+            RwTextField(
+                value = parameter.key,
+                onValueChange = { onUpdate(parameter.copy(key = it)) },
+                placeholder = parameter.label.ifEmpty { keyPlaceholder },
+                singleLine = true,
+                enabled = enabled,
+                modifier = Modifier.fillMaxWidth(),
+                textStyle = AppTypography.bodySmall,
+            )
+            Spacer(Modifier.height(Spacing.xs))
+            if (valueField != null) {
+                valueField()
+            } else {
+                RwTextField(
+                    value = parameter.value,
+                    onValueChange = { onUpdate(parameter.copy(value = it)) },
+                    placeholder = valuePlaceholder,
+                    singleLine = true,
+                    enabled = enabled,
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = AppTypography.bodySmall,
+                )
+            }
+        }
+        if (isHovered && enabled) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = Spacing.xs, y = -Spacing.xs)
+                    .size(20.dp)
+                    .background(colors.chromeSurface, CircleShape)
+                    .border(1.dp, colors.inputBorder, CircleShape)
+                    .clickable(onClick = onRemove)
+                    .testTag(removeTestTag),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = packStringResource(Res.string.editor_prop_remove_description),
+                    modifier = Modifier.size(12.dp),
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun ParameterRow(
     parameter: Parameter,
@@ -855,78 +1025,33 @@ private fun ParameterRow(
     onRemove: () -> Unit,
     enabled: Boolean = true,
 ) {
-    var showTemplatePicker by remember(parameter.key) { mutableStateOf(false) }
-
     val supportingText: @Composable (() -> Unit)? = remember(parameter.description) {
         if (parameter.description.isNotEmpty()) {
             { Text(parameter.description, maxLines = 1, overflow = TextOverflow.Ellipsis) }
         } else null
     }
 
-    Column {
-        if (parameter.label.isNotEmpty()) {
-            Text(parameter.label, style = AppTypography.label)
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
-            verticalAlignment = Alignment.Top,
-        ) {
-            RwTextField(
-                value = parameter.key,
-                onValueChange = { onUpdate(parameter.copy(key = it)) },
-                placeholder = parameter.label.ifEmpty { packStringResource(Res.string.editor_prop_key) },
-                singleLine = true,
-                enabled = enabled,
-                modifier = Modifier.weight(1f),
-                textStyle = AppTypography.bodySmall,
-            )
+    SimpleParameterCard(
+        parameter = parameter,
+        keyPlaceholder = packStringResource(Res.string.editor_prop_key),
+        valuePlaceholder = packStringResource(Res.string.editor_prop_value),
+        onUpdate = onUpdate,
+        onRemove = onRemove,
+        enabled = enabled,
+        valueField = {
             TemplateAutocompleteField(
                 value = parameter.value,
                 onValueChange = { onUpdate(parameter.copy(value = it)) },
                 projectParameters = projectParameters,
                 predecessors = predecessors,
-                label = { Text(packStringResource(Res.string.editor_prop_value)) },
+                placeholder = packStringResource(Res.string.editor_prop_value),
                 supportingText = supportingText,
                 singleLine = true,
                 enabled = enabled,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxWidth(),
                 textStyle = AppTypography.bodySmall,
                 testTag = "param_value_field",
             )
-            Box {
-                RwTooltip(tooltip = packStringResource(Res.string.editor_template_tooltip)) {
-                    RwButton(
-                        onClick = { showTemplatePicker = true },
-                        variant = RwButtonVariant.Ghost,
-                        enabled = enabled,
-                        contentPadding = PaddingValues(Spacing.xs),
-                        modifier = Modifier.testTag("insert_template_button"),
-                    ) {
-                        Text(packStringResource(Res.string.editor_template_button), style = AppTypography.bodySmall)
-                    }
-                }
-                TemplatePickerDropdown(
-                    expanded = showTemplatePicker,
-                    parameters = projectParameters,
-                    predecessors = predecessors,
-                    onSelect = { expr ->
-                        onUpdate(parameter.copy(value = insertExpressionSafely(parameter.value, expr)))
-                        showTemplatePicker = false
-                    },
-                    onDismiss = { showTemplatePicker = false },
-                )
-            }
-            RwButton(
-                onClick = onRemove,
-                variant = RwButtonVariant.Ghost,
-                enabled = enabled,
-                contentPadding = PaddingValues(Spacing.xs),
-                contentColor = MaterialTheme.colorScheme.error,
-                modifier = Modifier.testTag("remove_parameter_button"),
-            ) {
-                Text(packStringResource(Res.string.editor_prop_remove))
-            }
-        }
-    }
+        },
+    )
 }

@@ -10,7 +10,7 @@ import com.github.mr3zee.connections.ConnectionsRepository
 import com.github.mr3zee.execution.ExecutionEngine
 import com.github.mr3zee.model.*
 import com.github.mr3zee.model.collectConnectionIds
-import com.github.mr3zee.model.findActionBlock
+import com.github.mr3zee.model.findBlock
 import com.github.mr3zee.projects.ProjectsRepository
 import com.github.mr3zee.tags.TagRepository
 import com.github.mr3zee.teams.TeamAccessService
@@ -361,7 +361,7 @@ class DefaultReleasesService(
         val execution = repository.findBlockExecution(releaseId, blockId) ?: return false
         if (execution.status != BlockStatus.WAITING_FOR_INPUT) return false
 
-        val block = release.dagSnapshot.findActionBlock(blockId) ?: return false
+        val block = release.dagSnapshot.findBlock(blockId) ?: return false
 
         // Serialize concurrent approvals for the same (release, block) to prevent read-modify-write races.
         // Gate and rule are resolved inside the mutex using the freshest execution read.

@@ -108,16 +108,5 @@ private fun resolveFocusRing(
 }
 
 private fun DrawScope.drawFocusRing(ring: FocusRingParams) {
-    if (ring.animatedColor != Color.Transparent) {
-        val strokePx = ring.strokeWidth.toPx()
-        val offsetPx = ring.offset.toPx()
-        val cr = CornerRadius(ring.outerCornerRadius.toPx())
-        drawRoundRect(
-            color = ring.animatedColor,
-            topLeft = Offset(-offsetPx, -offsetPx),
-            size = Size(size.width + offsetPx * 2, size.height + offsetPx * 2),
-            cornerRadius = cr,
-            style = Stroke(width = strokePx),
-        )
-    }
+    // Focus ring drawing disabled per design requirements
 }

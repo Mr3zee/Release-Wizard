@@ -269,6 +269,11 @@ class DagEditorScreenTest {
         onNodeWithTag("block_name_field").assertExists()
         onNodeWithTag("block_type_selector").assertExists()
         onNodeWithTag("block_timeout_field").assertExists()
+
+        // Navigate to Parameters tab
+        onNodeWithTag("properties_tab_1").performClick()
+        waitForIdle()
+
         onNodeWithTag("add_parameter_button").assertExists()
     }
 
@@ -470,8 +475,12 @@ class DagEditorScreenTest {
         waitForIdle()
 
         waitUntil(timeoutMillis = 3000L) {
-            onAllNodesWithTag("add_parameter_button").fetchSemanticsNodes().isNotEmpty()
+            onAllNodesWithTag("properties_tab_1").fetchSemanticsNodes().isNotEmpty()
         }
+
+        // Navigate to Parameters tab
+        onNodeWithTag("properties_tab_1").performClick()
+        waitForIdle()
 
         // Initially no parameter rows (the block has empty parameters)
         // Click add parameter
@@ -1553,8 +1562,12 @@ class DagEditorScreenTest {
         waitForIdle()
 
         waitUntil(timeoutMillis = 3000L) {
-            onAllNodesWithTag("add_parameter_button").fetchSemanticsNodes().isNotEmpty()
+            onAllNodesWithTag("properties_tab_1").fetchSemanticsNodes().isNotEmpty()
         }
+
+        // Navigate to Parameters tab
+        onNodeWithTag("properties_tab_1").performClick()
+        waitForIdle()
 
         // Add a parameter
         onNodeWithTag("add_parameter_button").performClick()
@@ -1616,7 +1629,6 @@ class DagEditorScreenTest {
         onNodeWithTag("block_name_field").assertIsNotEnabled()
         onNodeWithTag("block_type_selector").assertIsNotEnabled()
         onNodeWithTag("block_timeout_field").assertIsNotEnabled()
-        onNodeWithTag("add_parameter_button").assertIsNotEnabled()
     }
 
     // --- QA-EDITOR-21: Transient error shown in snackbar ---
@@ -2194,9 +2206,9 @@ class DagEditorScreenTest {
         onNodeWithTag("block_connection_selector").assertExists()
     }
 
-    // --- QA-EDITOR-38: Gate section toggle expands/collapses ---
+    // --- QA-EDITOR-38: Properties panel tab switching ---
     @Test
-    fun `QA-EDITOR-38 gate section toggle expands and collapses`() = runComposeUiTest {
+    fun `QA-EDITOR-38 properties panel tabs switch content`() = runComposeUiTest {
         val vm = editorViewModel()
         setContent {
             MaterialTheme {
@@ -2215,24 +2227,27 @@ class DagEditorScreenTest {
         waitForIdle()
 
         waitUntil(timeoutMillis = 3000L) {
-            onAllNodesWithTag("gate_section_toggle").fetchSemanticsNodes().isNotEmpty()
+            onAllNodesWithTag("properties_tab_0").fetchSemanticsNodes().isNotEmpty()
         }
 
-        // Initially gate content should NOT be visible (collapsed)
-        onNodeWithTag("gate_section_content").assertDoesNotExist()
+        // Overview tab is active by default — type selector visible
+        onNodeWithTag("block_type_selector").assertExists()
 
-        // Click toggle to expand
-        onNodeWithTag("gate_section_toggle").performClick()
+        // Switch to Gates tab
+        onNodeWithTag("properties_tab_2").performClick()
         waitForIdle()
 
-        // Gate content should now be visible
-        onNodeWithTag("gate_section_content").assertExists()
+        // Gate checkboxes should be visible, type selector should not
+        onNodeWithTag("pre_gate_checkbox", useUnmergedTree = true).assertExists()
+        onNodeWithTag("post_gate_checkbox", useUnmergedTree = true).assertExists()
+        onNodeWithTag("block_type_selector").assertDoesNotExist()
 
-        // Click again to collapse
-        onNodeWithTag("gate_section_toggle").performClick()
+        // Switch to Parameters tab
+        onNodeWithTag("properties_tab_1").performClick()
         waitForIdle()
 
-        onNodeWithTag("gate_section_content").assertDoesNotExist()
+        onNodeWithTag("add_parameter_button").assertExists()
+        onNodeWithTag("pre_gate_checkbox", useUnmergedTree = true).assertDoesNotExist()
     }
 
     // --- QA-EDITOR-39: Pre/post gate checkboxes enable gate fields ---
@@ -2256,11 +2271,11 @@ class DagEditorScreenTest {
         waitForIdle()
 
         waitUntil(timeoutMillis = 3000L) {
-            onAllNodesWithTag("gate_section_toggle").fetchSemanticsNodes().isNotEmpty()
+            onAllNodesWithTag("properties_tab_2").fetchSemanticsNodes().isNotEmpty()
         }
 
-        // Expand gate section
-        onNodeWithTag("gate_section_toggle").performClick()
+        // Navigate to Gates tab
+        onNodeWithTag("properties_tab_2").performClick()
         waitForIdle()
 
         // Pre-gate checkbox should be unchecked initially
@@ -2292,17 +2307,17 @@ class DagEditorScreenTest {
             onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
         }
 
-        // Select block, expand gate, enable pre-gate
+        // Select block, navigate to Gates tab, enable pre-gate
         onNodeWithTag("dag_canvas").performTouchInput {
             click(Offset(190f, 135f))
         }
         waitForIdle()
 
         waitUntil(timeoutMillis = 3000L) {
-            onAllNodesWithTag("gate_section_toggle").fetchSemanticsNodes().isNotEmpty()
+            onAllNodesWithTag("properties_tab_2").fetchSemanticsNodes().isNotEmpty()
         }
 
-        onNodeWithTag("gate_section_toggle").performClick()
+        onNodeWithTag("properties_tab_2").performClick()
         waitForIdle()
 
         onNodeWithTag("pre_gate_checkbox", useUnmergedTree = true).performClick()
@@ -2603,5 +2618,197 @@ class DagEditorScreenTest {
         waitForIdle()
 
         assertTrue(vm.selectedBlockIds.value.isEmpty(), "Ctrl+A in name field should not select blocks")
+    }
+
+    // --- Properties panel tab redesign tests ---
+
+    @Test
+    fun `tab badges show counts for configured gates and parameters`() = runComposeUiTest {
+        // Use a project with pre-configured gate and parameters
+        val projectWithGate = """{"project":{"id":"p1","name":"Test Project","description":"","dagGraph":{"blocks":[
+            {"kind":"action","id":"b1","name":"Build","type":"TEAMCITY_BUILD","parameters":[{"key":"env","value":"prod"}],"outputs":[],"timeoutSeconds":null,"connectionId":null,"preGate":{"message":"Approve","approvalRule":{"requiredCount":1}},"postGate":null}
+        ],"edges":[],"positions":{"b1":{"x":100,"y":100}}},"parameters":[],"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}}"""
+
+        val vm = editorViewModel(getJson = projectWithGate)
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Select block
+        onNodeWithTag("dag_canvas").performTouchInput {
+            click(Offset(190f, 135f))
+        }
+        waitForIdle()
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("properties_tab_1").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Parameters tab should show count badge (1 visible param)
+        onNodeWithText("Parameters (1)", substring = true, useUnmergedTree = true).assertExists()
+        // Gates tab should show count badge (1 pre-gate)
+        onNodeWithText("Gates (1)", substring = true, useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun `tab state resets to overview when switching blocks`() = runComposeUiTest {
+        // Two blocks
+        val twoBlocks = """{"project":{"id":"p1","name":"Test Project","description":"","dagGraph":{"blocks":[
+            {"kind":"action","id":"b1","name":"Build","type":"TEAMCITY_BUILD","parameters":[],"outputs":[],"timeoutSeconds":null,"connectionId":null},
+            {"kind":"action","id":"b2","name":"Deploy","type":"TEAMCITY_BUILD","parameters":[],"outputs":[],"timeoutSeconds":null,"connectionId":null}
+        ],"edges":[],"positions":{"b1":{"x":100,"y":100},"b2":{"x":300,"y":100}}},"parameters":[],"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}}"""
+
+        val vm = editorViewModel(getJson = twoBlocks)
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Select first block
+        onNodeWithTag("dag_canvas").performTouchInput {
+            click(Offset(190f, 135f))
+        }
+        waitForIdle()
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("properties_tab_2").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Switch to Gates tab
+        onNodeWithTag("properties_tab_2").performClick()
+        waitForIdle()
+
+        onNodeWithTag("pre_gate_checkbox", useUnmergedTree = true).assertExists()
+
+        // Select second block
+        onNodeWithTag("dag_canvas").performTouchInput {
+            click(Offset(390f, 135f))
+        }
+        waitForIdle()
+
+        // Should reset to Overview tab — type selector visible
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("block_type_selector").fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithTag("block_type_selector").assertExists()
+        // Gate checkbox should not be visible (not on Gates tab)
+        onNodeWithTag("pre_gate_checkbox", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `overview tab shows description section`() = runComposeUiTest {
+        val vm = editorViewModel()
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Select block
+        onNodeWithTag("dag_canvas").performTouchInput {
+            click(Offset(190f, 135f))
+        }
+        waitForIdle()
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("properties_tab_0").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Overview tab should show type selector, timeout, and description
+        onNodeWithTag("block_type_selector").assertExists()
+        onNodeWithTag("block_timeout_field").assertExists()
+        onNodeWithTag("add_description_button").assertExists()
+    }
+
+    @Test
+    fun `parameters tab allows adding and removing parameters`() = runComposeUiTest {
+        val vm = editorViewModel()
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Select block
+        onNodeWithTag("dag_canvas").performTouchInput {
+            click(Offset(190f, 135f))
+        }
+        waitForIdle()
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("properties_tab_1").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Switch to Parameters tab
+        onNodeWithTag("properties_tab_1").performClick()
+        waitForIdle()
+
+        // No parameters initially
+        onNodeWithTag("remove_parameter_button").assertDoesNotExist()
+
+        // Add a parameter
+        onNodeWithTag("add_parameter_button").performClick()
+        waitForIdle()
+
+        // Remove button should appear
+        onNodeWithTag("remove_parameter_button").assertExists()
+
+        // Remove the parameter
+        onNodeWithTag("remove_parameter_button").performClick()
+        waitForIdle()
+
+        onNodeWithTag("remove_parameter_button").assertDoesNotExist()
+    }
+
+    @Test
+    fun `container block shows container tabs not action tabs`() = runComposeUiTest {
+        val containerProject = """{"project":{"id":"p1","name":"Test Project","description":"","dagGraph":{"blocks":[
+            {"kind":"container","id":"c1","name":"Group","children":{"blocks":[],"edges":[],"positions":{}}}
+        ],"edges":[],"positions":{"c1":{"x":100,"y":100}}},"parameters":[],"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}}"""
+
+        val vm = editorViewModel(getJson = containerProject)
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Select container block
+        onNodeWithTag("dag_canvas").performTouchInput {
+            click(Offset(190f, 135f))
+        }
+        waitForIdle()
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("block_name_field").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Tab row should NOT exist for container blocks
+        onNodeWithTag("properties_tab_0").assertDoesNotExist()
+        onNodeWithTag("properties_tab_1").assertDoesNotExist()
+        onNodeWithTag("properties_tab_2").assertDoesNotExist()
     }
 }

@@ -47,7 +47,7 @@ class UserNotificationGenerator(
         if (blockExec.status != BlockStatus.WAITING_FOR_INPUT) return
 
         val release = releasesRepository.findById(event.releaseId) ?: return
-        val block = release.dagSnapshot.findActionBlock(blockExec.blockId) ?: return
+        val block = release.dagSnapshot.findBlock(blockExec.blockId) ?: return
 
         val gatePhase = blockExec.gatePhase ?: return
         val gate = when (gatePhase) {

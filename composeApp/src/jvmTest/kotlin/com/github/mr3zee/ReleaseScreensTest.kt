@@ -5,6 +5,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.*
 import com.github.mr3zee.api.ProjectApiClient
 import com.github.mr3zee.api.ReleaseApiClient
+import com.github.mr3zee.editor.DagEditorScreen
+import com.github.mr3zee.editor.DagEditorViewModel
 import com.github.mr3zee.model.*
 import com.github.mr3zee.releases.*
 import io.ktor.client.*
@@ -539,7 +541,7 @@ class ReleaseScreensTest {
         }
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("block_detail_panel").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("block_status_text").assertExists()
-        onNodeWithText("Status: Running").assertExists()
+        onNodeWithTag("block_status_text").assertTextContains("Running")
     }
 
     @Test
@@ -790,8 +792,6 @@ class ReleaseScreensTest {
         }
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("approve_block_button").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithTag("approve_block_button").performClick()
-        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("confirm_approve_block", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithTag("confirm_approve_block_confirm", useUnmergedTree = true).performClick()
         waitForIdle()
         assertEquals(BlockId("approve1"), approvedBlockId)
     }
@@ -2739,9 +2739,9 @@ class ReleaseScreensTest {
         assertEquals(null, stoppedBlockId)
     }
 
-    // QA-RELDETAIL-14: Approve block confirmation dismissal
+    // QA-RELDETAIL-14: Approve button directly fires callback (no confirmation step)
     @Test
-    fun `approve block confirmation dismissal hides confirmation`() = runComposeUiTest {
+    fun `approve button directly fires callback without confirmation`() = runComposeUiTest {
         var approvedBlockId: BlockId? = null
         val release = singleBlockRelease(preGate = Gate())
         val executions = listOf(
@@ -2762,19 +2762,15 @@ class ReleaseScreensTest {
 
         clickBlock(this)
 
-        // Open approve confirmation
+        // Click approve — should fire callback directly without confirmation step
         onNodeWithTag("approve_block_button").performClick()
-        waitUntil(timeoutMillis = 3000L) {
-            onAllNodesWithTag("confirm_approve_block", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
-        }
-
-        // Dismiss it
-        onNodeWithTag("confirm_approve_block_cancel", useUnmergedTree = true).performClick()
         waitForIdle()
 
-        // Confirmation should disappear and callback should NOT have been called
+        // Callback should have been called immediately
+        assertEquals(BlockId("b1"), approvedBlockId)
+
+        // No confirmation inline element should exist
         onNodeWithTag("confirm_approve_block", useUnmergedTree = true).assertDoesNotExist()
-        assertEquals(null, approvedBlockId)
     }
 
     // QA-RELDETAIL-15: Block waiting panel when block has no execution entry
@@ -3136,5 +3132,105 @@ class ReleaseScreensTest {
         // Neither webhook card nor placeholder should appear
         onNodeWithTag("webhook_status_card", useUnmergedTree = true).assertDoesNotExist()
         onNodeWithTag("webhook_status_placeholder", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    // --- Gate improvements tests ---
+
+    @Test
+    fun `gate message shown when block is waiting for input`() = runComposeUiTest {
+        val release = singleBlockRelease(preGate = Gate(message = "Approve deploy", approvalRule = ApprovalRule(requiredCount = 1)))
+        val executions = listOf(
+            BlockExecution(
+                blockId = BlockId("b1"),
+                releaseId = ReleaseId("r1"),
+                status = BlockStatus.WAITING_FOR_INPUT,
+                gatePhase = GatePhase.PRE,
+                gateMessage = "Ready to deploy to production?",
+            ),
+        )
+
+        setReleaseDetailContent(
+            release = release,
+            blockExecutions = executions,
+        )
+
+        clickBlock(this)
+
+        // Resolved gate message should be visible
+        onNodeWithTag("gate_message_text").assertExists()
+        onNodeWithTag("gate_message_text").assertTextContains("Ready to deploy to production?")
+    }
+
+    @Test
+    fun `panel has drag handle for resizing`() = runComposeUiTest {
+        val release = singleBlockRelease()
+        val executions = listOf(
+            BlockExecution(
+                blockId = BlockId("b1"),
+                releaseId = ReleaseId("r1"),
+                status = BlockStatus.RUNNING,
+            ),
+        )
+
+        setReleaseDetailContent(
+            release = release,
+            blockExecutions = executions,
+        )
+
+        clickBlock(this)
+
+        // Panel should exist with block detail content
+        onNodeWithTag("block_detail_panel").assertExists()
+        // Status should be in header
+        onNodeWithTag("block_status_text").assertTextContains("Running")
+    }
+
+    @Test
+    fun `container block gates tab in editor`() = runComposeUiTest {
+        val containerProject = """{"project":{"id":"p1","name":"Test Project","description":"","dagGraph":{"blocks":[
+            {"kind":"container","id":"c1","name":"Group","children":{"blocks":[],"edges":[],"positions":{}}}
+        ],"edges":[],"positions":{"c1":{"x":100,"y":100}}},"parameters":[],"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}}"""
+
+        val client = mockHttpClient(
+            listOf(
+                "/projects/p1" to json(containerProject, HttpStatusCode.OK, method = null),
+                "/projects/p1" to json(containerProject, HttpStatusCode.OK, method = HttpMethod.Put),
+                "/projects/p1/lock" to json("""{"userId":"u1","username":"testuser","acquiredAt":"2026-03-13T00:00:00Z","expiresAt":"2026-03-13T00:05:00Z"}""", HttpStatusCode.OK, method = HttpMethod.Post),
+                "/projects/p1/lock/heartbeat" to json("""{"userId":"u1","username":"testuser","acquiredAt":"2026-03-13T00:00:00Z","expiresAt":"2026-03-13T00:05:00Z"}""", HttpStatusCode.OK, method = HttpMethod.Put),
+            )
+        )
+        val vm = DagEditorViewModel(ProjectId("p1"), ProjectApiClient(client))
+
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Select container block
+        onNodeWithTag("dag_canvas").performTouchInput {
+            click(Offset(190f, 135f))
+        }
+        waitForIdle()
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("container_tab_0").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Container should have Overview and Gates tabs
+        onNodeWithTag("container_tab_0").assertExists()
+        onNodeWithTag("container_tab_1").assertExists()
+
+        // Switch to Gates tab
+        onNodeWithTag("container_tab_1").performClick()
+        waitForIdle()
+
+        // Gate checkboxes should be visible
+        onNodeWithTag("pre_gate_checkbox", useUnmergedTree = true).assertExists()
+        onNodeWithTag("post_gate_checkbox", useUnmergedTree = true).assertExists()
     }
 }

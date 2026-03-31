@@ -13,6 +13,8 @@ sealed class Block {
     abstract val id: BlockId
     abstract val name: String
     abstract val description: String
+    abstract val preGate: Gate?
+    abstract val postGate: Gate?
 
     @Serializable
     @SerialName("container")
@@ -21,6 +23,8 @@ sealed class Block {
         override val name: String,
         override val description: String = "",
         val children: DagGraph = DagGraph(),
+        override val preGate: Gate? = null,
+        override val postGate: Gate? = null,
     ) : Block()
 
     @Serializable
@@ -34,8 +38,8 @@ sealed class Block {
         val outputs: List<String> = emptyList(),
         val timeoutSeconds: Long? = null,
         val connectionId: ConnectionId? = null,
-        val preGate: Gate? = null,
-        val postGate: Gate? = null,
+        override val preGate: Gate? = null,
+        override val postGate: Gate? = null,
         val injectWebhookUrl: Boolean = false,
     ) : Block()
 }

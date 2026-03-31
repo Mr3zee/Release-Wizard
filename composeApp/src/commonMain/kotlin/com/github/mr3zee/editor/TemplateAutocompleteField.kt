@@ -1,11 +1,22 @@
 package com.github.mr3zee.editor
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -20,6 +31,9 @@ import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.RwDropdownMenu
 import com.github.mr3zee.model.Block
 import com.github.mr3zee.model.Parameter
+import com.github.mr3zee.theme.AppShapes
+import com.github.mr3zee.theme.AppTypography
+import com.github.mr3zee.theme.LocalAppColors
 import com.github.mr3zee.i18n.packStringResource
 import releasewizard.composeapp.generated.resources.*
 
@@ -30,11 +44,12 @@ fun TemplateAutocompleteField(
     projectParameters: List<Parameter>,
     predecessors: List<Block>,
     label: @Composable (() -> Unit)? = null,
+    placeholder: String? = null,
     supportingText: @Composable (() -> Unit)? = null,
     singleLine: Boolean = true,
     enabled: Boolean = true,
     modifier: Modifier = Modifier,
-    textStyle: androidx.compose.ui.text.TextStyle = LocalTextStyle.current,
+    textStyle: androidx.compose.ui.text.TextStyle = AppTypography.bodySmall,
     testTag: String = "",
 ) {
     val defaultValueMarker = "\u0000"
@@ -73,7 +88,7 @@ fun TemplateAutocompleteField(
             val textWidthPx = if (textBeforeTrigger.isEmpty()) 0f
                 else layoutResult.getCursorRect(textBeforeTrigger.length).left
             with(density) {
-                val triggerX = OUTLINED_FIELD_START_PADDING + textWidthPx.toDp()
+                val triggerX = FIELD_HORIZONTAL_PADDING + textWidthPx.toDp()
                 // Clamp so dropdown doesn't overflow the field's right edge
                 val maxOffset = (containerWidthDp - DROPDOWN_MIN_WIDTH).coerceAtLeast(0.dp)
                 DpOffset(x = triggerX.coerceAtMost(maxOffset), y = 0.dp)
@@ -119,69 +134,129 @@ fun TemplateAutocompleteField(
     }
     val outputStartIndex = paramSuggestions.size
 
-    Box(
-        modifier = modifier.onSizeChanged { size ->
-            with(density) { containerWidthDp = size.width.toDp() }
-        },
-    ) {
-        OutlinedTextField(
-            value = tfv,
-            onValueChange = { newTfv ->
-                tfv = newTfv
-                onValueChange(newTfv.text)
-                updateSuggestions(newTfv)
-            },
-            label = label,
-            supportingText = supportingText,
-            singleLine = singleLine,
-            enabled = enabled,
-            textStyle = textStyle,
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag(testTag)
-                .onPreviewKeyEvent { event ->
-                    if (!showDropdown || event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+    val colors = LocalAppColors.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
 
-                    when (event.key) {
-                        Key.DirectionDown -> {
-                            if (filteredSuggestions.isNotEmpty()) {
-                                selectedIndex = if (selectedIndex >= filteredSuggestions.size - 1) 0 else selectedIndex + 1
-                            }
-                            true
-                        }
-                        Key.DirectionUp -> {
-                            if (filteredSuggestions.isNotEmpty()) {
-                                selectedIndex = if (selectedIndex <= 0) filteredSuggestions.size - 1 else selectedIndex - 1
-                            }
-                            true
-                        }
-                        Key.Enter -> {
-                            if (selectedIndex in filteredSuggestions.indices) {
-                                acceptSuggestion(filteredSuggestions[selectedIndex])
+    val borderColor by animateColorAsState(
+        targetValue = when {
+            isFocused -> colors.inputBorderFocused
+            else -> colors.inputBorder
+        },
+        animationSpec = tween(durationMillis = 100),
+    )
+    val borderWidth = if (isFocused) 2.dp else 1.dp
+    val disabledAlpha = if (enabled) 1f else 0.6f
+
+    Box(
+        modifier = modifier
+            .alpha(disabledAlpha)
+            .onSizeChanged { size ->
+                with(density) { containerWidthDp = size.width.toDp() }
+            },
+    ) {
+        Column {
+            if (label != null) {
+                Box(modifier = Modifier.padding(bottom = 6.dp)) {
+                    CompositionLocalProvider(LocalContentColor provides colors.chromeTextSecondary) {
+                        label()
+                    }
+                }
+            }
+
+            BasicTextField(
+                value = tfv,
+                onValueChange = { newTfv ->
+                    tfv = newTfv
+                    onValueChange(newTfv.text)
+                    updateSuggestions(newTfv)
+                },
+                enabled = enabled,
+                textStyle = textStyle.copy(color = colors.chromeTextPrimary),
+                singleLine = singleLine,
+                interactionSource = interactionSource,
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(testTag)
+                    .onPreviewKeyEvent { event ->
+                        if (!showDropdown || event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+
+                        when (event.key) {
+                            Key.DirectionDown -> {
+                                if (filteredSuggestions.isNotEmpty()) {
+                                    selectedIndex = if (selectedIndex >= filteredSuggestions.size - 1) 0 else selectedIndex + 1
+                                }
                                 true
-                            } else {
-                                false
+                            }
+                            Key.DirectionUp -> {
+                                if (filteredSuggestions.isNotEmpty()) {
+                                    selectedIndex = if (selectedIndex <= 0) filteredSuggestions.size - 1 else selectedIndex - 1
+                                }
+                                true
+                            }
+                            Key.Enter -> {
+                                if (selectedIndex in filteredSuggestions.indices) {
+                                    acceptSuggestion(filteredSuggestions[selectedIndex])
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
+                            Key.Tab -> {
+                                if (selectedIndex in filteredSuggestions.indices) {
+                                    acceptSuggestion(filteredSuggestions[selectedIndex])
+                                    true
+                                } else if (filteredSuggestions.size == 1) {
+                                    acceptSuggestion(filteredSuggestions[0])
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
+                            Key.Escape -> {
+                                showDropdown = false
+                                true
+                            }
+                            else -> false
+                        }
+                    },
+                decorationBox = { innerTextField ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(AppShapes.sm)
+                            .background(colors.inputBg, AppShapes.sm)
+                            .border(borderWidth, borderColor, AppShapes.sm)
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            if (tfv.text.isEmpty() && placeholder != null) {
+                                Text(
+                                    text = placeholder,
+                                    style = textStyle,
+                                    color = colors.inputPlaceholder,
+                                )
+                            }
+                            CompositionLocalProvider(LocalContentColor provides colors.chromeTextPrimary) {
+                                innerTextField()
                             }
                         }
-                        Key.Tab -> {
-                            if (selectedIndex in filteredSuggestions.indices) {
-                                acceptSuggestion(filteredSuggestions[selectedIndex])
-                                true
-                            } else if (filteredSuggestions.size == 1) {
-                                acceptSuggestion(filteredSuggestions[0])
-                                true
-                            } else {
-                                false
-                            }
-                        }
-                        Key.Escape -> {
-                            showDropdown = false
-                            true
-                        }
-                        else -> false
                     }
                 },
-        )
+            )
+
+            if (supportingText != null) {
+                Box(modifier = Modifier.padding(top = 4.dp, start = 16.dp)) {
+                    CompositionLocalProvider(
+                        LocalContentColor provides colors.chromeTextTertiary,
+                    ) {
+                        supportingText()
+                    }
+                }
+            }
+        }
 
         RwDropdownMenu(
             expanded = showDropdown,
@@ -288,8 +363,8 @@ private fun SuggestionItem(
     }
 }
 
-/** Material3 OutlinedTextField default horizontal content padding (start). */
-private val OUTLINED_FIELD_START_PADDING = 16.dp
+/** Horizontal padding inside the text field (matches RwTextField). */
+private val FIELD_HORIZONTAL_PADDING = 16.dp
 
 /** Minimum dropdown width used for offset clamping. */
 private val DROPDOWN_MIN_WIDTH = 200.dp

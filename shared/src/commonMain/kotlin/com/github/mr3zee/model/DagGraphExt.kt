@@ -17,6 +17,20 @@ fun DagGraph.findActionBlock(blockId: BlockId): Block.ActionBlock? {
 }
 
 /**
+ * Recursively search for any [Block] by [blockId] in this graph,
+ * including inside nested container blocks.
+ */
+fun DagGraph.findBlock(blockId: BlockId): Block? {
+    for (block in blocks) {
+        if (block.id == blockId) return block
+        if (block is Block.ContainerBlock) {
+            block.children.findBlock(blockId)?.let { return it }
+        }
+    }
+    return null
+}
+
+/**
  * Recursively collect all distinct [ConnectionId]s referenced by action blocks
  * in this graph, including inside nested container blocks.
  */

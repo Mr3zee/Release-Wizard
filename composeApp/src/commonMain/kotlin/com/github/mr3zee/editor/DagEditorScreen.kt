@@ -621,6 +621,7 @@ fun DagEditorScreen(
                         onUpdateInjectWebhookUrl = { id, inject -> viewModel.updateBlockInjectWebhookUrl(id, inject) },
                         projectDescription = project?.description ?: "",
                         onUpdateProjectDescription = { viewModel.updateProjectDescription(it) },
+                        onUpdateProjectParameters = { viewModel.updateProjectParameters(it) },
                         enabled = !isReadOnly,
                     )
                 }

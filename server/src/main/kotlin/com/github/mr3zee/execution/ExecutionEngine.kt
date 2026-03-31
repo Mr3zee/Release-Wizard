@@ -276,9 +276,65 @@ class ExecutionEngine(
         outputsMap: MutableMap<BlockId, Map<String, String>>,
         persistedExecutions: List<BlockExecution>,
     ) {
-        // Reuse the already-loaded executions from the parent recovery instead of re-fetching from DB
         val childExecMap = persistedExecutions.associateBy { it.blockId }
+        val persistedExec = childExecMap[container.id]
 
+        // Handle WAITING_FOR_INPUT recovery for container gates
+        if (persistedExec?.status == BlockStatus.WAITING_FOR_INPUT) {
+            statusMap[container.id] = BlockStatus.WAITING_FOR_INPUT
+            emitEvent(ReleaseEvent.BlockExecutionUpdated(release.id, persistedExec))
+
+            val gatePhase = persistedExec.gatePhase
+            if (gatePhase == null) {
+                log.warn("Container ${container.id.value} has WAITING_FOR_INPUT but no gatePhase — marking FAILED")
+                statusMap[container.id] = BlockStatus.FAILED
+                persistAndEmit(release.id, BlockExecution(
+                    blockId = container.id,
+                    releaseId = release.id,
+                    status = BlockStatus.FAILED,
+                    error = "Recovery failed: missing gate phase",
+                ))
+                return
+            }
+            val gate = when (gatePhase) {
+                GatePhase.PRE -> container.preGate
+                GatePhase.POST -> container.postGate
+            }
+
+            val deferred = registerDeferred(release.id, container.id)
+            val rule = gate?.approvalRule
+            if (rule != null && rule.requiredCount > 0 && persistedExec.approvals.size >= rule.requiredCount) {
+                deferred.complete(emptyMap())
+            }
+            try {
+                deferred.await()
+            } finally {
+                pendingApprovals[release.id]?.remove(container.id)
+            }
+
+            if (gatePhase == GatePhase.PRE) {
+                // Pre-gate resolved — clear gate state and proceed with container execution
+                persistAndEmit(release.id, BlockExecution(
+                    blockId = container.id,
+                    releaseId = release.id,
+                    status = BlockStatus.RUNNING,
+                    startedAt = persistedExec.startedAt,
+                ))
+            } else {
+                // Post-gate resolved — mark container as SUCCEEDED
+                statusMap[container.id] = BlockStatus.SUCCEEDED
+                persistAndEmit(release.id, BlockExecution(
+                    blockId = container.id,
+                    releaseId = release.id,
+                    status = BlockStatus.SUCCEEDED,
+                    startedAt = persistedExec.startedAt,
+                    finishedAt = Clock.System.now(),
+                ))
+                return
+            }
+        }
+
+        // Normal recovery / post-pre-gate recovery
         runContainer(
             release = release,
             container = container,
@@ -294,6 +350,31 @@ class ExecutionEngine(
                 }
             },
         )
+
+        // Post-gate after container completes
+        val postGate = container.postGate
+        if (postGate != null && statusMap[container.id] == BlockStatus.SUCCEEDED) {
+            val startTime = persistedExec?.startedAt ?: Clock.System.now()
+            val msg = resolveGateMessage(postGate, container.name, GatePhase.POST, release, outputsMap)
+            statusMap[container.id] = BlockStatus.WAITING_FOR_INPUT
+            persistAndEmit(release.id, BlockExecution(
+                blockId = container.id,
+                releaseId = release.id,
+                status = BlockStatus.WAITING_FOR_INPUT,
+                startedAt = startTime,
+                gatePhase = GatePhase.POST,
+                gateMessage = msg,
+            ))
+            awaitGateApproval(release.id, container.id)
+            statusMap[container.id] = BlockStatus.SUCCEEDED
+            persistAndEmit(release.id, BlockExecution(
+                blockId = container.id,
+                releaseId = release.id,
+                status = BlockStatus.SUCCEEDED,
+                startedAt = startTime,
+                finishedAt = Clock.System.now(),
+            ))
+        }
     }
 
     private suspend fun recoverAction(
@@ -683,8 +764,9 @@ class ExecutionEngine(
         outputsMap: MutableMap<BlockId, Map<String, String>>,
         initChildren: suspend (DagGraph, MutableMap<BlockId, BlockStatus>, MutableMap<BlockId, Map<String, String>>) -> Unit,
         runWaves: suspend (CoroutineScope, DagGraph, List<BlockId>, Map<BlockId, Set<BlockId>>, MutableMap<BlockId, BlockStatus>, MutableMap<BlockId, Map<String, String>>) -> Unit,
+        overrideStartTime: Instant? = null,
     ) {
-        val startTime = Clock.System.now()
+        val startTime = overrideStartTime ?: Clock.System.now()
         statusMap[container.id] = BlockStatus.RUNNING
         persistAndEmit(release.id, BlockExecution(
             blockId = container.id,
@@ -756,6 +838,24 @@ class ExecutionEngine(
         statusMap: MutableMap<BlockId, BlockStatus>,
         outputsMap: MutableMap<BlockId, Map<String, String>>,
     ) {
+        val startTime = Clock.System.now()
+
+        // Pre-gate (if configured)
+        val preGate = container.preGate
+        if (preGate != null) {
+            val msg = resolveGateMessage(preGate, container.name, GatePhase.PRE, release, outputsMap)
+            statusMap[container.id] = BlockStatus.WAITING_FOR_INPUT
+            persistAndEmit(release.id, BlockExecution(
+                blockId = container.id,
+                releaseId = release.id,
+                status = BlockStatus.WAITING_FOR_INPUT,
+                startedAt = startTime,
+                gatePhase = GatePhase.PRE,
+                gateMessage = msg,
+            ))
+            awaitGateApproval(release.id, container.id)
+        }
+
         runContainer(
             release = release,
             container = container,
@@ -779,7 +879,32 @@ class ExecutionEngine(
                     executeBlock(release, block, childStatusMap, childOutputsMap)
                 }
             },
+            overrideStartTime = if (preGate != null) startTime else null,
         )
+
+        // Post-gate (if configured)
+        val postGate = container.postGate
+        if (postGate != null && statusMap[container.id] == BlockStatus.SUCCEEDED) {
+            val msg = resolveGateMessage(postGate, container.name, GatePhase.POST, release, outputsMap)
+            statusMap[container.id] = BlockStatus.WAITING_FOR_INPUT
+            persistAndEmit(release.id, BlockExecution(
+                blockId = container.id,
+                releaseId = release.id,
+                status = BlockStatus.WAITING_FOR_INPUT,
+                startedAt = startTime,
+                gatePhase = GatePhase.POST,
+                gateMessage = msg,
+            ))
+            awaitGateApproval(release.id, container.id)
+            statusMap[container.id] = BlockStatus.SUCCEEDED
+            persistAndEmit(release.id, BlockExecution(
+                blockId = container.id,
+                releaseId = release.id,
+                status = BlockStatus.SUCCEEDED,
+                startedAt = startTime,
+                finishedAt = Clock.System.now(),
+            ))
+        }
     }
 
     private suspend fun executeAction(

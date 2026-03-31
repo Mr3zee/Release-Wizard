@@ -195,6 +195,9 @@
     <string name="editor_markdown_preview">Preview</string>
     <string name="editor_markdown_images_not_supported">Images are not supported</string>
     <string name="editor_project_description_header">Project Description</string>
+    <string name="editor_tab_overview">Overview</string>
+    <string name="editor_tab_parameters">Parameters</string>
+    <string name="editor_tab_gates">Gates</string>
     <string name="editor_prop_type">Type</string>
     <string name="editor_prop_container_type">Container block</string>
     <string name="editor_inject_webhook_label">Enable build status reporting</string>
@@ -233,8 +236,6 @@
     <string name="editor_template_block_outputs">Block Outputs</string>
     <string name="editor_template_empty">No templates available. Add project parameters or connect predecessor blocks with outputs to see options here.</string>
     <string name="editor_template_default_value">Default: %1$s</string>
-    <string name="editor_template_tooltip">Insert template (or type \${)</string>
-    <string name="editor_template_button">{}</string>
 
     <!-- ==================== Editor: Lock / Session ==================== -->
     <string name="editor_lock_unknown_user">another user</string>
@@ -379,6 +380,15 @@
     <string name="releases_gate_phase_pre">Waiting for approval before execution</string>
     <string name="releases_gate_phase_post">Execution complete \u2014 waiting for approval</string>
     <string name="releases_gate_phase_unknown">Waiting for approval</string>
+    <string name="releases_gate_pre_label">Pre-gate</string>
+    <string name="releases_gate_post_label">Post-gate</string>
+    <string name="releases_gate_default_message">Approval required</string>
+
+    <!-- ==================== Project Parameters ==================== -->
+    <string name="editor_project_parameters_header">Project Parameters</string>
+    <string name="editor_project_add_parameter">+ Add Parameter</string>
+    <string name="editor_project_param_key">Key</string>
+    <string name="editor_project_param_value">Default Value</string>
 
     <!-- ==================== Start Release Dialog ==================== -->
     <string name="start_release_title">Start Release</string>

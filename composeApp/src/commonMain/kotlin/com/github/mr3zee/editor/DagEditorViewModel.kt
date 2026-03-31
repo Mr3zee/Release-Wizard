@@ -151,6 +151,7 @@ class DagEditorViewModel(
                     name = p.name,
                     dagGraph = graphSnapshot,
                     description = descSnapshot,
+                    parameters = p.parameters,
                 ),
             )
             // Capture current description before overwriting _project
@@ -1036,6 +1037,13 @@ class DagEditorViewModel(
         scheduleAutoSave()
     }
 
+    fun updateProjectParameters(parameters: List<Parameter>) {
+        if (isReadOnly.value) return
+        _project.value = _project.value?.copy(parameters = parameters)
+        _isDirty.value = true
+        scheduleAutoSave()
+    }
+
     // Property updates — mutate graph without flooding undo stack.
     // Undo tracks structural changes (add/remove blocks/edges, moves).
 
@@ -1102,11 +1110,25 @@ class DagEditorViewModel(
     }
 
     fun updateBlockPreGate(blockId: BlockId, gate: Gate?) {
-        updateActionBlock(blockId) { it.copy(preGate = gate) }
+        if (isReadOnly.value) return
+        val g = _graph.value
+        updateGraphSilent(g.copy(blocks = mapBlocksDeep(g.blocks, blockId) { block ->
+            when (block) {
+                is Block.ActionBlock -> block.copy(preGate = gate)
+                is Block.ContainerBlock -> block.copy(preGate = gate)
+            }
+        }))
     }
 
     fun updateBlockPostGate(blockId: BlockId, gate: Gate?) {
-        updateActionBlock(blockId) { it.copy(postGate = gate) }
+        if (isReadOnly.value) return
+        val g = _graph.value
+        updateGraphSilent(g.copy(blocks = mapBlocksDeep(g.blocks, blockId) { block ->
+            when (block) {
+                is Block.ActionBlock -> block.copy(postGate = gate)
+                is Block.ContainerBlock -> block.copy(postGate = gate)
+            }
+        }))
     }
 
     fun updateBlockConnectionId(blockId: BlockId, connectionId: ConnectionId?) {

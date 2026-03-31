@@ -63,7 +63,6 @@ fun buildSuggestions(
 
 /**
  * Inserts an expression into a value, replacing any unclosed partial `${...` at the end.
- * Used by the TemplatePickerDialog to avoid appending on top of a partial expression.
  */
 fun insertExpressionSafely(currentValue: String, expression: String): String {
     val ctx = parseInterpolationContext(currentValue, currentValue.length)

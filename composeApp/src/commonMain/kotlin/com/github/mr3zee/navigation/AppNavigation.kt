@@ -120,7 +120,7 @@ fun AppNavigation(
         )
         is Screen.ReleaseView -> {
             val viewModel = remember(currentScreen.releaseId) {
-                ReleaseDetailViewModel(currentScreen.releaseId, releaseApiClient)
+                ReleaseDetailViewModel(currentScreen.releaseId, releaseApiClient, projectApiClient)
             }
 
             DisposableEffect(currentScreen.releaseId) {
@@ -133,9 +133,11 @@ fun AppNavigation(
             val isConnected by viewModel.isConnected.collectAsState()
             val reconnectAttempt by viewModel.reconnectAttempt.collectAsState()
             val vmError by viewModel.error.collectAsState()
+            val projectName by viewModel.projectName.collectAsState()
 
             ReleaseDetailScreen(
                 release = release,
+                projectName = projectName,
                 blockExecutions = blockExecutions,
                 isConnected = isConnected,
                 reconnectAttempt = reconnectAttempt,
