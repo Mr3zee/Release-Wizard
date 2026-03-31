@@ -513,11 +513,50 @@ class InMemoryReleasesRepository : ReleasesRepository {
                         finishedAt = null,
                         error = null,
                         outputs = emptyMap(),
+                        gatePhase = null,
+                        gateMessage = null,
+                        approvals = emptyList(),
+                        webhookStatus = null,
+                        subBuilds = emptyList(),
                     )
                 }
             }
         }
         updateStatus(releaseId, ReleaseStatus.RUNNING)
+    }
+
+    override suspend fun stopSingleBlock(releaseId: ReleaseId, blockId: BlockId, finishedAt: Instant) {
+        synchronized(lock) {
+            val idx = executions.indexOfFirst { it.releaseId == releaseId && it.blockId == blockId }
+            if (idx >= 0) {
+                executions[idx] = executions[idx].copy(status = BlockStatus.STOPPED, finishedAt = finishedAt)
+            }
+        }
+    }
+
+    override suspend fun resumeSingleBlockToWaiting(releaseId: ReleaseId, blockId: BlockId) {
+        synchronized(lock) {
+            val idx = executions.indexOfFirst { it.releaseId == releaseId && it.blockId == blockId }
+            if (idx >= 0) {
+                executions[idx] = BlockExecution(
+                    blockId = blockId,
+                    releaseId = releaseId,
+                    status = BlockStatus.WAITING,
+                )
+            }
+        }
+    }
+
+    override suspend fun resumeSingleBlockToGate(releaseId: ReleaseId, blockId: BlockId) {
+        synchronized(lock) {
+            val idx = executions.indexOfFirst { it.releaseId == releaseId && it.blockId == blockId }
+            if (idx >= 0) {
+                executions[idx] = executions[idx].copy(
+                    status = BlockStatus.WAITING_FOR_INPUT,
+                    finishedAt = null,
+                )
+            }
+        }
     }
 
     override suspend fun updateWebhookStatus(

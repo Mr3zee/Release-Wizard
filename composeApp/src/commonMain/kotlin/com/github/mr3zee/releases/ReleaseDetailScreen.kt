@@ -69,6 +69,7 @@ fun ReleaseDetailScreen(
     onStopRelease: () -> Unit,
     onResumeRelease: () -> Unit,
     onStopBlock: (BlockId) -> Unit,
+    onResumeBlock: (BlockId) -> Unit,
     onRerun: () -> Unit,
     onArchive: () -> Unit,
     onApproveBlock: (BlockId) -> Unit,
@@ -321,6 +322,7 @@ fun ReleaseDetailScreen(
                             onPanelHeightChange = { panelHeight = it },
                             onApprove = { onApproveBlock(blockId) },
                             onStopBlock = { activeConfirmation = ActiveConfirmation.StopBlock(blockId) },
+                            onResumeBlock = { onResumeBlock(blockId) },
                             onConfirmStopBlock = {
                                 val stopBlockId = (activeConfirmation as? ActiveConfirmation.StopBlock)?.blockId
                                 activeConfirmation = ActiveConfirmation.None
@@ -414,6 +416,7 @@ private fun BlockDetailPanel(
     onPanelHeightChange: (Dp) -> Unit,
     onApprove: () -> Unit,
     onStopBlock: () -> Unit = {},
+    onResumeBlock: () -> Unit = {},
     onConfirmStopBlock: () -> Unit,
     onDismissConfirmation: () -> Unit,
     onDismiss: () -> Unit,
@@ -422,14 +425,19 @@ private fun BlockDetailPanel(
     val currentPanelHeight by rememberUpdatedState(panelHeight)
     val currentOnChange by rememberUpdatedState(onPanelHeightChange)
 
+    // Action bar visibility — computed here so it's available for both the bar and the scrollable content
+    val showApprove = execution.status == BlockStatus.WAITING_FOR_INPUT
+    val showStop = (execution.status == BlockStatus.RUNNING || execution.status == BlockStatus.WAITING_FOR_INPUT) && releaseStatus == ReleaseStatus.RUNNING
+    val showResume = execution.status == BlockStatus.STOPPED && releaseStatus == ReleaseStatus.RUNNING
+    val showActionBar = showApprove || showStop || showResume
+
     Surface(
         tonalElevation = 2.dp,
         modifier = Modifier
             .fillMaxWidth()
             .testTag("block_detail_panel"),
     ) {
-        val execScrollState = rememberScrollState()
-        Column {
+        Column(modifier = Modifier.heightIn(max = panelHeight)) {
         // Drag handle
         Box(
             modifier = Modifier
@@ -455,7 +463,8 @@ private fun BlockDetailPanel(
                     ),
             )
         }
-        Box(modifier = Modifier.heightIn(max = panelHeight)) {
+        val execScrollState = rememberScrollState()
+        Box(modifier = Modifier.weight(1f, fill = false)) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -597,8 +606,13 @@ private fun BlockDetailPanel(
             // Stopped block context message
             if (execution.status == BlockStatus.STOPPED) {
                 Spacer(modifier = Modifier.height(Spacing.sm))
+                val stoppedText = if (releaseStatus == ReleaseStatus.RUNNING) {
+                    packStringResource(Res.string.releases_stopped_context_resumable)
+                } else {
+                    packStringResource(Res.string.releases_stopped_context)
+                }
                 Text(
-                    text = packStringResource(Res.string.releases_stopped_context),
+                    text = stoppedText,
                     style = AppTypography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.testTag("stopped_context_text"),
@@ -696,10 +710,23 @@ private fun BlockDetailPanel(
                 }
 
                 Spacer(modifier = Modifier.height(Spacing.xs))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+            }
+
+        }
+        VerticalScrollbar(
+            modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+            adapter = rememberScrollbarAdapter(execScrollState),
+        )
+        } // Box (scrollable content)
+
+        // Fixed action bar — outside scrollable area, always visible at bottom
+        if (showActionBar) {
+            HorizontalDivider()
+            Row(
+                modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                if (showApprove) {
                     RwButton(
                         onClick = onApprove,
                         modifier = Modifier.testTag("approve_block_button"),
@@ -707,24 +734,17 @@ private fun BlockDetailPanel(
                     ) {
                         Text(packStringResource(Res.string.common_approve))
                     }
-                    Spacer(modifier = Modifier.weight(1f))
-                    if (releaseStatus == ReleaseStatus.RUNNING) {
-                        RwButton(
-                            onClick = onStopBlock,
-                            modifier = Modifier.testTag("stop_block_button"),
-                            variant = RwButtonVariant.Ghost,
-                            contentColor = MaterialTheme.colorScheme.error,
-                        ) {
-                            Text(packStringResource(Res.string.releases_stop))
-                        }
+                }
+                if (showResume) {
+                    RwButton(
+                        onClick = onResumeBlock,
+                        modifier = Modifier.testTag("resume_block_button"),
+                        variant = RwButtonVariant.Primary,
+                    ) {
+                        Text(packStringResource(Res.string.releases_resume))
                     }
                 }
-            }
-
-            // Stop button for running blocks (without gate)
-            if (execution.status == BlockStatus.RUNNING && releaseStatus == ReleaseStatus.RUNNING) {
-                Spacer(modifier = Modifier.height(Spacing.sm))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                if (showStop) {
                     RwButton(
                         onClick = onStopBlock,
                         modifier = Modifier.testTag("stop_block_button"),
@@ -736,12 +756,7 @@ private fun BlockDetailPanel(
                 }
             }
         }
-        VerticalScrollbar(
-            modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
-            adapter = rememberScrollbarAdapter(execScrollState),
-        )
-        }
-        }
+        } // Column (panel layout)
     }
 }
 

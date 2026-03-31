@@ -224,6 +224,7 @@ class MavenPollerServiceTest {
         override suspend fun deleteRelease(id: ReleaseId, session: UserSession): Boolean = error("stub")
         override suspend fun awaitRelease(id: ReleaseId): Unit = error("stub")
         override suspend fun stopBlock(releaseId: ReleaseId, blockId: BlockId, session: UserSession): Boolean = error("stub")
+        override suspend fun resumeBlock(releaseId: ReleaseId, blockId: BlockId, session: UserSession): Boolean = error("stub")
         override suspend fun stopRelease(id: ReleaseId, session: UserSession): Boolean = error("stub")
         override suspend fun resumeRelease(id: ReleaseId, session: UserSession): Boolean = error("stub")
         override suspend fun restartBlock(releaseId: ReleaseId, blockId: BlockId, session: UserSession): Boolean = error("stub")

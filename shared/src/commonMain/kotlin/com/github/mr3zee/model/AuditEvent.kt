@@ -38,6 +38,7 @@ enum class AuditAction {
     BLOCK_RESTARTED,
     BLOCK_APPROVED,
     BLOCK_STOPPED,
+    BLOCK_RESUMED,
 
     // Connections
     CONNECTION_CREATED,

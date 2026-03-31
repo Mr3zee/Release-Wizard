@@ -154,6 +154,7 @@ fun AppNavigation(
                 onStopRelease = { viewModel.stopRelease() },
                 onResumeRelease = { viewModel.resumeRelease() },
                 onStopBlock = { viewModel.stopBlock(it) },
+                onResumeBlock = { viewModel.resumeBlock(it) },
                 onRerun = {
                     val projectId = viewModel.release.value?.projectTemplateId
                     if (projectId != null) {

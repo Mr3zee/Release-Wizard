@@ -323,10 +323,11 @@
     <string name="releases_stop">Stop</string>
     <string name="releases_resume">Resume</string>
     <string name="releases_stop_body">This will pause execution. Running blocks will be interrupted and external builds will be cancelled. You can resume later.</string>
-    <string name="releases_stop_block_body">Stopping this block will pause the entire release. All other running blocks will also be interrupted. External builds will be cancelled. You can resume later.</string>
+    <string name="releases_stop_block_body">This will stop only this block. Other blocks will continue running. External builds for this block will be cancelled. You can resume it later.</string>
     <string name="releases_stop_confirm">Stop Release</string>
     <string name="releases_stop_block_confirm">Stop</string>
-    <string name="releases_stopped_context">This block was stopped. It will re-execute when the release is resumed.</string>
+    <string name="releases_stopped_context">This block was stopped along with the release.</string>
+    <string name="releases_stopped_context_resumable">This block was stopped. Click Resume to restart it.</string>
     <string name="releases_rerun">Re-run</string>
     <string name="releases_approve_default_message">Approve this block to continue the release pipeline.</string>
     <string name="releases_block_status">Status: %1$s</string>
@@ -592,6 +593,7 @@
     <string name="audit_action_block_restarted">Block restarted</string>
     <string name="audit_action_block_approved">Block approved</string>
     <string name="audit_action_block_stopped">Block stopped</string>
+    <string name="audit_action_block_resumed">Block resumed</string>
     <string name="audit_action_connection_created">Connection created</string>
     <string name="audit_action_connection_updated">Connection updated</string>
     <string name="audit_action_connection_deleted">Connection deleted</string>

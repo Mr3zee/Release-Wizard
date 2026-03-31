@@ -106,6 +106,35 @@ interface ReleasesRepository {
         blockIds: Set<BlockId>,
     )
 
+    /**
+     * Stop a single block without changing the release status.
+     * Only updates status=STOPPED + finishedAt — preserves outputs, approvals, gate state, etc.
+     */
+    suspend fun stopSingleBlock(
+        releaseId: ReleaseId,
+        blockId: BlockId,
+        finishedAt: Instant,
+    )
+
+    /**
+     * Resume a single stopped block to WAITING, clearing all transient execution state.
+     * Does not change release status.
+     */
+    suspend fun resumeSingleBlockToWaiting(
+        releaseId: ReleaseId,
+        blockId: BlockId,
+    )
+
+    /**
+     * Resume a single stopped block to WAITING_FOR_INPUT (post-gate),
+     * preserving outputs, gatePhase, gateMessage, and approvals.
+     * Only clears finishedAt. Does not change release status.
+     */
+    suspend fun resumeSingleBlockToGate(
+        releaseId: ReleaseId,
+        blockId: BlockId,
+    )
+
     suspend fun updateWebhookStatus(
         releaseId: ReleaseId,
         blockId: BlockId,
