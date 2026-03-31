@@ -130,7 +130,7 @@ fun ReleaseDetailScreen(
                     }
                 },
                 actions = {
-                    if (!isConnected) {
+                    if (!isConnected && release?.status?.isTerminal != true) {
                         val disconnectedText = if (reconnectAttempt > 0) {
                             packStringResource(Res.string.releases_reconnecting, reconnectAttempt)
                         } else {
