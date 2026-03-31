@@ -172,9 +172,9 @@ fun BlockPropertiesPanel(
 
         Spacer(Modifier.height(Spacing.sm))
 
-        // Block ID
+        // Block ID — re-keyed on block.id so it resets when the block changes,
+        // but NOT synced on every recomposition (would fight user edits)
         var blockIdText by remember(block.id) { mutableStateOf(block.id.value) }
-        if (blockIdText != block.id.value) blockIdText = block.id.value
         var blockIdError by remember(block.id) { mutableStateOf(false) }
         // Keep references fresh for modifier callbacks (onFocusChanged, onPreviewKeyEvent)
         val currentBlockId by rememberUpdatedState(block.id)
@@ -640,6 +640,8 @@ private fun OverviewTabContent(
             },
             projectParameters = projectParameters,
             predecessors = predecessors,
+            selfBlock = block,
+            excludeParamKeys = setOf("text"),
             label = { Text(packStringResource(Res.string.editor_slack_message_label), style = AppTypography.label) },
             placeholder = packStringResource(Res.string.editor_slack_message_placeholder),
             singleLine = false,
@@ -1075,12 +1077,19 @@ private fun SimpleParameterCard(
                 Text(parameter.label, style = AppTypography.label)
                 Spacer(Modifier.height(Spacing.xs))
             }
+            val isKeyInvalid = parameter.key.isNotEmpty() && !ParameterKeyRegex.matches(parameter.key)
             RwTextField(
                 value = parameter.key,
-                onValueChange = { onUpdate(parameter.copy(key = it)) },
+                onValueChange = { newKey ->
+                    onUpdate(parameter.copy(key = newKey))
+                },
                 placeholder = parameter.label.ifEmpty { keyPlaceholder },
                 singleLine = true,
                 enabled = enabled,
+                isError = isKeyInvalid,
+                supportingText = if (isKeyInvalid) {
+                    { Text(packStringResource(Res.string.editor_prop_key_invalid)) }
+                } else null,
                 modifier = Modifier.fillMaxWidth(),
                 textStyle = AppTypography.bodySmall,
             )
@@ -1163,3 +1172,4 @@ private fun ParameterRow(
 }
 
 private val BlockIdSanitizeRegex = Regex("[^a-z0-9-]")
+private val ParameterKeyRegex = Regex("^[a-zA-Z_][a-zA-Z0-9_.\\-]*$")

@@ -190,7 +190,7 @@
     <string name="editor_prop_name">Name</string>
     <string name="editor_prop_block_id">ID</string>
     <string name="editor_prop_block_id_placeholder">block-id</string>
-    <string name="editor_prop_block_id_hint">Used in templates: ${block.&lt;id&gt;.&lt;output&gt;}</string>
+    <string name="editor_prop_block_id_hint">Used in templates: ${block.&lt;id&gt;.inputs.&lt;key&gt;}</string>
     <string name="editor_prop_block_id_duplicate">This ID is already used by another block</string>
     <string name="editor_prop_description">Description</string>
     <string name="editor_prop_description_placeholder">Add a description (Markdown supported)</string>
@@ -212,6 +212,7 @@
     <string name="editor_prop_parameters">Parameters</string>
     <string name="editor_prop_add_parameter">+ Add Parameter</string>
     <string name="editor_prop_key">Key</string>
+    <string name="editor_prop_key_invalid">Letters, digits, underscores, dots, hyphens only</string>
     <string name="editor_prop_value">Value</string>
     <string name="editor_prop_remove">\u00D7</string>
     <string name="editor_prop_remove_description">Remove parameter</string>
@@ -236,7 +237,8 @@
     <string name="editor_gate_approval_count_error">Must be 1 or more</string>
 
     <!-- ==================== Editor: Template Picker ==================== -->
-    <string name="editor_template_parameters">Parameters</string>
+    <string name="editor_template_parameters">Project Parameters</string>
+    <string name="editor_template_block_inputs">Block Inputs</string>
     <string name="editor_template_block_outputs">Block Outputs</string>
     <string name="editor_template_empty">No templates available. Add project parameters or connect predecessor blocks with outputs to see options here.</string>
     <string name="editor_template_default_value">Default: %1$s</string>

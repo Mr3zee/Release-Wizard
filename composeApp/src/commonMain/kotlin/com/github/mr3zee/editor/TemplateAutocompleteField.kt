@@ -17,18 +17,27 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.input.key.*
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-import com.github.mr3zee.components.RwDropdownMenu
 import com.github.mr3zee.model.Block
 import com.github.mr3zee.model.Parameter
 import com.github.mr3zee.theme.AppShapes
@@ -43,6 +52,8 @@ fun TemplateAutocompleteField(
     onValueChange: (String) -> Unit,
     projectParameters: List<Parameter>,
     predecessors: List<Block>,
+    selfBlock: Block.ActionBlock? = null,
+    excludeParamKeys: Set<String> = emptySet(),
     label: @Composable (() -> Unit)? = null,
     placeholder: String? = null,
     supportingText: @Composable (() -> Unit)? = null,
@@ -54,20 +65,34 @@ fun TemplateAutocompleteField(
 ) {
     val defaultValueMarker = "\u0000"
     val defaultValueTemplate = packStringResource(Res.string.editor_template_default_value, defaultValueMarker)
-    val allSuggestions = remember(projectParameters, predecessors, defaultValueTemplate) {
-        buildSuggestions(projectParameters, predecessors) { value ->
+    val allSuggestions = remember(projectParameters, predecessors, selfBlock, excludeParamKeys, defaultValueTemplate) {
+        buildSuggestions(projectParameters, predecessors, selfBlock, excludeParamKeys) { value ->
             defaultValueTemplate.replace(defaultValueMarker, value)
         }
     }
 
-    var tfv by remember { mutableStateOf(TextFieldValue(value, TextRange(value.length))) }
+    val expressionColor = MaterialTheme.colorScheme.primary
+
+    fun highlightExpressions(text: String): AnnotatedString = buildAnnotatedString {
+        var lastEnd = 0
+        TemplateExpressionRegex.findAll(text).forEach { match ->
+            append(text.substring(lastEnd, match.range.first))
+            withStyle(SpanStyle(color = expressionColor)) {
+                append(match.value)
+            }
+            lastEnd = match.range.last + 1
+        }
+        if (lastEnd < text.length) append(text.substring(lastEnd))
+    }
+
+    var tfv by remember { mutableStateOf(TextFieldValue(highlightExpressions(value), TextRange(value.length))) }
     // Sync external value changes — guard prevents recomposition loop
     if (tfv.text != value) {
         val clampedSel = TextRange(
             tfv.selection.start.coerceAtMost(value.length),
             tfv.selection.end.coerceAtMost(value.length),
         )
-        tfv = TextFieldValue(text = value, selection = clampedSel)
+        tfv = TextFieldValue(highlightExpressions(value), clampedSel)
     }
 
     var showDropdown by remember { mutableStateOf(false) }
@@ -79,20 +104,18 @@ fun TemplateAutocompleteField(
     val textMeasurer = rememberTextMeasurer()
     val density = LocalDensity.current
     var containerWidthDp by remember { mutableStateOf(0.dp) }
-    val dropdownOffset by remember {
-        derivedStateOf {
-            val ctx = interpolationContext ?: return@derivedStateOf DpOffset.Zero
-            val triggerPos = ctx.triggerOffset.coerceAtMost(tfv.text.length)
-            val textBeforeTrigger = tfv.text.substring(0, triggerPos)
-            val layoutResult = textMeasurer.measure(text = textBeforeTrigger, style = textStyle)
-            val textWidthPx = if (textBeforeTrigger.isEmpty()) 0f
-                else layoutResult.getCursorRect(textBeforeTrigger.length).left
-            with(density) {
-                val triggerX = FIELD_HORIZONTAL_PADDING + textWidthPx.toDp()
-                // Clamp so dropdown doesn't overflow the field's right edge
-                val maxOffset = (containerWidthDp - DROPDOWN_MIN_WIDTH).coerceAtLeast(0.dp)
-                DpOffset(x = triggerX.coerceAtMost(maxOffset), y = 0.dp)
-            }
+    // Computed on every recomposition (cheap arithmetic) to avoid stale captures in derivedStateOf
+    val dropdownOffset = run {
+        val ctx = interpolationContext ?: return@run DpOffset.Zero
+        val triggerPos = ctx.triggerOffset.coerceAtMost(tfv.text.length)
+        val textBeforeTrigger = tfv.text.substring(0, triggerPos)
+        val layoutResult = textMeasurer.measure(text = textBeforeTrigger, style = textStyle)
+        val textWidthPx = if (textBeforeTrigger.isEmpty()) 0f
+            else layoutResult.getCursorRect(textBeforeTrigger.length).left
+        with(density) {
+            val triggerX = FIELD_HORIZONTAL_PADDING + textWidthPx.toDp()
+            val maxOffset = (containerWidthDp - DROPDOWN_MIN_WIDTH).coerceAtLeast(0.dp)
+            DpOffset(x = triggerX.coerceAtMost(maxOffset), y = 0.dp)
         }
     }
 
@@ -103,7 +126,7 @@ fun TemplateAutocompleteField(
             val filtered = filterSuggestions(allSuggestions, ctx)
             filteredSuggestions = filtered
             showDropdown = filtered.isNotEmpty()
-            selectedIndex = -1
+            selectedIndex = if (filtered.isNotEmpty()) 0 else -1
         } else {
             showDropdown = false
             filteredSuggestions = emptyList()
@@ -117,7 +140,7 @@ fun TemplateAutocompleteField(
         val after = tfv.text.substring(tfv.selection.start)
         val newText = before + suggestion.insertText + after
         val newCursor = before.length + suggestion.insertText.length
-        tfv = TextFieldValue(newText, TextRange(newCursor))
+        tfv = TextFieldValue(highlightExpressions(newText), TextRange(newCursor))
         onValueChange(newText)
         showDropdown = false
         filteredSuggestions = emptyList()
@@ -125,14 +148,18 @@ fun TemplateAutocompleteField(
         interpolationContext = null
     }
 
-    // Pre-compute category splits and index offsets outside LazyColumn DSL
+    // Pre-compute category splits and flat index offsets
     val paramSuggestions = remember(filteredSuggestions) {
         filteredSuggestions.filter { it.category == SuggestionCategory.PARAMETER }
+    }
+    val inputSuggestions = remember(filteredSuggestions) {
+        filteredSuggestions.filter { it.category == SuggestionCategory.BLOCK_INPUT }
     }
     val outputSuggestions = remember(filteredSuggestions) {
         filteredSuggestions.filter { it.category == SuggestionCategory.BLOCK_OUTPUT }
     }
-    val outputStartIndex = paramSuggestions.size
+    val inputStartIndex = paramSuggestions.size
+    val outputStartIndex = inputStartIndex + inputSuggestions.size
 
     val colors = LocalAppColors.current
     val interactionSource = remember { MutableInteractionSource() }
@@ -148,11 +175,19 @@ fun TemplateAutocompleteField(
     val borderWidth = if (isFocused) 2.dp else 1.dp
     val disabledAlpha = if (enabled) 1f else 0.6f
 
+    // Dismiss popup when the text field loses focus (e.g., user clicks elsewhere)
+    LaunchedEffect(isFocused) {
+        if (!isFocused) showDropdown = false
+    }
+
+    var containerHeightPx by remember { mutableStateOf(0) }
+
     Box(
         modifier = modifier
             .alpha(disabledAlpha)
             .onSizeChanged { size ->
                 with(density) { containerWidthDp = size.width.toDp() }
+                containerHeightPx = size.height
             },
     ) {
         Column {
@@ -167,7 +202,7 @@ fun TemplateAutocompleteField(
             BasicTextField(
                 value = tfv,
                 onValueChange = { newTfv ->
-                    tfv = newTfv
+                    tfv = newTfv.copy(annotatedString = highlightExpressions(newTfv.text))
                     onValueChange(newTfv.text)
                     updateSuggestions(newTfv)
                 },
@@ -195,20 +230,14 @@ fun TemplateAutocompleteField(
                                 }
                                 true
                             }
-                            Key.Enter -> {
-                                if (selectedIndex in filteredSuggestions.indices) {
-                                    acceptSuggestion(filteredSuggestions[selectedIndex])
-                                    true
-                                } else {
-                                    false
+                            Key.Enter, Key.Tab -> {
+                                val target = when {
+                                    selectedIndex in filteredSuggestions.indices -> selectedIndex
+                                    filteredSuggestions.isNotEmpty() -> 0
+                                    else -> -1
                                 }
-                            }
-                            Key.Tab -> {
-                                if (selectedIndex in filteredSuggestions.indices) {
-                                    acceptSuggestion(filteredSuggestions[selectedIndex])
-                                    true
-                                } else if (filteredSuggestions.size == 1) {
-                                    acceptSuggestion(filteredSuggestions[0])
+                                if (target >= 0) {
+                                    acceptSuggestion(filteredSuggestions[target])
                                     true
                                 } else {
                                     false
@@ -258,50 +287,91 @@ fun TemplateAutocompleteField(
             }
         }
 
-        RwDropdownMenu(
-            expanded = showDropdown,
-            onDismissRequest = { showDropdown = false },
-            offset = dropdownOffset,
-            modifier = Modifier.testTag("${testTag}_autocomplete_dropdown"),
-        ) {
-            Column(
-                modifier = Modifier
-                    .widthIn(min = 200.dp, max = 280.dp)
-                    .heightIn(max = 200.dp)
-                    .verticalScroll(rememberScrollState()),
+        // Non-focusable popup so the text field retains keyboard focus while suggestions are visible
+        if (showDropdown) {
+            Popup(
+                alignment = Alignment.TopStart,
+                offset = with(density) {
+                    IntOffset(dropdownOffset.x.roundToPx(), containerHeightPx)
+                },
+                onDismissRequest = { showDropdown = false },
+                properties = PopupProperties(focusable = false),
             ) {
-                if (paramSuggestions.isNotEmpty()) {
-                    Text(
-                        packStringResource(Res.string.editor_template_parameters),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                    )
-                    paramSuggestions.forEachIndexed { itemIdx, suggestion ->
-                        SuggestionItem(
-                            suggestion = suggestion,
-                            isSelected = itemIdx == selectedIndex,
-                            onClick = { acceptSuggestion(suggestion) },
-                            testTag = "${testTag}_suggestion_$itemIdx",
-                        )
+                val scrollState = rememberScrollState()
+                // Track Y position of each suggestion item for precise scrolling
+                val itemPositions = remember(filteredSuggestions) { mutableMapOf<Int, Pair<Int, Int>>() }
+
+                // Scroll selected item fully into view on arrow key navigation
+                LaunchedEffect(selectedIndex) {
+                    if (selectedIndex < 0) return@LaunchedEffect
+                    val (itemY, itemH) = itemPositions[selectedIndex] ?: return@LaunchedEffect
+                    val viewportH = scrollState.viewportSize
+                    val scrollOffset = scrollState.value
+                    val itemBottom = itemY + itemH
+                    when {
+                        itemBottom > scrollOffset + viewportH ->
+                            scrollState.animateScrollTo(itemBottom - viewportH)
+                        itemY < scrollOffset ->
+                            scrollState.animateScrollTo(itemY)
                     }
                 }
 
-                if (outputSuggestions.isNotEmpty()) {
-                    Text(
-                        packStringResource(Res.string.editor_template_block_outputs),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                    )
-                    outputSuggestions.forEachIndexed { localIdx, suggestion ->
-                        val itemIdx = outputStartIndex + localIdx
-                        SuggestionItem(
-                            suggestion = suggestion,
-                            isSelected = itemIdx == selectedIndex,
-                            onClick = { acceptSuggestion(suggestion) },
-                            testTag = "${testTag}_suggestion_$itemIdx",
-                        )
+                Surface(
+                    shape = AppShapes.xs,
+                    shadowElevation = 8.dp,
+                    border = BorderStroke(1.dp, colors.chromeBorder),
+                    modifier = Modifier
+                        .widthIn(min = 200.dp, max = 280.dp)
+                        .heightIn(max = 200.dp)
+                        .testTag("${testTag}_autocomplete_dropdown"),
+                ) {
+                    Column(
+                        modifier = Modifier.verticalScroll(scrollState),
+                    ) {
+                        fun itemModifier(idx: Int) = Modifier.onGloballyPositioned { coords ->
+                            itemPositions[idx] = coords.positionInParent().y.toInt() to coords.size.height
+                        }
+
+                        if (paramSuggestions.isNotEmpty()) {
+                            SuggestionHeader(packStringResource(Res.string.editor_template_parameters))
+                            paramSuggestions.forEachIndexed { itemIdx, suggestion ->
+                                SuggestionItem(
+                                    suggestion = suggestion,
+                                    isSelected = itemIdx == selectedIndex,
+                                    onClick = { acceptSuggestion(suggestion) },
+                                    testTag = "${testTag}_suggestion_$itemIdx",
+                                    modifier = itemModifier(itemIdx),
+                                )
+                            }
+                        }
+
+                        if (inputSuggestions.isNotEmpty()) {
+                            SuggestionHeader(packStringResource(Res.string.editor_template_block_inputs))
+                            inputSuggestions.forEachIndexed { localIdx, suggestion ->
+                                val itemIdx = inputStartIndex + localIdx
+                                SuggestionItem(
+                                    suggestion = suggestion,
+                                    isSelected = itemIdx == selectedIndex,
+                                    onClick = { acceptSuggestion(suggestion) },
+                                    testTag = "${testTag}_suggestion_$itemIdx",
+                                    modifier = itemModifier(itemIdx),
+                                )
+                            }
+                        }
+
+                        if (outputSuggestions.isNotEmpty()) {
+                            SuggestionHeader(packStringResource(Res.string.editor_template_block_outputs))
+                            outputSuggestions.forEachIndexed { localIdx, suggestion ->
+                                val itemIdx = outputStartIndex + localIdx
+                                SuggestionItem(
+                                    suggestion = suggestion,
+                                    isSelected = itemIdx == selectedIndex,
+                                    onClick = { acceptSuggestion(suggestion) },
+                                    testTag = "${testTag}_suggestion_$itemIdx",
+                                    modifier = itemModifier(itemIdx),
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -310,11 +380,22 @@ fun TemplateAutocompleteField(
 }
 
 @Composable
+private fun SuggestionHeader(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+    )
+}
+
+@Composable
 private fun SuggestionItem(
     suggestion: TemplateSuggestion,
     isSelected: Boolean,
     onClick: () -> Unit,
     testTag: String,
+    modifier: Modifier = Modifier,
 ) {
     val bgColor = if (isSelected) {
         MaterialTheme.colorScheme.primaryContainer
@@ -335,7 +416,7 @@ private fun SuggestionItem(
         onClick = onClick,
         color = bgColor,
         contentColor = contentColor,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 48.dp)
             .testTag(testTag),
@@ -362,6 +443,9 @@ private fun SuggestionItem(
         }
     }
 }
+
+/** Matches `${...}` template expressions for syntax highlighting. */
+private val TemplateExpressionRegex = Regex("""\$\{[^}]*\}?""")
 
 /** Horizontal padding inside the text field (matches RwTextField). */
 private val FIELD_HORIZONTAL_PADDING = 16.dp

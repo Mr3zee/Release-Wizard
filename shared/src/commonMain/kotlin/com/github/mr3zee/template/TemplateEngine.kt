@@ -7,7 +7,14 @@ import com.github.mr3zee.model.Parameter
  * Resolves template expressions in parameter values.
  * Supported syntax:
  * - ${param.key} — project/release-level parameter
- * - ${block.blockId.outputName} — output from a specific block
+ * - ${block.blockId.inputs.key} — input parameter of a specific block
+ * - ${block.blockId.outputs.key} — output produced by a specific block during execution
+ * - ${block.blockId.key} — backward compat, resolves against outputs then inputs
+ *
+ * At runtime, the block outputs map stores entries under namespaced keys:
+ * - "inputs.<key>" for block input parameters
+ * - "outputs.<key>" for block execution outputs
+ * - "<key>" as a plain alias for outputs (backward compat)
  */
 object TemplateEngine {
 
@@ -41,10 +48,29 @@ object TemplateEngine {
         parameters: List<Parameter>,
         projectParameters: List<Parameter>,
         blockOutputs: Map<BlockId, Map<String, String>> = emptyMap(),
+        blockId: BlockId? = null,
     ): List<Parameter> {
-        return parameters.map { param ->
+        // Pass 1: resolve against project params + predecessor outputs/inputs
+        var resolved = parameters.map { param ->
             param.copy(value = resolve(param.value, projectParameters, blockOutputs))
         }
+
+        if (blockId == null) return resolved
+
+        // Iterative self-block resolution: add own params as inputs, re-resolve until stable.
+        // Handles chains like A→B→C where all are on the same block.
+        repeat(MAX_RESOLUTION_DEPTH) {
+            val ownInputs = resolved
+                .filter { it.key.isNotBlank() }
+                .associate { "inputs.${it.key}" to it.value }
+            val enrichedOutputs = blockOutputs + (blockId to (blockOutputs[blockId].orEmpty() + ownInputs))
+            val next = resolved.map { param ->
+                param.copy(value = resolve(param.value, projectParameters, enrichedOutputs))
+            }
+            if (next == resolved) return next
+            resolved = next
+        }
+        return resolved
     }
 
     private fun resolveExpression(
@@ -58,14 +84,25 @@ object TemplateEngine {
             return parameters.find { it.key == key }?.value
         }
 
-        // block.blockId.outputName — block output
+        // block.blockId[.inputs|outputs].key
         if (expr.startsWith("block.")) {
             val parts = expr.removePrefix("block.").split(".", limit = 2)
-            if (parts.size == 2) {
-                val blockId = BlockId(parts[0])
-                val outputName = parts[1]
-                return blockOutputs[blockId]?.get(outputName)
+            if (parts.size != 2) return null
+            val blockId = BlockId(parts[0])
+            val rest = parts[1]
+            val blockData = blockOutputs[blockId] ?: return null
+
+            // Explicit namespace: block.<id>.inputs.<key> or block.<id>.outputs.<key>
+            if (rest.startsWith("inputs.")) {
+                return blockData["inputs.${rest.removePrefix("inputs.")}"]
             }
+            if (rest.startsWith("outputs.")) {
+                val key = rest.removePrefix("outputs.")
+                return blockData["outputs.$key"] ?: blockData[key]
+            }
+
+            // Backward compat: block.<id>.<key> — try plain key (outputs alias)
+            return blockData[rest]
         }
 
         return null

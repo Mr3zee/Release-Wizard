@@ -140,12 +140,12 @@ class TemplateSuggestionsTest {
         assertEquals("Build / buildId", suggestions[0].label)
         assertEquals(SuggestionCategory.BLOCK_OUTPUT, suggestions[0].category)
         assertEquals("Build / buildNumber", suggestions[1].label)
-        assertEquals($$"${block.build1.buildNumber}", suggestions[1].insertText)
+        assertEquals($$"${block.build1.outputs.buildNumber}", suggestions[1].insertText)
         assertEquals("Build / buildUrl", suggestions[2].label)
         assertEquals("Build / buildStatus", suggestions[3].label)
         // Custom output "status" (not in known) comes last
         assertEquals("Build / status", suggestions[4].label)
-        assertEquals($$"${block.build1.status}", suggestions[4].insertText)
+        assertEquals($$"${block.build1.outputs.status}", suggestions[4].insertText)
     }
 
     @Test
@@ -238,7 +238,7 @@ class TemplateSuggestionsTest {
 
     @Test
     fun `block prefix with ID and output suffix filters further`() {
-        val ctx = InterpolationContext(triggerOffset = 0, prefix = "block.build1.build")
+        val ctx = InterpolationContext(triggerOffset = 0, prefix = "block.build1.outputs.build")
         val result = filterSuggestions(testSuggestions, ctx)
         // Matches known outputs starting with "build": buildId, buildNumber, buildUrl, buildStatus
         assertEquals(4, result.size)

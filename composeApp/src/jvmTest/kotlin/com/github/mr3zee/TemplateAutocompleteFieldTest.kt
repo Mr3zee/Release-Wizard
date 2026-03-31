@@ -196,7 +196,7 @@ class TemplateAutocompleteFieldTest {
         waitForIdle()
 
         // Should see both category headers and suggestion items
-        onNodeWithText("Parameters", useUnmergedTree = true).assertExists()
+        onNodeWithText("Project Parameters", useUnmergedTree = true).assertExists()
         onNodeWithText("Block Outputs", useUnmergedTree = true).assertExists()
         // Parameter suggestions (indices 0, 1)
         onNodeWithTag("field_suggestion_0", useUnmergedTree = true).assertExists()
@@ -324,9 +324,8 @@ class TemplateAutocompleteFieldTest {
         onNodeWithTag("field").performTextInput($$"${")
         waitForIdle()
 
-        // Arrow down twice to second item ("env"), then Enter to accept
+        // Arrow down once to second item ("env") — selectedIndex starts at 0, then Enter to accept
         onNodeWithTag("field").performKeyInput {
-            pressKey(Key.DirectionDown)
             pressKey(Key.DirectionDown)
             pressKey(Key.Enter)
         }
@@ -340,7 +339,7 @@ class TemplateAutocompleteFieldTest {
     // onPreviewKeyEvent receives it.
 
     @Test
-    fun `enter without selection does not accept suggestion`() = runComposeUiTest {
+    fun `enter without arrow key accepts first suggestion`() = runComposeUiTest {
         var currentValue = ""
         setContent {
             MaterialTheme {
@@ -362,14 +361,14 @@ class TemplateAutocompleteFieldTest {
         waitForIdle()
         onNodeWithTag("field_suggestion_0", useUnmergedTree = true).assertExists()
 
-        // Enter without arrow down — selectedIndex is -1, should not accept
+        // Enter without arrow navigation — selectedIndex starts at 0, accepts first suggestion
         onNodeWithTag("field").performKeyInput {
             pressKey(Key.Enter)
         }
         waitForIdle()
 
-        // Value should still be the raw typed text
-        assertEquals($$"${", currentValue)
+        // First suggestion (version parameter) should be accepted
+        assertEquals($$"${param.version}", currentValue)
     }
 
     @Test
@@ -423,9 +422,8 @@ class TemplateAutocompleteFieldTest {
         onNodeWithTag("field").performTextInput($$"${")
         waitForIdle()
 
-        // Down twice (select "env" at index 1), Up once (select "version" at index 0), Enter
+        // Down once (select "env" at index 1), Up once (select "version" at index 0), Enter
         onNodeWithTag("field").performKeyInput {
-            pressKey(Key.DirectionDown)
             pressKey(Key.DirectionDown)
             pressKey(Key.DirectionUp)
             pressKey(Key.Enter)
@@ -458,9 +456,8 @@ class TemplateAutocompleteFieldTest {
         onNodeWithTag("field").performTextInput($$"${")
         waitForIdle()
 
-        // Down twice reaches last item (index 1 = "env"), Down again wraps to first (index 0 = "version")
+        // Down once reaches last item (index 1 = "env"), Down again wraps to first (index 0 = "version")
         onNodeWithTag("field").performKeyInput {
-            pressKey(Key.DirectionDown)
             pressKey(Key.DirectionDown)
             pressKey(Key.DirectionDown) // wraps to index 0
             pressKey(Key.Enter)
@@ -492,9 +489,8 @@ class TemplateAutocompleteFieldTest {
         onNodeWithTag("field").performTextInput($$"${")
         waitForIdle()
 
-        // Down once (index 0 = "version"), Up wraps to last (index 1 = "env")
+        // selectedIndex starts at 0 ("version"), Up wraps to last (index 1 = "env")
         onNodeWithTag("field").performKeyInput {
-            pressKey(Key.DirectionDown) // index 0
             pressKey(Key.DirectionUp)   // wraps to index 1 (last)
             pressKey(Key.Enter)
         }

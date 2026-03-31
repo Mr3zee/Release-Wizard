@@ -186,4 +186,93 @@ class TemplateEngineTest {
         val result = TemplateEngine.resolve($$"${param.outer}", params)
         assertEquals("final-value", result)
     }
+
+    // --- Self-block sibling parameter resolution ---
+
+    @Test
+    fun `resolveParameters with blockId allows sibling param reference`() {
+        val params = listOf(
+            Parameter("channel", "#releases"),
+            Parameter("text", $$"Posted to ${block.slack.inputs.channel}"),
+        )
+        val resolved = TemplateEngine.resolveParameters(
+            params, emptyList(), emptyMap(), blockId = BlockId("slack"),
+        )
+        assertEquals("#releases", resolved[0].value)
+        assertEquals("Posted to #releases", resolved[1].value)
+    }
+
+    @Test
+    fun `resolveParameters without blockId does not resolve self-block references`() {
+        val params = listOf(
+            Parameter("channel", "#releases"),
+            Parameter("text", $$"Posted to ${block.slack.inputs.channel}"),
+        )
+        val resolved = TemplateEngine.resolveParameters(params, emptyList())
+        assertEquals($$"Posted to ${block.slack.inputs.channel}", resolved[1].value)
+    }
+
+    @Test
+    fun `resolveParameters handles intra-block chain A to B to C`() {
+        val params = listOf(
+            Parameter("a", "hello"),
+            Parameter("b", $$"${block.x.inputs.a}"),
+            Parameter("c", $$"${block.x.inputs.b}"),
+        )
+        val resolved = TemplateEngine.resolveParameters(
+            params, emptyList(), emptyMap(), blockId = BlockId("x"),
+        )
+        assertEquals("hello", resolved[0].value)
+        assertEquals("hello", resolved[1].value)
+        assertEquals("hello", resolved[2].value)
+    }
+
+    // --- Inputs/outputs namespace syntax ---
+
+    @Test
+    fun `resolve explicit inputs namespace`() {
+        val outputs = mapOf(BlockId("build") to mapOf("inputs.branch" to "main"))
+        val result = TemplateEngine.resolve(
+            $$"Branch: ${block.build.inputs.branch}", emptyList(), outputs,
+        )
+        assertEquals("Branch: main", result)
+    }
+
+    @Test
+    fun `resolve explicit outputs namespace`() {
+        val outputs = mapOf(BlockId("build") to mapOf(
+            "outputs.buildNumber" to "42",
+            "buildNumber" to "42",
+        ))
+        val result = TemplateEngine.resolve(
+            $$"Build #${block.build.outputs.buildNumber}", emptyList(), outputs,
+        )
+        assertEquals("Build #42", result)
+    }
+
+    @Test
+    fun `resolve backward compat without namespace`() {
+        val outputs = mapOf(BlockId("build") to mapOf("buildNumber" to "42"))
+        val result = TemplateEngine.resolve(
+            $$"Build #${block.build.buildNumber}", emptyList(), outputs,
+        )
+        assertEquals("Build #42", result)
+    }
+
+    @Test
+    fun `inputs and outputs do not collide via namespaces`() {
+        val outputs = mapOf(BlockId("build") to mapOf(
+            "inputs.branch" to "main",
+            "outputs.branch" to "release/1.0",
+            "branch" to "release/1.0",
+        ))
+        val inputResult = TemplateEngine.resolve(
+            $$"${block.build.inputs.branch}", emptyList(), outputs,
+        )
+        val outputResult = TemplateEngine.resolve(
+            $$"${block.build.outputs.branch}", emptyList(), outputs,
+        )
+        assertEquals("main", inputResult)
+        assertEquals("release/1.0", outputResult)
+    }
 }

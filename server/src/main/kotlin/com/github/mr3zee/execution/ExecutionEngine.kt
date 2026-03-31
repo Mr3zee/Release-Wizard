@@ -971,14 +971,18 @@ class ExecutionEngine(
         val outputs = resolveAndExecute(release, block, outputsMap, run)
         val postGate = block.postGate
         if (postGate != null) {
-            outputsMap[block.id] = outputs
+            val namespacedOutputs = outputs.flatMap { (k, v) ->
+                listOf("outputs.$k" to v, k to v)
+            }.toMap()
+            val fullMap = (outputsMap[block.id] ?: emptyMap()) + namespacedOutputs
+            outputsMap[block.id] = fullMap
             val msg = resolveGateMessage(postGate, block.name, GatePhase.POST, release, outputsMap)
             statusMap[block.id] = BlockStatus.WAITING_FOR_INPUT
             persistAndEmit(release.id, BlockExecution(
                 blockId = block.id,
                 releaseId = release.id,
                 status = BlockStatus.WAITING_FOR_INPUT,
-                outputs = outputs,
+                outputs = fullMap,
                 startedAt = startTime,
                 gatePhase = GatePhase.POST,
                 gateMessage = msg,
@@ -1188,7 +1192,14 @@ class ExecutionEngine(
             block.parameters,
             release.parameters,
             outputsMap,
+            blockId = block.id,
         )
+
+        // Store resolved inputs so downstream blocks can reference them via ${block.<id>.inputs.<key>}
+        val inputEntries = resolvedParams
+            .filter { it.key.isNotBlank() }
+            .associate { "inputs.${it.key}" to it.value }
+        outputsMap[block.id] = (outputsMap[block.id] ?: emptyMap()) + inputEntries
 
         val connections = mutableMapOf<ConnectionId, ConnectionConfig>()
         block.connectionId?.let { connId ->
@@ -1210,7 +1221,10 @@ class ExecutionEngine(
         val executionScope = object : ExecutionScope {
             override suspend fun persistOutputs(outputs: Map<String, String>) {
                 val existing = outputsMap[block.id] ?: emptyMap()
-                val merged = existing + outputs
+                val namespacedOutputs = outputs.flatMap { (k, v) ->
+                    listOf("outputs.$k" to v, k to v)
+                }.toMap()
+                val merged = existing + namespacedOutputs
                 outputsMap[block.id] = merged
                 // Upsert with merged outputs, preserving the original startedAt
                 val existingExec = repository.findBlockExecution(release.id, block.id)
@@ -1258,7 +1272,12 @@ class ExecutionEngine(
         statusMap: MutableMap<BlockId, BlockStatus>,
         outputsMap: MutableMap<BlockId, Map<String, String>>,
     ) {
-        outputsMap[blockId] = outputs
+        // Store outputs with namespaced keys + plain keys for backward compat
+        val namespacedOutputs = outputs.flatMap { (k, v) ->
+            listOf("outputs.$k" to v, k to v)
+        }.toMap()
+        val fullMap = (outputsMap[blockId] ?: emptyMap()) + namespacedOutputs
+        outputsMap[blockId] = fullMap
         statusMap[blockId] = BlockStatus.SUCCEEDED
         // Preserve approvals from the WAITING_FOR_INPUT state when transitioning to SUCCEEDED
         val existingExecution = repository.findBlockExecution(releaseId, blockId)
@@ -1267,7 +1286,7 @@ class ExecutionEngine(
             blockId = blockId,
             releaseId = releaseId,
             status = BlockStatus.SUCCEEDED,
-            outputs = outputs,
+            outputs = fullMap,
             approvals = approvals,
             startedAt = startTime,
             finishedAt = Clock.System.now(),

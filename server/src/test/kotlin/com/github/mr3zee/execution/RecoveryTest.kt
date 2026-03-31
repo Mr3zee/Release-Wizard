@@ -266,10 +266,14 @@ class RecoveryTest {
                 ?: fail("Release should exist after recovery")
             assertEquals(ReleaseStatus.SUCCEEDED, finalRelease.status)
 
-            // Outputs should be preserved from before crash, not re-executed
+            // Outputs should be preserved from before crash, with namespaced keys added
             val finalExec = releasesRepo.findBlockExecution(release.id, BlockId("build"))
                 ?: fail("Block execution should exist")
-            assertEquals(storedOutputs, finalExec.outputs)
+            // Raw keys preserved for backward compat + "outputs." prefixed keys
+            for ((key, value) in storedOutputs) {
+                assertEquals(value, finalExec.outputs[key], "Raw key '$key' should be preserved")
+                assertEquals(value, finalExec.outputs["outputs.$key"], "Namespaced key 'outputs.$key' should exist")
+            }
         }
     }
 
