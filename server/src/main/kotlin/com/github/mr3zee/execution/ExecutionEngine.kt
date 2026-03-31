@@ -53,8 +53,17 @@ class ExecutionEngine(
     // Releases currently being stopped (cancel-and-mark-stopped in progress)
     private val stoppingReleases = ConcurrentHashMap.newKeySet<ReleaseId>()
 
+    // Blocks currently being individually stopped (prevents executeWithBlockErrorHandling from marking FAILED)
+    private val stoppingBlocks: MutableSet<Pair<ReleaseId, BlockId>> = ConcurrentHashMap.newKeySet()
+
     // Per-release mutex to prevent concurrent restarts
     private val restartMutexes = ConcurrentHashMap<ReleaseId, Mutex>()
+
+    // Maps each block to the WaveLoopState managing it (for per-block stop/resume)
+    private val blockWaveLoopStates = ConcurrentHashMap<Pair<ReleaseId, BlockId>, WaveLoopState>()
+
+    // Per-block jobs for targeted cancellation
+    private val activeBlockJobs = ConcurrentHashMap<Pair<ReleaseId, BlockId>, Job>()
 
     // EXEC-H7: Global concurrency semaphore for parallel block execution.
     // Limits the total number of concurrently executing blocks across all releases
@@ -239,14 +248,20 @@ class ExecutionEngine(
             // Re-emit current state so WebSocket subscribers see the recovered state
             emitEvent(ReleaseEvent.ReleaseStatusChanged(release.id, ReleaseStatus.RUNNING, startedAt = startedAt))
 
-            // Skip already SUCCEEDED blocks
-            val remaining = sorted.filter { statusMap[it] != BlockStatus.SUCCEEDED }.toMutableList()
+            // Skip already SUCCEEDED and STOPPED blocks from remaining
+            val remaining = sorted.filter {
+                statusMap[it] != BlockStatus.SUCCEEDED && statusMap[it] != BlockStatus.STOPPED
+            }.toMutableList()
 
             coroutineScope {
-                runWaveLoop(this, release, graph, remaining, predecessors, statusMap) { block ->
+                runWaveLoop(this, release, graph, remaining, predecessors, statusMap, outputsMap) { block ->
                     recoverBlock(release, block, statusMap, outputsMap, execMap, persistedExecutions)
                 }
             }
+
+            // If release was auto-stopped (still has STOPPED blocks), don't finalize
+            val currentRelease = repository.findById(release.id)
+            if (currentRelease?.status == ReleaseStatus.STOPPED) return@executeWithReleaseErrorHandling
 
             val allSucceeded = statusMap.values.all { it == BlockStatus.SUCCEEDED }
             val finalStatus = if (allSucceeded) ReleaseStatus.SUCCEEDED else ReleaseStatus.FAILED
@@ -344,8 +359,10 @@ class ExecutionEngine(
                 initStatusFromPersisted(childGraph.blocks, childExecMap, childStatusMap, childOutputsMap)
             },
             runWaves = { wavesScope, childGraph, sorted, childPredecessors, childStatusMap, childOutputsMap ->
-                val remaining = sorted.filter { childStatusMap[it] != BlockStatus.SUCCEEDED }.toMutableList()
-                runWaveLoop(wavesScope, release, childGraph, remaining, childPredecessors, childStatusMap) { block ->
+                val remaining = sorted.filter {
+                    childStatusMap[it] != BlockStatus.SUCCEEDED && childStatusMap[it] != BlockStatus.STOPPED
+                }.toMutableList()
+                runWaveLoop(wavesScope, release, childGraph, remaining, childPredecessors, childStatusMap, childOutputsMap) { block ->
                     recoverBlock(release, block, childStatusMap, childOutputsMap, childExecMap, persistedExecutions)
                 }
             },
@@ -489,6 +506,8 @@ class ExecutionEngine(
             completionEmitted.remove(releaseId)
             replayBuffers.remove(releaseId)
             sequenceCounters.remove(releaseId)
+            blockWaveLoopStates.keys.removeAll { it.first == releaseId }
+            activeBlockJobs.keys.removeAll { it.first == releaseId }
 
             // Reset the failed block in DB
             val resetExec = BlockExecution(
@@ -527,12 +546,65 @@ class ExecutionEngine(
     }
 
     /**
-     * Stop a specific block within a running release.
-     * This pauses the entire release: all running blocks get STOPPED and external builds are cancelled.
+     * Stop a specific block within a running release (per-block stop).
+     * Only this block is stopped — other blocks continue running. Blocks that depend
+     * on this block will not launch (their predecessors check will fail).
+     * If all runnable blocks finish while stopped blocks remain, the release auto-transitions to STOPPED.
      */
-    suspend fun stopBlock(releaseId: ReleaseId, @Suppress("UNUSED_PARAMETER") blockId: BlockId): Boolean {
-        // blockId is validated by the service layer; the engine stops the entire release
-        return stopReleaseInternal(releaseId)
+    suspend fun stopBlock(releaseId: ReleaseId, blockId: BlockId): Boolean {
+        val mutex = restartMutexes.getOrPut(releaseId) { Mutex() }
+        return mutex.withLock {
+            val key = releaseId to blockId
+            val state = blockWaveLoopStates[key] ?: return@withLock false
+
+            // Validate in-memory status (not just DB) to prevent race
+            val currentStatus = state.statusMap[blockId]
+            if (currentStatus != BlockStatus.RUNNING && currentStatus != BlockStatus.WAITING_FOR_INPUT) {
+                return@withLock false
+            }
+
+            // Mark intent before cancel so error handlers skip FAILED marking
+            stoppingBlocks.add(key)
+            // Set status in memory BEFORE cancel so wave loop sees STOPPED immediately
+            state.statusMap[blockId] = BlockStatus.STOPPED
+
+            try {
+                val blockJob = activeBlockJobs[key]
+                if (blockJob != null && blockJob.isActive) {
+                    blockJob.cancel()
+                    blockJob.join()
+                }
+            } finally {
+                stoppingBlocks.remove(key)
+            }
+
+            // Cancel external build (best-effort)
+            val release = repository.findById(releaseId)
+            if (release != null) {
+                cancelExternalBuild(release, blockId)
+            }
+
+            // Persist — targeted UPDATE preserves outputs, gatePhase, approvals, etc.
+            repository.stopSingleBlock(releaseId, blockId, Clock.System.now())
+
+            // Clean up pending approval for this block only
+            pendingApprovals[releaseId]?.remove(blockId)
+
+            // Emit block update only (NOT ReleaseStatusChanged — release stays RUNNING)
+            val updatedExec = repository.findBlockExecution(releaseId, blockId)
+            if (updatedExec != null) {
+                emitBlockUpdate(releaseId, updatedExec)
+            }
+
+            // Track stopped count and wake wave loop
+            state.stoppedCount.incrementAndGet()
+            state.blockCompleted.trySend(Unit)
+
+            activeBlockJobs.remove(key)
+
+            log.info("Block {} stopped in release {}", blockId.value, releaseId.value)
+            true
+        }
     }
 
     /**
@@ -604,6 +676,9 @@ class ExecutionEngine(
             completionEmitted.remove(releaseId)
             replayBuffers.remove(releaseId)
             sequenceCounters.remove(releaseId)
+            // Clean up per-block state for this release
+            blockWaveLoopStates.keys.removeAll { it.first == releaseId }
+            activeBlockJobs.keys.removeAll { it.first == releaseId }
 
             log.info("Release {} stopped ({} blocks stopped)", releaseId.value, blocksToStop.size)
             true
@@ -645,6 +720,101 @@ class ExecutionEngine(
             recoverRelease(updatedRelease, updatedExecutions)
 
             log.info("Release {} resumed ({} blocks re-queued)", releaseId.value, stoppedBlocks.size)
+            true
+        }
+    }
+
+    /**
+     * Resume a single stopped block within a running release.
+     * If the block was stopped at a post-approval gate, it is restored to WAITING_FOR_INPUT
+     * with its outputs preserved (the block does NOT re-execute). Otherwise, it resets to WAITING.
+     */
+    suspend fun resumeBlock(releaseId: ReleaseId, blockId: BlockId): Boolean {
+        val mutex = restartMutexes.getOrPut(releaseId) { Mutex() }
+        return mutex.withLock {
+            val key = releaseId to blockId
+            val state = blockWaveLoopStates[key] ?: return@withLock false
+
+            // If the wave loop has auto-stopped, per-block resume is not possible.
+            // The user should use release-level resume instead.
+            if (state.autoStopped.get()) return@withLock false
+
+            val exec = repository.findBlockExecution(releaseId, blockId) ?: return@withLock false
+            if (exec.status != BlockStatus.STOPPED) return@withLock false
+
+            // Decrement stoppedCount and modify remaining atomically (synchronized with wave loop)
+            synchronized(state.remaining) {
+                state.stoppedCount.decrementAndGet()
+
+                if (exec.gatePhase != GatePhase.POST) {
+                    // Normal or pre-gate resume: add back to remaining
+                    state.remaining.add(blockId)
+                }
+            }
+
+            if (exec.gatePhase == GatePhase.POST) {
+                // Post-gate resume: restore to WAITING_FOR_INPUT, preserve outputs
+                repository.resumeSingleBlockToGate(releaseId, blockId)
+                state.statusMap[blockId] = BlockStatus.WAITING_FOR_INPUT
+
+                val updatedExec = repository.findBlockExecution(releaseId, blockId)
+                if (updatedExec != null) {
+                    emitBlockUpdate(releaseId, updatedExec)
+                }
+
+                // Launch a coroutine in the wave loop's scope to wait for post-gate approval
+                state.inFlightCount.incrementAndGet()
+                val job = state.scope.launch {
+                    try {
+                        awaitGateApproval(releaseId, blockId)
+                        // Complete with stored outputs — NO re-execution
+                        val startTime = exec.startedAt ?: Clock.System.now()
+                        completeBlockSuccess(releaseId, blockId, exec.outputs, startTime, state.statusMap, state.outputsMap)
+                    } catch (e: CancellationException) {
+                        val blockKey = releaseId to blockId
+                        if (!stoppingBlocks.contains(blockKey) && !stoppingReleases.contains(releaseId) && !restartingReleases.contains(releaseId)) {
+                            state.statusMap[blockId] = BlockStatus.FAILED
+                            persistAndEmit(releaseId, BlockExecution(
+                                blockId = blockId,
+                                releaseId = releaseId,
+                                status = BlockStatus.FAILED,
+                                error = "Cancelled",
+                                startedAt = exec.startedAt,
+                                finishedAt = Clock.System.now(),
+                            ))
+                        }
+                        throw e
+                    } catch (e: Exception) {
+                        state.statusMap[blockId] = BlockStatus.FAILED
+                        persistAndEmit(releaseId, BlockExecution(
+                            blockId = blockId,
+                            releaseId = releaseId,
+                            status = BlockStatus.FAILED,
+                            error = e.message ?: "Unknown error",
+                            startedAt = exec.startedAt,
+                            finishedAt = Clock.System.now(),
+                        ))
+                    } finally {
+                        activeBlockJobs.remove(key)
+                        state.inFlightCount.decrementAndGet()
+                        state.blockCompleted.trySend(Unit)
+                    }
+                }
+                activeBlockJobs[key] = job
+            } else {
+                // Normal or pre-gate resume: reset to WAITING, re-execute from scratch
+                repository.resumeSingleBlockToWaiting(releaseId, blockId)
+                state.statusMap[blockId] = BlockStatus.WAITING
+
+                val updatedExec = repository.findBlockExecution(releaseId, blockId)
+                if (updatedExec != null) {
+                    emitBlockUpdate(releaseId, updatedExec)
+                }
+            }
+
+            state.blockCompleted.trySend(Unit)
+
+            log.info("Block {} resumed in release {} (gatePhase={})", blockId.value, releaseId.value, exec.gatePhase)
             true
         }
     }
@@ -725,10 +895,14 @@ class ExecutionEngine(
             // Use coroutineScope for structured concurrency -- cancellation propagates to all children
             val remaining = sorted.toMutableList()
             coroutineScope {
-                runWaveLoop(this, release, graph, remaining, predecessors, statusMap) { block ->
+                runWaveLoop(this, release, graph, remaining, predecessors, statusMap, outputsMap) { block ->
                     executeBlock(release, block, statusMap, outputsMap)
                 }
             }
+
+            // If release was auto-stopped (still has STOPPED blocks), don't finalize
+            val currentRelease = repository.findById(release.id)
+            if (currentRelease?.status == ReleaseStatus.STOPPED) return@executeWithReleaseErrorHandling
 
             val allSucceeded = statusMap.values.all { it == BlockStatus.SUCCEEDED }
             val finalStatus = if (allSucceeded) ReleaseStatus.SUCCEEDED else ReleaseStatus.FAILED
@@ -818,6 +992,11 @@ class ExecutionEngine(
                 finishedAt = Clock.System.now(),
             ))
         } catch (e: CancellationException) {
+            // If the container itself was individually stopped, set STOPPED and return
+            if (stoppingBlocks.contains(release.id to container.id)) {
+                statusMap[container.id] = BlockStatus.STOPPED
+                return
+            }
             throw e
         } catch (e: Exception) {
             statusMap[container.id] = BlockStatus.FAILED
@@ -875,7 +1054,7 @@ class ExecutionEngine(
             },
             runWaves = { wavesScope, childGraph, sorted, childPredecessors, childStatusMap, childOutputsMap ->
                 val remaining = sorted.toMutableList()
-                runWaveLoop(wavesScope, release, childGraph, remaining, childPredecessors, childStatusMap) { block ->
+                runWaveLoop(wavesScope, release, childGraph, remaining, childPredecessors, childStatusMap, childOutputsMap) { block ->
                     executeBlock(release, block, childStatusMap, childOutputsMap)
                 }
             },
@@ -1101,9 +1280,11 @@ class ExecutionEngine(
 
     /**
      * Event-driven block execution loop: launches each block as soon as its predecessors succeed.
-     * EXEC-C1: Replaces the previous wave-based approach that serialized unrelated blocks sharing
-     * a topological level and busy-polled with delay(100ms). Now uses a Channel to signal
-     * block completion, eliminating both unnecessary serialization and busy-polling.
+     * EXEC-C1: Uses a Channel to signal block completion, eliminating busy-polling.
+     *
+     * Supports per-block stop/resume: external [stopBlock]/[resumeBlock] calls interact with the
+     * loop via [WaveLoopState]. The loop stays alive while stopped blocks exist (they may be resumed).
+     * If all runnable blocks finish while stopped blocks remain, the release auto-transitions to STOPPED.
      */
     private suspend fun runWaveLoop(
         scope: CoroutineScope,
@@ -1112,66 +1293,123 @@ class ExecutionEngine(
         remaining: MutableList<BlockId>,
         predecessors: Map<BlockId, Set<BlockId>>,
         statusMap: MutableMap<BlockId, BlockStatus>,
+        outputsMap: MutableMap<BlockId, Map<String, String>>,
         executeBlock: suspend (Block) -> Unit,
     ) {
-        // Channel signaled whenever any block reaches a terminal state
         val blockCompleted = Channel<Unit>(Channel.UNLIMITED)
         val inFlightCount = AtomicInteger(0)
-        // EXEC-M4: Pre-build lookup map to avoid O(n) scan per block in each wave
         val blockById = graph.blocks.associateBy { it.id }
 
-        fun launchReadyBlocks(): Int {
-            val ready = remaining.filter { blockId ->
-                val preds = predecessors[blockId] ?: emptySet()
-                preds.all { statusMap[it] == BlockStatus.SUCCEEDED }
-            }
-            for (blockId in ready) {
-                remaining.remove(blockId)
-                inFlightCount.incrementAndGet()
-                val block = blockById[blockId]
-                    ?: error("Block $blockId not found in DAG despite being in topological sort")
-                scope.launch {
-                    try {
-                        executeBlock(block)
-                    } finally {
-                        inFlightCount.decrementAndGet()
-                        blockCompleted.trySend(Unit)
+        // Pre-count stopped blocks (relevant during recovery)
+        val initialStoppedCount = statusMap.values.count { it == BlockStatus.STOPPED }
+
+        val state = WaveLoopState(
+            releaseId = release.id,
+            scope = scope,
+            remaining = remaining,
+            statusMap = statusMap,
+            outputsMap = outputsMap,
+            blockCompleted = blockCompleted,
+            inFlightCount = inFlightCount,
+            stoppedCount = AtomicInteger(initialStoppedCount),
+        )
+
+        // Register all managed blocks so stopBlock/resumeBlock can find the state
+        for (block in graph.blocks) {
+            blockWaveLoopStates[release.id to block.id] = state
+        }
+
+        try {
+            fun launchReadyBlocks(): Int {
+                return synchronized(state.remaining) {
+                    val ready = state.remaining.filter { blockId ->
+                        val preds = predecessors[blockId] ?: emptySet()
+                        preds.all { statusMap[it] == BlockStatus.SUCCEEDED }
                     }
+                    for (blockId in ready) {
+                        state.remaining.remove(blockId)
+                        inFlightCount.incrementAndGet()
+                        val block = blockById[blockId]
+                            ?: error("Block $blockId not found in DAG despite being in topological sort")
+                        val key = release.id to blockId
+                        val job = scope.launch {
+                            try {
+                                executeBlock(block)
+                            } finally {
+                                activeBlockJobs.remove(key)
+                                inFlightCount.decrementAndGet()
+                                blockCompleted.trySend(Unit)
+                            }
+                        }
+                        activeBlockJobs[key] = job
+                    }
+                    ready.size
                 }
             }
-            return ready.size
-        }
 
-        launchReadyBlocks()
-
-        while (remaining.isNotEmpty()) {
-            currentCoroutineContext().ensureActive()
-            if (inFlightCount.get() == 0) {
-                // All in-flight blocks finished — check once more for newly ready blocks
-                // (handles the race where multiple blocks complete before the loop iterates)
-                if (launchReadyBlocks() == 0) break // Truly stuck: remaining blocks have failed predecessors
-                continue
-            }
-            blockCompleted.receive() // Suspend until a block completes
             launchReadyBlocks()
-        }
 
-        // Wait for all in-flight blocks to finish
-        while (inFlightCount.get() > 0) {
-            blockCompleted.receive()
-        }
+            while (true) {
+                currentCoroutineContext().ensureActive()
 
-        blockCompleted.close()
+                // Atomically check termination and auto-stop conditions in a single synchronized block
+                // to prevent TOCTOU race with resumeBlock modifying stoppedCount + remaining.
+                // 0 = continue, 1 = break, 2 = auto-stop
+                val action = synchronized(state.remaining) {
+                    when {
+                        // All done: no remaining, no in-flight, no stopped
+                        state.remaining.isEmpty() && inFlightCount.get() == 0 && state.stoppedCount.get() == 0 -> 1
 
-        // Mark unreachable blocks (whose predecessors failed) as FAILED
-        for (blockId in remaining) {
-            statusMap[blockId] = BlockStatus.FAILED
-            persistAndEmit(release.id, BlockExecution(
-                blockId = blockId,
-                releaseId = release.id,
-                status = BlockStatus.FAILED,
-                error = "Skipped: predecessor failed",
-            ))
+                        // No in-flight, no stopped, but remaining exist — try to launch
+                        inFlightCount.get() == 0 && state.stoppedCount.get() == 0 ->
+                            if (launchReadyBlocks() == 0) 1 else 0
+
+                        // All runnable work done, but stopped blocks remain — auto-stop
+                        state.remaining.isEmpty() && inFlightCount.get() == 0 && state.stoppedCount.get() > 0 -> {
+                            // Set flag INSIDE synchronized to prevent resumeBlock from racing
+                            state.autoStopped.set(true)
+                            2
+                        }
+
+                        else -> 0
+                    }
+                }
+                if (action == 1) break
+                if (action == 2) {
+                    repository.updateStatus(release.id, ReleaseStatus.STOPPED)
+                    emitEvent(ReleaseEvent.ReleaseStatusChanged(release.id, ReleaseStatus.STOPPED))
+                    log.info("Release {} auto-stopped: all runnable blocks done, {} blocks still stopped",
+                        release.id.value, state.stoppedCount.get())
+                    return // Exit wave loop — release is now STOPPED
+                }
+
+                blockCompleted.receive()
+                launchReadyBlocks()
+            }
+
+            // Wait for all in-flight blocks to finish
+            while (inFlightCount.get() > 0) {
+                blockCompleted.receive()
+            }
+
+            blockCompleted.close()
+
+            // Mark unreachable blocks (whose predecessors failed) as FAILED
+            val unreachable = synchronized(state.remaining) { state.remaining.toList() }
+            for (blockId in unreachable) {
+                statusMap[blockId] = BlockStatus.FAILED
+                persistAndEmit(release.id, BlockExecution(
+                    blockId = blockId,
+                    releaseId = release.id,
+                    status = BlockStatus.FAILED,
+                    error = "Skipped: predecessor failed",
+                ))
+            }
+        } finally {
+            // Clean up block registrations
+            for (block in graph.blocks) {
+                blockWaveLoopStates.remove(release.id to block.id)
+            }
         }
     }
 
@@ -1310,7 +1548,10 @@ class ExecutionEngine(
         try {
             outputs = action()
         } catch (e: CancellationException) {
-            if (!restartingReleases.contains(releaseId) && !stoppingReleases.contains(releaseId)) {
+            val blockKey = releaseId to blockId
+            if (!restartingReleases.contains(releaseId)
+                && !stoppingReleases.contains(releaseId)
+                && !stoppingBlocks.contains(blockKey)) {
                 statusMap[blockId] = BlockStatus.FAILED
                 persistAndEmit(releaseId, BlockExecution(
                     blockId = blockId,
@@ -1362,6 +1603,8 @@ class ExecutionEngine(
                 replayBuffers.remove(releaseId)
                 sequenceCounters.remove(releaseId)
                 restartMutexes.remove(releaseId)
+                blockWaveLoopStates.keys.removeAll { it.first == releaseId }
+                activeBlockJobs.keys.removeAll { it.first == releaseId }
             }
         }
     }
@@ -1376,6 +1619,25 @@ class ExecutionEngine(
         }
         return result
     }
+
+    /**
+     * Tracks the mutable state of an active wave loop so that external
+     * [stopBlock]/[resumeBlock] calls can interact with it.
+     *
+     * ALL access to [remaining] must be wrapped in `synchronized(remaining)`.
+     */
+    class WaveLoopState(
+        val releaseId: ReleaseId,
+        val scope: CoroutineScope,
+        val remaining: MutableList<BlockId>,
+        val statusMap: MutableMap<BlockId, BlockStatus>,
+        val outputsMap: MutableMap<BlockId, Map<String, String>>,
+        val blockCompleted: Channel<Unit>,
+        val inFlightCount: AtomicInteger,
+        val stoppedCount: AtomicInteger = AtomicInteger(0),
+        /** Set to true by the wave loop when it decides to auto-stop. Checked by resumeBlock to prevent a race. */
+        val autoStopped: AtomicBoolean = AtomicBoolean(false),
+    )
 
     companion object {
         /** EXEC-H7: Maximum concurrent block executions across all releases */

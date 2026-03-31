@@ -425,9 +425,72 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
             it[BlockExecutionTable.finishedAt] = null
             it[BlockExecutionTable.error] = null
             it[BlockExecutionTable.outputs] = emptyMap()
+            it[BlockExecutionTable.gatePhase] = null
+            it[BlockExecutionTable.gateMessage] = null
+            it[BlockExecutionTable.approvals] = emptyList()
+            it[BlockExecutionTable.webhookStatus] = null
+            it[BlockExecutionTable.webhookStatusDescription] = null
+            it[BlockExecutionTable.webhookStatusAt] = null
+            it[BlockExecutionTable.subBuilds] = emptyList()
         }
         ReleaseTable.update({ ReleaseTable.id eq releaseUuid }) {
             it[ReleaseTable.status] = ReleaseStatus.RUNNING
+        }
+        Unit
+    }
+
+    override suspend fun stopSingleBlock(
+        releaseId: ReleaseId,
+        blockId: BlockId,
+        finishedAt: kotlin.time.Instant,
+    ) = dbQuery {
+        val releaseUuid = UUID.fromString(releaseId.value)
+        BlockExecutionTable.update({
+            (BlockExecutionTable.releaseId eq releaseUuid) and
+                (BlockExecutionTable.blockId eq blockId.value)
+        }) {
+            it[BlockExecutionTable.status] = BlockStatus.STOPPED
+            it[BlockExecutionTable.finishedAt] = finishedAt
+        }
+        Unit
+    }
+
+    override suspend fun resumeSingleBlockToWaiting(
+        releaseId: ReleaseId,
+        blockId: BlockId,
+    ) = dbQuery {
+        val releaseUuid = UUID.fromString(releaseId.value)
+        BlockExecutionTable.update({
+            (BlockExecutionTable.releaseId eq releaseUuid) and
+                (BlockExecutionTable.blockId eq blockId.value)
+        }) {
+            it[BlockExecutionTable.status] = BlockStatus.WAITING
+            it[BlockExecutionTable.startedAt] = null
+            it[BlockExecutionTable.finishedAt] = null
+            it[BlockExecutionTable.error] = null
+            it[BlockExecutionTable.outputs] = emptyMap()
+            it[BlockExecutionTable.gatePhase] = null
+            it[BlockExecutionTable.gateMessage] = null
+            it[BlockExecutionTable.approvals] = emptyList()
+            it[BlockExecutionTable.webhookStatus] = null
+            it[BlockExecutionTable.webhookStatusDescription] = null
+            it[BlockExecutionTable.webhookStatusAt] = null
+            it[BlockExecutionTable.subBuilds] = emptyList()
+        }
+        Unit
+    }
+
+    override suspend fun resumeSingleBlockToGate(
+        releaseId: ReleaseId,
+        blockId: BlockId,
+    ) = dbQuery {
+        val releaseUuid = UUID.fromString(releaseId.value)
+        BlockExecutionTable.update({
+            (BlockExecutionTable.releaseId eq releaseUuid) and
+                (BlockExecutionTable.blockId eq blockId.value)
+        }) {
+            it[BlockExecutionTable.status] = BlockStatus.WAITING_FOR_INPUT
+            it[BlockExecutionTable.finishedAt] = null
         }
         Unit
     }

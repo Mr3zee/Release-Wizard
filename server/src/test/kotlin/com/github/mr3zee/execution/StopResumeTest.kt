@@ -459,10 +459,10 @@ class StopResumeTest {
         }
     }
 
-    // ── stopBlock delegates to full release stop ─────────────────────────
+    // ── per-block stop ─────────────────────────────────────────────────
 
     @Test
-    fun `stopBlock stops entire release, not just the target block`() = runBlocking {
+    fun `stopBlock stops only the target block, other blocks continue`() = runBlocking {
         val executor = ControllableBlockExecutor()
         withTestSetup(executor) {
             // Two parallel blocks (no edges — both start simultaneously)
@@ -487,21 +487,28 @@ class StopResumeTest {
             awaitBlockStatus(releasesRepo, release.id, BlockId("a"), BlockStatus.RUNNING)
             awaitBlockStatus(releasesRepo, release.id, BlockId("b"), BlockStatus.RUNNING)
 
-            // Stop via block A — should stop entire release (both blocks)
+            // Stop block A — only A should stop, B continues
             val stopped = engine.stopBlock(release.id, BlockId("a"))
             assertTrue(stopped)
 
-            val finalRelease = releasesRepo.findById(release.id) ?: fail("Release must exist")
-            assertEquals(ReleaseStatus.STOPPED, finalRelease.status)
-
             val aExec = releasesRepo.findBlockExecution(release.id, BlockId("a")) ?: fail("Block A must exist")
-            val bExec = releasesRepo.findBlockExecution(release.id, BlockId("b")) ?: fail("Block B must exist")
             assertEquals(BlockStatus.STOPPED, aExec.status, "Block A must be STOPPED")
-            assertEquals(BlockStatus.STOPPED, bExec.status, "Block B must also be STOPPED (full release stop)")
 
-            // cancel() must be called for every RUNNING block, not just the target block
+            // Release stays RUNNING since block B is still going
+            val midRelease = releasesRepo.findById(release.id) ?: fail("Release must exist")
+            assertEquals(ReleaseStatus.RUNNING, midRelease.status, "Release must stay RUNNING while B runs")
+
+            // cancel() must be called only for block A
             assertTrue(executor.wasCancelled(BlockId("a")), "cancel() must be called for block A")
-            assertTrue(executor.wasCancelled(BlockId("b")), "cancel() must be called for block B")
+            assertFalse(executor.wasCancelled(BlockId("b")), "cancel() must NOT be called for block B")
+
+            // Complete block B — release should auto-stop since A is still STOPPED
+            executor.complete(BlockId("b"))
+            awaitBlockStatus(releasesRepo, release.id, BlockId("b"), BlockStatus.SUCCEEDED)
+            awaitReleaseStatus(releasesRepo, release.id, ReleaseStatus.STOPPED)
+
+            val finalRelease = releasesRepo.findById(release.id) ?: fail("Release must exist")
+            assertEquals(ReleaseStatus.STOPPED, finalRelease.status, "Release auto-stops when all runnable blocks done but stopped blocks remain")
         }
     }
 

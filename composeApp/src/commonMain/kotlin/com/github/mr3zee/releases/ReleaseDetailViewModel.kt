@@ -206,6 +206,16 @@ class ReleaseDetailViewModel(
         }
     }
 
+    fun resumeBlock(blockId: BlockId) {
+        viewModelScope.launch {
+            try {
+                releaseApiClient.resumeBlock(releaseId, blockId)
+            } catch (e: Exception) {
+                _error.value = e.toUiMessage()
+            }
+        }
+    }
+
     fun approveBlock(blockId: BlockId, input: Map<String, String> = emptyMap()) {
         viewModelScope.launch {
             try {

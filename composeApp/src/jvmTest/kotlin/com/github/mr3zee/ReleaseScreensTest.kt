@@ -163,6 +163,7 @@ class ReleaseScreensTest {
                     onStopRelease = {},
                     onResumeRelease = {},
                     onStopBlock = {},
+                    onResumeBlock = {},
                     onRerun = {},
                     onArchive = {},
                     onApproveBlock = {},
@@ -210,6 +211,7 @@ class ReleaseScreensTest {
                     onStopRelease = {},
                     onResumeRelease = {},
                     onStopBlock = {},
+                    onResumeBlock = {},
                     onRerun = {},
                     onArchive = {},
                     onApproveBlock = {},
@@ -242,6 +244,7 @@ class ReleaseScreensTest {
                     onStopRelease = {},
                     onResumeRelease = {},
                     onStopBlock = {},
+                    onResumeBlock = {},
                     onRerun = {},
                     onArchive = {},
                     onApproveBlock = {},
@@ -273,6 +276,7 @@ class ReleaseScreensTest {
                     onStopRelease = {},
                     onResumeRelease = {},
                     onStopBlock = {},
+                    onResumeBlock = {},
                     onRerun = {},
                     onArchive = {},
                     onApproveBlock = {},
@@ -305,6 +309,7 @@ class ReleaseScreensTest {
                     onStopRelease = {},
                     onResumeRelease = {},
                     onStopBlock = {},
+                    onResumeBlock = {},
                     onRerun = {},
                     onArchive = {},
                     onApproveBlock = {},
@@ -337,6 +342,7 @@ class ReleaseScreensTest {
                     onStopRelease = {},
                     onResumeRelease = {},
                     onStopBlock = {},
+                    onResumeBlock = {},
                     onRerun = {},
                     onArchive = {},
                     onApproveBlock = {},
@@ -362,6 +368,7 @@ class ReleaseScreensTest {
                     onStopRelease = {},
                     onResumeRelease = {},
                     onStopBlock = {},
+                    onResumeBlock = {},
                     onRerun = {},
                     onArchive = {},
                     onApproveBlock = {},
@@ -409,6 +416,7 @@ class ReleaseScreensTest {
                     onStopRelease = {},
                     onResumeRelease = {},
                     onStopBlock = {},
+                    onResumeBlock = {},
                     onRerun = {},
                     onArchive = {},
                     onApproveBlock = {},
@@ -445,6 +453,7 @@ class ReleaseScreensTest {
                     onStopRelease = {},
                     onResumeRelease = {},
                     onStopBlock = {},
+                    onResumeBlock = {},
                     onRerun = {},
                     onArchive = {},
                     onApproveBlock = {},
@@ -481,6 +490,7 @@ class ReleaseScreensTest {
                     onStopRelease = {},
                     onResumeRelease = {},
                     onStopBlock = {},
+                    onResumeBlock = {},
                     onRerun = {},
                     onArchive = {},
                     onApproveBlock = {},
@@ -527,6 +537,7 @@ class ReleaseScreensTest {
                     onStopRelease = {},
                     onResumeRelease = {},
                     onStopBlock = {},
+                    onResumeBlock = {},
                     onRerun = {},
                     onArchive = {},
                     onApproveBlock = {},
@@ -577,6 +588,7 @@ class ReleaseScreensTest {
                     onStopRelease = {},
                     onResumeRelease = {},
                     onStopBlock = {},
+                    onResumeBlock = {},
                     onRerun = {},
                     onArchive = {},
                     onApproveBlock = {},
@@ -622,6 +634,7 @@ class ReleaseScreensTest {
                     onStopRelease = {},
                     onResumeRelease = {},
                     onStopBlock = {},
+                    onResumeBlock = {},
                     onRerun = {},
                     onArchive = {},
                     onApproveBlock = {},
@@ -674,6 +687,7 @@ class ReleaseScreensTest {
                     onStopRelease = {},
                     onResumeRelease = {},
                     onStopBlock = {},
+                    onResumeBlock = {},
                     onRerun = {},
                     onArchive = {},
                     onApproveBlock = {},
@@ -779,6 +793,7 @@ class ReleaseScreensTest {
                     onStopRelease = {},
                     onResumeRelease = {},
                     onStopBlock = {},
+                    onResumeBlock = {},
                     onRerun = {},
                     onArchive = {},
                     onApproveBlock = { approvedBlockId = it },
@@ -834,6 +849,7 @@ class ReleaseScreensTest {
                     onStopRelease = {},
                     onResumeRelease = {},
                     onStopBlock = {},
+                    onResumeBlock = {},
                     onRerun = {},
                     onArchive = {},
                     onApproveBlock = {},
@@ -887,6 +903,7 @@ class ReleaseScreensTest {
                     onStopRelease = {},
                     onResumeRelease = {},
                     onStopBlock = {},
+                    onResumeBlock = {},
                     onRerun = {},
                     onArchive = {},
                     onApproveBlock = {},
@@ -941,6 +958,7 @@ class ReleaseScreensTest {
                     onStopRelease = {},
                     onResumeRelease = {},
                     onStopBlock = {},
+                    onResumeBlock = {},
                     onRerun = {},
                     onArchive = {},
                     onApproveBlock = {},
@@ -996,6 +1014,7 @@ class ReleaseScreensTest {
                     onStopRelease = {},
                     onResumeRelease = {},
                     onStopBlock = {},
+                    onResumeBlock = {},
                     onRerun = {},
                     onArchive = {},
                     onApproveBlock = {},
@@ -1047,6 +1066,7 @@ class ReleaseScreensTest {
                     onStopRelease = {},
                     onResumeRelease = {},
                     onStopBlock = {},
+                    onResumeBlock = {},
                     onRerun = {},
                     onArchive = {},
                     onApproveBlock = {},
@@ -1087,6 +1107,7 @@ class ReleaseScreensTest {
                     onStopRelease = {},
                     onResumeRelease = {},
                     onStopBlock = {},
+                    onResumeBlock = {},
                     onRerun = {},
                     onArchive = {},
                     onApproveBlock = {},
@@ -1118,6 +1139,7 @@ class ReleaseScreensTest {
                     onStopRelease = {},
                     onResumeRelease = {},
                     onStopBlock = {},
+                    onResumeBlock = {},
                     onRerun = {},
                     onArchive = {},
                     onApproveBlock = {},
@@ -1151,6 +1173,7 @@ class ReleaseScreensTest {
                     onStopRelease = {},
                     onResumeRelease = {},
                     onStopBlock = {},
+                    onResumeBlock = {},
                     onRerun = {},
                     onArchive = {},
                     onApproveBlock = {},
@@ -1182,6 +1205,7 @@ class ReleaseScreensTest {
                     onStopRelease = {},
                     onResumeRelease = {},
                     onStopBlock = {},
+                    onResumeBlock = {},
                     onRerun = {},
                     onArchive = {},
                     onApproveBlock = {},
@@ -2163,6 +2187,7 @@ class ReleaseScreensTest {
                     onStopRelease = {},
                     onResumeRelease = {},
                     onStopBlock = {},
+                    onResumeBlock = {},
                     onRerun = {},
                     onArchive = {},
                     onApproveBlock = {},
@@ -2220,6 +2245,7 @@ class ReleaseScreensTest {
                     onStopRelease = {},
                     onResumeRelease = {},
                     onStopBlock = {},
+                    onResumeBlock = {},
                     onRerun = {},
                     onArchive = {},
                     onApproveBlock = {},
@@ -2278,6 +2304,7 @@ class ReleaseScreensTest {
                     onStopRelease = {},
                     onResumeRelease = {},
                     onStopBlock = {},
+                    onResumeBlock = {},
                     onRerun = {},
                     onArchive = {},
                     onApproveBlock = {},
@@ -2330,6 +2357,7 @@ class ReleaseScreensTest {
                     onStopRelease = {},
                     onResumeRelease = {},
                     onStopBlock = {},
+                    onResumeBlock = {},
                     onRerun = {},
                     onArchive = {},
                     onApproveBlock = {},
@@ -2361,6 +2389,7 @@ class ReleaseScreensTest {
         onStopRelease: () -> Unit = {},
         onResumeRelease: () -> Unit = {},
         onStopBlock: (BlockId) -> Unit = {},
+        onResumeBlock: (BlockId) -> Unit = {},
         onRerun: () -> Unit = {},
         onArchive: () -> Unit = {},
         onApproveBlock: (BlockId) -> Unit = {},
@@ -2382,6 +2411,7 @@ class ReleaseScreensTest {
                     onStopRelease = onStopRelease,
                     onResumeRelease = onResumeRelease,
                     onStopBlock = onStopBlock,
+                    onResumeBlock = onResumeBlock,
                     onRerun = onRerun,
                     onArchive = onArchive,
                     onApproveBlock = onApproveBlock,
@@ -2829,7 +2859,7 @@ class ReleaseScreensTest {
         onNodeWithTag("block_status_text").assertExists()
         onAllNodesWithText("Stopped", substring = true).onFirst().assertExists()
         onNodeWithTag("stopped_context_text", useUnmergedTree = true).assertExists()
-        onNodeWithText("re-execute when the release is resumed", substring = true, useUnmergedTree = true).assertExists()
+        onNodeWithText("stopped along with the release", substring = true, useUnmergedTree = true).assertExists()
         // Duration text should show "Stopped" label
         onNodeWithTag("block_duration_text", useUnmergedTree = true).assertExists()
     }
@@ -3348,5 +3378,150 @@ class ReleaseScreensTest {
         onNodeWithTag("block_detail_panel").assertExists()
         // "Outputs" header should not appear when there are no outputs
         onNodeWithText("Outputs").assertDoesNotExist()
+    }
+
+    // ── Per-block stop/resume UI tests ──────────────────────────────────
+
+    @Test
+    fun `resume button visible when block is STOPPED and release is RUNNING`() = runComposeUiTest {
+        val release = singleBlockRelease(releaseStatus = ReleaseStatus.RUNNING)
+        val executions = listOf(
+            BlockExecution(
+                blockId = BlockId("b1"),
+                releaseId = ReleaseId("r1"),
+                status = BlockStatus.STOPPED,
+            ),
+        )
+
+        setReleaseDetailContent(release = release, blockExecutions = executions)
+        clickBlock(this)
+
+        onNodeWithTag("resume_block_button", useUnmergedTree = true).assertExists()
+        onNodeWithTag("stop_block_button", useUnmergedTree = true).assertDoesNotExist()
+        onNodeWithTag("approve_block_button", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `resume button hidden when block is STOPPED and release is STOPPED`() = runComposeUiTest {
+        val release = singleBlockRelease(releaseStatus = ReleaseStatus.STOPPED)
+        val executions = listOf(
+            BlockExecution(
+                blockId = BlockId("b1"),
+                releaseId = ReleaseId("r1"),
+                status = BlockStatus.STOPPED,
+            ),
+        )
+
+        setReleaseDetailContent(release = release, blockExecutions = executions)
+        clickBlock(this)
+
+        onNodeWithTag("resume_block_button", useUnmergedTree = true).assertDoesNotExist()
+        onNodeWithTag("stop_block_button", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `stopped context shows resumable text when release is RUNNING`() = runComposeUiTest {
+        val release = singleBlockRelease(releaseStatus = ReleaseStatus.RUNNING)
+        val executions = listOf(
+            BlockExecution(
+                blockId = BlockId("b1"),
+                releaseId = ReleaseId("r1"),
+                status = BlockStatus.STOPPED,
+            ),
+        )
+
+        setReleaseDetailContent(release = release, blockExecutions = executions)
+        clickBlock(this)
+
+        onNodeWithTag("stopped_context_text", useUnmergedTree = true).assertExists()
+        onNodeWithTag("stopped_context_text", useUnmergedTree = true)
+            .assertTextContains("Resume", substring = true)
+    }
+
+    @Test
+    fun `stopped context shows release-stopped text when release is STOPPED`() = runComposeUiTest {
+        val release = singleBlockRelease(releaseStatus = ReleaseStatus.STOPPED)
+        val executions = listOf(
+            BlockExecution(
+                blockId = BlockId("b1"),
+                releaseId = ReleaseId("r1"),
+                status = BlockStatus.STOPPED,
+            ),
+        )
+
+        setReleaseDetailContent(release = release, blockExecutions = executions)
+        clickBlock(this)
+
+        onNodeWithTag("stopped_context_text", useUnmergedTree = true).assertExists()
+        onNodeWithTag("stopped_context_text", useUnmergedTree = true)
+            .assertTextContains("along with the release", substring = true)
+    }
+
+    @Test
+    fun `stop and approve buttons shown for WAITING_FOR_INPUT block`() = runComposeUiTest {
+        val release = singleBlockRelease(
+            releaseStatus = ReleaseStatus.RUNNING,
+            preGate = Gate(),
+        )
+        val executions = listOf(
+            BlockExecution(
+                blockId = BlockId("b1"),
+                releaseId = ReleaseId("r1"),
+                status = BlockStatus.WAITING_FOR_INPUT,
+                gatePhase = GatePhase.PRE,
+                gateMessage = "Approve to start",
+            ),
+        )
+
+        setReleaseDetailContent(release = release, blockExecutions = executions)
+        clickBlock(this)
+
+        onNodeWithTag("approve_block_button", useUnmergedTree = true).assertExists()
+        onNodeWithTag("stop_block_button", useUnmergedTree = true).assertExists()
+        onNodeWithTag("resume_block_button", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `only stop button shown for RUNNING block`() = runComposeUiTest {
+        val release = singleBlockRelease(releaseStatus = ReleaseStatus.RUNNING)
+        val executions = listOf(
+            BlockExecution(
+                blockId = BlockId("b1"),
+                releaseId = ReleaseId("r1"),
+                status = BlockStatus.RUNNING,
+            ),
+        )
+
+        setReleaseDetailContent(release = release, blockExecutions = executions)
+        clickBlock(this)
+
+        onNodeWithTag("stop_block_button", useUnmergedTree = true).assertExists()
+        onNodeWithTag("approve_block_button", useUnmergedTree = true).assertDoesNotExist()
+        onNodeWithTag("resume_block_button", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun `resume block callback fires on click`() = runComposeUiTest {
+        var resumedBlockId: BlockId? = null
+        val release = singleBlockRelease(releaseStatus = ReleaseStatus.RUNNING)
+        val executions = listOf(
+            BlockExecution(
+                blockId = BlockId("b1"),
+                releaseId = ReleaseId("r1"),
+                status = BlockStatus.STOPPED,
+            ),
+        )
+
+        setReleaseDetailContent(
+            release = release,
+            blockExecutions = executions,
+            onResumeBlock = { resumedBlockId = it },
+        )
+        clickBlock(this)
+
+        onNodeWithTag("resume_block_button", useUnmergedTree = true).performClick()
+        waitForIdle()
+
+        assertEquals(BlockId("b1"), resumedBlockId)
     }
 }

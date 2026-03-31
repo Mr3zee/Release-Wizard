@@ -133,6 +133,7 @@ fun AuditAction.displayName(): String = packStringResource(
         AuditAction.BLOCK_RESTARTED -> Res.string.audit_action_block_restarted
         AuditAction.BLOCK_APPROVED -> Res.string.audit_action_block_approved
         AuditAction.BLOCK_STOPPED -> Res.string.audit_action_block_stopped
+        AuditAction.BLOCK_RESUMED -> Res.string.audit_action_block_resumed
         AuditAction.CONNECTION_CREATED -> Res.string.audit_action_connection_created
         AuditAction.CONNECTION_UPDATED -> Res.string.audit_action_connection_updated
         AuditAction.CONNECTION_DELETED -> Res.string.audit_action_connection_deleted

@@ -23,6 +23,7 @@ object ApiRoutes {
         fun restartBlock(releaseId: String, blockId: String) = "${blockExecution(releaseId, blockId)}/restart"
         fun approveBlock(releaseId: String, blockId: String) = "${blockExecution(releaseId, blockId)}/approve"
         fun stopBlock(releaseId: String, blockId: String) = "${blockExecution(releaseId, blockId)}/stop"
+        fun resumeBlock(releaseId: String, blockId: String) = "${blockExecution(releaseId, blockId)}/resume"
         fun ws(id: String) = "$BASE/$id/ws"
     }
 

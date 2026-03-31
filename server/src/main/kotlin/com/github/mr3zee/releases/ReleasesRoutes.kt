@@ -177,6 +177,18 @@ fun Route.releaseRoutes() {
                     call.respond(ReleaseResponse(release, executions))
                 }
 
+                post("/resume") {
+                    val releaseId = call.requireReleaseId()
+                    val blockId = call.requireBlockId()
+                    val resumed = service.resumeBlock(releaseId, blockId, call.userSession())
+                    if (!resumed) {
+                        log.warn("Cannot resume block {} in release {}", blockId.value, releaseId.value)
+                        throw IllegalArgumentException("Cannot resume block: ${blockId.value}")
+                    }
+                    log.info("Block resumed: {} in release {}", blockId.value, releaseId.value)
+                    call.respond(HttpStatusCode.OK, mapOf("status" to "resumed"))
+                }
+
                 post("/restart") {
                     val releaseId = call.requireReleaseId()
                     val blockId = call.requireBlockId()

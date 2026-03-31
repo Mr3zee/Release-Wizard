@@ -42,6 +42,7 @@ interface ReleasesService {
     suspend fun deleteRelease(id: ReleaseId, session: UserSession): Boolean
     suspend fun awaitRelease(id: ReleaseId)
     suspend fun stopBlock(releaseId: ReleaseId, blockId: BlockId, session: UserSession): Boolean
+    suspend fun resumeBlock(releaseId: ReleaseId, blockId: BlockId, session: UserSession): Boolean
     suspend fun stopRelease(id: ReleaseId, session: UserSession): Boolean
     suspend fun resumeRelease(id: ReleaseId, session: UserSession): Boolean
     suspend fun restartBlock(releaseId: ReleaseId, blockId: BlockId, session: UserSession): Boolean
@@ -308,6 +309,23 @@ class DefaultReleasesService(
             val teamId = repository.findTeamId(releaseId)
                 ?: throw NotFoundException("Release not found")
             auditService.log(TeamId(teamId), session, AuditAction.BLOCK_STOPPED, AuditTargetType.BLOCK, blockId.value, "Stopped block in release ${releaseId.value}")
+        }
+        return result
+    }
+
+    override suspend fun resumeBlock(releaseId: ReleaseId, blockId: BlockId, session: UserSession): Boolean {
+        val release = repository.findById(releaseId) ?: return false
+        checkAccess(releaseId, session)
+        if (release.status != ReleaseStatus.RUNNING) return false
+
+        val execution = repository.findBlockExecution(releaseId, blockId) ?: return false
+        if (execution.status != BlockStatus.STOPPED) return false
+
+        val result = executionEngine.resumeBlock(releaseId, blockId)
+        if (result) {
+            val teamId = repository.findTeamId(releaseId)
+                ?: throw NotFoundException("Release not found")
+            auditService.log(TeamId(teamId), session, AuditAction.BLOCK_RESUMED, AuditTargetType.BLOCK, blockId.value, "Resumed block in release ${releaseId.value}")
         }
         return result
     }
