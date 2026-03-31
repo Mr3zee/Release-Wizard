@@ -255,7 +255,7 @@ class EmojiInputOutputTest {
                 id = BlockId("b1"),
                 name = "\uD83D\uDEE0\uFE0F Build Step",
                 type = BlockType.TEAMCITY_BUILD,
-                outputs = listOf("\uD83D\uDCE6 artifact"),
+                outputs = listOf(BlockOutput("\uD83D\uDCE6 artifact")),
             ),
         )
         setContent {

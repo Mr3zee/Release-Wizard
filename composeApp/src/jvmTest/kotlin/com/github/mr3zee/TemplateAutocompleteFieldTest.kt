@@ -7,6 +7,7 @@ import androidx.compose.ui.test.*
 import com.github.mr3zee.editor.TemplateAutocompleteField
 import com.github.mr3zee.model.Block
 import com.github.mr3zee.model.BlockId
+import com.github.mr3zee.model.BlockOutput
 import com.github.mr3zee.model.BlockType
 import com.github.mr3zee.model.Parameter
 import kotlin.test.Test
@@ -25,7 +26,7 @@ class TemplateAutocompleteFieldTest {
             id = BlockId("build1"),
             name = "Build",
             type = BlockType.TEAMCITY_BUILD,
-            outputs = listOf("buildNumber", "status"),
+            outputs = listOf(BlockOutput("buildNumber"), BlockOutput("status")),
         ),
     )
 

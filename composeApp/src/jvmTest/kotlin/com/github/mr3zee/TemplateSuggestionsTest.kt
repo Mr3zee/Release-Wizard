@@ -3,6 +3,7 @@ package com.github.mr3zee
 import com.github.mr3zee.editor.*
 import com.github.mr3zee.model.Block
 import com.github.mr3zee.model.BlockId
+import com.github.mr3zee.model.BlockOutput
 import com.github.mr3zee.model.BlockType
 import com.github.mr3zee.model.Parameter
 import kotlin.test.Test
@@ -127,22 +128,28 @@ class TemplateSuggestionsTest {
                 id = BlockId("build1"),
                 name = "Build",
                 type = BlockType.TEAMCITY_BUILD,
-                outputs = listOf("buildNumber", "status"),
+                outputs = listOf(BlockOutput("buildNumber"), BlockOutput("status")),
             ),
         )
         val suggestions = buildSuggestions(emptyList(), blocks)
 
-        assertEquals(2, suggestions.size)
-        assertEquals("Build / buildNumber", suggestions[0].label)
-        assertEquals($$"${block.build1.buildNumber}", suggestions[0].insertText)
+        // knownOutputs() for TEAMCITY_BUILD: buildId, buildNumber, buildUrl, buildStatus (4)
+        // custom "buildNumber" is deduplicated, custom "status" is kept = 4 + 1 = 5
+        assertEquals(5, suggestions.size)
+        // Known outputs come first
+        assertEquals("Build / buildId", suggestions[0].label)
         assertEquals(SuggestionCategory.BLOCK_OUTPUT, suggestions[0].category)
-
-        assertEquals("Build / status", suggestions[1].label)
-        assertEquals($$"${block.build1.status}", suggestions[1].insertText)
+        assertEquals("Build / buildNumber", suggestions[1].label)
+        assertEquals($$"${block.build1.buildNumber}", suggestions[1].insertText)
+        assertEquals("Build / buildUrl", suggestions[2].label)
+        assertEquals("Build / buildStatus", suggestions[3].label)
+        // Custom output "status" (not in known) comes last
+        assertEquals("Build / status", suggestions[4].label)
+        assertEquals($$"${block.build1.status}", suggestions[4].insertText)
     }
 
     @Test
-    fun `skips blocks with no outputs`() {
+    fun `blocks with no custom outputs still have known outputs`() {
         val blocks = listOf(
             Block.ActionBlock(
                 id = BlockId("b1"),
@@ -151,7 +158,10 @@ class TemplateSuggestionsTest {
                 outputs = emptyList(),
             ),
         )
-        assertEquals(0, buildSuggestions(emptyList(), blocks).size)
+        // knownOutputs() for SLACK_MESSAGE: messageTs (1)
+        val suggestions = buildSuggestions(emptyList(), blocks)
+        assertEquals(1, suggestions.size)
+        assertEquals("Empty / messageTs", suggestions[0].label)
     }
 
     @Test
@@ -174,7 +184,7 @@ class TemplateSuggestionsTest {
                 id = BlockId("build1"),
                 name = "Build",
                 type = BlockType.TEAMCITY_BUILD,
-                outputs = listOf("buildNumber", "status"),
+                outputs = listOf(BlockOutput("buildNumber"), BlockOutput("status")),
             ),
         ),
     )
@@ -213,7 +223,8 @@ class TemplateSuggestionsTest {
     fun `block prefix filters to outputs only`() {
         val ctx = InterpolationContext(triggerOffset = 0, prefix = "block.")
         val result = filterSuggestions(testSuggestions, ctx)
-        assertEquals(2, result.size)
+        // 4 known TEAMCITY_BUILD outputs + 1 custom "status" = 5
+        assertEquals(5, result.size)
         result.forEach { assertEquals(SuggestionCategory.BLOCK_OUTPUT, it.category) }
     }
 
@@ -221,15 +232,20 @@ class TemplateSuggestionsTest {
     fun `block prefix with ID filters to specific block`() {
         val ctx = InterpolationContext(triggerOffset = 0, prefix = "block.build1.")
         val result = filterSuggestions(testSuggestions, ctx)
-        assertEquals(2, result.size)
+        // 4 known TEAMCITY_BUILD outputs + 1 custom "status" = 5
+        assertEquals(5, result.size)
     }
 
     @Test
     fun `block prefix with ID and output suffix filters further`() {
         val ctx = InterpolationContext(triggerOffset = 0, prefix = "block.build1.build")
         val result = filterSuggestions(testSuggestions, ctx)
-        assertEquals(1, result.size)
-        assertEquals("Build / buildNumber", result[0].label)
+        // Matches known outputs starting with "build": buildId, buildNumber, buildUrl, buildStatus
+        assertEquals(4, result.size)
+        assertEquals("Build / buildId", result[0].label)
+        assertEquals("Build / buildNumber", result[1].label)
+        assertEquals("Build / buildUrl", result[2].label)
+        assertEquals("Build / buildStatus", result[3].label)
     }
 
     @Test
@@ -245,7 +261,8 @@ class TemplateSuggestionsTest {
     fun `general prefix b matches block outputs`() {
         val ctx = InterpolationContext(triggerOffset = 0, prefix = "b")
         val result = filterSuggestions(testSuggestions, ctx)
-        assertEquals(2, result.size)
+        // 4 known TEAMCITY_BUILD outputs + 1 custom "status" = 5
+        assertEquals(5, result.size)
         result.forEach { assertEquals(SuggestionCategory.BLOCK_OUTPUT, it.category) }
     }
 
@@ -290,12 +307,17 @@ class TemplateSuggestionsTest {
                 id = BlockId("b1"),
                 name = "Build",
                 type = BlockType.TEAMCITY_BUILD,
-                outputs = listOf("", "buildNumber"),
+                outputs = listOf(BlockOutput(""), BlockOutput("buildNumber")),
             ),
         )
         val suggestions = buildSuggestions(emptyList(), blocks)
-        assertEquals(1, suggestions.size)
-        assertEquals("Build / buildNumber", suggestions[0].label)
+        // knownOutputs() for TEAMCITY_BUILD: buildId, buildNumber, buildUrl, buildStatus (4)
+        // Custom "" is blank (skipped), custom "buildNumber" is deduplicated = 4 total
+        assertEquals(4, suggestions.size)
+        assertEquals("Build / buildId", suggestions[0].label)
+        assertEquals("Build / buildNumber", suggestions[1].label)
+        assertEquals("Build / buildUrl", suggestions[2].label)
+        assertEquals("Build / buildStatus", suggestions[3].label)
     }
 
     @Test

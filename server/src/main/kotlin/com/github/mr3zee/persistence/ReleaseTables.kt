@@ -18,6 +18,7 @@ import org.jetbrains.exposed.v1.json.jsonb
 
 object ReleaseTable : UUIDTable("releases") {
     val projectTemplateId = reference("project_template_id", ProjectTemplateTable, onDelete = ReferenceOption.RESTRICT)
+    val name = varchar("name", 255).default("")
     val status = enumerationByName<ReleaseStatus>("status", 32)
     val dagSnapshot = jsonb<DagGraph>("dag_snapshot", AppJson)
     val parameters = jsonb("parameters", AppJson, ListSerializer(Parameter.serializer()))

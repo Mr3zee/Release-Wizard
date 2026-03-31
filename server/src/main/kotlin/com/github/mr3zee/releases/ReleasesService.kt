@@ -132,12 +132,15 @@ class DefaultReleasesService(
 
         val mergedParams = mergeParameters(project.parameters, request.parameters)
 
+        val releaseName = request.name.ifBlank { project.name }
+
         val release = repository.create(
             projectTemplateId = project.id,
             dagSnapshot = project.dagGraph,
             parameters = mergedParams,
             teamId = projectTeamId,
             createdByUserId = session.userId,
+            name = releaseName,
         )
 
         // Set tags (merge default tags from project with request tags)
@@ -172,6 +175,7 @@ class DefaultReleasesService(
             dagSnapshot = project.dagGraph,
             parameters = mergedParams,
             teamId = projectTeamId,
+            name = project.name,
         )
 
         // Apply project's default tags to scheduled releases
@@ -206,16 +210,25 @@ class DefaultReleasesService(
         val releaseTeamId = repository.findTeamId(id)
             ?: throw NotFoundException("Release not found")
 
+        // Fetch the latest project version so the rerun uses up-to-date DAG and parameters
+        val project = projectsRepository.findById(original.projectTemplateId)
+            ?: throw IllegalArgumentException("Project not found: ${original.projectTemplateId.value}")
+
+        if (project.dagGraph.blocks.isEmpty()) {
+            throw IllegalArgumentException("Project has no blocks")
+        }
+
         // REL-M5: Re-validate connection team consistency on rerun
         // since connections may have been deleted or moved since the original run
-        validateConnectionTeamConsistency(original.dagSnapshot, releaseTeamId)
+        validateConnectionTeamConsistency(project.dagGraph, releaseTeamId)
 
         val release = repository.create(
             projectTemplateId = original.projectTemplateId,
-            dagSnapshot = original.dagSnapshot,
-            parameters = original.parameters,
+            dagSnapshot = project.dagGraph,
+            parameters = project.parameters,
             teamId = releaseTeamId,
             createdByUserId = session.userId,
+            name = project.name,
         )
 
         // Copy tags from the original release
@@ -223,7 +236,7 @@ class DefaultReleasesService(
         applyTags(release.id, originalTags, releaseTeamId)
 
         // Initialize block executions as WAITING (batch)
-        repository.batchUpsertBlockExecutions(release.id, original.dagSnapshot.blocks)
+        repository.batchUpsertBlockExecutions(release.id, project.dagGraph.blocks)
 
         executionEngine.startExecution(release)
         auditService.log(TeamId(releaseTeamId), session, AuditAction.RELEASE_RERUN, AuditTargetType.RELEASE, release.id.value, "Re-run of release ${id.value}")

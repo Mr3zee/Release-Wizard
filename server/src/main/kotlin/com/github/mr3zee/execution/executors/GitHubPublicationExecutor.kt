@@ -108,7 +108,11 @@ class GitHubPublicationExecutor(
         val releaseUrl = responseBody["html_url"]?.jsonPrimitive?.content ?: ""
         val actualTag = responseBody["tag_name"]?.jsonPrimitive?.content ?: fallbackTagName
         val releaseId = responseBody["id"]?.jsonPrimitive?.content ?: ""
-        return mapOf("releaseUrl" to releaseUrl, "tagName" to actualTag, "releaseId" to releaseId)
+        return mapOf(
+            com.github.mr3zee.model.GitHubPublicationOutputs.RELEASE_URL to releaseUrl,
+            com.github.mr3zee.model.GitHubPublicationOutputs.TAG_NAME to actualTag,
+            com.github.mr3zee.model.GitHubPublicationOutputs.RELEASE_ID to releaseId,
+        )
     }
 
     @Serializable

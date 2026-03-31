@@ -223,8 +223,8 @@ fun ReleaseListScreen(
             StartReleaseInlineForm(
                 visible = showStartDialog,
                 projects = projects,
-                onStart = { projectId ->
-                    viewModel.startRelease(projectId) { releaseId -> onViewRelease(releaseId) }
+                onStart = { projectId, name ->
+                    viewModel.startRelease(projectId, name) { releaseId -> onViewRelease(releaseId) }
                     showStartDialog = false
                 },
                 onDismiss = { showStartDialog = false },
@@ -462,17 +462,26 @@ fun ReleaseListScreen(
 private fun StartReleaseInlineForm(
     visible: Boolean,
     projects: List<ProjectTemplate>,
-    onStart: (com.github.mr3zee.model.ProjectId) -> Unit,
+    onStart: (com.github.mr3zee.model.ProjectId, String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var selectedProject by remember { mutableStateOf<ProjectTemplate?>(null) }
+    var releaseName by remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
 
     // Reset selection when form becomes visible
     LaunchedEffect(visible) {
         if (visible) {
             selectedProject = null
+            releaseName = ""
             expanded = false
+        }
+    }
+
+    // Pre-fill name with project name when project is selected
+    LaunchedEffect(selectedProject) {
+        if (selectedProject != null && releaseName.isEmpty()) {
+            releaseName = selectedProject?.name ?: ""
         }
     }
 
@@ -480,12 +489,12 @@ private fun StartReleaseInlineForm(
         visible = visible,
         title = packStringResource(Res.string.start_release_title),
         onDismiss = onDismiss,
-        onSubmit = { selectedProject?.let { onStart(it.id) } },
+        onSubmit = { selectedProject?.let { onStart(it.id, releaseName) } },
         testTag = "start_release_form",
         modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
         actions = {
             RwButton(
-                onClick = { selectedProject?.let { onStart(it.id) } },
+                onClick = { selectedProject?.let { onStart(it.id, releaseName) } },
                 enabled = selectedProject != null,
                 modifier = Modifier.testTag("start_release_confirm"),
                 variant = RwButtonVariant.Primary,
@@ -504,6 +513,15 @@ private fun StartReleaseInlineForm(
                     .testTag("no_projects_message"),
             )
         } else {
+            RwTextField(
+                value = releaseName,
+                onValueChange = { releaseName = it },
+                label = packStringResource(Res.string.start_release_name_label),
+                placeholder = packStringResource(Res.string.start_release_name_placeholder),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().testTag("start_release_name_field"),
+            )
+            Spacer(Modifier.height(Spacing.sm))
             Box(modifier = Modifier.testTag("project_dropdown")) {
                 RwTextField(
                     value = selectedProject?.name ?: "",
@@ -557,7 +575,7 @@ private fun ReleaseListItem(
     modifier: Modifier = Modifier,
 ) {
     var showMenu by remember { mutableStateOf(false) }
-    val displayName = projectName ?: packStringResource(Res.string.releases_unknown_project)
+    val displayName = release.name.ifEmpty { projectName ?: packStringResource(Res.string.releases_unknown_project) }
     val startedAt = release.startedAt
 
     ListItemCard(

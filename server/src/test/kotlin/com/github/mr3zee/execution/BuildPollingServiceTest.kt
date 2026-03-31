@@ -3,7 +3,9 @@ package com.github.mr3zee.execution
 import com.github.mr3zee.AppJson
 import com.github.mr3zee.execution.executors.BuildPollingService
 import com.github.mr3zee.execution.executors.QueueTimeoutException
+import com.github.mr3zee.model.BlockType
 import com.github.mr3zee.model.SubBuildStatus
+import com.github.mr3zee.model.knownOutputs
 import io.ktor.client.*
 import io.ktor.client.engine.mock.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -526,5 +528,53 @@ class BuildPollingServiceTest {
         )
 
         assertTrue(subBuilds.isEmpty(), "Should return empty list on failure")
+    }
+
+    // --- Output keys match knownOutputs ---
+
+    @Test
+    fun `TC poll output keys are subset of knownOutputs`() = runBlocking {
+        val client = mockClient { request ->
+            respond(
+                """{"state":"finished","status":"SUCCESS","number":"1"}""",
+                HttpStatusCode.OK,
+                headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+            )
+        }
+        val service = BuildPollingService(client)
+        val result = service.pollTeamCityBuild(
+            serverUrl = "https://tc.example.com",
+            token = "t",
+            buildId = "1",
+            intervalSeconds = 1,
+        )
+
+        val knownNames = BlockType.TEAMCITY_BUILD.knownOutputs().map { it.name }.toSet()
+        val unknownKeys = result.keys - knownNames
+        assertTrue(unknownKeys.isEmpty(), "TeamCity poll produced output keys not in knownOutputs: $unknownKeys")
+    }
+
+    @Test
+    fun `GH poll output keys are subset of knownOutputs`() = runBlocking {
+        val client = mockClient { request ->
+            respond(
+                """{"status":"completed","conclusion":"success","html_url":"https://github.com/o/r/actions/runs/1"}""",
+                HttpStatusCode.OK,
+                headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+            )
+        }
+        val service = BuildPollingService(client)
+        val result = service.pollGitHubRun(
+            owner = "o",
+            repo = "r",
+            token = "t",
+            runId = "1",
+            intervalSeconds = 1,
+            baseUrl = "https://api.github.com",
+        )
+
+        val knownNames = BlockType.GITHUB_ACTION.knownOutputs().map { it.name }.toSet()
+        val unknownKeys = result.keys - knownNames
+        assertTrue(unknownKeys.isEmpty(), "GitHub poll produced output keys not in knownOutputs: $unknownKeys")
     }
 }

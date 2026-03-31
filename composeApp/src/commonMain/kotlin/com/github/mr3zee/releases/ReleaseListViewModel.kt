@@ -125,6 +125,7 @@ class ReleaseListViewModel(
 
     fun setActive(active: Boolean) {
         _isActive.value = active
+        if (active) refresh()
     }
 
     fun refresh() {
@@ -226,10 +227,10 @@ class ReleaseListViewModel(
         }
     }
 
-    fun startRelease(projectId: ProjectId, onCreated: (ReleaseId) -> Unit = {}) {
+    fun startRelease(projectId: ProjectId, name: String = "", onCreated: (ReleaseId) -> Unit = {}) {
         viewModelScope.launch {
             try {
-                val response = releaseApiClient.startRelease(CreateReleaseRequest(projectTemplateId = projectId))
+                val response = releaseApiClient.startRelease(CreateReleaseRequest(projectTemplateId = projectId, name = name))
                 onCreated(response.release.id)
                 loadReleases()
             } catch (e: Exception) {

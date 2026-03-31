@@ -42,7 +42,7 @@ class EmojiSerializationTest {
             parameters = listOf(
                 Parameter("\uD83D\uDCE6 artifact", "release.zip"),
             ),
-            outputs = listOf("\uD83D\uDCCA report"),
+            outputs = listOf(BlockOutput("\uD83D\uDCCA report")),
         )
         val encoded = json.encodeToString(Block.serializer(), block)
         val decoded = json.decodeFromString(Block.serializer(), encoded)
@@ -50,7 +50,7 @@ class EmojiSerializationTest {
         assertTrue(decoded is Block.ActionBlock)
         assertEquals("\uD83D\uDEE0\uFE0F Build & Test", decoded.name)
         assertEquals("\uD83D\uDCE6 artifact", decoded.parameters.first().key)
-        assertEquals("\uD83D\uDCCA report", decoded.outputs.first())
+        assertEquals("\uD83D\uDCCA report", decoded.outputs.first().name)
     }
 
     @Test

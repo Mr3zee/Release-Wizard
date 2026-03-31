@@ -25,13 +25,16 @@ import com.github.mr3zee.profile.ProfileScreen
 import com.github.mr3zee.profile.ProfileViewModel
 import com.github.mr3zee.projects.ProjectListScreen
 import com.github.mr3zee.projects.ProjectListViewModel
+import com.github.mr3zee.api.CreateReleaseRequest
 import com.github.mr3zee.releases.*
 import com.github.mr3zee.teams.*
+import kotlinx.coroutines.launch
 
 @Composable
 fun AppNavigation(
     currentScreen: Screen,
     onNavigate: (Screen) -> Unit,
+    onReplaceCurrent: (Screen) -> Unit = onNavigate,
     onGoBack: () -> Boolean,
     projectListViewModel: ProjectListViewModel,
     projectApiClient: ProjectApiClient,
@@ -84,6 +87,7 @@ fun AppNavigation(
                     onDispose { viewModel.releaseLock() }
                 }
 
+                val startReleaseScope = rememberCoroutineScope()
                 // DagEditorScreen handles its own Ctrl+S/Z/C/V/A/Delete via onKeyEvent
                 DagEditorScreen(
                     viewModel = viewModel,
@@ -93,6 +97,19 @@ fun AppNavigation(
                     },
                     onOpenAutomation = {
                         onNavigate(Screen.ProjectAutomation(projectId))
+                    },
+                    onStartRelease = { name ->
+                        startReleaseScope.launch {
+                            try {
+                                val response = releaseApiClient.startRelease(
+                                    CreateReleaseRequest(projectTemplateId = projectId, name = name)
+                                )
+                                onNavigate(Screen.ReleaseView(response.release.id))
+                            } catch (e: Exception) {
+                                if (e is kotlinx.coroutines.CancellationException) throw e
+                                // Start-release errors are non-critical; the user stays on the editor screen
+                            }
+                        }
                     },
                 )
             } else {
@@ -149,13 +166,14 @@ fun AppNavigation(
                 onStopBlock = { viewModel.stopBlock(it) },
                 onRerun = {
                     viewModel.rerunRelease { newReleaseId ->
-                        onNavigate(Screen.ReleaseView(newReleaseId))
+                        onReplaceCurrent(Screen.ReleaseView(newReleaseId))
                     }
                 },
                 onArchive = { viewModel.archiveRelease() },
                 onApproveBlock = { viewModel.approveBlock(it) },
                 onBlockClick = {},
                 onDismissError = { viewModel.dismissError() },
+                onNavigateToProject = { projectId -> onNavigate(Screen.ProjectEditor(projectId)) },
             )
         }
         is Screen.TeamList -> {

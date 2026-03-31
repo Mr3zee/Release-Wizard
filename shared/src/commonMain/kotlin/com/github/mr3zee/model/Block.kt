@@ -35,7 +35,7 @@ sealed class Block {
         override val description: String = "",
         val type: BlockType,
         val parameters: List<Parameter> = emptyList(),
-        val outputs: List<String> = emptyList(),
+        val outputs: List<BlockOutput> = emptyList(),
         val timeoutSeconds: Long? = null,
         val connectionId: ConnectionId? = null,
         override val preGate: Gate? = null,

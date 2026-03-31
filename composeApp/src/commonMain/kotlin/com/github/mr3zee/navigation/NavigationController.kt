@@ -33,6 +33,16 @@ class NavigationController(
     var suppressUrlSync: Boolean by mutableStateOf(false)
         internal set
 
+    /** Replace the top screen with [screen]. If only the root is left, just push. */
+    fun replaceCurrent(screen: Screen) {
+        Snapshot.withMutableSnapshot {
+            if (_backStack.size > 1) {
+                _backStack.removeLast()
+            }
+            _backStack.add(screen)
+        }
+    }
+
     /** Push [screen] onto the back stack. Does nothing if the screen is already on top. */
     fun navigate(screen: Screen) {
         if (_backStack.lastOrNull() == screen) return

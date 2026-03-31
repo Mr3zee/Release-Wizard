@@ -59,6 +59,9 @@ fun ConnectionListScreen(
     onEditConnection: (ConnectionId) -> Unit,
     onBack: (() -> Unit)? = null,
 ) {
+    // Refresh data when navigating back to this screen
+    LaunchedEffect(Unit) { viewModel.refresh() }
+
     val connections by viewModel.connections.collectAsState()
     val webhookUrls by viewModel.webhookUrls.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()

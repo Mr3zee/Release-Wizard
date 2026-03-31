@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class CreateReleaseRequest(
     val projectTemplateId: ProjectId,
+    val name: String = "",
     val parameters: List<Parameter> = emptyList(),
     val tags: List<String> = emptyList(),
 )

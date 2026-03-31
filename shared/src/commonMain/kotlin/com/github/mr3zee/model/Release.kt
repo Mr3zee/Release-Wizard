@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class Release(
     val id: ReleaseId,
+    val name: String = "",
     val projectTemplateId: ProjectId,
     val status: ReleaseStatus,
     val dagSnapshot: DagGraph,

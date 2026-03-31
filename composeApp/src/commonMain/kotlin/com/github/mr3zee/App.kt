@@ -403,6 +403,7 @@ fun App() {
                             AppNavigation(
                                 currentScreen = currentScreen,
                                 onNavigate = { navController.navigate(it) },
+                                onReplaceCurrent = { navController.replaceCurrent(it) },
                                 onGoBack = { navController.goBack() },
                                 projectListViewModel = projectListViewModel,
                                 projectApiClient = projectApiClient,

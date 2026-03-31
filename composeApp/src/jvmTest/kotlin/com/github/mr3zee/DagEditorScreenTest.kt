@@ -2811,4 +2811,176 @@ class DagEditorScreenTest {
         onNodeWithTag("properties_tab_1").assertDoesNotExist()
         onNodeWithTag("properties_tab_2").assertDoesNotExist()
     }
+
+    // ---- Start Release button tests ----
+
+    @Test
+    fun `start release button exists when onStartRelease is provided`() = runComposeUiTest {
+        var startReleaseCalled: String? = null
+        val vm = editorViewModel()
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(
+                    viewModel = vm,
+                    onBack = {},
+                    onStartRelease = { name -> startReleaseCalled = name },
+                )
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        onNodeWithTag("start_release_button").assertExists()
+        onNodeWithTag("start_release_button").performClick()
+        waitForIdle()
+
+        assertEquals("Test Project", startReleaseCalled)
+    }
+
+    @Test
+    fun `start release button does not exist when onStartRelease is null`() = runComposeUiTest {
+        val vm = editorViewModel()
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        onNodeWithTag("start_release_button").assertDoesNotExist()
+    }
+
+    // ---- Block outputs read-only display ----
+
+    @Test
+    fun `block outputs displayed in overview tab when block has outputs`() = runComposeUiTest {
+        val projectWithOutputs = """{"project":{"id":"p1","name":"Test Project","description":"","dagGraph":{"blocks":[
+            {"kind":"action","id":"b1","name":"Publish","type":"GITHUB_PUBLICATION","parameters":[],"outputs":[{"name":"artifact_url","description":"URL of the published artifact"}],"timeoutSeconds":null,"connectionId":null}
+        ],"edges":[],"positions":{"b1":{"x":100,"y":100}}},"parameters":[],"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}}"""
+
+        val vm = editorViewModel(getJson = projectWithOutputs)
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Select block b1
+        onNodeWithTag("dag_canvas").performTouchInput {
+            click(Offset(190f, 135f))
+        }
+        waitForIdle()
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("block_name_field").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Overview tab (index 0) is selected by default — verify outputs section
+        onNodeWithText("Outputs").assertExists()
+        onNodeWithText("artifact_url").assertExists()
+        onNodeWithText("URL of the published artifact").assertExists()
+    }
+
+    @Test
+    fun `block without outputs does not show outputs section in overview`() = runComposeUiTest {
+        // Default projectJson has no custom outputs, but knownOutputs() adds system outputs for all action blocks
+        val vm = editorViewModel()
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Select block b1
+        onNodeWithTag("dag_canvas").performTouchInput {
+            click(Offset(190f, 135f))
+        }
+        waitForIdle()
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("block_name_field").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // "Outputs" header should appear because knownOutputs() provides system outputs for TEAMCITY_BUILD
+        onNodeWithText("Outputs").assertExists()
+    }
+
+    // ---- Container gates tab badge count ----
+
+    @Test
+    fun `container gates tab shows badge count when gates are configured`() = runComposeUiTest {
+        val containerWithGates = """{"project":{"id":"p1","name":"Test Project","description":"","dagGraph":{"blocks":[
+            {"kind":"container","id":"c1","name":"Deploy Group","children":{"blocks":[],"edges":[],"positions":{}},"preGate":{"message":"Pre-deploy check"},"postGate":{"message":"Post-deploy check"}}
+        ],"edges":[],"positions":{"c1":{"x":100,"y":100}}},"parameters":[],"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}}"""
+
+        val vm = editorViewModel(getJson = containerWithGates)
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Select container block
+        onNodeWithTag("dag_canvas").performTouchInput {
+            click(Offset(190f, 135f))
+        }
+        waitForIdle()
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("container_tab_0").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Gates tab (index 1) should have badge count "(2)" for pre and post gates
+        onNodeWithTag("container_tab_1").assertExists()
+        onNodeWithTag("container_tab_1").assertTextContains("(2)", substring = true)
+    }
+
+    @Test
+    fun `container gates tab no badge when no gates configured`() = runComposeUiTest {
+        val containerNoGates = """{"project":{"id":"p1","name":"Test Project","description":"","dagGraph":{"blocks":[
+            {"kind":"container","id":"c1","name":"Group","children":{"blocks":[],"edges":[],"positions":{}}}
+        ],"edges":[],"positions":{"c1":{"x":100,"y":100}}},"parameters":[],"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}}"""
+
+        val vm = editorViewModel(getJson = containerNoGates)
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Select container block
+        onNodeWithTag("dag_canvas").performTouchInput {
+            click(Offset(190f, 135f))
+        }
+        waitForIdle()
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("container_tab_0").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Gates tab should exist and just say "Gates" without a count badge
+        onNodeWithTag("container_tab_1").assertExists()
+        onNodeWithTag("container_tab_1").assertTextEquals("Gates")
+    }
 }

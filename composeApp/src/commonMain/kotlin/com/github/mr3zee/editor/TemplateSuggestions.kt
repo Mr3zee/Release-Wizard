@@ -2,6 +2,7 @@ package com.github.mr3zee.editor
 
 import com.github.mr3zee.model.Block
 import com.github.mr3zee.model.Parameter
+import com.github.mr3zee.model.knownOutputs
 
 data class TemplateSuggestion(
     val label: String,
@@ -41,15 +42,19 @@ fun buildSuggestions(
     }
 
     val actionPredecessors = predecessors.filterIsInstance<Block.ActionBlock>()
-        .filter { it.outputs.isNotEmpty() }
     for (block in actionPredecessors) {
-        for (output in block.outputs) {
-            if (output.isBlank()) continue
+        // Merge known system outputs with any custom outputs on the block
+        val known = block.type.knownOutputs()
+        val knownNames = known.map { it.name }.toSet()
+        val custom = block.outputs.filter { it.name !in knownNames }
+        val allOutputs = known + custom
+        for (output in allOutputs) {
+            if (output.name.isBlank()) continue
             suggestions.add(
                 TemplateSuggestion(
-                    label = "${block.name} / $output",
-                    insertText = $$"${block.$${block.id.value}.$$output}",
-                    description = null,
+                    label = "${block.name} / ${output.name}",
+                    insertText = $$"${block.$${block.id.value}.$${output.name}}",
+                    description = output.description.takeIf { it.isNotEmpty() },
                     category = SuggestionCategory.BLOCK_OUTPUT,
                 )
             )

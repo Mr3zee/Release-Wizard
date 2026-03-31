@@ -83,9 +83,10 @@ class BuildPollingService(
                 val buildNumber = json["number"]?.jsonPrimitive?.content ?: buildId
                 val buildStatus = status ?: "UNKNOWN"
                 return mapOf(
-                    "buildNumber" to buildNumber,
-                    "buildUrl" to "$serverUrl/viewLog.html?buildId=$buildId",
-                    "buildStatus" to buildStatus,
+                    com.github.mr3zee.model.TeamCityOutputs.BUILD_ID to buildId,
+                    com.github.mr3zee.model.TeamCityOutputs.BUILD_NUMBER to buildNumber,
+                    com.github.mr3zee.model.TeamCityOutputs.BUILD_URL to "$serverUrl/viewLog.html?buildId=$buildId",
+                    com.github.mr3zee.model.TeamCityOutputs.BUILD_STATUS to buildStatus,
                 )
             }
 
@@ -358,10 +359,10 @@ class BuildPollingService(
 
                     if (status == "completed") {
                         return mapOf(
-                            "runId" to runId,
-                            "runUrl" to (json["html_url"]?.jsonPrimitive?.content
+                            com.github.mr3zee.model.GitHubActionOutputs.RUN_ID to runId,
+                            com.github.mr3zee.model.GitHubActionOutputs.RUN_URL to (json["html_url"]?.jsonPrimitive?.content
                                 ?: "$baseUrl/$owner/$repo/actions/runs/$runId"),
-                            "runStatus" to (conclusion ?: "unknown"),
+                            com.github.mr3zee.model.GitHubActionOutputs.RUN_STATUS to (conclusion ?: "unknown"),
                         )
                     }
                 }

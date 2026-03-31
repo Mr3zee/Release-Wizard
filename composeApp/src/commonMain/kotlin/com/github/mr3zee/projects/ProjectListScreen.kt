@@ -58,6 +58,9 @@ fun ProjectListScreen(
     onEditProject: (ProjectId) -> Unit,
     isTeamLead: Boolean = false,
 ) {
+    // Refresh data when navigating back to this screen
+    LaunchedEffect(Unit) { viewModel.refresh() }
+
     val projects by viewModel.projects.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()

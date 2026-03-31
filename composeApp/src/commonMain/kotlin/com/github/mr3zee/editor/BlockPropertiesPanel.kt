@@ -76,7 +76,6 @@ fun BlockPropertiesPanel(
     val scrollState = rememberScrollState()
     Box(
         modifier = modifier
-            .width(340.dp)
             .fillMaxHeight(),
     ) {
     Column(
@@ -112,7 +111,7 @@ fun BlockPropertiesPanel(
                 packStringResource(Res.string.editor_project_parameters_header),
                 style = AppTypography.subheading,
             )
-            Spacer(Modifier.height(Spacing.xs))
+            Spacer(Modifier.height(Spacing.sm))
 
             var projParams by remember(projectParameters) { mutableStateOf(projectParameters) }
             if (projParams != projectParameters) projParams = projectParameters
@@ -410,7 +409,8 @@ private fun OverviewTabContent(
 ) {
     // Type selector
     var typeExpanded by remember(block.id) { mutableStateOf(false) }
-    Text(packStringResource(Res.string.editor_prop_type), style = AppTypography.label)
+    val labelColor = LocalAppColors.current.chromeTextSecondary
+    Text(packStringResource(Res.string.editor_prop_type), style = AppTypography.label, color = labelColor)
     Spacer(Modifier.height(Spacing.xs))
     Box {
         RwButton(
@@ -450,7 +450,7 @@ private fun OverviewTabContent(
         }
         var connExpanded by remember(block.id) { mutableStateOf(false) }
 
-        Text(packStringResource(Res.string.editor_prop_connection), style = AppTypography.label)
+        Text(packStringResource(Res.string.editor_prop_connection), style = AppTypography.label, color = labelColor)
         Spacer(Modifier.height(Spacing.xs))
         Box {
             RwButton(
@@ -531,6 +531,7 @@ private fun OverviewTabContent(
             Text(
                 packStringResource(Res.string.editor_inject_webhook_label),
                 style = AppTypography.label,
+                color = labelColor,
             )
         }
         Text(
@@ -549,7 +550,7 @@ private fun OverviewTabContent(
         val currentTextValue = block.parameters.find { it.key == "text" }?.value ?: ""
         if (slackMessage != currentTextValue) slackMessage = currentTextValue
 
-        Text(packStringResource(Res.string.editor_slack_message_label), style = AppTypography.label)
+        Text(packStringResource(Res.string.editor_slack_message_label), style = AppTypography.label, color = labelColor)
         Spacer(Modifier.height(Spacing.xs))
         RwTextField(
             value = slackMessage,
@@ -612,6 +613,32 @@ private fun OverviewTabContent(
         enabled = enabled,
         onUpdateDescription = onUpdateDescription,
     )
+
+    // Read-only outputs section — merge known system outputs with any custom outputs on the block
+    val allOutputs = remember(block.type, block.outputs) {
+        val known = block.type.knownOutputs()
+        val knownNames = known.map { it.name }.toSet()
+        val custom = block.outputs.filter { it.name !in knownNames }
+        known + custom
+    }
+    if (allOutputs.isNotEmpty()) {
+        Spacer(Modifier.height(Spacing.lg))
+        HorizontalDivider(modifier = Modifier.padding(bottom = Spacing.sm))
+        Text(packStringResource(Res.string.editor_outputs_header), style = AppTypography.subheading)
+        Spacer(Modifier.height(Spacing.xs))
+        allOutputs.forEach { output ->
+            Column(modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xxs)) {
+                Text(output.name, style = AppTypography.bodySmall)
+                if (output.description.isNotEmpty()) {
+                    Text(
+                        output.description,
+                        style = AppTypography.caption,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -634,9 +661,11 @@ private fun ParametersTabContent(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        val paramLabelColor = LocalAppColors.current.chromeTextSecondary
         Text(
             packStringResource(Res.string.editor_prop_parameters),
             style = AppTypography.label,
+            color = paramLabelColor,
             modifier = Modifier.weight(1f),
         )
         if (configKey != null && block.connectionId != null) {
@@ -775,7 +804,8 @@ private fun ExternalConfigSelector(
         }
     }
 
-    Text(packStringResource(Res.string.editor_config_selector), style = AppTypography.label)
+    val configLabelColor = LocalAppColors.current.chromeTextSecondary
+    Text(packStringResource(Res.string.editor_config_selector), style = AppTypography.label, color = configLabelColor)
     Spacer(Modifier.height(Spacing.xs))
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -894,7 +924,7 @@ private fun SingleGateEditor(
             enabled = enabled,
             modifier = Modifier.testTag("${testTagPrefix}_checkbox"),
         )
-        Text(label, style = AppTypography.label)
+        Text(label, style = AppTypography.body)
     }
 
     if (isEnabled) {

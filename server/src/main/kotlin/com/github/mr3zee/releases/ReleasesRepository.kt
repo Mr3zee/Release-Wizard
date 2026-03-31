@@ -56,6 +56,7 @@ interface ReleasesRepository {
         parameters: List<Parameter>,
         teamId: String,
         createdByUserId: String? = null,
+        name: String = "",
     ): Release
     suspend fun updateStatus(id: ReleaseId, status: ReleaseStatus): Boolean
     suspend fun setStarted(id: ReleaseId): Boolean

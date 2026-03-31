@@ -19,7 +19,7 @@ class SerializationTest {
                     name = "Build",
                     type = BlockType.TEAMCITY_BUILD,
                     parameters = listOf(Parameter("buildType", "MyBuild")),
-                    outputs = listOf("buildNumber", "buildUrl"),
+                    outputs = listOf(BlockOutput("buildNumber"), BlockOutput("buildUrl")),
                     timeoutSeconds = 600,
                 ),
                 Block.ActionBlock(

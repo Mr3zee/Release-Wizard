@@ -24,6 +24,7 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
     private fun ResultRow.toRelease(): Release {
         return Release(
             id = ReleaseId(this[ReleaseTable.id].value.toString()),
+            name = this[ReleaseTable.name],
             projectTemplateId = ProjectId(this[ReleaseTable.projectTemplateId].value.toString()),
             status = this[ReleaseTable.status],
             dagSnapshot = this[ReleaseTable.dagSnapshot],
@@ -231,12 +232,14 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
         parameters: List<Parameter>,
         teamId: String,
         createdByUserId: String?,
+        name: String,
     ): Release = dbQuery {
         val id = UUID.randomUUID()
         val now = Clock.System.now()
         ReleaseTable.insert {
             it[ReleaseTable.id] = id
             it[ReleaseTable.projectTemplateId] = UUID.fromString(projectTemplateId.value)
+            it[ReleaseTable.name] = name
             it[ReleaseTable.status] = ReleaseStatus.PENDING
             it[ReleaseTable.dagSnapshot] = dagSnapshot
             it[ReleaseTable.parameters] = parameters
@@ -248,6 +251,7 @@ class ExposedReleasesRepository(private val db: Database) : ReleasesRepository {
         }
         Release(
             id = ReleaseId(id.toString()),
+            name = name,
             projectTemplateId = projectTemplateId,
             status = ReleaseStatus.PENDING,
             dagSnapshot = dagSnapshot,

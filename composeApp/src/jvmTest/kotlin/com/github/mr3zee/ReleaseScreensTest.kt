@@ -2349,6 +2349,7 @@ class ReleaseScreensTest {
         isConnected: Boolean = true,
         reconnectAttempt: Int = 0,
         error: com.github.mr3zee.util.UiMessage? = null,
+        projectName: String? = null,
         onBack: () -> Unit = {},
         onCancel: () -> Unit = {},
         onStopRelease: () -> Unit = {},
@@ -2359,11 +2360,13 @@ class ReleaseScreensTest {
         onApproveBlock: (BlockId) -> Unit = {},
         onBlockClick: (BlockId) -> Unit = {},
         onDismissError: () -> Unit = {},
+        onNavigateToProject: ((ProjectId) -> Unit)? = null,
     ) {
         setContent {
             MaterialTheme {
                 ReleaseDetailScreen(
                     release = release,
+                    projectName = projectName,
                     blockExecutions = blockExecutions,
                     isConnected = isConnected,
                     reconnectAttempt = reconnectAttempt,
@@ -2378,6 +2381,7 @@ class ReleaseScreensTest {
                     onApproveBlock = onApproveBlock,
                     onBlockClick = onBlockClick,
                     onDismissError = onDismissError,
+                    onNavigateToProject = onNavigateToProject,
                 )
             }
         }
@@ -3232,5 +3236,111 @@ class ReleaseScreensTest {
         // Gate checkboxes should be visible
         onNodeWithTag("pre_gate_checkbox", useUnmergedTree = true).assertExists()
         onNodeWithTag("post_gate_checkbox", useUnmergedTree = true).assertExists()
+    }
+
+    // ---- Edit Project button tests ----
+
+    @Test
+    fun `edit project button exists when onNavigateToProject is provided`() = runComposeUiTest {
+        val release = singleBlockRelease()
+        var navigatedProjectId: ProjectId? = null
+
+        setReleaseDetailContent(
+            release = release,
+            onNavigateToProject = { navigatedProjectId = it },
+        )
+
+        onNodeWithTag("go_to_project_button").assertExists()
+        onNodeWithTag("go_to_project_button").performClick()
+        waitForIdle()
+
+        assertEquals(ProjectId("p1"), navigatedProjectId)
+    }
+
+    @Test
+    fun `edit project button does not exist when onNavigateToProject is null`() = runComposeUiTest {
+        val release = singleBlockRelease()
+
+        setReleaseDetailContent(release = release)
+
+        onNodeWithTag("release_detail_screen").assertExists()
+        onNodeWithTag("go_to_project_button").assertDoesNotExist()
+    }
+
+    // ---- Release title with project name ----
+
+    @Test
+    fun `release detail title shows project name when provided`() = runComposeUiTest {
+        val release = singleBlockRelease()
+
+        setReleaseDetailContent(
+            release = release,
+            projectName = "My Cool Project",
+        )
+
+        onNodeWithTag("release_detail_screen").assertExists()
+        onNodeWithText("Release My Cool Project", substring = true).assertExists()
+    }
+
+    @Test
+    fun `release detail title falls back to release id when no project name`() = runComposeUiTest {
+        val release = singleBlockRelease()
+
+        setReleaseDetailContent(release = release)
+
+        onNodeWithTag("release_detail_screen").assertExists()
+        // Release id is "r1", title should contain first 8 chars of it
+        onNodeWithText("Release r1", substring = true).assertExists()
+    }
+
+    // ---- Block execution outputs display ----
+
+    @Test
+    fun `block execution outputs displayed in detail panel`() = runComposeUiTest {
+        val release = singleBlockRelease()
+        val executions = listOf(
+            BlockExecution(
+                blockId = BlockId("b1"),
+                releaseId = ReleaseId("r1"),
+                status = BlockStatus.SUCCEEDED,
+                outputs = mapOf("artifact_url" to "https://example.com/artifact.jar"),
+            ),
+        )
+
+        setReleaseDetailContent(
+            release = release,
+            blockExecutions = executions,
+        )
+
+        clickBlock(this)
+
+        // The "Outputs" header should appear
+        onNodeWithText("Outputs").assertExists()
+        // The output entry should contain the key and value
+        onNodeWithText("artifact_url", substring = true).assertExists()
+        onNodeWithText("https://example.com/artifact.jar", substring = true).assertExists()
+    }
+
+    @Test
+    fun `block execution without outputs does not show outputs section`() = runComposeUiTest {
+        val release = singleBlockRelease()
+        val executions = listOf(
+            BlockExecution(
+                blockId = BlockId("b1"),
+                releaseId = ReleaseId("r1"),
+                status = BlockStatus.RUNNING,
+            ),
+        )
+
+        setReleaseDetailContent(
+            release = release,
+            blockExecutions = executions,
+        )
+
+        clickBlock(this)
+
+        onNodeWithTag("block_detail_panel").assertExists()
+        // "Outputs" header should not appear when there are no outputs
+        onNodeWithText("Outputs").assertDoesNotExist()
     }
 }

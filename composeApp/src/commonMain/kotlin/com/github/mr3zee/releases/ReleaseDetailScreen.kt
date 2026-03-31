@@ -74,6 +74,7 @@ fun ReleaseDetailScreen(
     onApproveBlock: (BlockId) -> Unit,
     onBlockClick: (BlockId) -> Unit,
     onDismissError: () -> Unit = {},
+    onNavigateToProject: ((ProjectId) -> Unit)? = null,
 ) {
     var selectedBlockId by remember(release?.id) { mutableStateOf<BlockId?>(null) }
     var activeConfirmation by remember { mutableStateOf<ActiveConfirmation>(ActiveConfirmation.None) }
@@ -107,7 +108,7 @@ fun ReleaseDetailScreen(
                         horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                     ) {
                         val titleText = if (release != null) {
-                            val displayName = projectName ?: release.id.value.take(8)
+                            val displayName = release.name.ifEmpty { projectName ?: release.id.value.take(8) }
                             packStringResource(Res.string.releases_release_title, displayName)
                         } else {
                             packStringResource(Res.string.releases_detail_title)
@@ -143,6 +144,17 @@ fun ReleaseDetailScreen(
                                 .padding(end = Spacing.sm)
                                 .testTag("disconnected_indicator"),
                         )
+                    }
+                    if (release != null && onNavigateToProject != null) {
+                        RwTooltip(tooltip = packStringResource(Res.string.releases_go_to_project)) {
+                            RwButton(
+                                onClick = { onNavigateToProject(release.projectTemplateId) },
+                                variant = RwButtonVariant.Ghost,
+                                modifier = Modifier.testTag("go_to_project_button"),
+                            ) {
+                                Text(packStringResource(Res.string.releases_go_to_project))
+                            }
+                        }
                     }
                     if (release?.status == ReleaseStatus.RUNNING) {
                         RwTooltip(tooltip = packStringResource(Res.string.releases_stop_tooltip)) {

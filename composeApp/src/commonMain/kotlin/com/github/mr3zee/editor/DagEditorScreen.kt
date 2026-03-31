@@ -9,6 +9,7 @@ import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -33,7 +34,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.zIndex
@@ -73,6 +77,7 @@ fun DagEditorScreen(
     viewModel: DagEditorViewModel,
     onBack: () -> Unit,
     onOpenAutomation: (() -> Unit)? = null,
+    onStartRelease: ((String) -> Unit)? = null,
 ) {
     val project by viewModel.project.collectAsState()
     val graph by viewModel.graph.collectAsState()
@@ -103,6 +108,7 @@ fun DagEditorScreen(
 
     var leftSidebarExpanded by remember { mutableStateOf(true) }
     var rightSidebarExpanded by remember { mutableStateOf(true) }
+    var propertiesPanelWidth by remember { mutableStateOf(340.dp) }
     var isTextFieldFocused by remember { mutableStateOf(false) }
 
     var pendingDiscardNavigation by remember { mutableStateOf<(() -> Unit)?>(null) }
@@ -345,6 +351,21 @@ fun DagEditorScreen(
                 actions = {
                     if (validationErrors.isNotEmpty()) {
                         ValidationErrorBadge(validationErrors)
+                    }
+                    if (onStartRelease != null && project != null) {
+                        RwTooltip(tooltip = packStringResource(Res.string.editor_start_release)) {
+                            RwButton(
+                                onClick = {
+                                    val name = project?.name ?: return@RwButton
+                                    guardedNavigate { onStartRelease(name) }
+                                },
+                                variant = RwButtonVariant.Ghost,
+                                enabled = validationErrors.isEmpty(),
+                                modifier = Modifier.testTag("start_release_button"),
+                            ) {
+                                Text(packStringResource(Res.string.editor_start_release))
+                            }
+                        }
                     }
                     if (onOpenAutomation != null) {
                         RwButton(
@@ -592,12 +613,32 @@ fun DagEditorScreen(
                     }
                 }
 
-                // Right: properties panel
+                // Right: resize drag handle + properties panel (animate together)
                 AnimatedVisibility(
                     visible = rightSidebarExpanded,
                     enter = expandHorizontally(),
                     exit = shrinkHorizontally(),
                 ) {
+                    Row {
+                        // Resize drag handle for properties panel
+                        val density = LocalDensity.current
+                        val currentWidth by rememberUpdatedState(propertiesPanelWidth)
+                        var isHandleHovered by remember { mutableStateOf(false) }
+                        @OptIn(ExperimentalComposeUiApi::class)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .width(6.dp)
+                                .pointerInput(Unit) {
+                                    detectDragGestures { _, dragAmount ->
+                                        with(density) {
+                                            propertiesPanelWidth = (currentWidth - dragAmount.x.toDp()).coerceIn(280.dp, 500.dp)
+                                        }
+                                    }
+                                }
+                                .pointerHoverIcon(resizeEdgeCursor(ResizeEdge.Left)),
+                        )
+
                     BlockPropertiesPanel(
                         block = selectedBlock,
                         graph = graph,
@@ -622,8 +663,10 @@ fun DagEditorScreen(
                         projectDescription = project?.description ?: "",
                         onUpdateProjectDescription = { viewModel.updateProjectDescription(it) },
                         onUpdateProjectParameters = { viewModel.updateProjectParameters(it) },
+                        modifier = Modifier.width(propertiesPanelWidth),
                         enabled = !isReadOnly,
                     )
+                    } // Row
                 }
             }
         }
