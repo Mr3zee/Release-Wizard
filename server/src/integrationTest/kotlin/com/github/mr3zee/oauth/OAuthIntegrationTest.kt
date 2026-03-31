@@ -113,7 +113,7 @@ class OAuthIntegrationTest {
             slf4jLogger()
             allowOverride(true)
             modules(
-                appModule(dbConfig, testEncryptionConfig(), authConfig, webhookConfig, testPasswordPolicyConfig(), oauthCfg),
+                appModule(dbConfig, testEncryptionConfig(), authConfig, webhookConfig, testPasswordPolicyConfig(), oauthConfig = oauthCfg),
                 auditModule,
                 authModule,
                 projectsModule,

@@ -13,16 +13,14 @@ fun Routing.slackWebhookRoutes(state: TestPanelState) {
     post("/services/{path...}") {
         val body = call.receiveText()
 
-        val parsed = try {
+        val text = try {
             val json = Json.parseToJsonElement(body).jsonObject
-            Pair(json["text"]?.jsonPrimitive?.content ?: body, json["channel"]?.jsonPrimitive?.content)
+            json["text"]?.jsonPrimitive?.content ?: body
         } catch (_: Exception) {
-            Pair(body, null)
+            body
         }
-        val text = parsed.first
-        val channel = parsed.second
 
-        state.addSlackMessage(text, channel)
+        state.addSlackMessage(text)
         call.respondText("ok", status = HttpStatusCode.OK)
     }
 }

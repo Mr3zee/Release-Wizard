@@ -82,34 +82,6 @@ class SlackMessageExecutorIntegrationTest {
     }
 
     @Test
-    fun `execute sends message with explicit channel parameter`() = runBlocking {
-        val cfg = config ?: error("SlackTestConfig not loaded — setUp should have skipped this test")
-        val uuid = UUID.randomUUID().toString()
-        val text = "Channel param test $uuid"
-        val executor = SlackMessageExecutor(client ?: error("HttpClient not initialized"))
-
-        val outputs = executor.execute(
-            block = block(),
-            parameters = listOf(
-                Parameter(key = "text", value = text),
-                Parameter(key = "channel", value = "#ci-integration-tests"),
-            ),
-            context = context(),
-        )
-
-        assertEquals("sent", outputs["messageTs"])
-        assertEquals("#ci-integration-tests", outputs["channel"])
-
-        // Verify message arrived
-        val message = (client ?: error("HttpClient not initialized")).findSlackMessageByText(
-            botToken = cfg.botToken,
-            channelId = cfg.channelId,
-            textSubstring = uuid,
-        )
-        assertTrue(message.text.contains(uuid), "Message text should contain UUID")
-    }
-
-    @Test
     fun `execute with invalid webhook URL throws`() = runBlocking {
         val executor = SlackMessageExecutor(client ?: error("HttpClient not initialized"))
 

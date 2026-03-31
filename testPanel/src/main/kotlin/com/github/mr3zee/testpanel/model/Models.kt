@@ -75,7 +75,6 @@ data class RequestLogEntry(
 data class SlackMessage(
     val id: Int,
     val text: String,
-    val channel: String? = null,
     val receivedAt: String,
 )
 

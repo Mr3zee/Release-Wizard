@@ -67,30 +67,14 @@ class ExecutorsTest {
             block = slackBlock(),
             parameters = listOf(
                 Parameter(key = "text", value = "Deploy complete!"),
-                Parameter(key = "channel", value = "#releases"),
             ),
             context = context(config = ConnectionConfig.SlackConfig(webhookUrl = "https://hooks.slack.com/test")),
         )
 
         assertEquals("https://hooks.slack.com/test", capturedUrl)
         assertEquals("sent", outputs["messageTs"])
-        assertEquals("#releases", outputs["channel"])
         val body = capturedBody ?: error("capturedBody should have been set by the mock client")
         assertTrue(body.contains("Deploy complete!"))
-    }
-
-    @Test
-    fun `slack executor uses default channel when not specified`() = runBlocking {
-        val client = mockClient { respond("ok", HttpStatusCode.OK) }
-
-        val executor = SlackMessageExecutor(client)
-        val outputs = executor.execute(
-            block = slackBlock(),
-            parameters = listOf(Parameter(key = "text", value = "Hello")),
-            context = context(config = ConnectionConfig.SlackConfig(webhookUrl = "https://hooks.slack.com/test")),
-        )
-
-        assertEquals("default", outputs["channel"])
     }
 
     @Test
@@ -239,6 +223,44 @@ class ExecutorsTest {
 
         val body = Json.decodeFromString<JsonObject>(capturedBody ?: error("capturedBody should have been set by the mock client"))
         assertEquals("v2.0", body["name"]?.jsonPrimitive?.content)
+    }
+
+    // --- Output keys match knownOutputs ---
+
+    @Test
+    fun `slack executor output keys are subset of knownOutputs`() = runBlocking {
+        val client = mockClient { respond("ok", HttpStatusCode.OK) }
+        val executor = SlackMessageExecutor(client)
+        val outputs = executor.execute(
+            block = slackBlock(),
+            parameters = listOf(Parameter(key = "text", value = "test")),
+            context = context(config = ConnectionConfig.SlackConfig(webhookUrl = "https://hooks.slack.com/test")),
+        )
+
+        val knownNames = BlockType.SLACK_MESSAGE.knownOutputs().map { it.name }.toSet()
+        val unknownKeys = outputs.keys - knownNames
+        assertTrue(unknownKeys.isEmpty(), "Slack executor produced output keys not in knownOutputs: $unknownKeys")
+    }
+
+    @Test
+    fun `github publication executor output keys are subset of knownOutputs`() = runBlocking {
+        val client = mockClient {
+            respond(
+                """{"html_url":"https://github.com/o/r/releases/tag/v1","tag_name":"v1","id":1}""",
+                HttpStatusCode.Created,
+                headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+            )
+        }
+        val executor = GitHubPublicationExecutor(client)
+        val outputs = executor.execute(
+            block = ghPubBlock(),
+            parameters = listOf(Parameter(key = "tagName", value = "v1")),
+            context = context(config = ConnectionConfig.GitHubConfig(token = "t", owner = "o", repo = "r")),
+        )
+
+        val knownNames = BlockType.GITHUB_PUBLICATION.knownOutputs().map { it.name }.toSet()
+        val unknownKeys = outputs.keys - knownNames
+        assertTrue(unknownKeys.isEmpty(), "GitHub Publication executor produced output keys not in knownOutputs: $unknownKeys")
     }
 
     // --- Missing connection tests ---

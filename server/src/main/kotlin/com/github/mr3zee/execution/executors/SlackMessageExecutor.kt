@@ -17,8 +17,8 @@ import org.slf4j.LoggerFactory
 /**
  * Sends a message via Slack incoming webhook.
  *
- * Params: text (required), channel (optional)
- * Outputs: messageTs = "sent", channel
+ * Params: text (required)
+ * Outputs: messageTs = "sent"
  */
 class SlackMessageExecutor(
     private val httpClient: HttpClient,
@@ -50,9 +50,8 @@ class SlackMessageExecutor(
 
         val text = parameters.find { it.key == "text" }?.value
             ?: throw IllegalArgumentException("Slack Message requires 'text' parameter")
-        val channel = parameters.find { it.key == "channel" }?.value
 
-        val payload = SlackWebhookPayload(text = text, channel = channel)
+        val payload = SlackWebhookPayload(text = text)
 
         val response = httpClient.post(config.webhookUrl) {
             contentType(ContentType.Application.Json)
@@ -66,8 +65,7 @@ class SlackMessageExecutor(
         }
 
         return buildMap {
-            put("messageTs", "sent")
-            put("channel", channel ?: "default")
+            put(com.github.mr3zee.model.SlackOutputs.MESSAGE_TS, "sent")
         }
     }
 }
@@ -75,5 +73,4 @@ class SlackMessageExecutor(
 @Serializable
 private data class SlackWebhookPayload(
     val text: String,
-    val channel: String? = null,
 )
