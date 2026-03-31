@@ -192,6 +192,8 @@ class DefaultProjectsService(
             val messages = errors.joinToString("; ") { error ->
                 when (error) {
                     is ValidationError.DuplicateBlockId -> "Duplicate block ID: ${error.blockId.value}"
+                    is ValidationError.InvalidBlockIdFormat -> "Invalid block ID format: ${error.blockId.value}"
+                    is ValidationError.BlockIdTooLong -> "Block ID too long: ${error.blockId.value} (${error.length}/${error.max})"
                     is ValidationError.SelfLoop -> "Self-loop on block: ${error.edge.fromBlockId.value}"
                     is ValidationError.InvalidEdgeReference -> "Invalid edge reference: ${error.missingBlockId.value}"
                     is ValidationError.CycleDetected -> "Cycle detected involving: ${error.involvedBlockIds.joinToString { it.value }}"

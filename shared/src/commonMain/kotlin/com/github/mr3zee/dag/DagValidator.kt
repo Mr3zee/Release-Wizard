@@ -2,11 +2,15 @@ package com.github.mr3zee.dag
 
 import com.github.mr3zee.model.Block
 import com.github.mr3zee.model.BlockId
+import com.github.mr3zee.model.BlockIdFormatRegex
 import com.github.mr3zee.model.DagGraph
 import com.github.mr3zee.model.Edge
+import com.github.mr3zee.model.MAX_BLOCK_ID_LENGTH
 
 sealed class ValidationError {
     data class DuplicateBlockId(val blockId: BlockId) : ValidationError()
+    data class InvalidBlockIdFormat(val blockId: BlockId) : ValidationError()
+    data class BlockIdTooLong(val blockId: BlockId, val length: Int, val max: Int) : ValidationError()
     data class SelfLoop(val edge: Edge) : ValidationError()
     data class InvalidEdgeReference(val edge: Edge, val missingBlockId: BlockId) : ValidationError()
     data class CycleDetected(val involvedBlockIds: Set<BlockId>) : ValidationError()
@@ -31,7 +35,7 @@ object DagValidator {
     const val MAX_PARAM_VALUE_LENGTH = 1000
     const val MAX_BLOCK_DESCRIPTION_LENGTH = 2000
 
-    fun validate(graph: DagGraph, currentDepth: Int = 0): List<ValidationError> {
+    fun validate(graph: DagGraph, currentDepth: Int = 0, globalBlockIds: MutableSet<BlockId> = mutableSetOf()): List<ValidationError> {
         val errors = mutableListOf<ValidationError>()
 
         if (currentDepth > MAX_NESTING_DEPTH) {
@@ -50,8 +54,16 @@ object DagValidator {
         val blockIds = mutableSetOf<BlockId>()
 
         for (block in graph.blocks) {
-            if (!blockIds.add(block.id)) {
+            if (!blockIds.add(block.id) || !globalBlockIds.add(block.id)) {
                 errors.add(ValidationError.DuplicateBlockId(block.id))
+            }
+
+            if (block.id.value.length > MAX_BLOCK_ID_LENGTH) {
+                errors.add(ValidationError.BlockIdTooLong(block.id, block.id.value.length, MAX_BLOCK_ID_LENGTH))
+            }
+
+            if (!BlockIdFormatRegex.matches(block.id.value)) {
+                errors.add(ValidationError.InvalidBlockIdFormat(block.id))
             }
 
             if (block.name.length > MAX_BLOCK_NAME_LENGTH) {
@@ -99,7 +111,7 @@ object DagValidator {
 
         for (block in graph.blocks) {
             if (block is Block.ContainerBlock && block.children.blocks.isNotEmpty()) {
-                val childErrors = validate(block.children, currentDepth + 1)
+                val childErrors = validate(block.children, currentDepth + 1, globalBlockIds)
                 errors.addAll(childErrors)
             }
         }

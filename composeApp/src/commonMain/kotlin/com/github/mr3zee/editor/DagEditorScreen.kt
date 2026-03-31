@@ -648,6 +648,7 @@ fun DagEditorScreen(
                         configFetchError = if (selectedBlock != null) configFetchError[selectedBlock.id] else null,
                         isFetchingConfigParams = selectedBlock != null && selectedBlock.id in isFetchingConfigParams,
                         onUpdateName = { id, name -> viewModel.updateBlockName(id, name) },
+                        onUpdateBlockId = { oldId, newId -> viewModel.updateBlockId(oldId, newId) },
                         onUpdateType = { id, type -> viewModel.updateBlockType(id, type) },
                         onUpdateConnectionId = { id, connId -> viewModel.updateBlockConnectionId(id, connId) },
                         onSelectConfig = { id, configId -> viewModel.selectExternalConfig(id, configId) },
@@ -900,6 +901,8 @@ private fun ValidationErrorBadge(errors: List<ValidationError>) {
 private fun formatValidationError(error: ValidationError): String = when (error) {
     is ValidationError.CycleDetected -> packStringResource(Res.string.editor_validation_cycle, error.involvedBlockIds.size)
     is ValidationError.DuplicateBlockId -> packStringResource(Res.string.editor_validation_duplicate_id, error.blockId.value)
+    is ValidationError.InvalidBlockIdFormat -> packStringResource(Res.string.editor_validation_invalid_block_id_format, error.blockId.value)
+    is ValidationError.BlockIdTooLong -> packStringResource(Res.string.editor_validation_block_id_too_long, error.blockId.value, error.length, error.max)
     is ValidationError.InvalidEdgeReference -> packStringResource(Res.string.editor_validation_invalid_edge, error.missingBlockId.value)
     is ValidationError.SelfLoop -> packStringResource(Res.string.editor_validation_self_loop, error.edge.fromBlockId.value)
     is ValidationError.TooManyBlocks -> packStringResource(Res.string.editor_validation_too_many_blocks, error.count, error.max)

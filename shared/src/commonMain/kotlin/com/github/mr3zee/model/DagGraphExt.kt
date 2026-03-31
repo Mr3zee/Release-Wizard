@@ -47,3 +47,19 @@ fun DagGraph.collectConnectionIds(): List<ConnectionId> {
     collect(this)
     return result.toList()
 }
+
+/**
+ * Recursively collect all [BlockId]s in this graph, including inside nested containers.
+ */
+fun DagGraph.collectAllBlockIds(): Set<BlockId> {
+    val result = mutableSetOf<BlockId>()
+    fun collect(graph: DagGraph) {
+        for (block in graph.blocks) {
+            result.add(block.id)
+            if (block is Block.ContainerBlock) collect(block.children)
+        }
+    }
+    collect(this)
+    return result
+}
+

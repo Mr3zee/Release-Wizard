@@ -188,6 +188,10 @@
     <string name="editor_prop_title">Properties</string>
     <string name="editor_prop_empty_hint">Select a block to edit its properties</string>
     <string name="editor_prop_name">Name</string>
+    <string name="editor_prop_block_id">ID</string>
+    <string name="editor_prop_block_id_placeholder">block-id</string>
+    <string name="editor_prop_block_id_hint">Used in templates: ${block.&lt;id&gt;.&lt;output&gt;}</string>
+    <string name="editor_prop_block_id_duplicate">This ID is already used by another block</string>
     <string name="editor_prop_description">Description</string>
     <string name="editor_prop_description_placeholder">Add a description (Markdown supported)</string>
     <string name="editor_prop_add_description">Add description</string>
@@ -265,6 +269,8 @@
     <string name="editor_validation_title">Validation Issues</string>
     <string name="editor_validation_cycle">Cycle detected involving %1$d blocks</string>
     <string name="editor_validation_duplicate_id">Duplicate block ID: %1$s</string>
+    <string name="editor_validation_invalid_block_id_format">Invalid block ID format: %1$s</string>
+    <string name="editor_validation_block_id_too_long">Block ID too long: %1$s (%2$d/%3$d)</string>
     <string name="editor_validation_invalid_edge">Edge references missing block: %1$s</string>
     <string name="editor_validation_self_loop">Self-loop on block: %1$s</string>
     <string name="editor_validation_too_many_blocks">Too many blocks: %1$d (max %2$d)</string>

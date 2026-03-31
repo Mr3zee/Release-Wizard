@@ -22,6 +22,8 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.onPointerEvent
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.*
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -56,6 +58,7 @@ fun BlockPropertiesPanel(
     configFetchError: String? = null,
     isFetchingConfigParams: Boolean = false,
     onUpdateName: (BlockId, String) -> Unit,
+    onUpdateBlockId: (BlockId, BlockId) -> Boolean = { _, _ -> false },
     onUpdateType: (BlockId, BlockType) -> Unit,
     onUpdateConnectionId: (BlockId, ConnectionId?) -> Unit = { _, _ -> },
     onSelectConfig: (BlockId, String) -> Unit = { _, _ -> },
@@ -169,6 +172,68 @@ fun BlockPropertiesPanel(
 
         Spacer(Modifier.height(Spacing.sm))
 
+        // Block ID
+        var blockIdText by remember(block.id) { mutableStateOf(block.id.value) }
+        if (blockIdText != block.id.value) blockIdText = block.id.value
+        var blockIdError by remember(block.id) { mutableStateOf(false) }
+        // Keep references fresh for modifier callbacks (onFocusChanged, onPreviewKeyEvent)
+        val currentBlockId by rememberUpdatedState(block.id)
+        val currentOnUpdateBlockId by rememberUpdatedState(onUpdateBlockId)
+
+        fun commitBlockId() {
+            if (blockIdText == currentBlockId.value) return
+            val trimmed = blockIdText.trim('-')
+            if (trimmed.isEmpty()) {
+                blockIdText = currentBlockId.value
+                blockIdError = false
+            } else {
+                val newId = BlockId(trimmed)
+                val success = currentOnUpdateBlockId(currentBlockId, newId)
+                if (!success) {
+                    blockIdError = true
+                } else {
+                    blockIdText = trimmed
+                    blockIdError = false
+                }
+            }
+        }
+
+        RwTextField(
+            value = blockIdText,
+            onValueChange = { raw ->
+                val sanitized = raw.lowercase().replace(BlockIdSanitizeRegex, "-").trimStart('-')
+                blockIdText = sanitized
+                blockIdError = false
+            },
+            label = packStringResource(Res.string.editor_prop_block_id),
+            placeholder = packStringResource(Res.string.editor_prop_block_id_placeholder),
+            singleLine = true,
+            enabled = enabled,
+            isError = blockIdError,
+            supportingText = if (blockIdError) {
+                { Text(packStringResource(Res.string.editor_prop_block_id_duplicate)) }
+            } else {
+                { Text(
+                    packStringResource(Res.string.editor_prop_block_id_hint),
+                    style = AppTypography.bodySmall,
+                ) }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("block_id_field")
+                .onPreviewKeyEvent { event ->
+                    if (event.type == KeyEventType.KeyDown && event.key == Key.Enter) {
+                        commitBlockId()
+                        true
+                    } else false
+                }
+                .onFocusChanged { state ->
+                    if (!state.isFocused) commitBlockId()
+                },
+        )
+
+        Spacer(Modifier.height(Spacing.lg))
+
         when (block) {
             is Block.ActionBlock -> {
                 var selectedTab by remember(block.id) { mutableStateOf(0) }
@@ -210,6 +275,8 @@ fun BlockPropertiesPanel(
                 when (selectedTab) {
                     0 -> OverviewTabContent(
                         block = block,
+                        graph = graph,
+                        projectParameters = projectParameters,
                         connections = connections,
                         externalConfigs = externalConfigs,
                         isFetchingConfigs = isFetchingConfigs,
@@ -393,6 +460,8 @@ private fun BlockDescriptionSection(
 @Composable
 private fun OverviewTabContent(
     block: Block.ActionBlock,
+    graph: DagGraph,
+    projectParameters: List<Parameter>,
     connections: List<Connection>,
     externalConfigs: List<ExternalConfig>,
     isFetchingConfigs: Boolean,
@@ -407,6 +476,11 @@ private fun OverviewTabContent(
     onUpdateDescription: (BlockId, String) -> Unit,
     enabled: Boolean,
 ) {
+    // Compute predecessors for template picker (shared by gates, parameters, and Slack message)
+    val predecessors = remember(graph, block.id) {
+        com.github.mr3zee.dag.findPredecessors(graph, block.id)
+    }
+
     // Type selector
     var typeExpanded by remember(block.id) { mutableStateOf(false) }
     val labelColor = LocalAppColors.current.chromeTextSecondary
@@ -550,9 +624,7 @@ private fun OverviewTabContent(
         val currentTextValue = block.parameters.find { it.key == "text" }?.value ?: ""
         if (slackMessage != currentTextValue) slackMessage = currentTextValue
 
-        Text(packStringResource(Res.string.editor_slack_message_label), style = AppTypography.label, color = labelColor)
-        Spacer(Modifier.height(Spacing.xs))
-        RwTextField(
+        TemplateAutocompleteField(
             value = slackMessage,
             onValueChange = { text ->
                 slackMessage = text
@@ -566,10 +638,14 @@ private fun OverviewTabContent(
                 }
                 onUpdateParameters(block.id, updatedParams)
             },
+            projectParameters = projectParameters,
+            predecessors = predecessors,
+            label = { Text(packStringResource(Res.string.editor_slack_message_label), style = AppTypography.label) },
             placeholder = packStringResource(Res.string.editor_slack_message_placeholder),
             singleLine = false,
             enabled = enabled,
-            modifier = Modifier.fillMaxWidth().testTag("slack_message_field"),
+            modifier = Modifier.fillMaxWidth(),
+            testTag = "slack_message_field",
         )
         Spacer(Modifier.height(Spacing.lg))
     }
@@ -1085,3 +1161,5 @@ private fun ParameterRow(
         },
     )
 }
+
+private val BlockIdSanitizeRegex = Regex("[^a-z0-9-]")

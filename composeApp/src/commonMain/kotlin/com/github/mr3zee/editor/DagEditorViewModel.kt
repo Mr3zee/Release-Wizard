@@ -24,8 +24,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
 
 sealed interface LockState {
     data object Acquiring : LockState
@@ -383,10 +381,9 @@ class DagEditorViewModel(
 
     // Block operations
 
-    @OptIn(ExperimentalUuidApi::class)
     fun addBlock(type: BlockType, name: String, x: Float, y: Float) {
         if (isReadOnly.value) return
-        val blockId = BlockId(Uuid.random().toString())
+        val blockId = generateBlockId(name, _graph.value.collectAllBlockIds())
         val block = Block.ActionBlock(id = blockId, name = name, type = type)
         val position = BlockPosition(x, y)
         updateGraph(
@@ -399,10 +396,9 @@ class DagEditorViewModel(
         _selectedEdgeIndex.value = null
     }
 
-    @OptIn(ExperimentalUuidApi::class)
     fun addContainerBlock(name: String, x: Float, y: Float) {
         if (isReadOnly.value) return
-        val blockId = BlockId(Uuid.random().toString())
+        val blockId = generateBlockId(name, _graph.value.collectAllBlockIds())
         val block = Block.ContainerBlock(id = blockId, name = name)
         val position = BlockPosition(x, y, BlockPosition.DEFAULT_CONTAINER_WIDTH, BlockPosition.DEFAULT_CONTAINER_HEIGHT, BlockPosition.DEFAULT_NEW_CONTAINER_HEADER_HEIGHT)
         updateGraph(
@@ -1056,6 +1052,87 @@ class DagEditorViewModel(
         }
     }
 
+    /**
+     * Changes a block's ID, cascading the rename through edges, positions,
+     * selection state, and external config caches.
+     * Returns true if the rename succeeded, false if [newId] conflicts with an existing block.
+     */
+    fun updateBlockId(oldId: BlockId, newId: BlockId): Boolean {
+        if (isReadOnly.value) return false
+        if (oldId == newId) return true
+        val g = _graph.value
+        // Check uniqueness
+        if (newId in g.collectAllBlockIds()) return false
+
+        // Rewrite template expressions: ${block.oldId.xxx} → ${block.newId.xxx}
+        val oldRef = "\${block.${oldId.value}."
+        val newRef = "\${block.${newId.value}."
+        fun rewriteTemplates(value: String): String = value.replace(oldRef, newRef)
+        fun remapGate(gate: Gate?): Gate? =
+            gate?.copy(message = rewriteTemplates(gate.message))
+        fun remapParams(params: List<Parameter>): List<Parameter> =
+            params.map { it.copy(value = rewriteTemplates(it.value)) }
+
+        fun remapBlocks(blocks: List<Block>): List<Block> = blocks.map { block ->
+            when (block) {
+                is Block.ActionBlock -> block.copy(
+                    id = if (block.id == oldId) newId else block.id,
+                    parameters = remapParams(block.parameters),
+                    preGate = remapGate(block.preGate),
+                    postGate = remapGate(block.postGate),
+                )
+                is Block.ContainerBlock -> block.copy(
+                    id = if (block.id == oldId) newId else block.id,
+                    children = block.children.copy(
+                        blocks = remapBlocks(block.children.blocks),
+                        edges = block.children.edges.map { edge ->
+                            edge.copy(
+                                fromBlockId = if (edge.fromBlockId == oldId) newId else edge.fromBlockId,
+                                toBlockId = if (edge.toBlockId == oldId) newId else edge.toBlockId,
+                            )
+                        },
+                        positions = block.children.positions.mapKeys { (k, _) -> if (k == oldId) newId else k },
+                    ),
+                )
+            }
+        }
+
+        val newGraph = g.copy(
+            blocks = remapBlocks(g.blocks),
+            edges = g.edges.map { edge ->
+                edge.copy(
+                    fromBlockId = if (edge.fromBlockId == oldId) newId else edge.fromBlockId,
+                    toBlockId = if (edge.toBlockId == oldId) newId else edge.toBlockId,
+                )
+            },
+            positions = g.positions.mapKeys { (k, _) -> if (k == oldId) newId else k },
+        )
+        updateGraph(newGraph)
+
+        // Update selection
+        if (oldId in _selectedBlockIds.value) {
+            _selectedBlockIds.value = _selectedBlockIds.value - oldId + newId
+        }
+
+        // Migrate caches keyed by block ID
+        _externalConfigs.value.let { map ->
+            if (oldId in map) _externalConfigs.value = map - oldId + (newId to map.getValue(oldId))
+        }
+        _configFetchError.value.let { map ->
+            if (oldId in map) _configFetchError.value = map - oldId + (newId to map.getValue(oldId))
+        }
+        if (oldId in _isFetchingConfigs.value) {
+            _isFetchingConfigs.value = _isFetchingConfigs.value - oldId + newId
+        }
+        if (oldId in _isFetchingConfigParams.value) {
+            _isFetchingConfigParams.value = _isFetchingConfigParams.value - oldId + newId
+        }
+        configFetchJobs.remove(oldId)?.let { configFetchJobs[newId] = it }
+        paramsFetchJobs.remove(oldId)?.let { paramsFetchJobs[newId] = it }
+
+        return true
+    }
+
     fun updateBlockDescription(blockId: BlockId, description: String) {
         updateBlockField(blockId) { block ->
             when (block) {
@@ -1329,7 +1406,6 @@ class DagEditorViewModel(
         _clipboard.value = DagGraph(blocks = blocks, edges = edges, positions = positions)
     }
 
-    @OptIn(ExperimentalUuidApi::class)
     fun pasteClipboard() {
         if (isReadOnly.value) return
         val clip = _clipboard.value ?: return
@@ -1448,16 +1524,24 @@ class DagEditorViewModel(
         _parentLookup.value = lookup
     }
 
-    @OptIn(ExperimentalUuidApi::class)
-    private fun remapDagGraph(graph: DagGraph, parentMapping: Map<BlockId, BlockId>): DagGraph {
-        val childMapping = graph.blocks.associate { it.id to BlockId(Uuid.random().toString()) }
+    private fun remapDagGraph(
+        graph: DagGraph,
+        parentMapping: Map<BlockId, BlockId>,
+        usedIds: MutableSet<BlockId> = (_graph.value.collectAllBlockIds() + parentMapping.values).toMutableSet(),
+    ): DagGraph {
+        val childMapping = mutableMapOf<BlockId, BlockId>()
+        for (block in graph.blocks) {
+            val newId = generateBlockId(block.name, usedIds)
+            childMapping[block.id] = newId
+            usedIds.add(newId)
+        }
         val allMapping = parentMapping + childMapping
 
         val newBlocks = graph.blocks.map { block ->
             val newId = childMapping[block.id] ?: error("Missing ID mapping for block ${block.id}")
             when (block) {
                 is Block.ActionBlock -> block.copy(id = newId)
-                is Block.ContainerBlock -> block.copy(id = newId, children = remapDagGraph(block.children, allMapping))
+                is Block.ContainerBlock -> block.copy(id = newId, children = remapDagGraph(block.children, allMapping, usedIds))
             }
         }
 
