@@ -468,13 +468,15 @@ private fun WebhookSecretInlineCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
-                RwTextField(
-                    value = secret,
-                    onValueChange = {},
-                    readOnly = true,
-                    singleLine = true,
-                    modifier = Modifier.weight(1f).testTag("webhook_secret_field"),
-                )
+                Box(Modifier.weight(1f)) {
+                    RwTextField(
+                        value = secret,
+                        onValueChange = {},
+                        readOnly = true,
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().testTag("webhook_secret_field"),
+                    )
+                }
                 RwTooltip(tooltip = packStringResource(Res.string.common_copy_to_clipboard)) {
                     RwIconButton(
                         onClick = { copyToClipboard(secret) },

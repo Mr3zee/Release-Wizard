@@ -582,8 +582,8 @@ internal fun DrawScope.drawRunningIndicator(
     val screenY = transform.toScreenY(position.y)
     val screenW = transform.toScreen(position.width)
     val screenH = transform.toScreen(position.height)
-    val dotRadius = transform.toScreen(3f)
-    val clampedRadius = dotRadius.coerceAtLeast(1.5f)
+    val dotRadius = transform.toScreen(5f)
+    val clampedRadius = dotRadius.coerceAtLeast(2.5f)
 
     // Orbit the dot around the block perimeter
     val perimeter = 2 * (screenW + screenH)
@@ -596,15 +596,15 @@ internal fun DrawScope.drawRunningIndicator(
         else -> Offset(screenX, screenY + screenH - (dist - 2 * screenW - screenH)) // left edge
     }
 
+    // Glow behind the dot
     drawCircle(
-        color = colors.blockStatusRunning,
-        radius = clampedRadius,
+        color = colors.runningSpinner.copy(alpha = 0.4f),
+        radius = clampedRadius * 3f,
         center = Offset(dotX, dotY),
     )
-    // Subtle glow behind the dot
     drawCircle(
-        color = colors.blockStatusRunning.copy(alpha = 0.3f),
-        radius = clampedRadius * 2.5f,
+        color = colors.runningSpinner,
+        radius = clampedRadius,
         center = Offset(dotX, dotY),
     )
 }

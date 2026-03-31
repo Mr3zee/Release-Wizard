@@ -106,6 +106,9 @@ data class AppColors(
     val blockStatusWaitingForInput: Color,
     val blockStatusStopped: Color,
 
+    // Running spinner indicator (brighter than block fill)
+    val runningSpinner: Color,
+
     // Release stopped status
     val statusStopped: Color,
 
@@ -215,6 +218,7 @@ val LightAppColors = AppColors(
     blockStatusWaiting = Color(0xFF9CA3AF),
     blockStatusWaitingForInput = Color(0xFFD97706),
     blockStatusStopped = Color(0xFF0D9488),
+    runningSpinner = Color(0xFFFFFFFF),
     statusStopped = Color(0xFF0D9488),
 
     // Sidebar — opaque tokens tuned for WCAG AA 4.5:1
@@ -324,6 +328,7 @@ val DarkAppColors = AppColors(
     blockStatusWaiting = Color(0xFF6B7280),
     blockStatusWaitingForInput = Color(0xFFF59E0B),
     blockStatusStopped = Color(0xFF5EEAD4),
+    runningSpinner = Color(0xFFFFFFFF),
     statusStopped = Color(0xFF5EEAD4),
 
     // Sidebar — opaque tokens tuned for dark theme, WCAG AA compliant
