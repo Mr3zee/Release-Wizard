@@ -6,9 +6,9 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
+import org.koin.core.context.GlobalContext
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotEquals
 
 class PasswordPepperingTest {
 
@@ -156,23 +156,27 @@ class PasswordPepperingTest {
     }
 
     // --- Pepper correctness tests ---
+    // These tests use a shared DB across sequential testApplication blocks.
+    // Each block gets its own Koin context — we must stop Koin between blocks
+    // to avoid the Ktor Koin plugin colliding on the global KoinContext.
 
     @Test
-    fun `cannot login with different pepper`() = testApplication {
+    fun `cannot login with different pepper`() {
         val sharedDb = testDbConfig()
 
         // Register with pepper A
-        application { testModule(dbConfig = sharedDb, authConfig = testAuthConfig(pepperSecret = TEST_PEPPER)) }
-        val client = jsonClient()
-        val registerResponse = client.post(ApiRoutes.Auth.REGISTER) {
-            contentType(ContentType.Application.Json)
-            setBody(RegisterRequest(username = "peppertest", password = "testpass123"))
+        testApplication {
+            application { testModule(dbConfig = sharedDb, authConfig = testAuthConfig(pepperSecret = TEST_PEPPER)) }
+            val client = jsonClient()
+            val registerResponse = client.post(ApiRoutes.Auth.REGISTER) {
+                contentType(ContentType.Application.Json)
+                setBody(RegisterRequest(username = "peppertest", password = "testpass123"))
+            }
+            assertEquals(HttpStatusCode.Created, registerResponse.status)
         }
-        assertEquals(HttpStatusCode.Created, registerResponse.status)
+        GlobalContext.stopKoin()
 
         // Login with pepper B (no old pepper fallback) should fail
-        // Since we can't reconfigure the app mid-test, we use a second testApplication block
-        // sharing the same H2 DB (DB_CLOSE_DELAY=-1 keeps it alive)
         testApplication {
             application { testModule(dbConfig = sharedDb, authConfig = testAuthConfig(pepperSecret = TEST_PEPPER_ALT)) }
             val client2 = jsonClient()
@@ -185,17 +189,20 @@ class PasswordPepperingTest {
     }
 
     @Test
-    fun `pepper rotation — old pepper login succeeds and re-hashes`() = testApplication {
+    fun `pepper rotation — old pepper login succeeds and re-hashes`() {
         val sharedDb = testDbConfig()
 
         // Register with pepper A
-        application { testModule(dbConfig = sharedDb, authConfig = testAuthConfig(pepperSecret = TEST_PEPPER)) }
-        val client = jsonClient()
-        val registerResponse = client.post(ApiRoutes.Auth.REGISTER) {
-            contentType(ContentType.Application.Json)
-            setBody(RegisterRequest(username = "rotateuser", password = "testpass123"))
+        testApplication {
+            application { testModule(dbConfig = sharedDb, authConfig = testAuthConfig(pepperSecret = TEST_PEPPER)) }
+            val client = jsonClient()
+            val registerResponse = client.post(ApiRoutes.Auth.REGISTER) {
+                contentType(ContentType.Application.Json)
+                setBody(RegisterRequest(username = "rotateuser", password = "testpass123"))
+            }
+            assertEquals(HttpStatusCode.Created, registerResponse.status)
         }
-        assertEquals(HttpStatusCode.Created, registerResponse.status)
+        GlobalContext.stopKoin()
 
         // Login with pepper B + old A — should succeed via rotation
         testApplication {
@@ -212,6 +219,7 @@ class PasswordPepperingTest {
             }
             assertEquals(HttpStatusCode.OK, loginResponse.status)
         }
+        GlobalContext.stopKoin()
 
         // After rotation, login with pepper B only (no old) should still work
         // because the hash was transparently upgraded during the previous login
@@ -248,23 +256,26 @@ class PasswordPepperingTest {
     }
 
     @Test
-    fun `no pepper vs pepper produces different hashes`() = testApplication {
+    fun `no pepper vs pepper produces different hashes`() {
         val sharedDb = testDbConfig()
 
         // Register without pepper
-        application { testModule(dbConfig = sharedDb, authConfig = testAuthConfig()) }
-        val client = jsonClient()
-        client.post(ApiRoutes.Auth.REGISTER) {
-            contentType(ContentType.Application.Json)
-            setBody(RegisterRequest(username = "nopepperuser", password = "samepassword"))
-        }
+        testApplication {
+            application { testModule(dbConfig = sharedDb, authConfig = testAuthConfig()) }
+            val client = jsonClient()
+            client.post(ApiRoutes.Auth.REGISTER) {
+                contentType(ContentType.Application.Json)
+                setBody(RegisterRequest(username = "nopepperuser", password = "samepassword"))
+            }
 
-        // Login without pepper works
-        val loginNoPepper = client.post(ApiRoutes.Auth.LOGIN) {
-            contentType(ContentType.Application.Json)
-            setBody(LoginRequest(username = "nopepperuser", password = "samepassword"))
+            // Login without pepper works
+            val loginNoPepper = client.post(ApiRoutes.Auth.LOGIN) {
+                contentType(ContentType.Application.Json)
+                setBody(LoginRequest(username = "nopepperuser", password = "samepassword"))
+            }
+            assertEquals(HttpStatusCode.OK, loginNoPepper.status)
         }
-        assertEquals(HttpStatusCode.OK, loginNoPepper.status)
+        GlobalContext.stopKoin()
 
         // Try to login with pepper — should fail (hash is different)
         testApplication {
