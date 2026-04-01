@@ -8,6 +8,7 @@ import com.github.mr3zee.model.TeamInvite
 import com.github.mr3zee.util.UiMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 class MyInvitesViewModel(
@@ -46,6 +47,8 @@ class MyInvitesViewModel(
             try {
                 val response = apiClient.getMyInvites()
                 _invites.value = response.invites
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -61,6 +64,8 @@ class MyInvitesViewModel(
                 apiClient.acceptInvite(inviteId)
                 loadInvites()
                 onAccepted()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -76,6 +81,8 @@ class MyInvitesViewModel(
                 apiClient.declineInvite(inviteId)
                 loadInvites()
                 onDeclined()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -93,6 +100,8 @@ class MyInvitesViewModel(
             try {
                 val response = apiClient.getMyInvites()
                 _invites.value = response.invites
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _refreshError.value = e.toUiMessage()
             } finally {

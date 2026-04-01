@@ -16,6 +16,7 @@ import com.github.mr3zee.model.Parameter
 import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.model.Schedule
 import com.github.mr3zee.util.UiMessage
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -70,12 +71,16 @@ class ProjectAutomationViewModel(
                     val project = projectApiClient.getProject(projectId)
                     _projectParameters.value = project.parameters
                     _projectName.value = project.name
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (_: Exception) {
                     // Project params are optional for the automation screen to function
                 }
                 _schedules.value = scheduleClient.listSchedules(projectId)
                 _webhookTriggers.value = webhookClient.listTriggers(projectId)
                 _mavenTriggers.value = mavenClient.listMavenTriggers(projectId)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -90,6 +95,8 @@ class ProjectAutomationViewModel(
             try {
                 val created = scheduleClient.createSchedule(projectId, request)
                 _schedules.value += created
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -103,6 +110,8 @@ class ProjectAutomationViewModel(
             try {
                 val updated = scheduleClient.toggleSchedule(projectId, scheduleId, enabled)
                 _schedules.value = _schedules.value.map { if (it.id == scheduleId) updated else it }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }
@@ -114,6 +123,8 @@ class ProjectAutomationViewModel(
             try {
                 scheduleClient.deleteSchedule(projectId, scheduleId)
                 _schedules.value = _schedules.value.filter { it.id != scheduleId }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }
@@ -127,6 +138,8 @@ class ProjectAutomationViewModel(
                 val created = webhookClient.createTrigger(projectId, request)
                 _webhookTriggers.value += created
                 _webhookCreated.emit(created)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -140,6 +153,8 @@ class ProjectAutomationViewModel(
             try {
                 val updated = webhookClient.toggleTrigger(projectId, triggerId, enabled)
                 _webhookTriggers.value = _webhookTriggers.value.map { if (it.id == triggerId) updated else it }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }
@@ -151,6 +166,8 @@ class ProjectAutomationViewModel(
             try {
                 webhookClient.deleteTrigger(projectId, triggerId)
                 _webhookTriggers.value = _webhookTriggers.value.filter { it.id != triggerId }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }
@@ -164,6 +181,8 @@ class ProjectAutomationViewModel(
                 val created = mavenClient.createMavenTrigger(projectId, request)
                 _mavenTriggers.value += created
                 _mavenTriggerCreated.emit(created)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -177,6 +196,8 @@ class ProjectAutomationViewModel(
             try {
                 val updated = mavenClient.toggleMavenTrigger(projectId, triggerId, enabled)
                 _mavenTriggers.value = _mavenTriggers.value.map { if (it.id == triggerId) updated else it }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }
@@ -188,6 +209,8 @@ class ProjectAutomationViewModel(
             try {
                 mavenClient.deleteMavenTrigger(projectId, triggerId)
                 _mavenTriggers.value = _mavenTriggers.value.filter { it.id != triggerId }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }

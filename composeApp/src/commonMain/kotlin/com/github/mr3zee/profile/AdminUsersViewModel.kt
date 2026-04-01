@@ -10,6 +10,7 @@ import com.github.mr3zee.api.toUiMessage
 import com.github.mr3zee.model.User
 import com.github.mr3zee.util.UiMessage
 import com.github.mr3zee.util.copyToClipboard
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -73,6 +74,8 @@ class AdminUsersViewModel(
                 _users.value = response.sortedWith(
                     compareBy<User> { it.approved }.thenBy { it.createdAt ?: 0L }
                 )
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -90,6 +93,8 @@ class AdminUsersViewModel(
                 authApiClient.approveUser(userId)
                 _successEvent.value = AdminSuccessEvent.UserApproved(username)
                 loadUsers()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }
@@ -102,6 +107,8 @@ class AdminUsersViewModel(
             try {
                 authApiClient.rejectUser(userId)
                 loadUsers()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }
@@ -114,6 +121,8 @@ class AdminUsersViewModel(
             try {
                 val result = authApiClient.getDeletePreCheck(userId)
                 _deletePreCheck.value = userId to result
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _deletePreCheck.value = null
                 _error.value = e.toUiMessage()
@@ -130,6 +139,8 @@ class AdminUsersViewModel(
                 _deletePreCheck.value = null
                 _successEvent.value = AdminSuccessEvent.UserDeleted(username)
                 loadUsers()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -154,6 +165,8 @@ class AdminUsersViewModel(
                 _generatedLinks.value += (userId to response.resetUrl)
                 // Auto-copy to clipboard
                 copyToClipboard(response.resetUrl)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }
@@ -178,6 +191,8 @@ class AdminUsersViewModel(
             try {
                 val tokens = patApiClient.listUserTokens(userId)
                 _userTokens.update { it + (userId to tokens) }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -193,6 +208,8 @@ class AdminUsersViewModel(
                 patApiClient.revokeUserToken(userId, tokenId)
                 _successEvent.value = AdminSuccessEvent.TokenRevoked
                 loadUserTokens(userId)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }

@@ -15,6 +15,7 @@ import com.github.mr3zee.dag.DagValidator
 import com.github.mr3zee.dag.ValidationError
 import com.github.mr3zee.model.*
 import io.ktor.client.plugins.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -202,6 +203,8 @@ class DagEditorViewModel(
             _error.value = null
             try {
                 reloadProjectAndAcquireLock()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -229,6 +232,8 @@ class DagEditorViewModel(
             try {
                 val response = client.listConnections(limit = 200)
                 _teamConnections.value = response.connections
+            } catch (e: CancellationException) {
+                throw e
             } catch (_: Exception) {
                 // Silently fail — connection dropdown will be empty
             }
@@ -248,6 +253,8 @@ class DagEditorViewModel(
             } else {
                 _lockState.value = LockState.LockedByOther(null)
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Exception) {
             _lockState.value = LockState.LockedByOther(null)
         }
@@ -265,6 +272,8 @@ class DagEditorViewModel(
                         _lockState.value = LockState.Acquired(updated)
                         success = true
                         break
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (_: Exception) {
                         if (retry < HEARTBEAT_MAX_RETRIES - 1) {
                             delay(2000L.milliseconds) // Wait before retry
@@ -296,6 +305,8 @@ class DagEditorViewModel(
             try {
                 apiClient.forceReleaseLock(projectId)
                 reloadProjectAndAcquireLock()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }
@@ -306,6 +317,8 @@ class DagEditorViewModel(
         viewModelScope.launch {
             try {
                 reloadProjectAndAcquireLock()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }
@@ -343,6 +356,8 @@ class DagEditorViewModel(
                     }
                 }
                 _error.value = e.toUiMessage()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -368,6 +383,8 @@ class DagEditorViewModel(
                     _lockState.value = LockState.LockLost
                 }
                 _error.value = UiMessage.LockReacquireFailed(e.message)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _lockState.value = LockState.LockLost
                 _error.value = UiMessage.LockReacquireFailed(e.message ?: "")
@@ -1243,6 +1260,8 @@ class DagEditorViewModel(
             try {
                 val response = client.fetchExternalConfigs(connectionId, connectionType)
                 _externalConfigs.value += (blockId to response.configs)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _configFetchError.value += (blockId to (e.message ?: "Failed to fetch"))
             } finally {
@@ -1304,6 +1323,8 @@ class DagEditorViewModel(
                 if (merged != currentBlock.parameters) {
                     updateBlockParameters(blockId, merged)
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {

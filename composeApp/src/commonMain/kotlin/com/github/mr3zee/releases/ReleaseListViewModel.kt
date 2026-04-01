@@ -14,6 +14,7 @@ import com.github.mr3zee.model.Release
 import com.github.mr3zee.model.ReleaseId
 import com.github.mr3zee.model.ReleaseStatus
 import com.github.mr3zee.model.TeamId
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -174,6 +175,8 @@ class ReleaseListViewModel(
                     _releases.value += response.releases
                     _pagination.value = response.pagination
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -204,6 +207,8 @@ class ReleaseListViewModel(
             _pagination.value = response.pagination
             _lastRefreshedAt.value = TimeSource.Monotonic.markNow()
             _refreshError.value = null
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             if (silent) {
                 _refreshError.value = e.toUiMessage()
@@ -221,6 +226,8 @@ class ReleaseListViewModel(
             try {
                 val response = projectApiClient.listProjects(limit = 200)
                 _projects.value = response.projects
+            } catch (e: CancellationException) {
+                throw e
             } catch (_: Exception) {
                 // Projects loading failure is non-critical for the release list
             }
@@ -233,6 +240,8 @@ class ReleaseListViewModel(
                 val response = releaseApiClient.startRelease(CreateReleaseRequest(projectTemplateId = projectId, name = name))
                 onCreated(response.release.id)
                 loadReleases()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }
@@ -244,6 +253,8 @@ class ReleaseListViewModel(
             try {
                 releaseApiClient.archiveRelease(id)
                 loadReleases()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }
@@ -255,6 +266,8 @@ class ReleaseListViewModel(
             try {
                 releaseApiClient.deleteRelease(id)
                 loadReleases()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }

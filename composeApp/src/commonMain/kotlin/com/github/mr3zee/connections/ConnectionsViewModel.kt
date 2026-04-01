@@ -13,6 +13,7 @@ import com.github.mr3zee.model.ConnectionId
 import com.github.mr3zee.util.UiMessage
 import com.github.mr3zee.model.ConnectionType
 import com.github.mr3zee.model.TeamId
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -163,6 +164,8 @@ class ConnectionsViewModel(
                     _webhookUrls.value += response.webhookUrls
                     _pagination.value = response.pagination
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -192,6 +195,8 @@ class ConnectionsViewModel(
             _webhookUrls.value = response.webhookUrls
             _pagination.value = response.pagination
             _refreshError.value = null
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             if (silent) {
                 _refreshError.value = e.toUiMessage()
@@ -213,6 +218,8 @@ class ConnectionsViewModel(
                 apiClient.createConnection(CreateConnectionRequest(name = name, teamId = teamId, type = type, config = config))
                 loadConnections()
                 _savedSuccessfully.tryEmit(Unit)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -226,6 +233,8 @@ class ConnectionsViewModel(
             _error.value = null
             try {
                 _editingConnection.value = apiClient.getConnection(id)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }
@@ -244,6 +253,8 @@ class ConnectionsViewModel(
                 apiClient.updateConnection(id, UpdateConnectionRequest(name = name, config = config))
                 loadConnections()
                 _savedSuccessfully.tryEmit(Unit)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -259,6 +270,8 @@ class ConnectionsViewModel(
                 apiClient.deleteConnection(id)
                 loadConnections()
                 _deletedSuccessfully.tryEmit(Unit)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }
@@ -277,6 +290,8 @@ class ConnectionsViewModel(
                 } else {
                     _error.value = UiMessage.ConnectionTestFailed(result.message)
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -297,6 +312,8 @@ class ConnectionsViewModel(
                 } else {
                     _error.value = UiMessage.ConnectionTestFailed(result.message)
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {

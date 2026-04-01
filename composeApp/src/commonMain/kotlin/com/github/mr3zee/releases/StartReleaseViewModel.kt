@@ -13,6 +13,7 @@ import com.github.mr3zee.model.ReleaseId
 import com.github.mr3zee.util.UiMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 class StartReleaseViewModel(
@@ -51,6 +52,8 @@ class StartReleaseViewModel(
                 _project.value = project
                 _releaseName.value = project.name
                 _parameters.value = project.parameters
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -89,6 +92,8 @@ class StartReleaseViewModel(
                     )
                 )
                 onCreated(response.release.id)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {

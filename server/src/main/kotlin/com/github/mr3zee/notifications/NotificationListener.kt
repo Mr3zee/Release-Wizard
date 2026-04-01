@@ -75,6 +75,8 @@ class NotificationListener(
                         status,
                     )
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 log.error("Failed to send {} notification for release {}", entity.type, releaseId.value, e)
             }

@@ -8,6 +8,7 @@ import com.github.mr3zee.util.bearerTokenUuid
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerializationException
 import org.koin.ktor.ext.inject
 import org.slf4j.LoggerFactory
@@ -43,6 +44,8 @@ fun Route.webhookRoutes() {
                     return@post
                 }
                 text
+            } catch (e: CancellationException) {
+                throw e
             } catch (_: Exception) {
                 call.respond(HttpStatusCode.BadRequest, "Failed to read request body")
                 return@post
@@ -53,6 +56,8 @@ fun Route.webhookRoutes() {
             } catch (_: SerializationException) {
                 call.respond(HttpStatusCode.BadRequest, "Invalid JSON body")
                 return@post
+            } catch (e: CancellationException) {
+                throw e
             } catch (_: Exception) {
                 call.respond(HttpStatusCode.BadRequest, "Invalid JSON body")
                 return@post

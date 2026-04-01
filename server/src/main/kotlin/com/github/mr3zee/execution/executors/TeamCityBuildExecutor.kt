@@ -14,6 +14,7 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.slf4j.LoggerFactory
@@ -204,6 +205,8 @@ class TeamCityBuildExecutor(
             } else {
                 emptyMap()
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             log.warn("Failed to fetch artifacts for build {}: {}", buildId, e.message)
             emptyMap()
@@ -223,7 +226,7 @@ class TeamCityBuildExecutor(
                 setBody("""<buildCancelRequest comment="Stopped by Release Wizard" readdIntoQueue="false"/>""")
             }
             log.info("TeamCity build {} cancel response: {}", buildId, response.status)
-        } catch (e: kotlinx.coroutines.CancellationException) {
+        } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             log.warn("Failed to cancel TeamCity build {}: {}", buildId, e.message)

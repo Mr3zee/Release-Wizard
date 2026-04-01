@@ -10,6 +10,7 @@ import com.github.mr3zee.util.UiMessage
 import com.github.mr3zee.model.TeamId
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 class AuditLogViewModel(
@@ -55,6 +56,8 @@ class AuditLogViewModel(
                 val response = apiClient.getAuditLog(teamId, offset = 0, limit = pageSize)
                 _events.value = response.events
                 _pagination.value = response.pagination
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -73,6 +76,8 @@ class AuditLogViewModel(
                 val response = apiClient.getAuditLog(teamId, offset = 0, limit = pageSize)
                 _events.value = response.events
                 _pagination.value = response.pagination
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _refreshError.value = e.toUiMessage()
             } finally {
@@ -95,6 +100,8 @@ class AuditLogViewModel(
                 val response = apiClient.getAuditLog(teamId, offset = nextOffset, limit = pageSize)
                 _events.value += response.events
                 _pagination.value = response.pagination
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {

@@ -9,6 +9,7 @@ import com.github.mr3zee.api.toUiMessage
 import com.github.mr3zee.util.UiMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 class PatViewModel(
@@ -40,6 +41,8 @@ class PatViewModel(
             _error.value = null
             try {
                 _tokens.value = patApiClient.listTokens()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -58,6 +61,8 @@ class PatViewModel(
                 _newlyCreatedToken.value = response
                 _createSuccess.value = true
                 _tokens.value = patApiClient.listTokens()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -78,6 +83,8 @@ class PatViewModel(
                 patApiClient.revokeToken(id)
                 _successMessage.value = UiMessage.Raw("pat_revoked")
                 _tokens.value = patApiClient.listTokens()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {

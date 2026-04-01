@@ -6,6 +6,7 @@ import com.github.mr3zee.api.*
 import com.github.mr3zee.audit.AuditService
 import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.model.*
+import kotlinx.coroutines.CancellationException
 
 interface TeamService {
     suspend fun createTeam(request: CreateTeamRequest, session: UserSession): TeamResponse
@@ -126,7 +127,7 @@ class DefaultTeamService(
             if (team != null) {
                 notificationGenerator.onMemberRoleChanged(userId, teamId, team.name, request.role)
             }
-        } catch (e: kotlinx.coroutines.CancellationException) {
+        } catch (e: CancellationException) {
             throw e
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             log.warn("Failed to generate role-changed notification: {}", e.message)
@@ -174,7 +175,7 @@ class DefaultTeamService(
             if (team != null) {
                 notificationGenerator.onTeamInviteReceived(userId, teamId, team.name)
             }
-        } catch (e: kotlinx.coroutines.CancellationException) {
+        } catch (e: CancellationException) {
             throw e
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             log.warn("Failed to generate invite notification for user {} in team {}: {}", userId, teamId.value, e.message)
@@ -212,7 +213,7 @@ class DefaultTeamService(
         auditService.log(teamId, session, AuditAction.JOIN_REQUEST_SUBMITTED, AuditTargetType.USER, session.userId, "Submitted join request")
         try {
             notificationGenerator.onJoinRequestSubmitted(session.userId, session.username, teamId, team.name)
-        } catch (e: kotlinx.coroutines.CancellationException) {
+        } catch (e: CancellationException) {
             throw e
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             log.warn("Failed to generate join-request-submitted notification: {}", e.message)
@@ -245,7 +246,7 @@ class DefaultTeamService(
             if (team != null) {
                 notificationGenerator.onJoinRequestDecided(requestUserId, teamId, team.name, approved = true)
             }
-        } catch (e: kotlinx.coroutines.CancellationException) {
+        } catch (e: CancellationException) {
             throw e
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             log.warn("Failed to generate join-request-approved notification: {}", e.message)
@@ -261,7 +262,7 @@ class DefaultTeamService(
             if (team != null) {
                 notificationGenerator.onJoinRequestDecided(request.userId.value, teamId, team.name, approved = false)
             }
-        } catch (e: kotlinx.coroutines.CancellationException) {
+        } catch (e: CancellationException) {
             throw e
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             log.warn("Failed to generate join-request-rejected notification: {}", e.message)
@@ -287,6 +288,8 @@ class DefaultTeamService(
         // Runs in a separate transaction — failure is logged but doesn't block the invite acceptance.
         try {
             teamRepository.cancelPendingJoinRequest(teamId, session.userId, reviewedByUserId = session.userId)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             val log = org.slf4j.LoggerFactory.getLogger(DefaultTeamService::class.java)
             log.warn("Failed to cancel pending join request for user {} in team {}: {}", session.userId, teamId.value, e.message)

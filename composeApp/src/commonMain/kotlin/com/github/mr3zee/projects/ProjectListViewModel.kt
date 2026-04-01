@@ -10,6 +10,7 @@ import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.util.UiMessage
 import com.github.mr3zee.model.ProjectTemplate
 import com.github.mr3zee.model.TeamId
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -120,6 +121,8 @@ class ProjectListViewModel(
                     _projects.value += response.projects
                     _pagination.value = response.pagination
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -144,6 +147,8 @@ class ProjectListViewModel(
             _projects.value = response.projects
             _pagination.value = response.pagination
             _refreshError.value = null
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             if (silent) {
                 _refreshError.value = e.toUiMessage()
@@ -164,6 +169,8 @@ class ProjectListViewModel(
                 val project = apiClient.createProject(CreateProjectRequest(name = name, teamId = teamId, description = description))
                 loadProjects()
                 onCreated?.invoke(project.id)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }
@@ -176,6 +183,8 @@ class ProjectListViewModel(
             try {
                 apiClient.deleteProject(id)
                 loadProjects()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }

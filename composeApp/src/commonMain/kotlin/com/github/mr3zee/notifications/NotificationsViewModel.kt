@@ -9,6 +9,7 @@ import com.github.mr3zee.model.UserNotification
 import com.github.mr3zee.util.UiMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 class NotificationsViewModel(
@@ -58,6 +59,8 @@ class NotificationsViewModel(
                 val response = apiClient.listNotifications(offset = 0, limit = pageSize)
                 _notifications.value = response.notifications
                 _pagination.value = response.pagination
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -76,6 +79,8 @@ class NotificationsViewModel(
                 val response = apiClient.listNotifications(offset = 0, limit = pageSize)
                 _notifications.value = response.notifications
                 _pagination.value = response.pagination
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _refreshError.value = e.toUiMessage()
             } finally {
@@ -94,6 +99,8 @@ class NotificationsViewModel(
                 val response = apiClient.listNotifications(offset = nextOffset, limit = pageSize)
                 _notifications.value += response.notifications
                 _pagination.value = response.pagination
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -110,6 +117,8 @@ class NotificationsViewModel(
         viewModelScope.launch {
             try {
                 apiClient.markAsRead(notificationId)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 // Revert: set this notification back to unread
                 _notifications.value = _notifications.value.map {
@@ -127,6 +136,8 @@ class NotificationsViewModel(
         viewModelScope.launch {
             try {
                 apiClient.markAllAsRead()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 // Revert: restore original read state for the items that were unread
                 _notifications.value = _notifications.value.map {
@@ -145,6 +156,8 @@ class NotificationsViewModel(
         viewModelScope.launch {
             try {
                 apiClient.deleteNotification(notificationId)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 // Revert: re-insert the removed item at its original position
                 val current = _notifications.value.toMutableList()
@@ -161,6 +174,8 @@ class NotificationsViewModel(
         viewModelScope.launch {
             try {
                 apiClient.deleteAllRead()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 // Revert: merge removed items back, sort by timestamp descending
                 _notifications.value = (_notifications.value + removedItems)

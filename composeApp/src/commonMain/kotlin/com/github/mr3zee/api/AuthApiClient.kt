@@ -4,6 +4,7 @@ import com.github.mr3zee.model.ClientType
 import com.github.mr3zee.model.User
 import com.github.mr3zee.util.RuntimeContext
 import com.github.mr3zee.util.currentRuntimeContext
+import kotlinx.coroutines.CancellationException
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -41,6 +42,8 @@ class AuthApiClient(private val client: HttpClient) {
         return try {
             val response = client.get(serverUrl(ApiRoutes.Auth.ME))
             response.body()
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Exception) {
             null
         }
@@ -85,6 +88,8 @@ class AuthApiClient(private val client: HttpClient) {
                 setBody(ValidateResetTokenRequest(token = token))
             }
             true
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Exception) {
             false
         }

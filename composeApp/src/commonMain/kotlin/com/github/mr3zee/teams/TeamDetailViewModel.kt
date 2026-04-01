@@ -10,6 +10,7 @@ import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.model.TeamMembership
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 class TeamDetailViewModel(
@@ -56,6 +57,8 @@ class TeamDetailViewModel(
                 val detail = apiClient.getTeamDetail(teamId)
                 _team.value = detail.team
                 _members.value = detail.members
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -74,6 +77,8 @@ class TeamDetailViewModel(
                 val detail = apiClient.getTeamDetail(teamId)
                 _team.value = detail.team
                 _members.value = detail.members
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _refreshError.value = e.toUiMessage()
             } finally {
@@ -93,6 +98,8 @@ class TeamDetailViewModel(
             try {
                 apiClient.leaveTeam(teamId)
                 onLeft()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _actionError.value = e.toUiMessage()
             } finally {

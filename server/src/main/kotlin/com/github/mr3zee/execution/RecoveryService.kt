@@ -3,6 +3,7 @@ package com.github.mr3zee.execution
 import com.github.mr3zee.model.ReleaseStatus
 import com.github.mr3zee.releases.ReleasesRepository
 import com.github.mr3zee.webhooks.StatusWebhookService
+import kotlinx.coroutines.CancellationException
 import org.slf4j.LoggerFactory
 
 /**
@@ -42,12 +43,16 @@ class RecoveryService(
                 executionEngine.recoverRelease(release, executions)
                 resumed++
                 log.info("Recovery started for release {}", release.id.value)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 failed++
                 log.error("Failed to recover release {}: {}", release.id.value, e.message, e)
                 // Mark the release as FAILED if recovery itself fails
                 try {
                     releasesRepository.setFinished(release.id, ReleaseStatus.FAILED)
+                } catch (e2: CancellationException) {
+                    throw e2
                 } catch (e2: Exception) {
                     log.error("Failed to mark release {} as FAILED", release.id.value, e2)
                 }

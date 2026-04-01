@@ -8,6 +8,7 @@ import com.github.mr3zee.model.UserId
 import com.github.mr3zee.model.isAdmin
 import com.github.mr3zee.plugins.CorrelationIdKey
 import com.github.mr3zee.teams.TeamRepository
+import kotlinx.coroutines.CancellationException
 import io.ktor.http.*
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.auth.*
@@ -164,7 +165,7 @@ fun Route.authRoutes() {
                     executionScope.launch {
                         try {
                             notificationGenerator.onAccountPendingApproval(user.username)
-                        } catch (e: kotlinx.coroutines.CancellationException) {
+                        } catch (e: CancellationException) {
                             throw e
                         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
                             log.warn("Failed to generate admin notification for registration: {}", e.message)

@@ -75,6 +75,7 @@ import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import io.ktor.server.websocket.*
 import io.ktor.util.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -488,6 +489,8 @@ fun Application.module() {
                                 environment.log.warn("Failed to create seed admin user '$seedUsername'")
                             }
                         }
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         environment.log.warn("Seed admin user creation failed", e)
                     }
@@ -514,6 +517,8 @@ fun Application.module() {
                 scope.launch {
                     try {
                         recoveryService.recover()
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         environment.log.error("Release recovery failed", e)
                     }
@@ -539,7 +544,7 @@ fun Application.module() {
                     // Run cleanup immediately on startup to clear expired tokens from crash/restart
                     try {
                         webhookService.cleanupExpiredTokens()
-                    } catch (e: kotlinx.coroutines.CancellationException) {
+                    } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
                         environment.log.error("Initial webhook token cleanup failed", e)
@@ -548,7 +553,7 @@ fun Application.module() {
                         delay(StatusWebhookService.CLEANUP_INTERVAL)
                         try {
                             webhookService.cleanupExpiredTokens()
-                        } catch (e: kotlinx.coroutines.CancellationException) {
+                        } catch (e: CancellationException) {
                             throw e
                         } catch (e: Exception) {
                             environment.log.error("Webhook token cleanup failed", e)
@@ -563,7 +568,7 @@ fun Application.module() {
                 scope.launch {
                     try {
                         patService.deleteExpiredAndRevoked()
-                    } catch (e: kotlinx.coroutines.CancellationException) {
+                    } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
                         environment.log.error("Initial PAT cleanup failed", e)
@@ -572,7 +577,7 @@ fun Application.module() {
                         delay(PatService.CLEANUP_INTERVAL)
                         try {
                             patService.deleteExpiredAndRevoked()
-                        } catch (e: kotlinx.coroutines.CancellationException) {
+                        } catch (e: CancellationException) {
                             throw e
                         } catch (e: Exception) {
                             environment.log.warn("PAT cleanup failed", e)
@@ -588,6 +593,8 @@ fun Application.module() {
                     while (true) {
                         try {
                             lockoutRepo.deleteExpired(kotlin.time.Clock.System.now())
+                        } catch (e: CancellationException) {
+                            throw e
                         } catch (e: Exception) {
                             environment.log.warn("Lockout cleanup failed", e)
                         }
@@ -603,7 +610,7 @@ fun Application.module() {
                         delay(3_600_000L.milliseconds)
                         try {
                             notifGenerator.cleanup()
-                        } catch (e: kotlinx.coroutines.CancellationException) {
+                        } catch (e: CancellationException) {
                             throw e
                         } catch (e: Exception) {
                             environment.log.error("User notification cleanup failed", e)
@@ -737,6 +744,8 @@ private suspend fun seedDevConnections(
         )
 
         log.info("Seed dev connections created (TeamCity, Slack, GitHub) in team '{}'", team.name)
+    } catch (e: CancellationException) {
+        throw e
     } catch (e: Exception) {
         log.warn("Failed to seed dev connections", e)
     }

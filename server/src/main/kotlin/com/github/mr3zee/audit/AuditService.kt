@@ -2,6 +2,7 @@ package com.github.mr3zee.audit
 
 import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.model.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
@@ -105,6 +106,8 @@ class AuditService(
                         details = sanitizedDetails,
                     )
                 )
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 logger.error("Failed to write audit event: action={}, target={}", action, sanitizedTargetId, e)
             }

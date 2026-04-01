@@ -8,6 +8,7 @@ import com.github.mr3zee.api.toUiMessage
 import com.github.mr3zee.util.UiMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 class ProfileViewModel(
@@ -50,6 +51,8 @@ class ProfileViewModel(
             try {
                 val info = authApiClient.me()
                 _userInfo.value = info
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -68,6 +71,8 @@ class ProfileViewModel(
                 _successMessage.value = UiMessage.UsernameChanged
                 _usernameChangeSuccess.value = true
                 onUsernameChanged?.invoke(updatedInfo)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -84,6 +89,8 @@ class ProfileViewModel(
                 authApiClient.changePassword(currentPassword, newPassword)
                 _successMessage.value = UiMessage.PasswordChanged
                 _passwordChangeSuccess.value = true
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -99,6 +106,8 @@ class ProfileViewModel(
             try {
                 authApiClient.deleteAccount(confirmUsername, currentPassword)
                 _accountDeleteSuccess.value = true
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {

@@ -4,6 +4,7 @@ import com.github.mr3zee.AppJson
 import com.github.mr3zee.util.UiMessage
 import io.ktor.client.plugins.*
 import io.ktor.client.statement.*
+import kotlinx.coroutines.CancellationException
 
 /**
  * Try to parse lock conflict response from a 409 response.
@@ -14,6 +15,8 @@ suspend fun ClientRequestException.parseLockConflict(): ProjectLockConflictRespo
     return try {
         val body = response.bodyAsText()
         AppJson.decodeFromString<ProjectLockConflictResponse>(body)
+    } catch (e: CancellationException) {
+        throw e
     } catch (_: Exception) {
         null
     }
@@ -27,6 +30,8 @@ suspend fun ClientRequestException.parseError(): ErrorResponse? {
     return try {
         val body = response.bodyAsText()
         AppJson.decodeFromString<ErrorResponse>(body)
+    } catch (e: CancellationException) {
+        throw e
     } catch (_: Exception) {
         null
     }

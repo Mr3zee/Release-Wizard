@@ -65,6 +65,8 @@ class SchedulerService(
                     // Just advance next_run_at to the future
                     advanceNextRun(schedule)
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 logger.error("Failed to recover schedule {}: {}", schedule.id, e.message, e)
             }
@@ -86,6 +88,8 @@ class SchedulerService(
                 }
                 logger.info("Triggering scheduled release for project {}", schedule.projectId.value)
                 fireSchedule(schedule)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 logger.error("Failed to trigger schedule {}: {}", schedule.id, e.message, e)
             }

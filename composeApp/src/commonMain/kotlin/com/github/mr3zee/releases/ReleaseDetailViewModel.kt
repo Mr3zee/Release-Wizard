@@ -9,6 +9,7 @@ import com.github.mr3zee.api.toUiMessage
 import com.github.mr3zee.util.UiMessage
 import com.github.mr3zee.model.*
 import com.github.mr3zee.model.isTerminal
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -79,7 +80,7 @@ class ReleaseDetailViewModel(
                 // Flow completed normally (release finished)
                 _isConnected.value = false
                 return
-            } catch (e: kotlinx.coroutines.CancellationException) {
+            } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
                 _isConnected.value = false
@@ -112,6 +113,8 @@ class ReleaseDetailViewModel(
                         try {
                             val project = projectApiClient.getProject(event.release.projectTemplateId)
                             _projectName.value = project.name
+                        } catch (e: CancellationException) {
+                            throw e
                         } catch (_: Exception) {
                             // Project name is best-effort; fall back to ID
                         }
@@ -148,6 +151,8 @@ class ReleaseDetailViewModel(
         viewModelScope.launch {
             try {
                 releaseApiClient.cancelRelease(releaseId)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }
@@ -159,6 +164,8 @@ class ReleaseDetailViewModel(
             try {
                 val response = releaseApiClient.rerunRelease(releaseId)
                 onRerunCreated(response.release.id)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }
@@ -170,6 +177,8 @@ class ReleaseDetailViewModel(
             try {
                 val response = releaseApiClient.archiveRelease(releaseId)
                 _release.value = response.release
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }
@@ -180,6 +189,8 @@ class ReleaseDetailViewModel(
         viewModelScope.launch {
             try {
                 releaseApiClient.stopRelease(releaseId)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }
@@ -190,6 +201,8 @@ class ReleaseDetailViewModel(
         viewModelScope.launch {
             try {
                 releaseApiClient.resumeRelease(releaseId)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }
@@ -200,6 +213,8 @@ class ReleaseDetailViewModel(
         viewModelScope.launch {
             try {
                 releaseApiClient.stopBlock(releaseId, blockId)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }
@@ -210,6 +225,8 @@ class ReleaseDetailViewModel(
         viewModelScope.launch {
             try {
                 releaseApiClient.resumeBlock(releaseId, blockId)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }
@@ -220,6 +237,8 @@ class ReleaseDetailViewModel(
         viewModelScope.launch {
             try {
                 releaseApiClient.approveBlock(releaseId, blockId, input)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }

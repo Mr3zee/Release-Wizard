@@ -18,6 +18,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import com.github.mr3zee.AppJson
 import com.github.mr3zee.DevModeConfig
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import org.yaml.snakeyaml.LoaderOptions
@@ -61,6 +62,8 @@ class ConnectionTester(
                 val error = body["error"]?.jsonPrimitive?.content ?: "unknown error"
                 ConnectionTestResult(success = false, message = "Slack auth failed: $error")
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             log.warn("Slack connection test failed: {}", e.message)
             ConnectionTestResult(success = false, message = "Failed to connect: ${e.message ?: e.javaClass.simpleName}")
@@ -87,6 +90,8 @@ class ConnectionTester(
         } catch (e: IllegalArgumentException) {
             log.warn("TeamCity connection test rejected: {}", e.message)
             ConnectionTestResult(success = false, message = e.message ?: "Invalid URL")
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             log.warn("TeamCity connection test failed for {}: {}", config.serverUrl, e.message)
             ConnectionTestResult(success = false, message = "Failed to connect: ${e.message ?: e.javaClass.simpleName}")
@@ -116,6 +121,8 @@ class ConnectionTester(
                 log.warn("GitHub connection test failed for {}/{}: HTTP {}", config.owner, config.repo, response.status)
                 ConnectionTestResult(success = false, message = "GitHub returned ${response.status}")
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             log.warn("GitHub connection test failed for {}/{}: {}", config.owner, config.repo, e.message)
             ConnectionTestResult(success = false, message = "Failed to connect: ${e.message ?: e.javaClass.simpleName}")

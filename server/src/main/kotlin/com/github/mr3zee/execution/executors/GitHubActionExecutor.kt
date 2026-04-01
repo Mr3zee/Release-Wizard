@@ -13,6 +13,7 @@ import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -188,7 +189,7 @@ class GitHubActionExecutor(
                         return matchingRun.jsonObject["id"]?.jsonPrimitive?.content
                     }
                 }
-            } catch (e: kotlinx.coroutines.CancellationException) {
+            } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 log.debug("Run discovery attempt $attempt failed", e)
@@ -215,7 +216,7 @@ class GitHubActionExecutor(
                 header("Accept", "application/vnd.github+json")
             }
             log.info("GitHub Actions run {} cancel response: {}", runId, response.status)
-        } catch (e: kotlinx.coroutines.CancellationException) {
+        } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             log.warn("Failed to cancel GitHub Actions run {}: {}", runId, e.message)

@@ -4,6 +4,7 @@ import com.github.mr3zee.api.ApiRoutes
 import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -33,6 +34,8 @@ fun Route.healthRoute(appVersion: String) {
                 }
             }
             call.respond(HealthStatus(status = "UP", version = appVersion))
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             log.warn("Health check failed", e)
             call.respond(HttpStatusCode.ServiceUnavailable, HealthStatus(status = "DOWN", version = appVersion, error = "Database unavailable"))

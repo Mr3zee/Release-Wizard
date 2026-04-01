@@ -7,6 +7,7 @@ import com.github.mr3zee.api.UserInfo
 import com.github.mr3zee.api.toUiMessage
 import com.github.mr3zee.util.UiMessage
 import com.github.mr3zee.util.navigateToExternalUrl
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -40,6 +41,8 @@ class AuthViewModel(
                 if (userInfo != null) {
                     hadSession = true
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (_: Exception) {
                 _user.value = null
             } finally {
@@ -58,6 +61,8 @@ class AuthViewModel(
                 if (userInfo != null) {
                     hadSession = true
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (_: Exception) {
                 // Silently ignore — user stays as-is
             }
@@ -74,6 +79,8 @@ class AuthViewModel(
                 // Login response doesn't include teams — fetch full profile via /me
                 val fullUser = apiClient.me()
                 _user.value = fullUser
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -92,6 +99,8 @@ class AuthViewModel(
                 // Register response doesn't include teams — fetch full profile via /me
                 val fullUser = apiClient.me()
                 _user.value = fullUser
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -104,6 +113,8 @@ class AuthViewModel(
         viewModelScope.launch {
             try {
                 apiClient.logout()
+            } catch (e: CancellationException) {
+                throw e
             } catch (_: Exception) {
                 // Ignore logout errors
             }

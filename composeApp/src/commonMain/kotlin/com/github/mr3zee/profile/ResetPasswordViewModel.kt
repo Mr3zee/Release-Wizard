@@ -7,6 +7,7 @@ import com.github.mr3zee.api.toUiMessage
 import com.github.mr3zee.util.UiMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 class ResetPasswordViewModel(
@@ -43,6 +44,8 @@ class ResetPasswordViewModel(
             try {
                 val valid = authApiClient.validateResetToken(token)
                 _isTokenValid.value = valid
+            } catch (e: CancellationException) {
+                throw e
             } catch (_: Exception) {
                 _isTokenValid.value = false
             } finally {
@@ -63,6 +66,8 @@ class ResetPasswordViewModel(
             try {
                 authApiClient.resetPassword(token, newPassword)
                 _isComplete.value = true
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {

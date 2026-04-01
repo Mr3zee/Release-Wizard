@@ -2,6 +2,7 @@ package com.github.mr3zee.api
 
 import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.model.ProjectTemplate
+import kotlinx.coroutines.CancellationException
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.ClientRequestException
@@ -59,6 +60,8 @@ class ProjectApiClient(private val client: HttpClient) {
             client.delete(serverUrl(ApiRoutes.Projects.lock(projectId.value)))
         } catch (_: ClientRequestException) {
             // Fire-and-forget — TTL handles cleanup
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Exception) {
             // Network failure — TTL handles cleanup
         }

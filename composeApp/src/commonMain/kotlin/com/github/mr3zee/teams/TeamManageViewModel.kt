@@ -7,6 +7,7 @@ import com.github.mr3zee.model.*
 import com.github.mr3zee.util.UiMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 class TeamManageViewModel(
@@ -62,6 +63,8 @@ class TeamManageViewModel(
                 _invites.value = invitesResponse.invites
                 val requestsResponse = apiClient.listJoinRequests(teamId)
                 _joinRequests.value = requestsResponse.requests
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             } finally {
@@ -75,6 +78,8 @@ class TeamManageViewModel(
             try {
                 apiClient.updateTeam(teamId, UpdateTeamRequest(name = name, description = description))
                 loadAll()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }
@@ -86,6 +91,8 @@ class TeamManageViewModel(
             try {
                 apiClient.deleteTeam(teamId)
                 onDeleted()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }
@@ -101,6 +108,8 @@ class TeamManageViewModel(
         viewModelScope.launch {
             try {
                 apiClient.updateMemberRole(teamId, userId, UpdateMemberRoleRequest(role))
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 // Rollback on failure
                 _members.value = previousMembers
@@ -114,6 +123,8 @@ class TeamManageViewModel(
             try {
                 apiClient.removeMember(teamId, userId)
                 loadAll()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }
@@ -128,6 +139,8 @@ class TeamManageViewModel(
                 apiClient.inviteUser(teamId, username)
                 _inviteSuccess.value = true
                 loadAll()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _inviteError.value = e.toUiMessage()
             } finally {
@@ -146,6 +159,8 @@ class TeamManageViewModel(
             try {
                 apiClient.cancelInvite(teamId, inviteId)
                 loadAll()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }
@@ -157,6 +172,8 @@ class TeamManageViewModel(
             try {
                 apiClient.approveJoinRequest(teamId, requestId)
                 loadAll()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }
@@ -168,6 +185,8 @@ class TeamManageViewModel(
             try {
                 apiClient.rejectJoinRequest(teamId, requestId)
                 loadAll()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _error.value = e.toUiMessage()
             }

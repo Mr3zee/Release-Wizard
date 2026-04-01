@@ -58,6 +58,7 @@ import com.github.mr3zee.theme.loadLanguagePack
 import com.github.mr3zee.theme.loadThemePreference
 import com.github.mr3zee.theme.saveLanguagePack
 import com.github.mr3zee.theme.saveThemePreference
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.time.Duration.Companion.milliseconds
@@ -99,6 +100,8 @@ fun App() {
     LaunchedEffect(Unit) {
         try {
             passwordPolicy = authApiClient.getPasswordPolicy()
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Exception) {
             // Fallback to static string resource if server unreachable
             passwordPolicy = null
@@ -193,12 +196,16 @@ fun App() {
         // Initial fetch
         try {
             unreadNotificationCount = userNotificationApiClient.getUnreadCount().count
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Exception) { /* ignore */ }
         // Periodic polling
         while (true) {
             delay(NOTIFICATION_POLL_INTERVAL_MS.milliseconds)
             try {
                 unreadNotificationCount = userNotificationApiClient.getUnreadCount().count
+            } catch (e: CancellationException) {
+                throw e
             } catch (_: Exception) { /* ignore */ }
         }
     }

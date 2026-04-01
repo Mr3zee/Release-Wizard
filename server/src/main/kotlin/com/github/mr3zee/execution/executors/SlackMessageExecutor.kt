@@ -11,6 +11,7 @@ import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -140,6 +141,8 @@ class SlackMessageExecutor(
                 }
             }
             null
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             log.warn("Failed to check Slack message history: {}", e.message)
             null
