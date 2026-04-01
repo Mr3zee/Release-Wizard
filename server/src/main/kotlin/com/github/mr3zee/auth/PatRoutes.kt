@@ -5,7 +5,7 @@ import com.github.mr3zee.NotFoundException
 import com.github.mr3zee.api.ApiRoutes
 import com.github.mr3zee.api.CreatePatRequest
 import com.github.mr3zee.model.UserId
-import com.github.mr3zee.model.UserRole
+import com.github.mr3zee.model.isAdmin
 import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -66,7 +66,7 @@ fun Route.patRoutes() {
 
 private fun RoutingContext.requireAdmin() {
     val session = call.userSession()
-    if (session.role != UserRole.ADMIN) {
+    if (!session.role.isAdmin) {
         throw ForbiddenException("Admin access required")
     }
 }

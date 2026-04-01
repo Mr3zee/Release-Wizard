@@ -10,6 +10,7 @@ import io.ktor.client.*
 import kotlinx.coroutines.runBlocking
 import org.junit.*
 import org.junit.Assert.fail
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class TeamCityBuildExecutorIntegrationTest {
@@ -97,8 +98,9 @@ class TeamCityBuildExecutorIntegrationTest {
         val pollingService = BuildPollingService(httpClient)
         val executor = TeamCityBuildExecutor(httpClient, pollingService)
 
-        // Define a custom output that matches a TC build parameter.
-        // Most TC builds have system.teamcity.version as a resulting property.
+        // The TC build step emits:
+        //   ##teamcity[setParameter name='rw.test.version' value='1.2.3-test']
+        //   ##teamcity[setParameter name='rw.test.commitHash' value='abc123def456']
         val blockWithOutputs = Block.ActionBlock(
             id = BlockId("tc-integ-custom"),
             name = "Integration TC Build with Custom Outputs",
@@ -106,7 +108,8 @@ class TeamCityBuildExecutorIntegrationTest {
             connectionId = ConnectionId("conn-tc"),
             timeoutSeconds = 300,
             outputs = listOf(
-                BlockOutput(name = "system.teamcity.version", description = "TC server version"),
+                BlockOutput(name = "rw.test.version", description = "Custom version set by build step"),
+                BlockOutput(name = "rw.test.commitHash", description = "Custom commit hash set by build step"),
             ),
         )
 
@@ -119,13 +122,11 @@ class TeamCityBuildExecutorIntegrationTest {
         // Standard outputs should be present
         val buildNumber = outputs["buildNumber"] ?: error("Expected 'buildNumber' in outputs")
         assertTrue(buildNumber.isNotEmpty(), "buildNumber should not be empty")
+        assertEquals("SUCCESS", outputs["buildStatus"])
 
-        // Custom output should be captured if the property exists on the build
-        val tcVersion = outputs["system.teamcity.version"]
-        // system.teamcity.version is set by TC on every build, so it should be present
-        if (tcVersion != null) {
-            assertTrue(tcVersion.isNotEmpty(), "system.teamcity.version should not be empty when present")
-        }
+        // Custom outputs set via ##teamcity[setParameter] should be captured
+        assertEquals("1.2.3-test", outputs["rw.test.version"], "Custom output rw.test.version should be captured")
+        assertEquals("abc123def456", outputs["rw.test.commitHash"], "Custom output rw.test.commitHash should be captured")
     }
 
     @Test
