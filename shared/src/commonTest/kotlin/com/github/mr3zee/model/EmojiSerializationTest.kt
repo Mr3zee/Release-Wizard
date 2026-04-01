@@ -79,7 +79,7 @@ class EmojiSerializationTest {
             id = ConnectionId("c1"),
             name = "\uD83D\uDCE2 Alert Channel",
             type = ConnectionType.SLACK,
-            config = ConnectionConfig.SlackConfig(webhookUrl = "https://hooks.slack.com/test"),
+            config = ConnectionConfig.SlackConfig(botToken = "xoxb-test-token"),
             createdAt = now,
             updatedAt = now,
         )

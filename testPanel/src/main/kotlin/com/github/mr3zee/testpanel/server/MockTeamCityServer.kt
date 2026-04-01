@@ -122,8 +122,8 @@ private fun Application.configureRoutes(state: TestPanelState) {
         buildRoutes(state)
         subBuildRoutes(state)
         artifactRoutes(state)
-        // Slack
-        slackWebhookRoutes(state)
+        // Slack Bot API
+        slackApiRoutes(state)
         // GitHub
         gitHubRepoRoutes(state)
         gitHubActionRoutes(state)

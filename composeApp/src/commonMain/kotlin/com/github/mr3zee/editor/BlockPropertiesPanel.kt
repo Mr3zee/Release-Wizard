@@ -616,8 +616,43 @@ private fun OverviewTabContent(
         Spacer(Modifier.height(Spacing.lg))
     }
 
-    // Slack Message
+    // Slack Message — dedicated channel and text fields
     if (block.type == BlockType.SLACK_MESSAGE) {
+        // Channel field with template autocomplete
+        var slackChannel by remember(block.id) {
+            mutableStateOf(block.parameters.find { it.key == "channel" }?.value ?: "")
+        }
+        val currentChannelValue = block.parameters.find { it.key == "channel" }?.value ?: ""
+        if (slackChannel != currentChannelValue) slackChannel = currentChannelValue
+
+        Text(packStringResource(Res.string.editor_slack_channel_label), style = AppTypography.label)
+        Spacer(Modifier.height(Spacing.xs))
+        TemplateAutocompleteField(
+            value = slackChannel,
+            onValueChange = { text ->
+                slackChannel = text
+                val currentIndex = block.parameters.indexOfFirst { it.key == "channel" }
+                val updatedParams = if (currentIndex >= 0) {
+                    block.parameters.toMutableList().apply {
+                        set(currentIndex, get(currentIndex).copy(value = text))
+                    }
+                } else {
+                    block.parameters + Parameter(key = "channel", value = text)
+                }
+                onUpdateParameters(block.id, updatedParams)
+            },
+            projectParameters = projectParameters,
+            predecessors = predecessors,
+            label = { Text(packStringResource(Res.string.editor_slack_channel_label)) },
+            supportingText = { Text(packStringResource(Res.string.editor_slack_channel_hint)) },
+            singleLine = true,
+            enabled = enabled,
+            modifier = Modifier.fillMaxWidth(),
+            testTag = "slack_channel_field",
+        )
+        Spacer(Modifier.height(Spacing.md))
+
+        // Message text field
         var slackMessage by remember(block.id) {
             mutableStateOf(block.parameters.find { it.key == "text" }?.value ?: "")
         }
@@ -773,13 +808,13 @@ private fun ParametersTabContent(
 
     // Filter out managed parameters from the visible list:
     // - config ID parameter (managed by the config selector)
-    // - "text" parameter for Slack blocks (managed by the dedicated message field)
+    // - "text" and "channel" parameters for Slack blocks (managed by dedicated fields)
     val isSlack = block.type == BlockType.SLACK_MESSAGE
     val visibleParamsWithIndex = remember(params, configKey, isSlack) {
         params.withIndex()
             .filter { (_, p) ->
                 (configKey == null || p.key != configKey) &&
-                    (!isSlack || p.key != "text")
+                    (!isSlack || (p.key != "text" && p.key != "channel"))
             }
             .toList()
     }

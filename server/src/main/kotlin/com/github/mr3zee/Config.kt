@@ -39,7 +39,7 @@ data class WebhookConfig(
 
 data class DevModeConfig(
     val enabled: Boolean,
-    val slackWebhookBaseUrl: String = "http://localhost:8111/services",
+    val slackApiBaseUrl: String = "http://localhost:8111",
     val githubApiBaseUrl: String = "http://localhost:8111",
     val teamcityBaseUrl: String = "http://localhost:8111",
 )
@@ -49,7 +49,7 @@ fun ApplicationConfig.devModeConfig(): DevModeConfig {
     if (!enabled) return DevModeConfig(enabled = false)
     return DevModeConfig(
         enabled = true,
-        slackWebhookBaseUrl = propertyOrNull("app.dev.slackWebhookBaseUrl")?.getString() ?: "http://localhost:8111/services",
+        slackApiBaseUrl = propertyOrNull("app.dev.slackApiBaseUrl")?.getString()?.trimEnd('/') ?: "http://localhost:8111",
         githubApiBaseUrl = propertyOrNull("app.dev.githubApiBaseUrl")?.getString() ?: "http://localhost:8111",
         teamcityBaseUrl = propertyOrNull("app.dev.teamcityBaseUrl")?.getString() ?: "http://localhost:8111",
     )

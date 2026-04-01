@@ -55,27 +55,52 @@ class ExecutorsTest {
     fun `slack executor sends message and returns outputs`() = runBlocking {
         var capturedBody: String? = null
         var capturedUrl: String? = null
+        var capturedAuth: String? = null
 
         val client = mockClient { request ->
             capturedUrl = request.url.toString()
             capturedBody = request.body.toByteArray().decodeToString()
-            respond("ok", HttpStatusCode.OK)
+            capturedAuth = request.headers["Authorization"]
+            respond(
+                """{"ok":true,"ts":"1234567890.123456","channel":"C0123456789"}""",
+                HttpStatusCode.OK,
+                headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+            )
         }
 
         val executor = SlackMessageExecutor(client)
         val outputs = executor.execute(
             block = slackBlock(),
             parameters = listOf(
+                Parameter(key = "channel", value = "#releases"),
                 Parameter(key = "text", value = "Deploy complete!"),
             ),
-            context = context(config = ConnectionConfig.SlackConfig(webhookUrl = "https://hooks.slack.com/test")),
+            context = context(config = ConnectionConfig.SlackConfig(botToken = "xoxb-test-token")),
         )
 
-        assertEquals("https://hooks.slack.com/test", capturedUrl)
-        val messageTs = outputs["messageTs"] ?: error("messageTs output should be present")
-        assertTrue(messageTs.matches(Regex("\\d+\\.\\d+")), "messageTs should be epoch timestamp format, got: $messageTs")
+        assertTrue(capturedUrl?.contains("chat.postMessage") == true)
+        assertEquals("Bearer xoxb-test-token", capturedAuth)
+        assertEquals("1234567890.123456", outputs["messageTs"])
+        assertEquals("C0123456789", outputs["channel"])
         val body = capturedBody ?: error("capturedBody should have been set by the mock client")
         assertTrue(body.contains("Deploy complete!"))
+        assertTrue(body.contains("#releases"))
+    }
+
+    @Test
+    fun `slack executor throws on missing channel parameter`() = runBlocking {
+        val client = mockClient { respond("ok", HttpStatusCode.OK) }
+
+        val executor = SlackMessageExecutor(client)
+        val e = assertFailsWith<IllegalArgumentException> {
+            executor.execute(
+                block = slackBlock(),
+                parameters = listOf(Parameter(key = "text", value = "Hello")),
+                context = context(config = ConnectionConfig.SlackConfig(botToken = "xoxb-test-token")),
+            )
+        }
+        val message = e.message ?: error("IllegalArgumentException should have a message")
+        assertTrue(message.contains("channel"))
     }
 
     @Test
@@ -86,8 +111,8 @@ class ExecutorsTest {
         val e = assertFailsWith<IllegalArgumentException> {
             executor.execute(
                 block = slackBlock(),
-                parameters = emptyList(),
-                context = context(config = ConnectionConfig.SlackConfig(webhookUrl = "https://hooks.slack.com/test")),
+                parameters = listOf(Parameter(key = "channel", value = "#test")),
+                context = context(config = ConnectionConfig.SlackConfig(botToken = "xoxb-test-token")),
             )
         }
         val message = e.message ?: error("IllegalArgumentException should have a message")
@@ -96,18 +121,83 @@ class ExecutorsTest {
 
     @Test
     fun `slack executor throws on API failure`() = runBlocking {
-        val client = mockClient { respond("channel_not_found", HttpStatusCode.NotFound) }
+        val client = mockClient {
+            respond(
+                """{"ok":false,"error":"channel_not_found"}""",
+                HttpStatusCode.OK,
+                headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+            )
+        }
         val executor = SlackMessageExecutor(client)
 
         val e = assertFailsWith<RuntimeException> {
             executor.execute(
                 block = slackBlock(),
-                parameters = listOf(Parameter(key = "text", value = "Hello")),
-                context = context(config = ConnectionConfig.SlackConfig(webhookUrl = "https://hooks.slack.com/test")),
+                parameters = listOf(
+                    Parameter(key = "channel", value = "#nonexistent"),
+                    Parameter(key = "text", value = "Hello"),
+                ),
+                context = context(config = ConnectionConfig.SlackConfig(botToken = "xoxb-test-token")),
             )
         }
         val message = e.message ?: error("RuntimeException should have a message")
-        assertTrue(message.contains("Slack webhook failed"))
+        assertTrue(message.contains("Slack API error"))
+    }
+
+    @Test
+    fun `slack executor resume finds message in history`() = runBlocking {
+        val client = mockClient { request ->
+            val url = request.url.toString()
+            val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            when {
+                url.contains("conversations.history") -> respond(
+                    """{"ok":true,"messages":[{"text":"Deploy complete!","ts":"111.222"}]}""",
+                    HttpStatusCode.OK, jsonHeaders,
+                )
+                else -> respond("""{"ok":true,"ts":"999.000","channel":"C0"}""", HttpStatusCode.OK, jsonHeaders)
+            }
+        }
+
+        val executor = SlackMessageExecutor(client)
+        val outputs = executor.resume(
+            block = slackBlock(),
+            parameters = listOf(
+                Parameter(key = "channel", value = "#releases"),
+                Parameter(key = "text", value = "Deploy complete!"),
+            ),
+            context = context(config = ConnectionConfig.SlackConfig(botToken = "xoxb-test-token")),
+        )
+
+        // Should return the ts from history, not re-send
+        assertEquals("111.222", outputs["messageTs"])
+    }
+
+    @Test
+    fun `slack executor resume re-sends when message not in history`() = runBlocking {
+        val client = mockClient { request ->
+            val url = request.url.toString()
+            val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            when {
+                url.contains("conversations.history") -> respond(
+                    """{"ok":true,"messages":[]}""",
+                    HttpStatusCode.OK, jsonHeaders,
+                )
+                else -> respond("""{"ok":true,"ts":"999.000","channel":"C0"}""", HttpStatusCode.OK, jsonHeaders)
+            }
+        }
+
+        val executor = SlackMessageExecutor(client)
+        val outputs = executor.resume(
+            block = slackBlock(),
+            parameters = listOf(
+                Parameter(key = "channel", value = "#releases"),
+                Parameter(key = "text", value = "Deploy complete!"),
+            ),
+            context = context(config = ConnectionConfig.SlackConfig(botToken = "xoxb-test-token")),
+        )
+
+        // Should re-send and return ts from chat.postMessage
+        assertEquals("999.000", outputs["messageTs"])
     }
 
     // --- GitHub Publication Executor ---
@@ -230,12 +320,21 @@ class ExecutorsTest {
 
     @Test
     fun `slack executor output keys are subset of knownOutputs`() = runBlocking {
-        val client = mockClient { respond("ok", HttpStatusCode.OK) }
+        val client = mockClient {
+            respond(
+                """{"ok":true,"ts":"1234567890.123456","channel":"C0123456789"}""",
+                HttpStatusCode.OK,
+                headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+            )
+        }
         val executor = SlackMessageExecutor(client)
         val outputs = executor.execute(
             block = slackBlock(),
-            parameters = listOf(Parameter(key = "text", value = "test")),
-            context = context(config = ConnectionConfig.SlackConfig(webhookUrl = "https://hooks.slack.com/test")),
+            parameters = listOf(
+                Parameter(key = "channel", value = "#test"),
+                Parameter(key = "text", value = "test"),
+            ),
+            context = context(config = ConnectionConfig.SlackConfig(botToken = "xoxb-test-token")),
         )
 
         val knownNames = BlockType.SLACK_MESSAGE.knownOutputs().map { it.name }.toSet()

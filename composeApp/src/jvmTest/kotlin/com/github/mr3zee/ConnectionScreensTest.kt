@@ -30,7 +30,7 @@ class ConnectionScreensTest {
 
     private val connectionsJson = """{"connections":[
         {"id":"c1","name":"My GitHub","type":"GITHUB","config":{"type":"github","token":"****token","owner":"mr3zee","repo":"release-wizard"},"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"},
-        {"id":"c2","name":"Team Slack","type":"SLACK","config":{"type":"slack","webhookUrl":"https://hooks.slack.com/test"},"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}
+        {"id":"c2","name":"Team Slack","type":"SLACK","config":{"type":"slack","botToken":"xoxb-test-token"},"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}
     ]}"""
 
     private fun connClient(json: String = connectionsJson, status: HttpStatusCode = HttpStatusCode.OK) = mockHttpClient(
@@ -176,7 +176,7 @@ class ConnectionScreensTest {
 
         onNodeWithTag("connection_type_selector").performClick()
         onNodeWithText("Slack").performClick()
-        onNodeWithTag("slack_webhook_url").assertExists()
+        onNodeWithTag("slack_bot_token").assertExists()
         onNodeWithTag("github_token").assertDoesNotExist()
     }
 
@@ -206,7 +206,7 @@ class ConnectionScreensTest {
         onNodeWithTag("connection_name_field").performTextInput("My Slack")
         onNodeWithTag("save_connection_button").assertIsNotEnabled()
 
-        onNodeWithTag("slack_webhook_url").performTextInput("https://hooks.slack.com/test")
+        onNodeWithTag("slack_bot_token").performTextInput("xoxb-test-token")
         onNodeWithTag("save_connection_button").assertIsEnabled()
     }
 
@@ -276,7 +276,7 @@ class ConnectionScreensTest {
 
     private val githubConnectionJson = """{"connection":{"id":"c1","name":"My GitHub","type":"GITHUB","config":{"type":"github","token":"ghp_secret","owner":"mr3zee","repo":"release-wizard","pollingIntervalSeconds":30},"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}}"""
 
-    private val slackConnectionJson = """{"connection":{"id":"c2","name":"Team Slack","type":"SLACK","config":{"type":"slack","webhookUrl":"https://hooks.slack.com/test"},"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}}"""
+    private val slackConnectionJson = """{"connection":{"id":"c2","name":"Team Slack","type":"SLACK","config":{"type":"slack","botToken":"xoxb-test-token"},"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}}"""
 
     private val teamCityConnectionJson = """{"connection":{"id":"c3","name":"My TC","type":"TEAMCITY","config":{"type":"teamcity","serverUrl":"https://tc.example.com","token":"tc_token","pollingIntervalSeconds":30},"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}}"""
 
@@ -331,7 +331,7 @@ class ConnectionScreensTest {
             onAllNodes(hasTestTag("connection_name_field") and hasText("Team Slack")).fetchSemanticsNodes().isNotEmpty()
         }
         onNodeWithTag("connection_name_field").assertTextContains("Team Slack")
-        onNodeWithTag("slack_webhook_url").assertTextContains("https://hooks.slack.com/test")
+        onNodeWithTag("slack_bot_token").assertTextContains("xoxb-test-token")
     }
 
     @Test
@@ -478,7 +478,7 @@ class ConnectionScreensTest {
                     val conns = if (!returnNewData.get()) {
                         """[{"id":"c1","name":"My GitHub","type":"GITHUB","config":{"type":"github","token":"****","owner":"x","repo":"y"},"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}]"""
                     } else {
-                        """[{"id":"c1","name":"My GitHub","type":"GITHUB","config":{"type":"github","token":"****","owner":"x","repo":"y"},"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"},{"id":"c-new","name":"New Slack","type":"SLACK","config":{"type":"slack","webhookUrl":"https://hooks.slack.com/new"},"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}]"""
+                        """[{"id":"c1","name":"My GitHub","type":"GITHUB","config":{"type":"github","token":"****","owner":"x","repo":"y"},"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"},{"id":"c-new","name":"New Slack","type":"SLACK","config":{"type":"slack","botToken":"xoxb-new-token"},"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}]"""
                     }
                     respond("""{"connections":$conns}""", status = HttpStatusCode.OK, headers = jsonHeaders)
                 }
@@ -593,7 +593,7 @@ class ConnectionScreensTest {
 
     private val sortableConnectionsJson = """{"connections":[
         {"id":"c1","name":"Zebra Conn","type":"GITHUB","config":{"type":"github","token":"t","owner":"o","repo":"r"},"createdAt":"2026-03-10T00:00:00Z","updatedAt":"2026-03-10T00:00:00Z"},
-        {"id":"c2","name":"Alpha Conn","type":"SLACK","config":{"type":"slack","webhookUrl":"https://hooks.slack.com/test"},"createdAt":"2026-03-12T00:00:00Z","updatedAt":"2026-03-12T00:00:00Z"}
+        {"id":"c2","name":"Alpha Conn","type":"SLACK","config":{"type":"slack","botToken":"xoxb-test-token"},"createdAt":"2026-03-12T00:00:00Z","updatedAt":"2026-03-12T00:00:00Z"}
     ]}"""
 
     @Test
@@ -898,7 +898,7 @@ class ConnectionScreensTest {
                 }
                 path.endsWith("/connections") -> {
                     val data = if (deletePerformed.get()) {
-                        """{"connections":[{"id":"c2","name":"Team Slack","type":"SLACK","config":{"type":"slack","webhookUrl":"https://hooks.slack.com/test"},"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}]}"""
+                        """{"connections":[{"id":"c2","name":"Team Slack","type":"SLACK","config":{"type":"slack","botToken":"xoxb-test-token"},"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}]}"""
                     } else {
                         connectionsJson
                     }
@@ -1567,7 +1567,7 @@ class ConnectionScreensTest {
     }
 
     @Test
-    fun `slack form shows webhook help link`() = runComposeUiTest {
+    fun `slack form shows bot token help link`() = runComposeUiTest {
         val vm = ConnectionsViewModel(ConnectionApiClient(connClient("""{"connections":[]}""")), MutableStateFlow(TeamId("test-team")))
         setContent {
             MaterialTheme { ConnectionFormScreen(viewModel = vm, onBack = {}) }
@@ -1575,7 +1575,7 @@ class ConnectionScreensTest {
 
         onNodeWithTag("connection_type_selector").performClick()
         onNodeWithText("Slack").performClick()
-        onNodeWithText("Generate at Slack", substring = true, useUnmergedTree = true).assertExists()
+        onNodeWithText("Create at Slack", substring = true, useUnmergedTree = true).assertExists()
     }
 
     @Test
@@ -1629,7 +1629,7 @@ class ConnectionScreensTest {
     }
 
     @Test
-    fun `slack webhook help link opens correct url`() = runComposeUiTest {
+    fun `slack bot token help link opens correct url`() = runComposeUiTest {
         val openedUrls = mutableListOf<String>()
         val fakeUriHandler = object : UriHandler {
             override fun openUri(uri: String) { openedUrls.add(uri) }
@@ -1643,7 +1643,7 @@ class ConnectionScreensTest {
 
         onNodeWithTag("connection_type_selector").performClick()
         onNodeWithText("Slack").performClick()
-        onNodeWithText("Generate at Slack", substring = true, useUnmergedTree = true).performClick()
+        onNodeWithText("Create at Slack", substring = true, useUnmergedTree = true).performClick()
         assertEquals(1, openedUrls.size)
         assertTrue(openedUrls[0].contains("api.slack.com/apps"))
     }

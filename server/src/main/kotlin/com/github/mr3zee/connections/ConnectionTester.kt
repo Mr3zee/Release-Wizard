@@ -41,22 +41,29 @@ class ConnectionTester(
         is ConnectionConfig.GitHubConfig -> testGitHub(config)
     }
 
-    private fun testSlack(config: ConnectionConfig.SlackConfig): ConnectionTestResult {
-        val url = config.webhookUrl
-        val isDevUrl = devModeConfig.enabled && url.startsWith(devModeConfig.slackWebhookBaseUrl)
-        if (!isDevUrl && !url.startsWith("https://hooks.slack.com/")) {
-            return ConnectionTestResult(success = false, message = "Invalid Slack webhook URL: must start with https://hooks.slack.com/")
-        }
-        if (isDevUrl) {
-            return ConnectionTestResult(success = true, message = "Webhook URL accepted (dev mode: ${devModeConfig.slackWebhookBaseUrl})")
-        }
-        // CONN-H2: Also validate against SSRF (DNS rebinding, IP spoofing)
+    private val slackApiBaseUrl: String
+        get() = if (devModeConfig.enabled) "${devModeConfig.slackApiBaseUrl}/api" else "https://slack.com/api"
+
+    private suspend fun testSlack(config: ConnectionConfig.SlackConfig): ConnectionTestResult {
         return try {
-            validateUrlNotPrivate(url)
-            ConnectionTestResult(success = true, message = "Webhook URL format is valid")
-        } catch (e: IllegalArgumentException) {
-            log.warn("Slack webhook URL rejected by SSRF check: {}", e.message)
-            ConnectionTestResult(success = false, message = e.message ?: "Invalid URL")
+            val response = httpClient.get("$slackApiBaseUrl/auth.test") {
+                header("Authorization", "Bearer ${config.botToken}")
+            }
+            if (!response.status.isSuccess()) {
+                return ConnectionTestResult(success = false, message = "Slack returned HTTP ${response.status}")
+            }
+            val body = AppJson.decodeFromString<JsonObject>(response.bodyAsText())
+            val ok = body["ok"]?.jsonPrimitive?.booleanOrNull ?: false
+            if (ok) {
+                val team = body["team"]?.jsonPrimitive?.content ?: "unknown"
+                ConnectionTestResult(success = true, message = "Connected to Slack workspace: $team")
+            } else {
+                val error = body["error"]?.jsonPrimitive?.content ?: "unknown error"
+                ConnectionTestResult(success = false, message = "Slack auth failed: $error")
+            }
+        } catch (e: Exception) {
+            log.warn("Slack connection test failed: {}", e.message)
+            ConnectionTestResult(success = false, message = "Failed to connect: ${e.message ?: e.javaClass.simpleName}")
         }
     }
 
@@ -82,7 +89,7 @@ class ConnectionTester(
             ConnectionTestResult(success = false, message = e.message ?: "Invalid URL")
         } catch (e: Exception) {
             log.warn("TeamCity connection test failed for {}: {}", config.serverUrl, e.message)
-            ConnectionTestResult(success = false, message = "Failed to connect: ${e.message}")
+            ConnectionTestResult(success = false, message = "Failed to connect: ${e.message ?: e.javaClass.simpleName}")
         }
     }
 
@@ -111,7 +118,7 @@ class ConnectionTester(
             }
         } catch (e: Exception) {
             log.warn("GitHub connection test failed for {}/{}: {}", config.owner, config.repo, e.message)
-            ConnectionTestResult(success = false, message = "Failed to connect: ${e.message}")
+            ConnectionTestResult(success = false, message = "Failed to connect: ${e.message ?: e.javaClass.simpleName}")
         }
     }
 

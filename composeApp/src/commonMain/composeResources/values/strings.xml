@@ -109,7 +109,7 @@
     <string name="connections_name_placeholder">e.g., Production GitHub</string>
     <string name="connections_type_label">Type</string>
     <string name="connections_type_dropdown">Open type selector</string>
-    <string name="connections_slack_webhook_url">Webhook URL</string>
+    <string name="connections_slack_bot_token">Bot Token</string>
     <string name="connections_tc_server_url">Server URL</string>
     <string name="connections_tc_token">Token</string>
     <string name="connections_tc_polling_interval">Polling interval</string>
@@ -127,7 +127,7 @@
     <string name="connections_empty_icon">No connections</string>
 
     <!-- Connection placeholders -->
-    <string name="connections_slack_webhook_placeholder">https://hooks.slack.com/services/\u2026</string>
+    <string name="connections_slack_bot_token_placeholder">xoxb-\u2026</string>
     <string name="connections_tc_server_placeholder">https://teamcity.example.com</string>
     <string name="connections_tc_token_placeholder">Paste your TeamCity access token</string>
     <string name="connections_tc_polling_placeholder">30</string>
@@ -146,7 +146,7 @@
     <string name="connections_github_pat_hint">Generate at GitHub \u003E Settings \u003E Developer settings \u003E Fine-grained tokens</string>
     <string name="connections_tc_token_hint">Generate at TeamCity \u003E Profile \u003E Access Tokens</string>
     <string name="connections_tc_token_hint_no_url">Generate at TeamCity \u003E Profile \u003E Access Tokens (enter server URL above to open directly)</string>
-    <string name="connections_slack_webhook_hint">Generate at Slack \u003E Your Apps \u003E Incoming Webhooks</string>
+    <string name="connections_slack_bot_token_hint">Create at Slack \u003E Your Apps \u003E OAuth &amp; Permissions</string>
     <string name="connections_open_external_link">Opens in browser</string>
 
     <!-- ==================== Connections: Section Headers ==================== -->
@@ -222,6 +222,9 @@
     <string name="editor_config_selector">Configuration</string>
     <string name="editor_config_selector_placeholder">Search configurations\u2026</string>
     <string name="editor_config_no_configs">No configurations found</string>
+    <string name="editor_slack_channel_label">Channel</string>
+    <string name="editor_slack_channel_placeholder">C0123456789</string>
+    <string name="editor_slack_channel_hint">Channel ID or name (e.g. #releases). Supports template expressions.</string>
     <string name="editor_slack_message_label">Message</string>
     <string name="editor_slack_message_placeholder">Enter the message to send (supports template expressions)</string>
     <string name="automation_copy_webhook_url">Copy URL</string>

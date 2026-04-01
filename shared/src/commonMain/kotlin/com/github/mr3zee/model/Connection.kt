@@ -19,7 +19,7 @@ sealed class ConnectionConfig {
     @Serializable
     @SerialName("slack")
     data class SlackConfig(
-        val webhookUrl: String,
+        val botToken: String,
     ) : ConnectionConfig()
 
     @Serializable

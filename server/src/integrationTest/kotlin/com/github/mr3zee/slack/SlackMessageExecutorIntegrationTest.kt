@@ -10,7 +10,6 @@ import kotlinx.coroutines.runBlocking
 import org.junit.*
 import org.junit.Assert.fail
 import java.util.UUID
-import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -50,14 +49,14 @@ class SlackMessageExecutorIntegrationTest {
             blockOutputs = emptyMap(),
             connections = mapOf(
                 ConnectionId("conn-slack") to ConnectionConfig.SlackConfig(
-                    webhookUrl = cfg.webhookUrl,
+                    botToken = cfg.botToken,
                 )
             ),
         )
     }
 
     @Test
-    fun `execute sends message via webhook and message arrives in channel`() = runBlocking {
+    fun `execute sends message via bot token and message arrives in channel`() = runBlocking {
         val cfg = config ?: error("SlackTestConfig not loaded — setUp should have skipped this test")
         val uuid = UUID.randomUUID().toString()
         val text = "Integration test message $uuid"
@@ -65,10 +64,14 @@ class SlackMessageExecutorIntegrationTest {
 
         val outputs = executor.execute(
             block = block(),
-            parameters = listOf(Parameter(key = "text", value = text)),
+            parameters = listOf(
+                Parameter(key = "channel", value = cfg.channelId),
+                Parameter(key = "text", value = text),
+            ),
             context = context(),
         )
 
+        // chat.postMessage returns a real Slack timestamp
         val messageTs = outputs["messageTs"] ?: error("messageTs output should be present")
         assertTrue(messageTs.matches(Regex("\\d+\\.\\d+")), "messageTs should be epoch timestamp format, got: $messageTs")
 
@@ -83,7 +86,8 @@ class SlackMessageExecutorIntegrationTest {
     }
 
     @Test
-    fun `execute with invalid webhook URL throws`() = runBlocking {
+    fun `execute with invalid bot token throws`() = runBlocking {
+        val cfg = config ?: error("SlackTestConfig not loaded — setUp should have skipped this test")
         val executor = SlackMessageExecutor(client ?: error("HttpClient not initialized"))
 
         val invalidContext = ExecutionContext(
@@ -92,7 +96,7 @@ class SlackMessageExecutorIntegrationTest {
             blockOutputs = emptyMap(),
             connections = mapOf(
                 ConnectionId("conn-slack") to ConnectionConfig.SlackConfig(
-                    webhookUrl = "https://hooks.slack.com/services/T000/B000/invalid",
+                    botToken = "xoxb-invalid-token-000",
                 )
             ),
         )
@@ -100,13 +104,16 @@ class SlackMessageExecutorIntegrationTest {
         try {
             executor.execute(
                 block = block(),
-                parameters = listOf(Parameter(key = "text", value = "should fail")),
+                parameters = listOf(
+                    Parameter(key = "channel", value = cfg.channelId),
+                    Parameter(key = "text", value = "should fail"),
+                ),
                 context = invalidContext,
             )
             fail("Should have thrown RuntimeException")
         } catch (e: RuntimeException) {
             val msg = e.message ?: error("RuntimeException should have a message")
-            assertTrue(msg.contains("Slack webhook failed"), "Message: $msg")
+            assertTrue(msg.contains("Slack API error"), "Message: $msg")
         }
     }
 }

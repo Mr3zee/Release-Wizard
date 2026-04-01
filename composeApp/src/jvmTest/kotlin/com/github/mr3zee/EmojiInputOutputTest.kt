@@ -87,14 +87,14 @@ class EmojiInputOutputTest {
         onNodeWithText("Slack").performClick()
 
         onNodeWithTag("connection_name_field").performTextInput("\uD83D\uDCE2 Alerts")
-        onNodeWithTag("slack_webhook_url").performTextInput("https://hooks.slack.com/test")
+        onNodeWithTag("slack_bot_token").performTextInput("xoxb-test-token")
         onNodeWithTag("save_connection_button").assertIsEnabled()
     }
 
     @Test
     fun `connection list displays emoji in connection name`() = runComposeUiTest {
         val connectionsJson = """{"connections":[
-            {"id":"c1","name":"\uD83D\uDE80 Deploy Bot","type":"SLACK","config":{"type":"slack","webhookUrl":"https://hooks.slack.com/test"},"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}
+            {"id":"c1","name":"\uD83D\uDE80 Deploy Bot","type":"SLACK","config":{"type":"slack","botToken":"xoxb-test-token"},"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}
         ]}"""
         val vm = ConnectionsViewModel(
             ConnectionApiClient(mockHttpClient(mapOf("/connections" to json(connectionsJson)))),

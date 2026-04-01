@@ -37,6 +37,12 @@ fun createTestHttpClient(): HttpClient = HttpClient(MockEngine { request ->
                 HttpStatusCode.OK,
                 headersOf(HttpHeaders.ContentType, ContentType.Application.Xml.toString()),
             )
+        url.contains("slack.com/api/auth.test") ->
+            respond("""{"ok":true,"team":"Test Workspace","user":"bot"}""", HttpStatusCode.OK, jsonHeaders)
+        url.contains("slack.com/api/chat.postMessage") ->
+            respond("""{"ok":true,"ts":"1234567890.123456","channel":"C0123456789"}""", HttpStatusCode.OK, jsonHeaders)
+        url.contains("slack.com/api/conversations.history") ->
+            respond("""{"ok":true,"messages":[]}""", HttpStatusCode.OK, jsonHeaders)
         else ->
             respond("ok", HttpStatusCode.OK, jsonHeaders)
     }

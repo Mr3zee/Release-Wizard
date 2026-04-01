@@ -159,7 +159,7 @@ class Phase6PolishTest {
             setBody(CreateConnectionRequest(
                 name = "test-conn",
                 type = ConnectionType.SLACK,
-                config = com.github.mr3zee.model.ConnectionConfig.SlackConfig(webhookUrl = "https://hooks.slack.com/test"),
+                config = com.github.mr3zee.model.ConnectionConfig.SlackConfig(botToken = "xoxb-test-token"),
                 teamId = teamId,
             ))
         }

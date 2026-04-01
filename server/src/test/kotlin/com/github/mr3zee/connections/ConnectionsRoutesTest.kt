@@ -81,7 +81,7 @@ class ConnectionsRoutesTest {
                     name = "",
                     teamId = teamId,
                     type = ConnectionType.SLACK,
-                    config = ConnectionConfig.SlackConfig(webhookUrl = "https://hooks.slack.com/test"),
+                    config = ConnectionConfig.SlackConfig(botToken = "xoxb-test-token"),
                 )
             )
         }
@@ -177,7 +177,7 @@ class ConnectionsRoutesTest {
                     name = "To Delete",
                     teamId = teamId,
                     type = ConnectionType.SLACK,
-                    config = ConnectionConfig.SlackConfig(webhookUrl = "https://hooks.slack.com/test"),
+                    config = ConnectionConfig.SlackConfig(botToken = "xoxb-test-token"),
                 )
             )
         }
@@ -204,7 +204,7 @@ class ConnectionsRoutesTest {
                     teamId = teamId,
                     type = ConnectionType.SLACK,
                     config = ConnectionConfig.SlackConfig(
-                        webhookUrl = "https://hooks.slack.com/services/T00/B00/xxx",
+                        botToken = "xoxb-test-token",
                     ),
                 )
             )
@@ -332,7 +332,7 @@ class ConnectionsRoutesTest {
                     name = "Slack Conn",
                     teamId = teamId,
                     type = ConnectionType.SLACK,
-                    config = ConnectionConfig.SlackConfig(webhookUrl = "https://hooks.slack.com/test"),
+                    config = ConnectionConfig.SlackConfig(botToken = "xoxb-test-token"),
                 )
             )
         }
@@ -448,14 +448,14 @@ class ConnectionsRoutesTest {
                 TestConnectionConfigRequest(
                     type = ConnectionType.SLACK,
                     config = ConnectionConfig.SlackConfig(
-                        webhookUrl = "https://hooks.slack.com/services/T00/B00/xxx",
+                        botToken = "xoxb-test-token",
                     ),
                 )
             )
         }
         assertEquals(HttpStatusCode.OK, response.status)
         val result = response.body<ConnectionTestResult>()
-        // The mock client responds with 200 for Slack webhook URLs, so the test should succeed
+        // The mock client responds with auth.test JSON for Slack, so the test should succeed
         assertTrue(result.success)
     }
 
@@ -470,7 +470,7 @@ class ConnectionsRoutesTest {
                 TestConnectionConfigRequest(
                     type = ConnectionType.SLACK,
                     config = ConnectionConfig.SlackConfig(
-                        webhookUrl = "https://hooks.slack.com/services/T00/B00/xxx",
+                        botToken = "xoxb-test-token",
                     ),
                 )
             )
@@ -479,7 +479,7 @@ class ConnectionsRoutesTest {
     }
 
     @Test
-    fun `test connection config with invalid Slack webhook URL returns failure`() = testApplication {
+    fun `test connection config with Slack returns connection test result`() = testApplication {
         application { testModule() }
         val client = jsonClient()
         client.login()
@@ -490,16 +490,15 @@ class ConnectionsRoutesTest {
                 TestConnectionConfigRequest(
                     type = ConnectionType.SLACK,
                     config = ConnectionConfig.SlackConfig(
-                        webhookUrl = "https://example.com/not-a-slack-webhook",
+                        botToken = "xoxb-another-token",
                     ),
                 )
             )
         }
         assertEquals(HttpStatusCode.OK, response.status)
         val result = response.body<ConnectionTestResult>()
-        // ConnectionTester validates the URL format before making the request
-        assertFalse(result.success)
-        assertTrue(result.message.contains("Invalid Slack webhook URL"))
+        // The mock client responds with auth.test success for all Slack calls
+        assertTrue(result.success)
     }
 
     @Test

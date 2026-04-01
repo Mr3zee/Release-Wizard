@@ -197,12 +197,13 @@ class TestPanelState {
 
     // --- Slack ---
 
-    fun addSlackMessage(text: String): SlackMessage {
+    fun addSlackMessage(text: String, channel: String = ""): SlackMessage {
         var msg: SlackMessage? = null
         _state.update { state ->
             val m = SlackMessage(
                 id = state.nextSlackMessageId,
                 text = text,
+                channel = channel,
                 receivedAt = formatTimestamp(),
             )
             msg = m
@@ -213,6 +214,8 @@ class TestPanelState {
         }
         return msg ?: error("SlackMessage was not created")
     }
+
+    fun getSlackMessages(): List<SlackMessage> = _state.value.slackMessages
 
     fun clearSlackMessages() {
         _state.update { it.copy(slackMessages = emptyList()) }

@@ -21,18 +21,31 @@ class ConnectionTesterTest {
     // Slack
 
     @Test
-    fun `slack valid webhook URL succeeds`() = runTest {
-        val tester = createTester { respondOk() }
-        val result = tester.test(ConnectionConfig.SlackConfig(webhookUrl = "https://hooks.slack.com/services/T00/B00/xxx"))
+    fun `slack valid bot token succeeds`() = runTest {
+        val tester = createTester {
+            respond("""{"ok":true,"team":"Test Team"}""", HttpStatusCode.OK, jsonHeaders())
+        }
+        val result = tester.test(ConnectionConfig.SlackConfig(botToken = "xoxb-valid-token"))
         assertTrue(result.success)
+        assertTrue(result.message.contains("Test Team"))
     }
 
     @Test
-    fun `slack invalid webhook URL fails`() = runTest {
-        val tester = createTester { respondOk() }
-        val result = tester.test(ConnectionConfig.SlackConfig(webhookUrl = "https://example.com/hook"))
+    fun `slack invalid bot token fails`() = runTest {
+        val tester = createTester {
+            respond("""{"ok":false,"error":"invalid_auth"}""", HttpStatusCode.OK, jsonHeaders())
+        }
+        val result = tester.test(ConnectionConfig.SlackConfig(botToken = "xoxb-bad"))
         assertFalse(result.success)
-        assertTrue(result.message.contains("Invalid Slack webhook URL"))
+        assertTrue(result.message.contains("invalid_auth"))
+    }
+
+    @Test
+    fun `slack connection error returns failure`() = runTest {
+        val tester = createTester { throw RuntimeException("Connection refused") }
+        val result = tester.test(ConnectionConfig.SlackConfig(botToken = "xoxb-token"))
+        assertFalse(result.success)
+        assertTrue(result.message.contains("Connection refused"))
     }
 
     // TeamCity

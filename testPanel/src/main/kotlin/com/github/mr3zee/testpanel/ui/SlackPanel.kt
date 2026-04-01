@@ -43,8 +43,8 @@ fun SlackPanel(state: TestPanelState) {
         if (messages.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    "No messages received yet. Configure a Slack connection in Release Wizard " +
-                            "pointing to http://localhost:$port/services/T00/B00/xxx",
+                    "No messages received yet. In dev mode, Slack API calls are routed to " +
+                            "http://localhost:$port/api/chat.postMessage automatically.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -83,11 +83,23 @@ private fun SlackStatChip(label: String, count: Int, color: androidx.compose.ui.
 private fun SlackMessageCard(message: com.github.mr3zee.testpanel.model.SlackMessage) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                message.receivedAt,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    message.receivedAt,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (message.channel.isNotBlank()) {
+                    Text(
+                        message.channel,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
             Spacer(Modifier.height(8.dp))
             Text(
                 message.text,

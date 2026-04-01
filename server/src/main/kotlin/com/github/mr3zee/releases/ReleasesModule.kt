@@ -1,5 +1,6 @@
 package com.github.mr3zee.releases
 
+import com.github.mr3zee.DevModeConfig
 import com.github.mr3zee.execution.BlockExecutor
 import com.github.mr3zee.execution.DispatchingBlockExecutor
 import com.github.mr3zee.execution.ExecutionEngine
@@ -20,7 +21,9 @@ val releasesModule = module {
                 BlockType.TEAMCITY_BUILD to TeamCityBuildExecutor(httpClient, get(), get(), get<StatusWebhookService>()),
                 BlockType.GITHUB_ACTION to GitHubActionExecutor(httpClient, get()),
                 BlockType.GITHUB_PUBLICATION to GitHubPublicationExecutor(httpClient),
-                BlockType.SLACK_MESSAGE to SlackMessageExecutor(httpClient),
+                BlockType.SLACK_MESSAGE to SlackMessageExecutor(httpClient, get<DevModeConfig>().let {
+                    if (it.enabled) "${it.slackApiBaseUrl}/api" else "https://slack.com/api"
+                }),
             )
         )
     }

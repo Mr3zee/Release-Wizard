@@ -47,6 +47,7 @@ fun BlockType.knownOutputs(): List<BlockOutput> = when (this) {
     )
     BlockType.SLACK_MESSAGE -> listOf(
         BlockOutput(SlackOutputs.MESSAGE_TS, "Slack message timestamp identifier"),
+        BlockOutput(SlackOutputs.CHANNEL, "Slack channel the message was posted to"),
     )
 }
 
@@ -71,6 +72,7 @@ object GitHubPublicationOutputs {
 
 object SlackOutputs {
     const val MESSAGE_TS = "messageTs"
+    const val CHANNEL = "channel"
 }
 
 /** The parameter key that holds the external config ID for this block type, or null if not applicable. */

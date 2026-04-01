@@ -42,11 +42,11 @@ class ConnectionE2eTest : E2eTestBase() {
         onAllNodesWithText("Slack").onFirst().performClick()
         waitForIdle()
 
-        // Fill webhook URL
+        // Fill bot token
         waitUntil(timeoutMillis = 5_000L) {
-            onAllNodesWithTag("slack_webhook_url").fetchSemanticsNodes().isNotEmpty()
+            onAllNodesWithTag("slack_bot_token").fetchSemanticsNodes().isNotEmpty()
         }
-        onNodeWithTag("slack_webhook_url").performTextInput("https://hooks.slack.com/services/T00/B00/xxx")
+        onNodeWithTag("slack_bot_token").performTextInput("xoxb-test-token-value")
         waitForIdle()
 
         onNodeWithTag("save_connection_button").performClick()

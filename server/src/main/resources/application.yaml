@@ -14,14 +14,14 @@ ktor:
 #                  BROWSER_ABSOLUTE_LIFETIME_SECONDS, DESKTOP_ABSOLUTE_LIFETIME_SECONDS,
 #                  PASSWORD_PEPPER, PASSWORD_PEPPER_OLD,
 #                  GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET,
-#                  DEV_MODE, DEV_SLACK_WEBHOOK_BASE_URL, DEV_GITHUB_API_BASE_URL, DEV_TEAMCITY_BASE_URL
+#                  DEV_MODE, DEV_SLACK_API_BASE_URL, DEV_GITHUB_API_BASE_URL, DEV_TEAMCITY_BASE_URL
 # JB Cloud Console: map DB0_URL_JDBC → DB_URL, DB0_USERNAME → DB_USER, DB0_PASSWORD → DB_PASSWORD
 # via customEnv in Helm additional params (see DEPLOYMENT.md).
 app:
   version: "$APP_VERSION:dev"
   devMode: "$DEV_MODE:false"
   dev:
-    slackWebhookBaseUrl: "$DEV_SLACK_WEBHOOK_BASE_URL:http://localhost:8111/services"
+    slackApiBaseUrl: "$DEV_SLACK_API_BASE_URL:http://localhost:8111"
     githubApiBaseUrl: "$DEV_GITHUB_API_BASE_URL:http://localhost:8111"
     teamcityBaseUrl: "$DEV_TEAMCITY_BASE_URL:http://localhost:8111"
   database:

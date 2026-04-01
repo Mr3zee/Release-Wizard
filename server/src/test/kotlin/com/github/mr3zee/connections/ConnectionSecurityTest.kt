@@ -127,7 +127,7 @@ class ConnectionSecurityTest {
     }
 
     @Test
-    fun `update with masked slack config preserves webhook url`() = testApplication {
+    fun `update with masked slack config preserves bot token`() = testApplication {
         application { testModule() }
         val client = jsonClient()
         val teamId = client.loginAndCreateTeam()
@@ -140,7 +140,7 @@ class ConnectionSecurityTest {
                     teamId = teamId,
                     type = ConnectionType.SLACK,
                     config = ConnectionConfig.SlackConfig(
-                        webhookUrl = "https://hooks.slack.com/services/T00/B00/original",
+                        botToken = "xoxb-original-token-value",
                     ),
                 )
             )
@@ -153,7 +153,7 @@ class ConnectionSecurityTest {
             setBody(
                 UpdateConnectionRequest(
                     name = "Slack Updated Name",
-                    config = ConnectionConfig.SlackConfig(webhookUrl = "********"),
+                    config = ConnectionConfig.SlackConfig(botToken = "********"),
                 )
             )
         }

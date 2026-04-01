@@ -125,7 +125,7 @@ class WritingAuditTest {
 
     private val sortableConnectionsJson = """{"connections":[
         {"id":"c1","name":"Zebra Conn","type":"GITHUB","config":{"type":"github","token":"t","owner":"o","repo":"r"},"createdAt":"2026-03-10T00:00:00Z","updatedAt":"2026-03-10T00:00:00Z"},
-        {"id":"c2","name":"Alpha Conn","type":"SLACK","config":{"type":"slack","webhookUrl":"https://hooks.slack.com/test"},"createdAt":"2026-03-12T00:00:00Z","updatedAt":"2026-03-12T00:00:00Z"}
+        {"id":"c2","name":"Alpha Conn","type":"SLACK","config":{"type":"slack","botToken":"xoxb-test-token"},"createdAt":"2026-03-12T00:00:00Z","updatedAt":"2026-03-12T00:00:00Z"}
     ]}"""
 
     @Test

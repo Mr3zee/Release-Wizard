@@ -158,10 +158,11 @@ class TemplateSuggestionsTest {
                 outputs = emptyList(),
             ),
         )
-        // knownOutputs() for SLACK_MESSAGE: messageTs (1)
+        // knownOutputs() for SLACK_MESSAGE: messageTs, channel (2)
         val suggestions = buildSuggestions(emptyList(), blocks)
-        assertEquals(1, suggestions.size)
+        assertEquals(2, suggestions.size)
         assertEquals("Empty / messageTs", suggestions[0].label)
+        assertEquals("Empty / channel", suggestions[1].label)
     }
 
     @Test

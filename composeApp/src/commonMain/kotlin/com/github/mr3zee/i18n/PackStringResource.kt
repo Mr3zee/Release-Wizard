@@ -13,7 +13,7 @@ import org.jetbrains.compose.resources.stringResource
 private val NEVER_OVERRIDE = setOf(
     "connections_github_pat",
     "connections_tc_token",
-    "connections_slack_webhook_url",
+    "connections_slack_bot_token",
     "connections_tc_server_url",
     "editor_prop_remove",
     "editor_dirty_indicator",

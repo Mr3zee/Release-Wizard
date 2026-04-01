@@ -173,8 +173,8 @@ class DefaultConnectionsService(
         return when (newConfig) {
             is ConnectionConfig.SlackConfig -> {
                 val existingSlack = existing as? ConnectionConfig.SlackConfig
-                if (isMasked(newConfig.webhookUrl) && existingSlack != null) {
-                    newConfig.copy(webhookUrl = existingSlack.webhookUrl)
+                if (isMasked(newConfig.botToken) && existingSlack != null) {
+                    newConfig.copy(botToken = existingSlack.botToken)
                 } else newConfig
             }
             is ConnectionConfig.TeamCityConfig -> {
@@ -208,7 +208,7 @@ class DefaultConnectionsService(
 private fun Connection.masked(): Connection = copy(config = config.masked())
 
 private fun ConnectionConfig.masked(): ConnectionConfig = when (this) {
-    is ConnectionConfig.SlackConfig -> copy(webhookUrl = mask(webhookUrl))
+    is ConnectionConfig.SlackConfig -> copy(botToken = mask(botToken))
     is ConnectionConfig.TeamCityConfig -> copy(token = mask(token))
     is ConnectionConfig.GitHubConfig -> copy(token = mask(token))
 }

@@ -85,7 +85,7 @@ class SerializationTest {
     @Test
     fun `connection config round trip`() {
         val configs = listOf(
-            ConnectionConfig.SlackConfig(webhookUrl = "https://hooks.slack.com/test"),
+            ConnectionConfig.SlackConfig(botToken = "xoxb-test-token"),
             ConnectionConfig.TeamCityConfig(serverUrl = "https://tc.example.com", token = "abc123"),
             ConnectionConfig.GitHubConfig(token = "ghp_test", owner = "mr3zee", repo = "release-wizard"),
         )
@@ -163,7 +163,7 @@ class SerializationTest {
             name = "My Slack",
             teamId = TeamId("test-team"),
             type = ConnectionType.SLACK,
-            config = ConnectionConfig.SlackConfig(webhookUrl = "https://hooks.slack.com/test"),
+            config = ConnectionConfig.SlackConfig(botToken = "xoxb-test-token"),
         )
         val encoded1 = json.encodeToString(CreateConnectionRequest.serializer(), createRequest)
         val decoded1 = json.decodeFromString(CreateConnectionRequest.serializer(), encoded1)

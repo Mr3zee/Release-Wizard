@@ -47,7 +47,7 @@ fun appModule(
             // CONN-C1: SSRF protection at HTTP client level — validates every outgoing request
             install(SsrfProtection) {
                 if (devModeConfig.enabled) {
-                    allowUrl(devModeConfig.slackWebhookBaseUrl)
+                    allowUrl(devModeConfig.slackApiBaseUrl)
                     allowUrl(devModeConfig.githubApiBaseUrl)
                     allowUrl(devModeConfig.teamcityBaseUrl)
                 }

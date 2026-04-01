@@ -35,23 +35,23 @@ class SlackConnectionTesterIntegrationTest {
     }
 
     @Test
-    fun `valid webhook URL format succeeds`() = runBlocking {
+    fun `valid bot token succeeds`() = runBlocking {
         val cfg = config ?: error("SlackTestConfig not loaded — setUp should have skipped this test")
         val tester = ConnectionTester(client ?: error("HttpClient not initialized"))
         val result = tester.test(
-            ConnectionConfig.SlackConfig(webhookUrl = cfg.webhookUrl)
+            ConnectionConfig.SlackConfig(botToken = cfg.botToken)
         )
         assertTrue(result.success, "Expected success but got: ${result.message}")
-        assertTrue(result.message.contains("valid"), "Message should mention valid: ${result.message}")
+        assertTrue(result.message.contains("Connected to Slack workspace"), "Message should mention workspace: ${result.message}")
     }
 
     @Test
-    fun `invalid webhook URL format fails`() = runBlocking {
+    fun `invalid bot token fails`() = runBlocking {
         val tester = ConnectionTester(client ?: error("HttpClient not initialized"))
         val result = tester.test(
-            ConnectionConfig.SlackConfig(webhookUrl = "https://example.com/not-a-slack-webhook")
+            ConnectionConfig.SlackConfig(botToken = "xoxb-invalid-token-000")
         )
-        assertFalse(result.success, "Expected failure for invalid URL format")
-        assertTrue(result.message.contains("Invalid Slack webhook URL"), "Message: ${result.message}")
+        assertFalse(result.success, "Expected failure for invalid bot token")
+        assertTrue(result.message.contains("invalid_auth") || result.message.contains("not_authed"), "Message: ${result.message}")
     }
 }

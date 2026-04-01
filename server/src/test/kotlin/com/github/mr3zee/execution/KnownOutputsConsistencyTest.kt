@@ -72,6 +72,7 @@ class KnownOutputsConsistencyTest {
         val known = BlockType.SLACK_MESSAGE.knownOutputs().map { it.name }.toSet()
         val constants = setOf(
             SlackOutputs.MESSAGE_TS,
+            SlackOutputs.CHANNEL,
         )
         assertTrue(
             constants.all { it in known },

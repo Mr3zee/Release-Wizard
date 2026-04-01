@@ -98,7 +98,7 @@ fun ConnectionFormScreen(
     var expanded by remember(connectionId) { mutableStateOf(false) }
 
     // Type-specific fields
-    var slackWebhookUrl by remember(connectionId) { mutableStateOf("") }
+    var slackBotToken by remember(connectionId) { mutableStateOf("") }
     var teamCityServerUrl by remember(connectionId) { mutableStateOf("") }
     var teamCityToken by remember(connectionId) { mutableStateOf("") }
     var teamCityPollingInterval by remember(connectionId) { mutableStateOf("30") }
@@ -108,7 +108,7 @@ fun ConnectionFormScreen(
     var githubPollingInterval by remember(connectionId) { mutableStateOf("30") }
     // Track initial values to detect dirty state
     var initialName by remember(connectionId) { mutableStateOf("") }
-    var initialSlackWebhookUrl by remember(connectionId) { mutableStateOf("") }
+    var initialSlackBotToken by remember(connectionId) { mutableStateOf("") }
     var initialTeamCityServerUrl by remember(connectionId) { mutableStateOf("") }
     var initialTeamCityToken by remember(connectionId) { mutableStateOf("") }
     var initialTeamCityPollingInterval by remember(connectionId) { mutableStateOf("30") }
@@ -121,7 +121,7 @@ fun ConnectionFormScreen(
         derivedStateOf {
             name != initialName || when (selectedType) {
                 ConnectionType.SLACK ->
-                    slackWebhookUrl != initialSlackWebhookUrl
+                    slackBotToken != initialSlackBotToken
                 ConnectionType.TEAMCITY ->
                     teamCityServerUrl != initialTeamCityServerUrl ||
                         teamCityToken != initialTeamCityToken ||
@@ -139,7 +139,7 @@ fun ConnectionFormScreen(
 
     DisposableEffect(Unit) {
         onDispose {
-            slackWebhookUrl = ""
+            slackBotToken = ""
             teamCityToken = ""
             githubToken = ""
         }
@@ -157,8 +157,8 @@ fun ConnectionFormScreen(
             selectedType = connection.type
             when (val config = connection.config) {
                 is ConnectionConfig.SlackConfig -> {
-                    slackWebhookUrl = config.webhookUrl
-                    initialSlackWebhookUrl = config.webhookUrl
+                    slackBotToken = config.botToken
+                    initialSlackBotToken = config.botToken
                 }
                 is ConnectionConfig.TeamCityConfig -> {
                     teamCityServerUrl = config.serverUrl
@@ -185,7 +185,7 @@ fun ConnectionFormScreen(
     val currentConfig by remember {
         derivedStateOf {
             buildConfig(
-                selectedType, slackWebhookUrl, teamCityServerUrl, teamCityToken,
+                selectedType, slackBotToken, teamCityServerUrl, teamCityToken,
                 teamCityPollingInterval, githubToken, githubOwner, githubRepo,
                 githubPollingInterval,
             )
@@ -393,7 +393,7 @@ fun ConnectionFormScreen(
             val uriHandler = LocalUriHandler.current
             when (selectedType) {
                 ConnectionType.SLACK -> {
-                    var showSlackWebhook by remember { mutableStateOf(false) }
+                    var showSlackBotToken by remember(connectionId) { mutableStateOf(false) }
 
                     Text(
                         text = packStringResource(Res.string.connections_section_slack),
@@ -401,27 +401,27 @@ fun ConnectionFormScreen(
                         modifier = Modifier.testTag("section_header_slack"),
                     )
                     RwTextField(
-                        value = slackWebhookUrl,
-                        onValueChange = { slackWebhookUrl = it },
-                        label = packStringResource(Res.string.connections_slack_webhook_url),
-                        placeholder = packStringResource(Res.string.connections_slack_webhook_placeholder),
+                        value = slackBotToken,
+                        onValueChange = { slackBotToken = it },
+                        label = packStringResource(Res.string.connections_slack_bot_token),
+                        placeholder = packStringResource(Res.string.connections_slack_bot_token_placeholder),
                         singleLine = true,
-                        visualTransformation = if (showSlackWebhook) VisualTransformation.None else PasswordVisualTransformation(),
+                        visualTransformation = if (showSlackBotToken) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
-                            RwIconButton(onClick = { showSlackWebhook = !showSlackWebhook }, modifier = Modifier.size(32.dp).testTag("slack_webhook_url_toggle_visibility")) {
+                            RwIconButton(onClick = { showSlackBotToken = !showSlackBotToken }, modifier = Modifier.size(32.dp).testTag("slack_bot_token_toggle_visibility")) {
                                 Icon(
-                                    if (showSlackWebhook) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                    contentDescription = if (showSlackWebhook) packStringResource(Res.string.common_hide_value) else packStringResource(Res.string.common_show_value),
+                                    if (showSlackBotToken) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = if (showSlackBotToken) packStringResource(Res.string.common_hide_value) else packStringResource(Res.string.common_show_value),
                                 )
                             }
                         },
                         supportingText = {
                             TokenHelpLink(
-                                text = packStringResource(Res.string.connections_slack_webhook_hint),
+                                text = packStringResource(Res.string.connections_slack_bot_token_hint),
                                 onClick = { uriHandler.openUri("https://api.slack.com/apps") },
                             )
                         },
-                        modifier = Modifier.fillMaxWidth().testTag("slack_webhook_url"),
+                        modifier = Modifier.fillMaxWidth().testTag("slack_bot_token"),
                     )
                 }
                 ConnectionType.TEAMCITY -> {
@@ -654,7 +654,7 @@ fun ConnectionFormScreen(
 
 private fun buildConfig(
     type: ConnectionType,
-    slackWebhookUrl: String,
+    slackBotToken: String,
     teamCityServerUrl: String,
     teamCityToken: String,
     teamCityPollingInterval: String,
@@ -663,7 +663,7 @@ private fun buildConfig(
     githubRepo: String,
     githubPollingInterval: String,
 ): ConnectionConfig = when (type) {
-    ConnectionType.SLACK -> ConnectionConfig.SlackConfig(webhookUrl = slackWebhookUrl)
+    ConnectionType.SLACK -> ConnectionConfig.SlackConfig(botToken = slackBotToken)
     ConnectionType.TEAMCITY -> ConnectionConfig.TeamCityConfig(
         serverUrl = teamCityServerUrl,
         token = teamCityToken,
@@ -695,7 +695,7 @@ private fun parseGitHubUrl(url: String): Pair<String, String>? {
 }
 
 private fun ConnectionConfig.isValid(): Boolean = when (this) {
-    is ConnectionConfig.SlackConfig -> webhookUrl.isNotBlank()
+    is ConnectionConfig.SlackConfig -> botToken.isNotBlank()
     is ConnectionConfig.TeamCityConfig -> serverUrl.isNotBlank() && token.isNotBlank()
     is ConnectionConfig.GitHubConfig -> token.isNotBlank() && owner.isNotBlank() && repo.isNotBlank()
 }

@@ -453,7 +453,7 @@ fun Application.module() {
 
     if (devModeConfig.enabled) {
         environment.log.warn("DEV_MODE is enabled — SSRF allowlist includes dev URLs. Do NOT use in production. " +
-            "Slack: ${devModeConfig.slackWebhookBaseUrl}, GitHub: ${devModeConfig.githubApiBaseUrl}, TeamCity: ${devModeConfig.teamcityBaseUrl}")
+            "Slack: ${devModeConfig.slackApiBaseUrl}, GitHub: ${devModeConfig.githubApiBaseUrl}, TeamCity: ${devModeConfig.teamcityBaseUrl}")
     }
 
     if (authConfig.pepperSecret != null) {
@@ -718,7 +718,7 @@ private suspend fun seedDevConnections(
             name = "Test Panel \u2014 Slack",
             type = com.github.mr3zee.model.ConnectionType.SLACK,
             config = com.github.mr3zee.model.ConnectionConfig.SlackConfig(
-                webhookUrl = "${devModeConfig.slackWebhookBaseUrl}/T00/B00/dev",
+                botToken = "xoxb-dev-mode-token",
             ),
             teamId = teamId,
         )
