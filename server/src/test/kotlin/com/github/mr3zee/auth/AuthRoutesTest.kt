@@ -126,7 +126,7 @@ class AuthRoutesTest {
         val response = client.register(username = "first", password = "password1234")
         assertEquals(HttpStatusCode.Created, response.status)
         val userInfo = response.body<UserInfo>()
-        assertEquals(UserRole.ADMIN, userInfo.role)
+        assertEquals(UserRole.SUPERADMIN, userInfo.role)
     }
 
     @Test
@@ -189,7 +189,7 @@ class AuthRoutesTest {
         val meResponse = client.get(ApiRoutes.Auth.ME)
         assertEquals(HttpStatusCode.OK, meResponse.status)
         val userInfo = meResponse.body<UserInfo>()
-        assertEquals(UserRole.ADMIN, userInfo.role)
+        assertEquals(UserRole.SUPERADMIN, userInfo.role)
         assertEquals("roleuser", userInfo.username)
     }
 

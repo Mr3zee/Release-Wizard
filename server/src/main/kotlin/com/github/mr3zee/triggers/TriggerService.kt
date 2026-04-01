@@ -131,7 +131,7 @@ class DefaultTriggerService(
     }
 
     private suspend fun checkProjectAccess(projectId: ProjectId, session: UserSession) {
-        if (session.role == UserRole.ADMIN) return
+        if (session.role.isAdmin) return
         val projectTeamId = projectsRepository.findTeamId(projectId)
             ?: throw NotFoundException("Project not found")
         teamAccessService.checkMembership(TeamId(projectTeamId), session)

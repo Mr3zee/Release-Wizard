@@ -89,7 +89,7 @@ class DefaultReleasesService(
                     releaseIds = releaseIds,
                 )
             }
-            session.role == UserRole.ADMIN -> {
+            session.role.isAdmin -> {
                 repository.findAllWithCount(
                     offset = offset, limit = limit,
                     search = search, status = status, projectTemplateId = projectTemplateId,
@@ -474,14 +474,14 @@ class DefaultReleasesService(
     }
 
     override suspend fun checkAccess(id: ReleaseId, session: UserSession) {
-        if (session.role == UserRole.ADMIN) return
+        if (session.role.isAdmin) return
         val teamId = repository.findTeamId(id) ?: throw NotFoundException("Resource not found")
         teamAccessService.checkMembership(TeamId(teamId), session)
     }
 
     /** REL-M4: TEAM_LEAD required for destructive release operations (cancel, archive, delete). */
     private suspend fun checkAccessTeamLead(id: ReleaseId, session: UserSession) {
-        if (session.role == UserRole.ADMIN) return
+        if (session.role.isAdmin) return
         val teamId = repository.findTeamId(id) ?: throw NotFoundException("Resource not found")
         teamAccessService.checkTeamLead(TeamId(teamId), session)
     }

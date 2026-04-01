@@ -86,7 +86,7 @@ class Phase2SecurityHardeningTest {
         assertEquals(HttpStatusCode.OK, response.status)
         val userInfo = response.body<UserInfo>()
         assertEquals("admin", userInfo.username)
-        assertEquals(UserRole.ADMIN, userInfo.role)
+        assertEquals(UserRole.SUPERADMIN, userInfo.role)
     }
 
     @Test

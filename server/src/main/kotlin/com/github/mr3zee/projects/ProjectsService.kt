@@ -44,7 +44,7 @@ class DefaultProjectsService(
                 teamAccessService.checkMembership(teamId, session)
                 repository.findAllWithCount(teamId = teamId.value, offset = offset, limit = limit, search = search)
             }
-            session.role == UserRole.ADMIN -> {
+            session.role.isAdmin -> {
                 repository.findAllWithCount(offset = offset, limit = limit, search = search)
             }
             else -> {
@@ -150,13 +150,13 @@ class DefaultProjectsService(
     }
 
     private suspend fun checkAccess(id: ProjectId, session: UserSession) {
-        if (session.role == UserRole.ADMIN) return
+        if (session.role.isAdmin) return
         val teamId = repository.findTeamId(id) ?: throw NotFoundException("Resource not found")
         teamAccessService.checkMembership(TeamId(teamId), session)
     }
 
     private suspend fun checkAccessTeamLead(id: ProjectId, session: UserSession) {
-        if (session.role == UserRole.ADMIN) return
+        if (session.role.isAdmin) return
         val teamId = repository.findTeamId(id) ?: throw NotFoundException("Resource not found")
         teamAccessService.checkTeamLead(TeamId(teamId), session)
     }

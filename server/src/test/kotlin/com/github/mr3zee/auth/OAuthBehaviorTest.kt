@@ -227,7 +227,7 @@ class OAuthBehaviorTest {
 
         val oauthService = getKoin().get<OAuthService>()
         val user = oauthService.findOrCreateOAuthUser("google", "g-1", "first@gmail.com", "First")
-        assertEquals(UserRole.ADMIN, user.role)
+        assertEquals(UserRole.SUPERADMIN, user.role)
     }
 
     @Test

@@ -64,7 +64,7 @@ class DatabaseOAuthService(private val db: Database) : OAuthService {
 
                     // Create a new user
                     val isFirstUser = UserTable.selectAll().count() == 0L
-                    val role = if (isFirstUser) UserRole.ADMIN else UserRole.USER
+                    val role = if (isFirstUser) UserRole.SUPERADMIN else UserRole.USER
                     val username = findAvailableUsername(generateUsername(email, displayName))
                     val userId = UUID.randomUUID()
                     val now = Clock.System.now()

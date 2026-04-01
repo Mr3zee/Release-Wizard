@@ -43,6 +43,7 @@ object ApiRoutes {
         fun userRole(id: String) = "$USERS/$id/role"
         fun approveUser(id: String) = "$USERS/$id/approve"
         fun deleteUser(id: String) = "$USERS/$id"
+        fun deleteUserPreCheck(id: String) = "$USERS/$id/delete-info"
 
         object OAuth {
             const val GOOGLE = "$API_V1/auth/oauth/google"

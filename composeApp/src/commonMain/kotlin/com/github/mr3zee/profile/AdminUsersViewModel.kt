@@ -3,6 +3,7 @@ package com.github.mr3zee.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.mr3zee.api.AuthApiClient
+import com.github.mr3zee.api.DeleteUserPreCheckResponse
 import com.github.mr3zee.api.PatApiClient
 import com.github.mr3zee.api.PatInfo
 import com.github.mr3zee.api.toUiMessage
@@ -17,6 +18,7 @@ import kotlinx.coroutines.launch
 sealed class AdminSuccessEvent {
     data class UserApproved(val username: String) : AdminSuccessEvent()
     data object TokenRevoked : AdminSuccessEvent()
+    data class UserDeleted(val username: String) : AdminSuccessEvent()
 }
 
 class AdminUsersViewModel(
@@ -44,6 +46,12 @@ class AdminUsersViewModel(
 
     private val _successEvent = MutableStateFlow<AdminSuccessEvent?>(null)
     val successEvent: StateFlow<AdminSuccessEvent?> = _successEvent
+
+    private val _deletePreCheck = MutableStateFlow<Pair<String, DeleteUserPreCheckResponse>?>(null)
+    val deletePreCheck: StateFlow<Pair<String, DeleteUserPreCheckResponse>?> = _deletePreCheck
+
+    private val _isDeleting = MutableStateFlow(false)
+    val isDeleting: StateFlow<Boolean> = _isDeleting
 
     init {
         loadUsers()
@@ -98,6 +106,40 @@ class AdminUsersViewModel(
                 _error.value = e.toUiMessage()
             }
         }
+    }
+
+    fun fetchDeletePreCheck(userId: String) {
+        viewModelScope.launch {
+            _error.value = null
+            try {
+                val result = authApiClient.getDeletePreCheck(userId)
+                _deletePreCheck.value = userId to result
+            } catch (e: Exception) {
+                _deletePreCheck.value = null
+                _error.value = e.toUiMessage()
+            }
+        }
+    }
+
+    fun deleteUser(userId: String, username: String, confirmTeamLeadTransfer: Boolean = false) {
+        viewModelScope.launch {
+            _error.value = null
+            _isDeleting.value = true
+            try {
+                authApiClient.deleteUser(userId, confirmTeamLeadTransfer)
+                _deletePreCheck.value = null
+                _successEvent.value = AdminSuccessEvent.UserDeleted(username)
+                loadUsers()
+            } catch (e: Exception) {
+                _error.value = e.toUiMessage()
+            } finally {
+                _isDeleting.value = false
+            }
+        }
+    }
+
+    fun dismissDeletePreCheck() {
+        _deletePreCheck.value = null
     }
 
     fun dismissSuccess() {

@@ -117,4 +117,16 @@ class AuthApiClient(private val client: HttpClient) {
         val response = client.get(serverUrl(ApiRoutes.Auth.PASSWORD_POLICY))
         return response.body()
     }
+
+    suspend fun deleteUser(userId: String, confirmTeamLeadTransfer: Boolean = false) {
+        client.delete(serverUrl(ApiRoutes.Auth.deleteUser(userId))) {
+            contentType(ContentType.Application.Json)
+            setBody(AdminDeleteUserRequest(confirmTeamLeadTransfer = confirmTeamLeadTransfer))
+        }
+    }
+
+    suspend fun getDeletePreCheck(userId: String): DeleteUserPreCheckResponse {
+        val response = client.get(serverUrl(ApiRoutes.Auth.deleteUserPreCheck(userId)))
+        return response.body()
+    }
 }

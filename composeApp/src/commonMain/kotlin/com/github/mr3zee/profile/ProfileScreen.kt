@@ -67,6 +67,7 @@ import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.model.UserRole
+import com.github.mr3zee.model.isAdmin
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.LocalAppColors
 import com.github.mr3zee.theme.Spacing
@@ -250,10 +251,11 @@ fun ProfileScreen(
                         if (role != null) {
                             RwBadge(
                                 text = when (role) {
+                                    UserRole.SUPERADMIN -> packStringResource(Res.string.profile_role_superadmin)
                                     UserRole.ADMIN -> packStringResource(Res.string.profile_role_admin)
                                     UserRole.USER -> packStringResource(Res.string.profile_role_user)
                                 },
-                                color = if (role == UserRole.ADMIN) {
+                                color = if (role.isAdmin) {
                                     MaterialTheme.colorScheme.primary
                                 } else {
                                     LocalAppColors.current.chromeTextMetadata
@@ -427,7 +429,7 @@ fun ProfileScreen(
 
                 // ── Admin Tools ──────────────────────────────────
                 val effectiveRole = currentUserRole ?: userInfo?.role
-                if (effectiveRole == UserRole.ADMIN) {
+                if (effectiveRole?.isAdmin == true) {
                     Spacer(modifier = Modifier.height(Spacing.md))
                     HorizontalDivider(
                         modifier = Modifier.widthIn(max = 800.dp).padding(horizontal = Spacing.lg),

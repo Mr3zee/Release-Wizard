@@ -45,6 +45,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.github.mr3zee.api.DeleteUserPreCheckResponse
 import com.github.mr3zee.api.PatInfo
 import com.github.mr3zee.components.BackRefreshTopBar
 import com.github.mr3zee.components.EmptyState
@@ -59,6 +60,7 @@ import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.model.User
 import com.github.mr3zee.model.UserRole
+import com.github.mr3zee.model.isAdmin
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.LocalAppColors
 import com.github.mr3zee.theme.Spacing
@@ -75,6 +77,7 @@ import releasewizard.composeapp.generated.resources.*
 fun AdminUsersScreen(
     viewModel: AdminUsersViewModel,
     currentUserId: String?,
+    currentUserRole: UserRole? = null,
     onBack: () -> Unit,
 ) {
     val users by viewModel.users.collectAsState()
@@ -85,8 +88,11 @@ fun AdminUsersScreen(
     val isManualRefresh by viewModel.isManualRefresh.collectAsState()
     val successEvent by viewModel.successEvent.collectAsState()
 
+
     val userTokens by viewModel.userTokens.collectAsState()
     val loadingTokensFor by viewModel.loadingTokensFor.collectAsState()
+    val deletePreCheck by viewModel.deletePreCheck.collectAsState()
+    val isDeleting by viewModel.isDeleting.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -98,10 +104,18 @@ fun AdminUsersScreen(
     var confirmingRejectUserId by remember { mutableStateOf<String?>(null) }
     var expandedUserId by remember { mutableStateOf<String?>(null) }
     var revokeConfirmState by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var confirmingDeleteUserId by remember { mutableStateOf<String?>(null) }
 
     // #6: Clear revoke confirmation when users list changes (refresh/reload)
     LaunchedEffect(users) {
         revokeConfirmState = null
+    }
+
+    // Clear delete state when pre-check fetch fails (error is set, preCheck stays null)
+    LaunchedEffect(error) {
+        if (error != null && deletePreCheck == null) {
+            confirmingDeleteUserId = null
+        }
     }
 
     val resolvedError = error?.resolve()
@@ -119,6 +133,7 @@ fun AdminUsersScreen(
     val successMessage = when (val event = successEvent) {
         is AdminSuccessEvent.UserApproved -> packStringResource(Res.string.admin_users_approved_success, event.username)
         is AdminSuccessEvent.TokenRevoked -> tokenRevokedMessage
+        is AdminSuccessEvent.UserDeleted -> packStringResource(Res.string.admin_users_delete_success, event.username)
         null -> null
     }
     LaunchedEffect(successEvent) {
@@ -128,6 +143,13 @@ fun AdminUsersScreen(
             duration = SnackbarDuration.Short,
         )
         viewModel.dismissSuccess()
+    }
+
+    // Clear delete confirmation after successful delete (user removed from list)
+    LaunchedEffect(isDeleting) {
+        if (!isDeleting && confirmingDeleteUserId != null && deletePreCheck == null) {
+            confirmingDeleteUserId = null
+        }
     }
 
     val shortcutActions = remember {
@@ -233,10 +255,19 @@ fun AdminUsersScreen(
                             val isExpanded = expandedUserId == uid
                             // #9: Show token count after first load
                             val tokenCount = userTokens[uid]?.size
+                            val preCheckForUser = deletePreCheck
+                                ?.takeIf { it.first == uid }
+                                ?.second
+                            val isThisUserDeleting = confirmingDeleteUserId == uid
                             ActiveUserItem(
                                 user = user,
                                 isSelf = isSelf,
+                                currentUserRole = currentUserRole,
                                 generatedLink = generatedLinks[uid],
+                                deletePreCheck = preCheckForUser,
+                                isConfirmingDelete = isThisUserDeleting,
+                                isDeleteLoading = isThisUserDeleting && preCheckForUser == null && !isDeleting,
+                                isDeleting = isThisUserDeleting && isDeleting,
                                 onGenerateResetLink = { viewModel.generateResetLink(uid) },
                                 onCopyLink = { link ->
                                     copyToClipboard(link)
@@ -268,6 +299,17 @@ fun AdminUsersScreen(
                                     revokeConfirmState = null
                                 },
                                 onRevokeDismiss = { revokeConfirmState = null },
+                                onDeleteClick = {
+                                    confirmingDeleteUserId = uid
+                                    viewModel.fetchDeletePreCheck(uid)
+                                },
+                                onDeleteConfirm = { confirmTeamLeadTransfer ->
+                                    viewModel.deleteUser(uid, user.username, confirmTeamLeadTransfer)
+                                },
+                                onDeleteDismiss = {
+                                    confirmingDeleteUserId = null
+                                    viewModel.dismissDeletePreCheck()
+                                },
                             )
                         }
                     }
@@ -355,7 +397,12 @@ private fun PendingUserItem(
 private fun ActiveUserItem(
     user: User,
     isSelf: Boolean,
+    currentUserRole: UserRole?,
     generatedLink: String?,
+    deletePreCheck: DeleteUserPreCheckResponse?,
+    isConfirmingDelete: Boolean,
+    isDeleteLoading: Boolean,
+    isDeleting: Boolean,
     onGenerateResetLink: () -> Unit,
     onCopyLink: (String) -> Unit,
     isTokensExpanded: Boolean,
@@ -367,8 +414,20 @@ private fun ActiveUserItem(
     onRevokeClick: (tokenId: String) -> Unit,
     onRevokeConfirm: (tokenId: String) -> Unit,
     onRevokeDismiss: () -> Unit,
+    onDeleteClick: () -> Unit,
+    onDeleteConfirm: (confirmTeamLeadTransfer: Boolean) -> Unit,
+    onDeleteDismiss: () -> Unit,
 ) {
     val userId = user.id.value
+
+    // Determine if delete button should be shown:
+    // - Not for self
+    // - Not for superadmin (can never be deleted)
+    // - Not for admin unless the current user is superadmin
+    // - Not until currentUserRole is loaded
+    val canDelete = currentUserRole != null && !isSelf &&
+        user.role != UserRole.SUPERADMIN &&
+        !(user.role == UserRole.ADMIN && currentUserRole != UserRole.SUPERADMIN)
 
     RwCard(
         modifier = Modifier
@@ -397,10 +456,11 @@ private fun ActiveUserItem(
                         )
                         RwBadge(
                             text = when (user.role) {
+                                UserRole.SUPERADMIN -> packStringResource(Res.string.profile_role_superadmin)
                                 UserRole.ADMIN -> packStringResource(Res.string.profile_role_admin)
                                 UserRole.USER -> packStringResource(Res.string.profile_role_user)
                             },
-                            color = if (user.role == UserRole.ADMIN) {
+                            color = if (user.role.isAdmin) {
                                 MaterialTheme.colorScheme.primary
                             } else {
                                 LocalAppColors.current.chromeTextMetadata
@@ -466,15 +526,26 @@ private fun ActiveUserItem(
                         ) {
                             Text(buttonLabel)
                         }
-                        RwButton(
-                            onClick = onGenerateResetLink,
-                            variant = RwButtonVariant.Secondary,
-                            modifier = Modifier.testTag("admin_generate_reset_link_$userId"),
-                        ) {
-                            Text(
-                                if (user.hasPassword) packStringResource(Res.string.admin_users_generate_reset_link)
-                                else packStringResource(Res.string.admin_users_generate_set_password_link)
-                            )
+                        if (!isConfirmingDelete) {
+                            RwButton(
+                                onClick = onGenerateResetLink,
+                                variant = RwButtonVariant.Secondary,
+                                modifier = Modifier.testTag("admin_generate_reset_link_$userId"),
+                            ) {
+                                Text(
+                                    if (user.hasPassword) packStringResource(Res.string.admin_users_generate_reset_link)
+                                    else packStringResource(Res.string.admin_users_generate_set_password_link)
+                                )
+                            }
+                        }
+                        if (canDelete && !isConfirmingDelete) {
+                            RwButton(
+                                onClick = onDeleteClick,
+                                variant = RwButtonVariant.Danger,
+                                modifier = Modifier.testTag("admin_delete_$userId"),
+                            ) {
+                                Text(packStringResource(Res.string.admin_users_delete))
+                            }
                         }
                     }
                 }
@@ -524,6 +595,41 @@ private fun ActiveUserItem(
                     }
                 }
             }
+
+            // Delete loading indicator while pre-check is fetching
+            if (isDeleteLoading) {
+                Spacer(modifier = Modifier.height(Spacing.sm))
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp).testTag("admin_delete_loading_$userId"),
+                    strokeWidth = 2.dp,
+                )
+            }
+
+            // Delete inline confirmation (uses RwInlineConfirmation's own animation)
+            val showDeleteConfirmation = isConfirmingDelete && deletePreCheck != null
+            val affectedTeams = deletePreCheck?.affectedTeams.orEmpty()
+            val confirmMessage = if (affectedTeams.isNotEmpty()) {
+                val maxShown = 3
+                val shownNames = affectedTeams.take(maxShown).joinToString(", ") { it.teamName }
+                val teamNames = if (affectedTeams.size > maxShown) {
+                    "$shownNames ${packStringResource(Res.string.admin_users_and_n_others, affectedTeams.size - maxShown)}"
+                } else {
+                    shownNames
+                }
+                packStringResource(Res.string.admin_users_delete_confirm_team_lead, user.username, teamNames)
+            } else {
+                packStringResource(Res.string.admin_users_delete_confirm, user.username)
+            }
+            RwInlineConfirmation(
+                visible = showDeleteConfirmation && !isDeleting,
+                message = confirmMessage,
+                confirmLabel = packStringResource(Res.string.admin_users_delete),
+                onConfirm = { onDeleteConfirm(affectedTeams.isNotEmpty()) },
+                onDismiss = onDeleteDismiss,
+                isDestructive = true,
+                testTag = "admin_delete_confirm_$userId",
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }

@@ -9,7 +9,7 @@ import com.github.mr3zee.connections.ConnectionTester
 import com.github.mr3zee.model.NotificationConfig
 import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.model.TeamId
-import com.github.mr3zee.model.UserRole
+import com.github.mr3zee.model.isAdmin
 import com.github.mr3zee.projects.ProjectsRepository
 import com.github.mr3zee.teams.TeamAccessService
 import org.slf4j.LoggerFactory
@@ -32,7 +32,7 @@ class DefaultNotificationService(
 
     override suspend fun listByProject(projectId: ProjectId, session: UserSession): List<NotificationConfigResponse> {
         // Verify the caller has access to the project's team (or is admin)
-        if (session.role != UserRole.ADMIN) {
+        if (!session.role.isAdmin) {
             val projectTeamId = projectsRepository.findTeamId(projectId)
                 ?: throw NotFoundException("Project not found")
             teamAccessService.checkMembership(TeamId(projectTeamId), session)
@@ -42,7 +42,7 @@ class DefaultNotificationService(
 
     override suspend fun create(request: CreateNotificationConfigRequest, session: UserSession): NotificationConfigResponse {
         // Verify the caller has access to the project's team (or is admin) FIRST
-        if (session.role != UserRole.ADMIN) {
+        if (!session.role.isAdmin) {
             val projectTeamId = projectsRepository.findTeamId(request.projectId)
                 ?: throw NotFoundException("Project not found")
             teamAccessService.checkMembership(TeamId(projectTeamId), session)
@@ -72,7 +72,7 @@ class DefaultNotificationService(
         val entity = repository.findById(id) ?: return false
 
         // Verify team membership before allowing delete
-        if (session.role != UserRole.ADMIN) {
+        if (!session.role.isAdmin) {
             val projectTeamId = projectsRepository.findTeamId(entity.projectId)
                 ?: throw NotFoundException("Project not found")
             teamAccessService.checkMembership(TeamId(projectTeamId), session)
@@ -89,7 +89,7 @@ class DefaultNotificationService(
     // NOTIF-H2: Fixed ownership check — empty userId means the config was created
     // without proper attribution and should only be deletable by admins or the team lead.
     private fun checkOwnership(entity: NotificationConfigEntity, session: UserSession) {
-        if (session.role == UserRole.ADMIN) return
+        if (session.role.isAdmin) return
         if (entity.userId.isEmpty()) {
             throw ForbiddenException("Only admins can manage system notification configs")
         }

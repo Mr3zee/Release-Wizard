@@ -90,7 +90,7 @@ class DefaultProjectLockService(
     private suspend fun checkAccess(projectId: ProjectId, session: UserSession) {
         val teamId = projectsService.findTeamId(projectId)
             ?: throw NotFoundException("Project not found")
-        if (session.role == UserRole.ADMIN) return
+        if (session.role.isAdmin) return
         teamAccessService.checkMembership(TeamId(teamId), session)
     }
 }

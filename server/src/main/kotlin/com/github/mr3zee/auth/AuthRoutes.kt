@@ -5,6 +5,7 @@ import com.github.mr3zee.WebhookConfig
 import com.github.mr3zee.api.*
 import com.github.mr3zee.model.UserRole
 import com.github.mr3zee.model.UserId
+import com.github.mr3zee.model.isAdmin
 import com.github.mr3zee.plugins.CorrelationIdKey
 import com.github.mr3zee.teams.TeamRepository
 import io.ktor.http.*
@@ -483,13 +484,34 @@ fun Route.authRoutes() {
             }
         }
 
+        // Admin-only: pre-check before deleting a user
+        get(ApiRoutes.Auth.USERS + "/{userId}/delete-info") {
+            val session = call.userSession()
+            requireAdmin(call, session) ?: return@get
+            val userId = call.parameters["userId"]
+                ?: return@get call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Missing userId", code = "BAD_REQUEST"))
+            val result = authService.getDeletePreCheck(UserId(userId), UserId(session.userId))
+            call.respond(result)
+        }
+
         // Admin-only: delete (reject) a user
         delete(ApiRoutes.Auth.USERS + "/{userId}") {
             val session = call.userSession()
             requireAdmin(call, session) ?: return@delete
             val userId = call.parameters["userId"]
                 ?: return@delete call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Missing userId", code = "BAD_REQUEST"))
-            val result = authService.adminDeleteUser(UserId(userId), UserId(session.userId))
+            val request = try {
+                call.receive<AdminDeleteUserRequest>()
+            } catch (_: io.ktor.server.plugins.ContentTransformationException) {
+                // No body or malformed body — default to no team-lead transfer confirmation.
+                // This supports existing clients (e.g. rejectUser) that send no body on DELETE.
+                AdminDeleteUserRequest()
+            }
+            val result = authService.adminDeleteUser(
+                UserId(userId),
+                UserId(session.userId),
+                confirmTeamLeadTransfer = request.confirmTeamLeadTransfer,
+            )
             result.fold(
                 onSuccess = { deleted ->
                     if (deleted) {
@@ -503,18 +525,23 @@ fun Route.authRoutes() {
                     val message = error.message ?: "Deletion failed"
                     val code = when (message) {
                         "LAST_ADMIN" -> "LAST_ADMIN"
-                        "LAST_TEAM_LEAD" -> "LAST_TEAM_LEAD"
+                        "TEAM_LEAD_TRANSFER_REQUIRED" -> "TEAM_LEAD_TRANSFER_REQUIRED"
                         "CANNOT_DELETE_SELF" -> "CANNOT_DELETE_SELF"
+                        "CANNOT_DELETE_SUPERADMIN" -> "CANNOT_DELETE_SUPERADMIN"
+                        "SUPERADMIN_REQUIRED" -> "SUPERADMIN_REQUIRED"
                         else -> "BAD_REQUEST"
                     }
                     val humanMessage = when (message) {
                         "LAST_ADMIN" -> "Cannot delete the last admin account"
-                        "LAST_TEAM_LEAD" -> "Cannot delete: user is the last lead in one or more teams"
+                        "TEAM_LEAD_TRANSFER_REQUIRED" -> "User is the last lead in one or more teams; confirm team lead transfer"
                         "CANNOT_DELETE_SELF" -> "Cannot delete your own account via admin panel"
+                        "CANNOT_DELETE_SUPERADMIN" -> "The super admin account cannot be deleted"
+                        "SUPERADMIN_REQUIRED" -> "Only the super admin can delete admin accounts"
                         else -> message
                     }
                     val status = when (code) {
-                        "LAST_ADMIN", "LAST_TEAM_LEAD" -> HttpStatusCode.Conflict
+                        "LAST_ADMIN", "TEAM_LEAD_TRANSFER_REQUIRED" -> HttpStatusCode.Conflict
+                        "CANNOT_DELETE_SUPERADMIN", "SUPERADMIN_REQUIRED" -> HttpStatusCode.Forbidden
                         else -> HttpStatusCode.BadRequest
                     }
                     call.respond(status, ErrorResponse(error = humanMessage, code = code))
@@ -575,11 +602,11 @@ fun Route.authRoutes() {
 }
 
 /**
- * AUTH-H2: Checks that the session has ADMIN role. Returns the session on success, or null
- * after responding 403. Replaces the old requireAdminSession that had a dead null-check.
+ * AUTH-H2: Checks that the session has ADMIN or SUPERADMIN role. Returns the session on success,
+ * or null after responding 403.
  */
 private suspend fun requireAdmin(call: ApplicationCall, session: UserSession): UserSession? {
-    if (session.role != UserRole.ADMIN) {
+    if (!session.role.isAdmin) {
         call.respond(HttpStatusCode.Forbidden, ErrorResponse(error = "Admin access required", code = "FORBIDDEN"))
         return null
     }

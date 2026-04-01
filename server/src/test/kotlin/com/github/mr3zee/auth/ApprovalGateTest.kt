@@ -30,7 +30,7 @@ class ApprovalGateTest {
         assertEquals(HttpStatusCode.Created, response.status)
         val userInfo = response.body<UserInfo>()
         assertTrue(userInfo.approved)
-        assertEquals(UserRole.ADMIN, userInfo.role)
+        assertEquals(UserRole.SUPERADMIN, userInfo.role)
     }
 
     @Test

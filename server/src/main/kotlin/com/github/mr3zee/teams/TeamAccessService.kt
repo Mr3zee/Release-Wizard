@@ -5,14 +5,14 @@ import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.model.TeamMembership
 import com.github.mr3zee.model.TeamRole
-import com.github.mr3zee.model.UserRole
+import com.github.mr3zee.model.isAdmin
 import org.slf4j.LoggerFactory
 
 class TeamAccessService(private val teamRepository: TeamRepository) {
     private val log = LoggerFactory.getLogger(TeamAccessService::class.java)
 
     suspend fun checkMembership(teamId: TeamId, session: UserSession) {
-        if (session.role == UserRole.ADMIN) return
+        if (session.role.isAdmin) return
         teamRepository.findMembership(teamId, session.userId)
             ?: run {
                 log.warn("Access denied: user {} is not a member of team {}", session.userId, teamId.value)
@@ -21,7 +21,7 @@ class TeamAccessService(private val teamRepository: TeamRepository) {
     }
 
     suspend fun checkTeamLead(teamId: TeamId, session: UserSession) {
-        if (session.role == UserRole.ADMIN) return
+        if (session.role.isAdmin) return
         val membership = teamRepository.findMembership(teamId, session.userId)
         if (membership == null || membership.role != TeamRole.TEAM_LEAD) {
             log.warn("Access denied: user {} lacks team lead role for team {}", session.userId, teamId.value)

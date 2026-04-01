@@ -120,7 +120,7 @@ class DefaultScheduleService(
     private suspend fun resolveProjectTeamId(projectId: ProjectId, session: UserSession): String {
         val projectTeamId = projectsRepository.findTeamId(projectId)
             ?: throw NotFoundException("Project not found")
-        if (session.role != UserRole.ADMIN) {
+        if (!session.role.isAdmin) {
             teamAccessService.checkMembership(TeamId(projectTeamId), session)
         }
         return projectTeamId

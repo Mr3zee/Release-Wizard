@@ -19,6 +19,7 @@ import com.github.mr3zee.editor.DagEditorScreen
 import com.github.mr3zee.editor.DagEditorViewModel
 import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.model.TeamRole
+import com.github.mr3zee.model.isAdmin
 import com.github.mr3zee.profile.AdminUsersScreen
 import com.github.mr3zee.profile.AdminUsersViewModel
 import com.github.mr3zee.profile.ProfileScreen
@@ -72,7 +73,7 @@ fun AppNavigation(
         is Screen.ProjectEditor -> {
             val projectId = currentScreen.projectId
             if (projectId != null) {
-                val canForceUnlock = currentUserRole == com.github.mr3zee.model.UserRole.ADMIN ||
+                val canForceUnlock = currentUserRole?.isAdmin == true ||
                     userTeams.any { it.role == TeamRole.TEAM_LEAD }
                 val viewModel = remember(projectId) {
                     DagEditorViewModel(
@@ -269,6 +270,7 @@ fun AppNavigation(
             AdminUsersScreen(
                 viewModel = viewModel,
                 currentUserId = currentUserId,
+                currentUserRole = currentUserRole,
                 onBack = { onGoBack() },
             )
         }

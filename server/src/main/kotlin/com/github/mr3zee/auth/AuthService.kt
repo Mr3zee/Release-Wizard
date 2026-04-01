@@ -1,13 +1,18 @@
 package com.github.mr3zee.auth
 
+import com.github.mr3zee.api.AffectedTeamInfo
+import com.github.mr3zee.api.DeleteUserPreCheckResponse
 import com.github.mr3zee.api.OAuthProvider
+import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.model.TeamRole
 import com.github.mr3zee.model.User
 import com.github.mr3zee.model.UserId
 import com.github.mr3zee.model.UserRole
+import com.github.mr3zee.model.isAdmin
 import com.github.mr3zee.persistence.AccountLockoutTable
 import com.github.mr3zee.persistence.OAuthAccountTable
 import com.github.mr3zee.persistence.TeamMembershipTable
+import com.github.mr3zee.persistence.TeamTable
 import com.github.mr3zee.persistence.UserTable
 import de.mkammerer.argon2.Argon2Factory
 import kotlinx.coroutines.Dispatchers
@@ -85,10 +90,18 @@ interface AuthService {
     suspend fun approveUser(id: UserId): Boolean
 
     /**
-     * Admin-initiated user deletion (rejection). Applies LAST_ADMIN and last-team-lead guards.
-     * Does not require password confirmation (admin is already authenticated).
+     * Admin-initiated user deletion. Applies LAST_ADMIN, superadmin guards, and last-team-lead
+     * handling with optional team lead transfer. When [confirmTeamLeadTransfer] is true and the
+     * target is the sole lead in some teams, the admin is added/promoted to TEAM_LEAD in those
+     * teams before deletion.
      */
-    suspend fun adminDeleteUser(id: UserId, adminUserId: UserId): Result<Boolean>
+    suspend fun adminDeleteUser(id: UserId, adminUserId: UserId, confirmTeamLeadTransfer: Boolean = false): Result<Boolean>
+
+    /**
+     * Pre-check for admin delete: returns whether deletion is possible and lists teams
+     * where the target is the sole team lead (affected teams for lead transfer).
+     */
+    suspend fun getDeletePreCheck(targetId: UserId, adminUserId: UserId): DeleteUserPreCheckResponse
 
     /**
      * Lightweight check of a user's approval status from DB.
@@ -258,7 +271,7 @@ class DatabaseAuthService(
                     }
 
                     val isFirstUser = UserTable.selectAll().count() == 0L
-                    val role = if (isFirstUser) UserRole.ADMIN else UserRole.USER
+                    val role = if (isFirstUser) UserRole.SUPERADMIN else UserRole.USER
 
                     val id = UUID.randomUUID()
                     val now = Clock.System.now()
@@ -346,16 +359,31 @@ class DatabaseAuthService(
     override suspend fun safeUpdateUserRole(id: UserId, role: UserRole): Result<Boolean> =
         withContext(Dispatchers.IO) {
             suspendTransaction(db, transactionIsolation = Connection.TRANSACTION_SERIALIZABLE) {
-                // Check last-admin constraint atomically within the same transaction
-                if (role != UserRole.ADMIN) {
-                    val targetRow = UserTable.selectAll()
-                        .where { UserTable.id eq UUID.fromString(id.value) }
-                        .singleOrNull()
-                        ?: return@suspendTransaction Result.success(false)
-                    val isTargetCurrentlyAdmin = targetRow[UserTable.role] == UserRole.ADMIN
+                // Cannot promote anyone to SUPERADMIN
+                if (role == UserRole.SUPERADMIN) {
+                    return@suspendTransaction Result.failure(
+                        IllegalStateException("Cannot promote to superadmin")
+                    )
+                }
+
+                val targetRow = UserTable.selectAll()
+                    .where { UserTable.id eq UUID.fromString(id.value) }
+                    .singleOrNull()
+                    ?: return@suspendTransaction Result.success(false)
+
+                // Cannot change SUPERADMIN's role
+                if (targetRow[UserTable.role] == UserRole.SUPERADMIN) {
+                    return@suspendTransaction Result.failure(
+                        IllegalStateException("Cannot change superadmin role")
+                    )
+                }
+
+                // Check last-admin constraint when demoting an admin
+                if (!role.isAdmin) {
+                    val isTargetCurrentlyAdmin = targetRow[UserTable.role].isAdmin
                     if (isTargetCurrentlyAdmin) {
                         val adminCount = UserTable.selectAll()
-                            .where { UserTable.role eq UserRole.ADMIN }
+                            .where { (UserTable.role eq UserRole.ADMIN) or (UserTable.role eq UserRole.SUPERADMIN) }
                             .count()
                         if (adminCount <= 1) {
                             return@suspendTransaction Result.failure(
@@ -521,10 +549,10 @@ class DatabaseAuthService(
                     .where { UserTable.id eq UUID.fromString(userId.value) }
                     .singleOrNull()
                     ?: return@suspendTransaction Result.success(false)
-                val isAdmin = currentRow[UserTable.role] == UserRole.ADMIN
-                if (isAdmin) {
+                val isAdminRole = currentRow[UserTable.role].isAdmin
+                if (isAdminRole) {
                     val adminCount = UserTable.selectAll()
-                        .where { UserTable.role eq UserRole.ADMIN }
+                        .where { (UserTable.role eq UserRole.ADMIN) or (UserTable.role eq UserRole.SUPERADMIN) }
                         .count()
                     if (adminCount <= 1) {
                         return@suspendTransaction Result.failure(
@@ -596,22 +624,49 @@ class DatabaseAuthService(
         updated > 0
     }
 
-    override suspend fun adminDeleteUser(id: UserId, adminUserId: UserId): Result<Boolean> {
-        if (id == adminUserId) {
+    override suspend fun adminDeleteUser(
+        id: UserId,
+        adminUserId: UserId,
+        confirmTeamLeadTransfer: Boolean,
+    ): Result<Boolean> {
+        // Compare normalized UUIDs to prevent case-sensitivity bypass
+        if (id.value.equals(adminUserId.value, ignoreCase = true)) {
             return Result.failure(IllegalArgumentException("CANNOT_DELETE_SELF"))
         }
         return withContext(Dispatchers.IO) {
             suspendTransaction(db, transactionIsolation = Connection.TRANSACTION_SERIALIZABLE) {
                 val uuid = UUID.fromString(id.value)
+                val adminUuid = UUID.fromString(adminUserId.value)
                 val currentRow = UserTable.selectAll()
                     .where { UserTable.id eq uuid }
                     .singleOrNull()
                     ?: return@suspendTransaction Result.success(false)
 
-                val isAdmin = currentRow[UserTable.role] == UserRole.ADMIN
-                if (isAdmin) {
+                val targetRole = currentRow[UserTable.role]
+
+                // Cannot delete superadmin
+                if (targetRole == UserRole.SUPERADMIN) {
+                    return@suspendTransaction Result.failure(
+                        IllegalArgumentException("CANNOT_DELETE_SUPERADMIN")
+                    )
+                }
+
+                // Only superadmin can delete admins
+                if (targetRole == UserRole.ADMIN) {
+                    val adminRow = UserTable.selectAll()
+                        .where { UserTable.id eq adminUuid }
+                        .singleOrNull()
+                    if (adminRow == null || adminRow[UserTable.role] != UserRole.SUPERADMIN) {
+                        return@suspendTransaction Result.failure(
+                            IllegalArgumentException("SUPERADMIN_REQUIRED")
+                        )
+                    }
+                }
+
+                // Check last-admin constraint
+                if (targetRole.isAdmin) {
                     val adminCount = UserTable.selectAll()
-                        .where { UserTable.role eq UserRole.ADMIN }
+                        .where { (UserTable.role eq UserRole.ADMIN) or (UserTable.role eq UserRole.SUPERADMIN) }
                         .count()
                     if (adminCount <= 1) {
                         return@suspendTransaction Result.failure(
@@ -620,25 +675,56 @@ class DatabaseAuthService(
                     }
                 }
 
-                // Check last team lead constraint per team
-                val userTeamLeaderships = TeamMembershipTable.selectAll()
+                // Find teams where target is the sole team lead (subquery, no N+1)
+                val userLeadTeams = TeamMembershipTable
+                    .select(TeamMembershipTable.teamId)
                     .where {
                         (TeamMembershipTable.userId eq uuid) and
                             (TeamMembershipTable.role eq TeamRole.TEAM_LEAD)
                     }
+                val soleLeadTeamIds = TeamMembershipTable
+                    .select(TeamMembershipTable.teamId)
+                    .where {
+                        (TeamMembershipTable.teamId inSubQuery userLeadTeams) and
+                            (TeamMembershipTable.role eq TeamRole.TEAM_LEAD)
+                    }
+                    .groupBy(TeamMembershipTable.teamId)
+                    .having { TeamMembershipTable.teamId.count() eq 1L }
                     .map { it[TeamMembershipTable.teamId].value }
 
-                for (teamId in userTeamLeaderships) {
-                    val leadCount = TeamMembershipTable.selectAll()
-                        .where {
-                            (TeamMembershipTable.teamId eq teamId) and
-                                (TeamMembershipTable.role eq TeamRole.TEAM_LEAD)
-                        }
-                        .count()
-                    if (leadCount <= 1) {
+                if (soleLeadTeamIds.isNotEmpty()) {
+                    if (!confirmTeamLeadTransfer) {
                         return@suspendTransaction Result.failure(
-                            IllegalStateException("LAST_TEAM_LEAD")
+                            IllegalStateException("TEAM_LEAD_TRANSFER_REQUIRED")
                         )
+                    }
+                    // Transfer team lead to admin for each affected team
+                    for (teamId in soleLeadTeamIds) {
+                        val existingMembership = TeamMembershipTable.selectAll()
+                            .where {
+                                (TeamMembershipTable.teamId eq teamId) and
+                                    (TeamMembershipTable.userId eq adminUuid)
+                            }
+                            .singleOrNull()
+
+                        if (existingMembership != null) {
+                            // Promote existing membership to TEAM_LEAD
+                            TeamMembershipTable.update({
+                                (TeamMembershipTable.teamId eq teamId) and
+                                    (TeamMembershipTable.userId eq adminUuid)
+                            }) {
+                                it[TeamMembershipTable.role] = TeamRole.TEAM_LEAD
+                            }
+                        } else {
+                            // Add admin as new member with TEAM_LEAD role
+                            TeamMembershipTable.insert {
+                                it[TeamMembershipTable.teamId] = teamId
+                                it[TeamMembershipTable.userId] = adminUuid
+                                it[TeamMembershipTable.role] = TeamRole.TEAM_LEAD
+                                it[TeamMembershipTable.joinedAt] = Clock.System.now()
+                            }
+                        }
+                        log.info("Transferred team lead of team '{}' to admin '{}'", teamId, adminUserId.value)
                     }
                 }
 
@@ -651,6 +737,69 @@ class DatabaseAuthService(
             }
         }
     }
+
+    override suspend fun getDeletePreCheck(targetId: UserId, adminUserId: UserId): DeleteUserPreCheckResponse =
+        dbQuery {
+            if (targetId.value.equals(adminUserId.value, ignoreCase = true)) {
+                return@dbQuery DeleteUserPreCheckResponse(canDelete = false)
+            }
+
+            val targetUuid = UUID.fromString(targetId.value)
+            val targetRow = UserTable.selectAll()
+                .where { UserTable.id eq targetUuid }
+                .singleOrNull()
+                ?: return@dbQuery DeleteUserPreCheckResponse(canDelete = false)
+
+            val targetRole = targetRow[UserTable.role]
+
+            // Superadmin cannot be deleted
+            if (targetRole == UserRole.SUPERADMIN) {
+                return@dbQuery DeleteUserPreCheckResponse(canDelete = false)
+            }
+
+            // Check if caller is superadmin (needed for deleting admins)
+            val adminUuid = UUID.fromString(adminUserId.value)
+            val adminRow = UserTable.selectAll()
+                .where { UserTable.id eq adminUuid }
+                .singleOrNull()
+
+            if (targetRole == UserRole.ADMIN && adminRow?.get(UserTable.role) != UserRole.SUPERADMIN) {
+                return@dbQuery DeleteUserPreCheckResponse(canDelete = false, requiresSuperAdmin = true)
+            }
+
+            // Find teams where target is the sole team lead (single query with JOIN, no N+1)
+            val userLeadTeams = TeamMembershipTable
+                .select(TeamMembershipTable.teamId)
+                .where {
+                    (TeamMembershipTable.userId eq targetUuid) and
+                        (TeamMembershipTable.role eq TeamRole.TEAM_LEAD)
+                }
+            val soleLeadTeamIds = TeamMembershipTable
+                .select(TeamMembershipTable.teamId)
+                .where {
+                    (TeamMembershipTable.teamId inSubQuery userLeadTeams) and
+                        (TeamMembershipTable.role eq TeamRole.TEAM_LEAD)
+                }
+                .groupBy(TeamMembershipTable.teamId)
+                .having { TeamMembershipTable.teamId.count() eq 1L }
+                .map { it[TeamMembershipTable.teamId].value }
+                .toSet()
+
+            val affectedTeams = if (soleLeadTeamIds.isNotEmpty()) {
+                TeamTable.selectAll()
+                    .where { TeamTable.id inList soleLeadTeamIds }
+                    .map { row ->
+                        AffectedTeamInfo(
+                            teamId = TeamId(row[TeamTable.id].value.toString()),
+                            teamName = row[TeamTable.name],
+                        )
+                    }
+            } else {
+                emptyList()
+            }
+
+            DeleteUserPreCheckResponse(canDelete = true, affectedTeams = affectedTeams)
+        }
 
     override suspend fun isApproved(id: UserId): Boolean = dbQuery {
         UserTable.select(UserTable.approved)

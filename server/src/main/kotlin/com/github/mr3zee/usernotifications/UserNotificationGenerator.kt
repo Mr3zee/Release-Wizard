@@ -74,6 +74,7 @@ class UserNotificationGenerator(
             for (member in members) {
                 // Map TeamRole to UserRole for comparison
                 val memberMatchesRole = when (rule.requiredRole) {
+                    UserRole.SUPERADMIN -> member.role == TeamRole.TEAM_LEAD
                     UserRole.ADMIN -> member.role == TeamRole.TEAM_LEAD // Team leads are the closest match
                     UserRole.USER -> true // All members match USER role
                     null -> false

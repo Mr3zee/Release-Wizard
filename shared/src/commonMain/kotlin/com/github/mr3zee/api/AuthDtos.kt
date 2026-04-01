@@ -119,3 +119,21 @@ data class PasswordPolicyResponse(
     val requireSpecial: Boolean,
     val oauthProviders: List<OAuthProvider> = emptyList(),
 )
+
+@Serializable
+data class AdminDeleteUserRequest(
+    val confirmTeamLeadTransfer: Boolean = false,
+)
+
+@Serializable
+data class DeleteUserPreCheckResponse(
+    val canDelete: Boolean,
+    val requiresSuperAdmin: Boolean = false,
+    val affectedTeams: List<AffectedTeamInfo> = emptyList(),
+)
+
+@Serializable
+data class AffectedTeamInfo(
+    val teamId: TeamId,
+    val teamName: String,
+)

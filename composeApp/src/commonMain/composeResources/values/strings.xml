@@ -652,6 +652,7 @@
 
     <!-- ==================== Profile ==================== -->
     <string name="profile_title">Profile</string>
+    <string name="profile_role_superadmin">Super Admin</string>
     <string name="profile_role_admin">Admin</string>
     <string name="profile_role_user">User</string>
     <string name="profile_member_since">Member since %1$s</string>
@@ -743,6 +744,11 @@
     <string name="admin_users_tokens_empty">No access tokens</string>
     <string name="admin_users_token_revoked">Token revoked</string>
     <string name="admin_users_revoke_token_confirm">Revoke token \u201c%1$s\u201d? This cannot be undone.</string>
+    <string name="admin_users_delete">Delete</string>
+    <string name="admin_users_delete_confirm">This will permanently delete %1$s\u0027s account and all their data.</string>
+    <string name="admin_users_delete_confirm_team_lead">This will permanently delete %1$s\u0027s account. You will become team lead of: %2$s</string>
+    <string name="admin_users_delete_success">%1$s has been deleted</string>
+    <string name="admin_users_and_n_others">and %1$d others</string>
 
     <!-- ==================== Pending Approval Screen ==================== -->
     <string name="pending_approval_title">Registration Pending</string>
