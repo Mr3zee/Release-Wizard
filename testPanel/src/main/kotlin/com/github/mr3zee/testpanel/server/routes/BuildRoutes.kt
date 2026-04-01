@@ -40,6 +40,33 @@ fun Routing.buildRoutes(state: TestPanelState) {
         )
     }
 
+    get("/app/rest/builds/id:{buildId}/resulting-properties") {
+        val buildId = call.parameters["buildId"]?.toIntOrNull()
+        if (buildId == null) {
+            call.respondText("Invalid build ID", status = HttpStatusCode.BadRequest)
+            return@get
+        }
+
+        val build = state.currentState().builds.find { it.id == buildId }
+        if (build == null) {
+            call.respondText("Build not found: $buildId", status = HttpStatusCode.NotFound)
+            return@get
+        }
+
+        call.respond(
+            buildJsonObject {
+                putJsonArray("property") {
+                    for ((name, value) in build.resultingProperties) {
+                        addJsonObject {
+                            put("name", name)
+                            put("value", value)
+                        }
+                    }
+                }
+            }
+        )
+    }
+
     post("/app/rest/builds/{locator}") {
         val locator = call.parameters["locator"] ?: ""
         val buildId = locator.removePrefix("id:").toIntOrNull()

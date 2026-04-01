@@ -8,6 +8,7 @@ import com.github.mr3zee.model.Block
 import com.github.mr3zee.model.BlockExecution
 import com.github.mr3zee.model.ConnectionConfig
 import com.github.mr3zee.model.Parameter
+import com.github.mr3zee.model.knownOutputs
 import com.github.mr3zee.webhooks.StatusWebhookService
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -16,6 +17,7 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import org.slf4j.LoggerFactory
 
@@ -51,7 +53,7 @@ class TeamCityBuildExecutor(
         return if (persistedBuildId != null) {
             // Resume polling from persisted build ID
             try {
-                pollBuildToCompletion(config, persistedBuildId, parameters, scope)
+                pollBuildToCompletion(config, persistedBuildId, parameters, scope, block)
             } finally {
                 deactivateTokenIfNeeded(block, context)
             }
@@ -139,7 +141,7 @@ class TeamCityBuildExecutor(
         scope?.persistOutputs(mapOf(INTERNAL_BUILD_ID_KEY to buildId))
 
         return try {
-            pollBuildToCompletion(config, buildId, parameters, scope)
+            pollBuildToCompletion(config, buildId, parameters, scope, block)
         } finally {
             deactivateTokenIfNeeded(block, context)
         }
@@ -150,6 +152,7 @@ class TeamCityBuildExecutor(
         buildId: String,
         parameters: List<Parameter>,
         scope: ExecutionScope?,
+        block: Block.ActionBlock,
     ): Map<String, String> {
         // Discover sub-builds once (non-fatal on failure)
         var subBuilds = buildPollingService.discoverTeamCitySubBuilds(
@@ -175,7 +178,11 @@ class TeamCityBuildExecutor(
             }
         }
 
-        return baseOutputs + fetchArtifactOutputs(parameters, config, buildId)
+        // Compute custom output names (outputs on the block that are NOT known system outputs or reserved keys)
+        val knownOutputNames = block.type.knownOutputs().map { it.name }.toSet()
+        val customOutputNames = block.outputs.filter { it.name.isNotBlank() }.map { it.name }.toSet() - knownOutputNames - RESERVED_OUTPUT_KEYS
+
+        return baseOutputs + fetchArtifactOutputs(parameters, config, buildId) + fetchCustomOutputs(config, buildId, customOutputNames)
     }
 
     private suspend fun deactivateTokenIfNeeded(block: Block.ActionBlock, context: ExecutionContext) {
@@ -213,6 +220,43 @@ class TeamCityBuildExecutor(
         }
     }
 
+    private suspend fun fetchCustomOutputs(
+        config: ConnectionConfig.TeamCityConfig,
+        buildId: String,
+        customOutputNames: Set<String>,
+    ): Map<String, String> {
+        if (customOutputNames.isEmpty()) return emptyMap()
+
+        return try {
+            val response = httpClient.get("${config.serverUrl}/app/rest/builds/id:$buildId/resulting-properties") {
+                header("Authorization", "Bearer ${config.token}")
+                header("Accept", "application/json")
+            }
+
+            if (!response.status.isSuccess()) {
+                log.warn("Failed to fetch resulting-properties for build {}: HTTP {}", buildId, response.status)
+                return emptyMap()
+            }
+
+            val body = response.body<JsonObject>()
+            val properties = body["property"]?.jsonArray ?: return emptyMap()
+
+            properties
+                .filterIsInstance<JsonObject>()
+                .mapNotNull { prop ->
+                    val name = prop["name"]?.jsonPrimitive?.content ?: return@mapNotNull null
+                    val value = prop["value"]?.jsonPrimitive?.content ?: return@mapNotNull null
+                    if (name in customOutputNames) name to value else null
+                }
+                .toMap()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("Failed to fetch custom outputs for build {}: {}", buildId, e.message)
+            emptyMap()
+        }
+    }
+
     override suspend fun cancel(block: Block.ActionBlock, context: ExecutionContext) {
         val connectionId = block.connectionId ?: return
         val config = context.connections[connectionId] as? ConnectionConfig.TeamCityConfig ?: return
@@ -246,6 +290,9 @@ class TeamCityBuildExecutor(
         private val SYSTEM_PARAMETER_KEYS = setOf(
             "buildTypeId", "branch", "artifactsGlob", "artifactsMaxDepth", "artifactsMaxFiles",
         )
+
+        /** Output keys reserved by the system that custom outputs must not overwrite. */
+        private val RESERVED_OUTPUT_KEYS = setOf(BlockExecution.ARTIFACTS_OUTPUT_KEY)
 
         fun escapeXml(value: String): String = value
             .replace("&", "&amp;")

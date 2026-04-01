@@ -66,6 +66,7 @@ fun BlockPropertiesPanel(
     onRefreshConfigs: (BlockId) -> Unit = {},
     onRefreshConfigParams: (BlockId) -> Unit = {},
     onUpdateParameters: (BlockId, List<Parameter>) -> Unit,
+    onUpdateOutputs: (BlockId, List<BlockOutput>) -> Unit = { _, _ -> },
     onUpdateTimeout: (BlockId, Long?) -> Unit,
     onUpdatePreGate: (BlockId, Gate?) -> Unit,
     onUpdatePostGate: (BlockId, Gate?) -> Unit,
@@ -299,6 +300,7 @@ fun BlockPropertiesPanel(
                         isFetchingConfigParams = isFetchingConfigParams,
                         onRefreshConfigParams = onRefreshConfigParams,
                         onUpdateParameters = onUpdateParameters,
+                        onUpdateOutputs = onUpdateOutputs,
                         enabled = enabled,
                     )
                     2 -> GatesTabContent(
@@ -727,32 +729,6 @@ private fun OverviewTabContent(
         enabled = enabled,
         onUpdateDescription = onUpdateDescription,
     )
-
-    // Read-only outputs section — merge known system outputs with any custom outputs on the block
-    val allOutputs = remember(block.type, block.outputs) {
-        val known = block.type.knownOutputs()
-        val knownNames = known.map { it.name }.toSet()
-        val custom = block.outputs.filter { it.name !in knownNames }
-        known + custom
-    }
-    if (allOutputs.isNotEmpty()) {
-        Spacer(Modifier.height(Spacing.lg))
-        HorizontalDivider(modifier = Modifier.padding(bottom = Spacing.sm))
-        Text(packStringResource(Res.string.editor_outputs_header), style = AppTypography.subheading)
-        Spacer(Modifier.height(Spacing.xs))
-        allOutputs.forEach { output ->
-            Column(modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xxs)) {
-                Text(output.name, style = AppTypography.bodySmall)
-                if (output.description.isNotEmpty()) {
-                    Text(
-                        output.description,
-                        style = AppTypography.caption,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
-    }
 }
 
 @Composable
@@ -763,6 +739,7 @@ private fun ParametersTabContent(
     isFetchingConfigParams: Boolean,
     onRefreshConfigParams: (BlockId) -> Unit,
     onUpdateParameters: (BlockId, List<Parameter>) -> Unit,
+    onUpdateOutputs: (BlockId, List<BlockOutput>) -> Unit,
     enabled: Boolean,
 ) {
     val configKey = block.type.configIdParameterKey()
@@ -850,6 +827,85 @@ private fun ParametersTabContent(
         modifier = Modifier.fillMaxWidth().testTag("add_parameter_button"),
     ) {
         Text(packStringResource(Res.string.editor_prop_add_parameter))
+    }
+
+    // --- Outputs section ---
+    Spacer(Modifier.height(Spacing.lg))
+    HorizontalDivider(modifier = Modifier.padding(bottom = Spacing.sm))
+    Text(
+        packStringResource(Res.string.editor_outputs_section_header),
+        style = AppTypography.subheading,
+    )
+    Spacer(Modifier.height(Spacing.xs))
+
+    // Known (system) outputs — read-only
+    val knownOutputs = remember(block.type) { block.type.knownOutputs() }
+    val knownOutputNames = remember(knownOutputs) { knownOutputs.map { it.name }.toSet() }
+
+    knownOutputs.forEach { output ->
+        Column(modifier = Modifier.fillMaxWidth().padding(vertical = Spacing.xxs)) {
+            Text(output.name, style = AppTypography.bodySmall)
+            if (output.description.isNotEmpty()) {
+                Text(
+                    output.description,
+                    style = AppTypography.caption,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+
+    // Custom outputs — editable, only for TEAMCITY_BUILD blocks
+    if (block.type == BlockType.TEAMCITY_BUILD) {
+        Spacer(Modifier.height(Spacing.sm))
+        val customLabelColor = LocalAppColors.current.chromeTextSecondary
+        Text(
+            packStringResource(Res.string.editor_custom_outputs_label),
+            style = AppTypography.label,
+            color = customLabelColor,
+        )
+        Spacer(Modifier.height(Spacing.xs))
+
+        val customOutputs = remember(block.outputs, knownOutputNames) {
+            block.outputs.filter { it.name !in knownOutputNames }
+        }
+        var outputs by remember(block.id) { mutableStateOf(customOutputs) }
+        if (outputs != customOutputs) outputs = customOutputs
+
+        outputs.forEachIndexed { index, output ->
+            key(block.id, "custom_output", index) {
+                CustomOutputRow(
+                    output = output,
+                    knownOutputNames = knownOutputNames,
+                    existingCustomNames = outputs.mapIndexedNotNull { i, o -> if (i != index) o.name else null }.toSet(),
+                    onUpdate = { updated ->
+                        outputs = outputs.toMutableList().apply { set(index, updated) }
+                        onUpdateOutputs(block.id, outputs)
+                    },
+                    onRemove = {
+                        outputs = outputs.toMutableList().apply { removeAt(index) }
+                        onUpdateOutputs(block.id, outputs)
+                    },
+                    enabled = enabled,
+                    nameTestTag = "custom_output_name_field_$index",
+                    descriptionTestTag = "custom_output_description_field_$index",
+                    removeTestTag = "remove_custom_output_$index",
+                )
+                Spacer(Modifier.height(Spacing.xs))
+            }
+        }
+
+        RwButton(
+            onClick = {
+                outputs = outputs + BlockOutput(name = "")
+                onUpdateOutputs(block.id, outputs)
+            },
+            variant = RwButtonVariant.Secondary,
+            enabled = enabled,
+            modifier = Modifier.fillMaxWidth().testTag("add_custom_output_button"),
+        ) {
+            Text(packStringResource(Res.string.editor_add_custom_output))
+        }
     }
 }
 
@@ -1205,6 +1261,89 @@ private fun ParameterRow(
             )
         },
     )
+}
+
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+private fun CustomOutputRow(
+    output: BlockOutput,
+    knownOutputNames: Set<String>,
+    existingCustomNames: Set<String>,
+    onUpdate: (BlockOutput) -> Unit,
+    onRemove: () -> Unit,
+    enabled: Boolean = true,
+    nameTestTag: String = "custom_output_name_field",
+    descriptionTestTag: String = "custom_output_description_field",
+    removeTestTag: String = "remove_custom_output_button",
+) {
+    val colors = LocalAppColors.current
+    var isHovered by remember { mutableStateOf(false) }
+    val isNameClash = output.name.isNotBlank() && output.name in knownOutputNames
+    val isDuplicate = output.name.isNotBlank() && output.name in existingCustomNames
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .onPointerEvent(PointerEventType.Enter) { isHovered = true }
+            .onPointerEvent(PointerEventType.Exit) { isHovered = false },
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, colors.inputBorder, AppShapes.sm)
+                .padding(Spacing.sm),
+        ) {
+            RwTextField(
+                value = output.name,
+                onValueChange = { newName ->
+                    onUpdate(output.copy(name = newName))
+                },
+                placeholder = packStringResource(Res.string.editor_custom_output_name_placeholder),
+                singleLine = true,
+                enabled = enabled,
+                isError = isNameClash || isDuplicate,
+                supportingText = when {
+                    isNameClash -> {{ Text(packStringResource(Res.string.editor_custom_output_name_clash)) }}
+                    isDuplicate -> {{ Text(packStringResource(Res.string.editor_custom_output_duplicate)) }}
+                    else -> null
+                },
+                modifier = Modifier.fillMaxWidth().testTag(nameTestTag),
+                textStyle = AppTypography.bodySmall,
+            )
+            Spacer(Modifier.height(Spacing.xxs))
+            RwTextField(
+                value = output.description,
+                onValueChange = { newDesc ->
+                    onUpdate(output.copy(description = newDesc))
+                },
+                placeholder = packStringResource(Res.string.editor_custom_output_description_placeholder),
+                singleLine = true,
+                enabled = enabled,
+                modifier = Modifier.fillMaxWidth().testTag(descriptionTestTag),
+                textStyle = AppTypography.caption,
+            )
+        }
+        if (isHovered && enabled) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = Spacing.xs, y = -Spacing.xs)
+                    .size(20.dp)
+                    .background(colors.chromeSurface, CircleShape)
+                    .border(1.dp, colors.inputBorder, CircleShape)
+                    .clickable(onClick = onRemove)
+                    .testTag(removeTestTag),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = packStringResource(Res.string.editor_prop_remove_description),
+                    modifier = Modifier.size(12.dp),
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            }
+        }
+    }
 }
 
 private val BlockIdSanitizeRegex = Regex("[^a-z0-9-]")

@@ -656,6 +656,7 @@ fun DagEditorScreen(
                         onRefreshConfigs = { id -> viewModel.fetchExternalConfigs(id) },
                         onRefreshConfigParams = { id -> viewModel.fetchExternalConfigParameters(id) },
                         onUpdateParameters = { id, params -> viewModel.updateBlockParameters(id, params) },
+                        onUpdateOutputs = { id, outputs -> viewModel.updateBlockOutputs(id, outputs) },
                         onUpdateTimeout = { id, timeout -> viewModel.updateBlockTimeout(id, timeout) },
                         onUpdatePreGate = { id, gate -> viewModel.updateBlockPreGate(id, gate) },
                         onUpdatePostGate = { id, gate -> viewModel.updateBlockPostGate(id, gate) },

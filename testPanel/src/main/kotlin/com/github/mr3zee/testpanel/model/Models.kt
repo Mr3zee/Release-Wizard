@@ -39,6 +39,7 @@ data class TcBuild(
     val startDate: String? = null,
     val finishDate: String? = null,
     val parentBuildId: Int? = null,
+    val resultingProperties: Map<String, String> = emptyMap(),
 )
 
 @Serializable

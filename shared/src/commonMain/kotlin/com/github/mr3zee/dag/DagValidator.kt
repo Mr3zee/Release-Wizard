@@ -22,6 +22,8 @@ sealed class ValidationError {
     data class ParameterKeyTooLong(val blockId: BlockId, val key: String, val max: Int) : ValidationError()
     data class ParameterValueTooLong(val blockId: BlockId, val key: String, val max: Int) : ValidationError()
     data class BlockDescriptionTooLong(val blockId: BlockId, val length: Int, val max: Int) : ValidationError()
+    data class TooManyOutputs(val blockId: BlockId, val count: Int, val max: Int) : ValidationError()
+    data class OutputNameTooLong(val blockId: BlockId, val name: String, val max: Int) : ValidationError()
 }
 
 object DagValidator {
@@ -34,6 +36,8 @@ object DagValidator {
     const val MAX_PARAM_KEY_LENGTH = 255
     const val MAX_PARAM_VALUE_LENGTH = 1000
     const val MAX_BLOCK_DESCRIPTION_LENGTH = 2000
+    const val MAX_OUTPUTS_PER_BLOCK = 20
+    const val MAX_OUTPUT_NAME_LENGTH = 255
 
     fun validate(graph: DagGraph, currentDepth: Int = 0, globalBlockIds: MutableSet<BlockId> = mutableSetOf()): List<ValidationError> {
         val errors = mutableListOf<ValidationError>()
@@ -84,6 +88,14 @@ object DagValidator {
                     }
                     if (param.value.length > MAX_PARAM_VALUE_LENGTH) {
                         errors.add(ValidationError.ParameterValueTooLong(block.id, param.key, MAX_PARAM_VALUE_LENGTH))
+                    }
+                }
+                if (block.outputs.size > MAX_OUTPUTS_PER_BLOCK) {
+                    errors.add(ValidationError.TooManyOutputs(block.id, block.outputs.size, MAX_OUTPUTS_PER_BLOCK))
+                }
+                for (output in block.outputs) {
+                    if (output.name.length > MAX_OUTPUT_NAME_LENGTH) {
+                        errors.add(ValidationError.OutputNameTooLong(block.id, output.name, MAX_OUTPUT_NAME_LENGTH))
                     }
                 }
             }

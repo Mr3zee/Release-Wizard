@@ -184,6 +184,11 @@ class DefaultProjectsService(
                         "Block parameter key contains invalid characters ($, {, })"
                     }
                 }
+                for (output in block.outputs) {
+                    require(TemplateEngine.validateParameterKey(output.name)) {
+                        "Block output name '${output.name}' contains invalid characters ($, {, })"
+                    }
+                }
             }
         }
 
@@ -205,6 +210,8 @@ class DefaultProjectsService(
                     is ValidationError.ParameterKeyTooLong -> "Parameter key too long on block: ${error.blockId.value}"
                     is ValidationError.ParameterValueTooLong -> "Parameter value too long on block: ${error.blockId.value}"
                     is ValidationError.BlockDescriptionTooLong -> "Block description too long: ${error.blockId.value} (${error.length}/${error.max})"
+                    is ValidationError.TooManyOutputs -> "Too many outputs on block: ${error.blockId.value} (${error.count}/${error.max})"
+                    is ValidationError.OutputNameTooLong -> "Output name too long on block: ${error.blockId.value}"
                 }
             }
             throw IllegalArgumentException("Invalid DAG: $messages")

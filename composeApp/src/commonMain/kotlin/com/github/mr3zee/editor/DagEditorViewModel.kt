@@ -1195,6 +1195,10 @@ class DagEditorViewModel(
         updateActionBlock(blockId) { it.copy(parameters = parameters) }
     }
 
+    fun updateBlockOutputs(blockId: BlockId, outputs: List<BlockOutput>) {
+        updateActionBlock(blockId) { it.copy(outputs = outputs) }
+    }
+
     fun updateBlockTimeout(blockId: BlockId, timeoutSeconds: Long?) {
         updateActionBlock(blockId) { it.copy(timeoutSeconds = timeoutSeconds) }
     }

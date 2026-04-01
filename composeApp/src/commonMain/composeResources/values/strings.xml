@@ -792,5 +792,11 @@
     <string name="releases_go_to_project">Edit Project</string>
 
     <!-- ==================== Editor: Block Outputs ==================== -->
-    <string name="editor_outputs_header">Outputs</string>
+    <string name="editor_outputs_section_header">Outputs</string>
+    <string name="editor_add_custom_output">Add Custom Output</string>
+    <string name="editor_custom_output_name_placeholder">TC parameter name</string>
+    <string name="editor_custom_outputs_label">Custom Outputs</string>
+    <string name="editor_custom_output_description_placeholder">Description (optional)</string>
+    <string name="editor_custom_output_name_clash">Name conflicts with a known output</string>
+    <string name="editor_custom_output_duplicate">Duplicate output name</string>
 </resources>
