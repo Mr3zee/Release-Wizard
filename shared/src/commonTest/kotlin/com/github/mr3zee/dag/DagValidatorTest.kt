@@ -426,6 +426,39 @@ class DagValidatorTest {
     }
 
     @Test
+    fun `detects duplicate output names`() {
+        val block = Block.ActionBlock(
+            id = BlockId("a"),
+            name = "a",
+            type = BlockType.TEAMCITY_BUILD,
+            outputs = listOf(
+                BlockOutput("version"),
+                BlockOutput("version"),
+                BlockOutput("commitHash"),
+            ),
+        )
+        val graph = DagGraph(blocks = listOf(block))
+        val errors = DagValidator.validate(graph)
+        assertTrue(errors.any { it is ValidationError.DuplicateOutputName })
+        val dupes = errors.filterIsInstance<ValidationError.DuplicateOutputName>()
+        assertEquals(1, dupes.size)
+        assertEquals("version", dupes[0].name)
+    }
+
+    @Test
+    fun `blank output names are not flagged as duplicates`() {
+        val block = Block.ActionBlock(
+            id = BlockId("a"),
+            name = "a",
+            type = BlockType.TEAMCITY_BUILD,
+            outputs = listOf(BlockOutput(""), BlockOutput(""), BlockOutput("valid")),
+        )
+        val graph = DagGraph(blocks = listOf(block))
+        val errors = DagValidator.validate(graph)
+        assertTrue(errors.none { it is ValidationError.DuplicateOutputName })
+    }
+
+    @Test
     fun `detects block description too long in nested container`() {
         val longDescription = "x".repeat(DagValidator.MAX_BLOCK_DESCRIPTION_LENGTH + 1)
         val nestedBlock = Block.ActionBlock(

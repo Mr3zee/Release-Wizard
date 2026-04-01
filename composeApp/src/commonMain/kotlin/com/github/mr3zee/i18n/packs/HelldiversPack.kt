@@ -314,6 +314,7 @@ object HelldiversPack {
             "editor_validation_block_description_too_long" to $$"Briefing exceeds limit: %1$d / %2$d",
             "editor_validation_too_many_outputs" to $$"Too many stratagem outputs, Citizen (max %1$d)",
             "editor_validation_output_name_too_long" to $$"Output codename exceeds clearance (max %1$d)",
+            "editor_validation_duplicate_output_name" to $$"Duplicate stratagem codename: %1$s",
             "editor_validation_block_name_too_long" to $$"Block callsign too long: %1$d chars (max %2$d), Citizen",
             "editor_validation_cycle" to $$"Tactical loop detected involving %1$d units. Regroup, Citizen!",
             "editor_validation_duplicate_id" to $$"Duplicate unit designation: %1$s. Maintain order, Helldiver!",

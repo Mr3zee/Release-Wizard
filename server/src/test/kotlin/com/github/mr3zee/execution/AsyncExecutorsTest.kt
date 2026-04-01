@@ -860,6 +860,120 @@ class AsyncExecutorsTest {
         assertNull(outputs["version"])
     }
 
+    @Test
+    fun `teamcity executor captures custom outputs on resume`() = runBlocking {
+        val client = mockClient { request ->
+            val url = request.url.toString()
+            when {
+                url.contains("/app/rest/builds?locator=snapshotDependency") -> respond(
+                    """{"build":[]}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                url.contains("/resulting-properties") -> respond(
+                    """{"property":[{"name":"version","value":"2.0.0"}]}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                url.contains("/app/rest/builds/id:42") -> respond(
+                    """{"state":"finished","status":"SUCCESS","number":"42"}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                else -> respond("{}", HttpStatusCode.OK)
+            }
+        }
+
+        val pollingService = BuildPollingService(client)
+        val executor = TeamCityBuildExecutor(client, pollingService)
+
+        val block = Block.ActionBlock(
+            id = BlockId("tc-resume-custom"),
+            name = "Build",
+            type = BlockType.TEAMCITY_BUILD,
+            connectionId = ConnectionId("conn-1"),
+            outputs = listOf(BlockOutput(name = "version")),
+        )
+
+        val ctx = ExecutionContext(
+            releaseId = ReleaseId("release-1"),
+            parameters = emptyList(),
+            blockOutputs = mapOf(block.id to mapOf(TeamCityBuildExecutor.INTERNAL_BUILD_ID_KEY to "42")),
+            connections = mapOf(ConnectionId("conn-1") to ConnectionConfig.TeamCityConfig(
+                serverUrl = "https://tc.example.com",
+                token = "t",
+                pollingIntervalSeconds = 1,
+            )),
+        )
+
+        val outputs = executor.resume(block, listOf(Parameter(key = "buildTypeId", value = "bt1")), ctx)
+
+        assertEquals("42", outputs["buildNumber"])
+        assertEquals("SUCCESS", outputs["buildStatus"])
+        assertEquals("2.0.0", outputs["version"])
+    }
+
+    @Test
+    fun `teamcity executor handles resulting-properties with missing value field`() = runBlocking {
+        val client = mockClient { request ->
+            val url = request.url.toString()
+            when {
+                url.contains("/app/rest/buildQueue") -> respond(
+                    """{"id":"42","buildTypeId":"bt1","state":"queued"}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                url.contains("/app/rest/builds?locator=snapshotDependency") -> respond(
+                    """{"build":[]}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                url.contains("/resulting-properties") -> respond(
+                    """{"property":[{"name":"version"},{"name":"commitHash","value":"abc123"}]}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                url.contains("/app/rest/builds/id:42") -> respond(
+                    """{"state":"finished","status":"SUCCESS","number":"42"}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                else -> respond("{}", HttpStatusCode.OK)
+            }
+        }
+
+        val pollingService = BuildPollingService(client)
+        val executor = TeamCityBuildExecutor(client, pollingService)
+
+        val block = Block.ActionBlock(
+            id = BlockId("tc-missing-val"),
+            name = "Build",
+            type = BlockType.TEAMCITY_BUILD,
+            connectionId = ConnectionId("conn-1"),
+            outputs = listOf(
+                BlockOutput(name = "version"),
+                BlockOutput(name = "commitHash"),
+            ),
+        )
+
+        val outputs = executor.execute(
+            block = block,
+            parameters = listOf(Parameter(key = "buildTypeId", value = "bt1")),
+            context = context(
+                config = ConnectionConfig.TeamCityConfig(
+                    serverUrl = "https://tc.example.com",
+                    token = "t",
+                    pollingIntervalSeconds = 1,
+                ),
+            ),
+        )
+
+        // Property with missing value field should be skipped
+        assertNull(outputs["version"])
+        // Property with value present should be captured
+        assertEquals("abc123", outputs["commitHash"])
+    }
+
     // --- GitHub Action Executor ---
 
     @Test

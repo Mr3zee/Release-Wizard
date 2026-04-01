@@ -315,6 +315,7 @@ object RickRollPack {
             "editor_validation_block_description_too_long" to $$"Description too long, never gonna fit: %1$d / %2$d",
             "editor_validation_too_many_outputs" to $$"Never Gonna Give You More Outputs (max %1$d)",
             "editor_validation_output_name_too_long" to $$"Output name too long, never gonna fit (max %1$d)",
+            "editor_validation_duplicate_output_name" to $$"Never Gonna Duplicate: %1$s",
             "editor_validation_block_name_too_long" to $$"Block name too long: %1$d chars (max %2$d) \u2014 you know the rules",
             "editor_validation_cycle" to $$"Never gonna run around \u2014 cycle detected involving %1$d blocks",
             "editor_validation_duplicate_id" to $$"We're no strangers \u2014 duplicate block ID: %1$s",

@@ -312,6 +312,7 @@ object RickAndMortyPack {
             "editor_validation_block_description_too_long" to $$"Description too long, Morty: %1$d / %2$d",
             "editor_validation_too_many_outputs" to $$"Too many outputs, *burp* Morty (max %1$d)",
             "editor_validation_output_name_too_long" to $$"Output name too long, *burp* (max %1$d)",
+            "editor_validation_duplicate_output_name" to $$"Duplicate output *burp*: %1$s",
             "editor_validation_block_name_too_long" to "Block name is too long, *burp* Morty",
             "editor_validation_cycle" to $$"Cycle detected involving %1$d blocks. Time *burp* loop, Morty!",
             "editor_validation_duplicate_id" to $$"Duplicate block ID: %1$s. Come on, Morty.",

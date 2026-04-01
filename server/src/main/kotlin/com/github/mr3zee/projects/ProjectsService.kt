@@ -212,6 +212,7 @@ class DefaultProjectsService(
                     is ValidationError.BlockDescriptionTooLong -> "Block description too long: ${error.blockId.value} (${error.length}/${error.max})"
                     is ValidationError.TooManyOutputs -> "Too many outputs on block: ${error.blockId.value} (${error.count}/${error.max})"
                     is ValidationError.OutputNameTooLong -> "Output name too long on block: ${error.blockId.value}"
+                    is ValidationError.DuplicateOutputName -> "Duplicate output name '${error.name}' on block: ${error.blockId.value}"
                 }
             }
             throw IllegalArgumentException("Invalid DAG: $messages")

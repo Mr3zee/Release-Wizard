@@ -24,6 +24,7 @@ sealed class ValidationError {
     data class BlockDescriptionTooLong(val blockId: BlockId, val length: Int, val max: Int) : ValidationError()
     data class TooManyOutputs(val blockId: BlockId, val count: Int, val max: Int) : ValidationError()
     data class OutputNameTooLong(val blockId: BlockId, val name: String, val max: Int) : ValidationError()
+    data class DuplicateOutputName(val blockId: BlockId, val name: String) : ValidationError()
 }
 
 object DagValidator {
@@ -96,6 +97,12 @@ object DagValidator {
                 for (output in block.outputs) {
                     if (output.name.length > MAX_OUTPUT_NAME_LENGTH) {
                         errors.add(ValidationError.OutputNameTooLong(block.id, output.name, MAX_OUTPUT_NAME_LENGTH))
+                    }
+                }
+                val outputNames = mutableSetOf<String>()
+                for (output in block.outputs) {
+                    if (output.name.isNotBlank() && !outputNames.add(output.name)) {
+                        errors.add(ValidationError.DuplicateOutputName(block.id, output.name))
                     }
                 }
             }

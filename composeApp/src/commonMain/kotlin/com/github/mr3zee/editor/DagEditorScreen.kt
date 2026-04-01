@@ -917,6 +917,7 @@ private fun formatValidationError(error: ValidationError): String = when (error)
     is ValidationError.BlockDescriptionTooLong -> packStringResource(Res.string.editor_validation_block_description_too_long, error.length, error.max)
     is ValidationError.TooManyOutputs -> packStringResource(Res.string.editor_validation_too_many_outputs, error.max)
     is ValidationError.OutputNameTooLong -> packStringResource(Res.string.editor_validation_output_name_too_long, error.max)
+    is ValidationError.DuplicateOutputName -> packStringResource(Res.string.editor_validation_duplicate_output_name, error.name)
 }
 
 /** Circular sidebar toggle button that straddles the border with hover effect. */

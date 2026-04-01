@@ -2930,6 +2930,113 @@ class DagEditorScreenTest {
         onNodeWithText("Outputs").assertExists()
     }
 
+    @Test
+    fun `add custom output button adds editable row`() = runComposeUiTest {
+        val vm = editorViewModel()
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Select block b1 (TEAMCITY_BUILD)
+        onNodeWithTag("dag_canvas").performTouchInput {
+            click(Offset(190f, 135f))
+        }
+        waitForIdle()
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("block_name_field").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // Switch to Parameters tab
+        onNodeWithTag("properties_tab_1").performClick()
+        waitForIdle()
+
+        // No custom outputs initially
+        onNodeWithTag("custom_output_name_field_0").assertDoesNotExist()
+
+        // Click Add Custom Output
+        onNodeWithTag("add_custom_output_button").performClick()
+        waitForIdle()
+
+        // Custom output row should appear with name and description fields
+        onNodeWithTag("custom_output_name_field_0").assertExists()
+        onNodeWithTag("custom_output_description_field_0").assertExists()
+    }
+
+    @Test
+    fun `custom output description field is editable`() = runComposeUiTest {
+        val projectWithOutputs = """{"project":{"id":"p1","name":"Test Project","description":"","dagGraph":{"blocks":[
+            {"kind":"action","id":"b1","name":"Build","type":"TEAMCITY_BUILD","parameters":[{"key":"buildTypeId","value":"bt1"}],"outputs":[{"name":"version","description":"Build version"}],"timeoutSeconds":300,"connectionId":null}
+        ],"edges":[],"positions":{"b1":{"x":100,"y":100}}},"parameters":[],"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}}"""
+
+        val vm = editorViewModel(getJson = projectWithOutputs)
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        onNodeWithTag("dag_canvas").performTouchInput {
+            click(Offset(190f, 135f))
+        }
+        waitForIdle()
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("block_name_field").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        onNodeWithTag("properties_tab_1").performClick()
+        waitForIdle()
+
+        // Description field should exist for the custom output
+        onNodeWithTag("custom_output_description_field_0").assertExists()
+    }
+
+    @Test
+    fun `non-TC blocks do not show add custom output button`() = runComposeUiTest {
+        val ghProject = """{"project":{"id":"p1","name":"Test Project","description":"","dagGraph":{"blocks":[
+            {"kind":"action","id":"b1","name":"Publish","type":"GITHUB_PUBLICATION","parameters":[],"outputs":[],"timeoutSeconds":null,"connectionId":null}
+        ],"edges":[],"positions":{"b1":{"x":100,"y":100}}},"parameters":[],"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}}"""
+
+        val vm = editorViewModel(getJson = ghProject)
+        setContent {
+            MaterialTheme {
+                DagEditorScreen(viewModel = vm, onBack = {})
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Test Project").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        onNodeWithTag("dag_canvas").performTouchInput {
+            click(Offset(190f, 135f))
+        }
+        waitForIdle()
+
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithTag("block_name_field").fetchSemanticsNodes().isNotEmpty()
+        }
+
+        onNodeWithTag("properties_tab_1").performClick()
+        waitForIdle()
+
+        // Known outputs should be shown
+        onNodeWithText("Outputs").assertExists()
+        // But no add custom output button for non-TC blocks
+        onNodeWithTag("add_custom_output_button").assertDoesNotExist()
+    }
+
     // ---- Container gates tab badge count ----
 
     @Test

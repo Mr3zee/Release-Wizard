@@ -310,6 +310,7 @@ object EmojisPack {
             "editor_validation_block_description_too_long" to $$"\ud83d\udcdd Description too long: %1$d / %2$d",
             "editor_validation_too_many_outputs" to $$"\ud83d\udce4\ud83d\udcc8 max %1$d",
             "editor_validation_output_name_too_long" to $$"\ud83d\udce4\ud83c\udff7\ufe0f\ud83d\udcc8 max %1$d",
+            "editor_validation_duplicate_output_name" to $$"\uD83D\uDD01 %1$s",
             "editor_validation_block_name_too_long" to $$"\ud83c\udff7\ufe0f\ud83d\udcc8 %1$d (\ud83d\udcaf %2$d)",
             "editor_validation_cycle" to $$"\ud83d\udd04\u26a0\ufe0f %1$d \ud83e\uddf1",
             "editor_validation_duplicate_id" to $$"\ud83d\udc6f\u26a0\ufe0f %1$s",

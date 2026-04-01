@@ -260,6 +260,16 @@ class TemplateEngineTest {
     }
 
     @Test
+    fun `validateParameterKey rejects template chars in output names`() {
+        assertFalse(TemplateEngine.validateParameterKey("\${block.id}"))
+        assertFalse(TemplateEngine.validateParameterKey("name{bad}"))
+        assertFalse(TemplateEngine.validateParameterKey("has\$dollar"))
+        assertTrue(TemplateEngine.validateParameterKey("valid.output.name"))
+        assertTrue(TemplateEngine.validateParameterKey("rw.test.version"))
+        assertTrue(TemplateEngine.validateParameterKey(""))
+    }
+
+    @Test
     fun `inputs and outputs do not collide via namespaces`() {
         val outputs = mapOf(BlockId("build") to mapOf(
             "inputs.branch" to "main",
