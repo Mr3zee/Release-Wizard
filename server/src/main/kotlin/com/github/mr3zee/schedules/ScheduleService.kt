@@ -1,6 +1,7 @@
 package com.github.mr3zee.schedules
 
 import com.github.mr3zee.NotFoundException
+import com.github.mr3zee.api.CreateScheduleRequest
 import com.github.mr3zee.audit.AuditService
 import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.model.*
@@ -11,7 +12,7 @@ import org.slf4j.LoggerFactory
 interface ScheduleService {
     suspend fun listByProject(projectId: ProjectId, session: UserSession): List<Schedule>
     suspend fun getById(id: String, session: UserSession): Schedule?
-    suspend fun create(projectId: ProjectId, request: com.github.mr3zee.api.CreateScheduleRequest, session: UserSession): Schedule
+    suspend fun create(projectId: ProjectId, request: CreateScheduleRequest, session: UserSession): Schedule
     suspend fun toggle(id: String, enabled: Boolean, session: UserSession): Schedule?
     suspend fun delete(id: String, session: UserSession): Boolean
 }
@@ -46,7 +47,7 @@ class DefaultScheduleService(
 
     override suspend fun create(
         projectId: ProjectId,
-        request: com.github.mr3zee.api.CreateScheduleRequest,
+        request: CreateScheduleRequest,
         session: UserSession,
     ): Schedule {
         val teamId = resolveProjectTeamId(projectId, session)

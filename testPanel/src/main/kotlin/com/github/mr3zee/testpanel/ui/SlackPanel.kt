@@ -8,6 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.github.mr3zee.testpanel.model.SlackMessage
 import com.github.mr3zee.testpanel.model.TestPanelState
 
 @Composable
@@ -80,7 +81,7 @@ private fun SlackStatChip(label: String, count: Int, color: androidx.compose.ui.
 }
 
 @Composable
-private fun SlackMessageCard(message: com.github.mr3zee.testpanel.model.SlackMessage) {
+private fun SlackMessageCard(message: SlackMessage) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(

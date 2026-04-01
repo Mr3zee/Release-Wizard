@@ -5,7 +5,12 @@ import com.github.mr3zee.createTestProject
 import com.github.mr3zee.createTestProjectWithBlocks
 import com.github.mr3zee.jsonClient
 import com.github.mr3zee.loginAndCreateTeam
+import com.github.mr3zee.model.Block
+import com.github.mr3zee.model.BlockId
+import com.github.mr3zee.model.BlockType
+import com.github.mr3zee.model.DagGraph
 import com.github.mr3zee.model.Parameter
+import ProjectId
 import com.github.mr3zee.testModule
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -35,7 +40,7 @@ class StartReleaseFlowTest {
         val response = client.post(ApiRoutes.Releases.BASE) {
             contentType(ContentType.Application.Json)
             setBody(CreateReleaseRequest(
-                projectTemplateId = com.github.mr3zee.model.ProjectId(projectId),
+                projectTemplateId = ProjectId(projectId),
                 name = "Custom Release v2.0",
             ))
         }
@@ -54,7 +59,7 @@ class StartReleaseFlowTest {
         val response = client.post(ApiRoutes.Releases.BASE) {
             contentType(ContentType.Application.Json)
             setBody(CreateReleaseRequest(
-                projectTemplateId = com.github.mr3zee.model.ProjectId(projectId),
+                projectTemplateId = ProjectId(projectId),
                 name = "",
             ))
         }
@@ -75,12 +80,12 @@ class StartReleaseFlowTest {
             setBody(CreateProjectRequest(
                 name = "Param Project",
                 teamId = teamId,
-                dagGraph = com.github.mr3zee.model.DagGraph(
+                dagGraph = DagGraph(
                     blocks = listOf(
-                        com.github.mr3zee.model.Block.ActionBlock(
-                            id = com.github.mr3zee.model.BlockId("b1"),
+                        Block.ActionBlock(
+                            id = BlockId("b1"),
                             name = "Build",
-                            type = com.github.mr3zee.model.BlockType.TEAMCITY_BUILD,
+                            type = BlockType.TEAMCITY_BUILD,
                         ),
                     ),
                 ),

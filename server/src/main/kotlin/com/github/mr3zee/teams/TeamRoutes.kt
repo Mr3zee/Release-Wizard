@@ -1,9 +1,12 @@
 package com.github.mr3zee.teams
 
 import com.github.mr3zee.api.*
+import com.github.mr3zee.audit.AuditRepository
 import com.github.mr3zee.auth.userSession
 import com.github.mr3zee.model.TeamId
+import com.github.mr3zee.tags.TagService
 import io.ktor.http.*
+import io.ktor.server.application.ApplicationCall
 import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -14,9 +17,9 @@ import java.util.UUID
 fun Route.teamRoutes() {
     val service by inject<TeamService>()
     // TEAM-M1: Inject audit/tag dependencies at route scope instead of per-request inline injection
-    val auditRepo by inject<com.github.mr3zee.audit.AuditRepository>()
+    val auditRepo by inject<AuditRepository>()
     val teamAccessService by inject<TeamAccessService>()
-    val tagService by inject<com.github.mr3zee.tags.TagService>()
+    val tagService by inject<TagService>()
 
     route(ApiRoutes.Teams.BASE) {
         post {
@@ -219,7 +222,7 @@ fun Route.myInviteRoutes() {
     }
 }
 
-private suspend fun io.ktor.server.application.ApplicationCall.requireTeamId(): TeamId? {
+private suspend fun ApplicationCall.requireTeamId(): TeamId? {
     val raw = parameters["teamId"]
     if (raw == null) {
         respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Missing teamId", code = "VALIDATION_ERROR"))

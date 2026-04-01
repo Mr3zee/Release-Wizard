@@ -15,7 +15,6 @@ import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.keyboard.handleGlobalKeyEvent
 import com.github.mr3zee.i18n.packStringResource
 import com.github.mr3zee.api.AuthApiClient
-import releasewizard.composeapp.generated.resources.*
 import com.github.mr3zee.api.ConnectionApiClient
 import com.github.mr3zee.api.MavenTriggerApiClient
 import com.github.mr3zee.api.PatApiClient
@@ -24,6 +23,9 @@ import com.github.mr3zee.api.ReleaseApiClient
 import com.github.mr3zee.api.ScheduleApiClient
 import com.github.mr3zee.api.TeamApiClient
 import com.github.mr3zee.api.WebhookTriggerApiClient
+import com.github.mr3zee.api.OAuthProvider
+import com.github.mr3zee.api.PasswordPolicyResponse
+import com.github.mr3zee.api.UserNotificationApiClient
 import com.github.mr3zee.api.createHttpClient
 import com.github.mr3zee.auth.AuthEventBus
 import com.github.mr3zee.auth.AuthEvent
@@ -42,6 +44,7 @@ import com.github.mr3zee.navigation.AppNavigation
 import com.github.mr3zee.navigation.AppShell
 import com.github.mr3zee.navigation.NavigationController
 import com.github.mr3zee.navigation.Screen
+import com.github.mr3zee.notifications.NotificationsViewModel
 import com.github.mr3zee.navigation.SidebarSettingsContent
 import com.github.mr3zee.navigation.SidebarTeamSwitcher
 import com.github.mr3zee.navigation.createPlatformRouter
@@ -62,6 +65,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.time.Duration.Companion.milliseconds
+import releasewizard.composeapp.generated.resources.*
 
 /**
  * CompositionLocal for the server-driven password policy hint string.
@@ -86,7 +90,7 @@ fun App() {
     val scheduleApiClient = remember { ScheduleApiClient(httpClient) }
     val webhookTriggerApiClient = remember { WebhookTriggerApiClient(httpClient) }
     val mavenTriggerApiClient = remember { MavenTriggerApiClient(httpClient) }
-    val userNotificationApiClient = remember { com.github.mr3zee.api.UserNotificationApiClient(httpClient) }
+    val userNotificationApiClient = remember { UserNotificationApiClient(httpClient) }
 
     val activeTeamId = remember { MutableStateFlow<TeamId?>(null) }
 
@@ -96,7 +100,7 @@ fun App() {
     val releaseListViewModel = remember { ReleaseListViewModel(releaseApiClient, projectApiClient, activeTeamId) }
 
     // Fetch password policy from server, build localized hint in composable context
-    var passwordPolicy by remember { mutableStateOf<com.github.mr3zee.api.PasswordPolicyResponse?>(null) }
+    var passwordPolicy by remember { mutableStateOf<PasswordPolicyResponse?>(null) }
     LaunchedEffect(Unit) {
         try {
             passwordPolicy = authApiClient.getPasswordPolicy()
@@ -135,7 +139,7 @@ fun App() {
     // Unread notification count for sidebar badge
     var unreadNotificationCount by remember { mutableStateOf(0L) }
     val notificationsViewModel = remember {
-        com.github.mr3zee.notifications.NotificationsViewModel(
+        NotificationsViewModel(
             apiClient = userNotificationApiClient,
             onUnreadCountChanged = { count -> unreadNotificationCount = count },
         )
@@ -341,7 +345,7 @@ fun App() {
                     }
                     user == null -> {
                         val isGoogleAvailable = passwordPolicy?.oauthProviders
-                            ?.contains(com.github.mr3zee.api.OAuthProvider.GOOGLE) == true
+                            ?.contains(OAuthProvider.GOOGLE) == true
                         LoginScreen(
                             viewModel = authViewModel,
                             showGoogleLogin = currentRuntimeContext() == RuntimeContext.BROWSER && isGoogleAvailable,

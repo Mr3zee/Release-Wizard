@@ -9,6 +9,7 @@ import com.github.mr3zee.api.TeamResponse
 import com.github.mr3zee.api.toUiMessage
 import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.util.UiMessage
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -111,7 +112,7 @@ class TeamListViewModel(
             _pagination.value = response.pagination
             _refreshError.value = null
         } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e
+            if (e is CancellationException) throw e
             if (silent) {
                 _refreshError.value = e.toUiMessage()
             } else {
@@ -137,7 +138,7 @@ class TeamListViewModel(
                     _pagination.value = response.pagination
                 }
             } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
+                if (e is CancellationException) throw e
                 _error.value = e.toUiMessage()
             } finally {
                 _isLoadingMore.value = false
@@ -153,7 +154,7 @@ class TeamListViewModel(
                 loadTeams()
                 onCreated?.invoke(response.team.id)
             } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
+                if (e is CancellationException) throw e
                 _error.value = e.toUiMessage()
             }
         }
@@ -165,7 +166,7 @@ class TeamListViewModel(
                 val response = apiClient.getMyJoinRequests()
                 _pendingJoinRequestTeamIds.value = response.requests.map { it.teamId }.toSet()
             } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
+                if (e is CancellationException) throw e
                 // Best effort — don't block team list if join requests fail to load
             }
         }
@@ -178,7 +179,7 @@ class TeamListViewModel(
                 _pendingInviteByTeamId.value = response.invites.associate { it.teamId to it.id }
                 _pendingInviteTeamIds.value = _pendingInviteByTeamId.value.keys
             } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
+                if (e is CancellationException) throw e
                 // Best effort — don't block team list if invites fail to load
             }
         }
@@ -194,7 +195,7 @@ class TeamListViewModel(
                 onAccepted()
                 loadTeamsInternal(silent = true)
             } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
+                if (e is CancellationException) throw e
                 _error.value = e.toUiMessage()
             }
         }
@@ -213,7 +214,7 @@ class TeamListViewModel(
                 _pendingJoinRequestTeamIds.value = _pendingJoinRequestTeamIds.value + teamId
                 _message.value = UiMessage.JoinRequestSubmitted
             } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
+                if (e is CancellationException) throw e
                 _error.value = e.toUiMessage()
             }
         }

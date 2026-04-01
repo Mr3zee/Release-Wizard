@@ -7,6 +7,7 @@ import com.github.mr3zee.loginAndCreateTeam
 import com.github.mr3zee.registerAndApproveUser
 import com.github.mr3zee.testModule
 import com.github.mr3zee.model.UserNotification
+import io.ktor.client.HttpClient
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
@@ -23,7 +24,7 @@ class UserNotificationRoutesTest {
      */
     private suspend fun ApplicationTestBuilder.seedNotifications(
         count: Int = 3,
-    ): io.ktor.client.HttpClient {
+    ): HttpClient {
         val admin = jsonClient()
         val teamId = admin.loginAndCreateTeam()
         val user2 = jsonClient()

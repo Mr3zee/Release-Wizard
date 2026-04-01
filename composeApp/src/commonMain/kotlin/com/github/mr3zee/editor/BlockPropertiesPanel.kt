@@ -37,6 +37,7 @@ import com.github.mr3zee.components.RwIconButton
 import com.github.mr3zee.components.RwMarkdownField
 import com.github.mr3zee.components.RwSegmentedTabRow
 import com.github.mr3zee.components.RwTextField
+import com.github.mr3zee.dag.findPredecessors
 import com.github.mr3zee.model.*
 import com.github.mr3zee.theme.AppShapes
 import com.github.mr3zee.theme.AppTypography
@@ -348,7 +349,7 @@ fun BlockPropertiesPanel(
                     }
                     1 -> {
                         val predecessors = remember(graph, block.id) {
-                            com.github.mr3zee.dag.findPredecessors(graph, block.id)
+                            findPredecessors(graph, block.id)
                         }
                         SingleGateEditor(
                             label = packStringResource(Res.string.editor_gate_pre_label),
@@ -478,7 +479,7 @@ private fun OverviewTabContent(
 ) {
     // Compute predecessors for template picker (shared by gates, parameters, and Slack message)
     val predecessors = remember(graph, block.id) {
-        com.github.mr3zee.dag.findPredecessors(graph, block.id)
+        findPredecessors(graph, block.id)
     }
 
     // Type selector
@@ -766,7 +767,7 @@ private fun ParametersTabContent(
 ) {
     val configKey = block.type.configIdParameterKey()
     val predecessors = remember(graph, block.id) {
-        com.github.mr3zee.dag.findPredecessors(graph, block.id)
+        findPredecessors(graph, block.id)
     }
 
     // Parameters header with refresh button
@@ -862,7 +863,7 @@ private fun GatesTabContent(
     enabled: Boolean,
 ) {
     val predecessors = remember(graph, block.id) {
-        com.github.mr3zee.dag.findPredecessors(graph, block.id)
+        findPredecessors(graph, block.id)
     }
 
     SingleGateEditor(

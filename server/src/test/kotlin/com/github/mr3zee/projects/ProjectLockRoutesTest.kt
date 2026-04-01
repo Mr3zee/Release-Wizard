@@ -5,6 +5,7 @@ import com.github.mr3zee.jsonClient
 import com.github.mr3zee.login
 import com.github.mr3zee.loginAndCreateTeam
 import com.github.mr3zee.createTestProject
+import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.testModule
 import io.ktor.client.HttpClient
 import io.ktor.client.call.*
@@ -24,7 +25,7 @@ class ProjectLockRoutesTest {
     private suspend fun inviteAndAccept(
         adminClient: HttpClient,
         userClient: HttpClient,
-        teamId: com.github.mr3zee.model.TeamId,
+        teamId: TeamId,
     ) {
         adminClient.post(ApiRoutes.Teams.invites(teamId.value)) {
             contentType(ContentType.Application.Json)

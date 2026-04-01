@@ -14,6 +14,7 @@ import io.ktor.client.plugins.cookies.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.yield
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -741,7 +742,7 @@ class ProjectListScreenTest {
             val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
             // Spin until the test signals it's OK to respond
             while (!responseReady.get()) {
-                kotlinx.coroutines.yield()
+                yield()
             }
             when {
                 path.endsWith("/projects") ->

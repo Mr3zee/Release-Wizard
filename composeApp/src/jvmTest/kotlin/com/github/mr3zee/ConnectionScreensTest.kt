@@ -15,6 +15,7 @@ import io.ktor.client.plugins.cookies.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.yield
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
@@ -793,7 +794,7 @@ class ConnectionScreensTest {
                 path.endsWith("/test") -> {
                     testStarted.set(true)
                     // Block until allowed to finish
-                    while (!testCanFinish.get()) { kotlinx.coroutines.yield() }
+                    while (!testCanFinish.get()) { yield() }
                     respond("""{"success":true,"message":"OK"}""", status = HttpStatusCode.OK, headers = jsonHeaders)
                 }
                 path.endsWith("/connections") -> {
@@ -1355,7 +1356,7 @@ class ConnectionScreensTest {
             when {
                 method == HttpMethod.Post && path.endsWith("/connections") -> {
                     saveStarted.set(true)
-                    while (!saveCanFinish.get()) { kotlinx.coroutines.yield() }
+                    while (!saveCanFinish.get()) { yield() }
                     respond("""{"connection":{"id":"c-new","name":"New","type":"GITHUB","config":{"type":"github","token":"t","owner":"o","repo":"r"},"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}}""", status = HttpStatusCode.Created, headers = jsonHeaders)
                 }
                 path.endsWith("/connections") -> {

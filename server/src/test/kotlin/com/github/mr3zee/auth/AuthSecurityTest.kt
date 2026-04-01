@@ -2,12 +2,25 @@ package com.github.mr3zee.auth
 
 import com.github.mr3zee.*
 import com.github.mr3zee.api.*
+import com.github.mr3zee.audit.auditModule
+import com.github.mr3zee.connections.connectionsModule
+import com.github.mr3zee.mavenpublication.mavenTriggerModule
+import com.github.mr3zee.notifications.notificationsModule
 import com.github.mr3zee.plugins.CorrelationId
 import com.github.mr3zee.plugins.CorrelationIdKey
 import com.github.mr3zee.plugins.CsrfProtection
 import com.github.mr3zee.plugins.RequestSizeLimit
 import com.github.mr3zee.plugins.SessionTtl
 import com.github.mr3zee.projects.LockConflictException
+import com.github.mr3zee.projects.projectLockModule
+import com.github.mr3zee.projects.projectsModule
+import com.github.mr3zee.releases.releasesModule
+import com.github.mr3zee.schedules.schedulesModule
+import com.github.mr3zee.tags.tagsModule
+import com.github.mr3zee.teams.teamsModule
+import com.github.mr3zee.triggers.triggersModule
+import com.github.mr3zee.usernotifications.userNotificationsModule
+import com.github.mr3zee.webhooks.webhooksModule
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
@@ -175,20 +188,20 @@ private fun Application.testModuleWithLowRateLimit() {
         allowOverride(true)
         modules(
             appModule(dbConfig, testEncryptionConfig(), authConfig, testWebhookConfig(), testPasswordPolicyConfig(), useFlyway = false),
-            com.github.mr3zee.audit.auditModule,
+            auditModule,
             authModule,
-            com.github.mr3zee.projects.projectsModule,
-            com.github.mr3zee.projects.projectLockModule,
-            com.github.mr3zee.connections.connectionsModule,
-            com.github.mr3zee.webhooks.webhooksModule,
-            com.github.mr3zee.releases.releasesModule,
-            com.github.mr3zee.notifications.notificationsModule,
-            com.github.mr3zee.schedules.schedulesModule,
-            com.github.mr3zee.triggers.triggersModule,
-            com.github.mr3zee.mavenpublication.mavenTriggerModule,
-            com.github.mr3zee.tags.tagsModule,
-            com.github.mr3zee.teams.teamsModule,
-            com.github.mr3zee.usernotifications.userNotificationsModule,
+            projectsModule,
+            projectLockModule,
+            connectionsModule,
+            webhooksModule,
+            releasesModule,
+            notificationsModule,
+            schedulesModule,
+            triggersModule,
+            mavenTriggerModule,
+            tagsModule,
+            teamsModule,
+            userNotificationsModule,
             module { single { executionScope } },
             testOverrideModule,
         )

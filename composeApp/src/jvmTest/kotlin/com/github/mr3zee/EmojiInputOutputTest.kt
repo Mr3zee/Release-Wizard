@@ -5,10 +5,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.test.*
 import com.github.mr3zee.api.AuthApiClient
 import com.github.mr3zee.api.ConnectionApiClient
+import com.github.mr3zee.api.ProjectApiClient
 import com.github.mr3zee.auth.AuthViewModel
 import com.github.mr3zee.auth.LoginScreen
 import com.github.mr3zee.connections.ConnectionFormScreen
+import com.github.mr3zee.connections.ConnectionListScreen
 import com.github.mr3zee.connections.ConnectionsViewModel
+import com.github.mr3zee.editor.DagEditorScreen
+import com.github.mr3zee.editor.DagEditorViewModel
 import com.github.mr3zee.editor.TemplateAutocompleteField
 import com.github.mr3zee.model.*
 import io.ktor.http.*
@@ -102,7 +106,7 @@ class EmojiInputOutputTest {
         )
         setContent {
             MaterialTheme {
-                com.github.mr3zee.connections.ConnectionListScreen(
+                ConnectionListScreen(
                     viewModel = vm,
                     onCreateConnection = {},
                     onEditConnection = {},
@@ -352,13 +356,13 @@ class EmojiInputOutputTest {
 
     @Test
     fun `editing block name with emoji in DAG editor`() = runComposeUiTest {
-        val vm = com.github.mr3zee.editor.DagEditorViewModel(
+        val vm = DagEditorViewModel(
             ProjectId("p1"),
-            com.github.mr3zee.api.ProjectApiClient(editorClient()),
+            ProjectApiClient(editorClient()),
         )
         setContent {
             MaterialTheme {
-                com.github.mr3zee.editor.DagEditorScreen(viewModel = vm, onBack = {})
+                DagEditorScreen(viewModel = vm, onBack = {})
             }
         }
 
@@ -390,9 +394,9 @@ class EmojiInputOutputTest {
     @Test
     fun `project with emoji name displays correctly`() = runComposeUiTest {
         val emojiProjectJson = """{"project":{"id":"p1","name":"\uD83D\uDE80 Awesome Release","description":"\uD83C\uDF1F Star project","dagGraph":{"blocks":[],"edges":[],"positions":{}},"parameters":[],"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}}"""
-        val vm = com.github.mr3zee.editor.DagEditorViewModel(
+        val vm = DagEditorViewModel(
             ProjectId("p1"),
-            com.github.mr3zee.api.ProjectApiClient(
+            ProjectApiClient(
                 mockHttpClient(
                     mapOf(
                         "/projects/p1" to json(emojiProjectJson, method = null),
@@ -404,7 +408,7 @@ class EmojiInputOutputTest {
         )
         setContent {
             MaterialTheme {
-                com.github.mr3zee.editor.DagEditorScreen(viewModel = vm, onBack = {})
+                DagEditorScreen(viewModel = vm, onBack = {})
             }
         }
 

@@ -17,6 +17,7 @@ import com.github.mr3zee.persistence.initDatabase
 import com.github.mr3zee.releases.ExposedReleasesRepository
 import com.github.mr3zee.webhooks.*
 import io.ktor.client.*
+import io.ktor.client.engine.cio.CIO
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -104,7 +105,7 @@ class WebhookStatusIntegrationTest {
         val scope = testScope
         if (scope != null) {
             scope.cancel()
-            runBlocking { scope.coroutineContext[kotlinx.coroutines.Job]?.join() }
+            runBlocking { scope.coroutineContext[Job]?.join() }
         }
         testScope = null
         // Close HikariCP connection pool
@@ -298,7 +299,7 @@ class WebhookStatusIntegrationTest {
         ngrokProcess = process
 
         // Poll ngrok's local API until it reports a healthy tunnel with a public URL
-        val ngrokApiClient = HttpClient(io.ktor.client.engine.cio.CIO)
+        val ngrokApiClient = HttpClient(CIO)
         var publicUrl: String? = null
         ngrokApiClient.use { ngrokApiClient ->
             waitUntil(maxAttempts = 30, delayMillis = 1000) {

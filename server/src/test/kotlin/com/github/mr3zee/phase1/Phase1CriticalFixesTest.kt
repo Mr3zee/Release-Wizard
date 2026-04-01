@@ -5,6 +5,7 @@ import com.github.mr3zee.api.*
 import com.github.mr3zee.execution.BlockExecutor
 import com.github.mr3zee.execution.StubBlockExecutor
 import com.github.mr3zee.model.*
+import com.github.mr3zee.security.EncryptionService
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -32,7 +33,7 @@ class Phase1CriticalFixesTest {
     @Test
     fun `INFRA-C1 encryption works with singleton SecureRandom`() {
         val config = testEncryptionConfig()
-        val service = com.github.mr3zee.security.EncryptionService(config)
+        val service = EncryptionService(config)
         // Encrypt multiple values to verify singleton reuse
         val plaintexts = (1..100).map { "secret-$it" }
         val encrypted = plaintexts.map { service.encrypt(it) }

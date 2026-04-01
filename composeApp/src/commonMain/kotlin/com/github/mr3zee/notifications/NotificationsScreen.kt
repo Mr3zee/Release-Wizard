@@ -53,6 +53,8 @@ import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.model.UserNotification
 import com.github.mr3zee.model.UserNotificationType
+import com.github.mr3zee.model.ReleaseId
+import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.navigation.Screen
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.LocalAppColors
@@ -344,9 +346,9 @@ private fun navigateToTarget(notification: UserNotification, onNavigate: (Screen
     val targetType = notification.targetType ?: return false
     val targetId = notification.targetId ?: return false
     return when (targetType) {
-        "release" -> { onNavigate(Screen.ReleaseView(com.github.mr3zee.model.ReleaseId(targetId))); true }
-        "team" -> { onNavigate(Screen.TeamDetail(com.github.mr3zee.model.TeamId(targetId))); true }
-        "team-manage" -> { onNavigate(Screen.TeamManage(com.github.mr3zee.model.TeamId(targetId))); true }
+        "release" -> { onNavigate(Screen.ReleaseView(ReleaseId(targetId))); true }
+        "team" -> { onNavigate(Screen.TeamDetail(TeamId(targetId))); true }
+        "team-manage" -> { onNavigate(Screen.TeamManage(TeamId(targetId))); true }
         "admin-users" -> { onNavigate(Screen.AdminUsers); true }
         else -> false
     }

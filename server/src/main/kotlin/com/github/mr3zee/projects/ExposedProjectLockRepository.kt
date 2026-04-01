@@ -5,6 +5,7 @@ import com.github.mr3zee.persistence.ProjectLockTable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jetbrains.exposed.v1.core.*
+import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
 import org.slf4j.LoggerFactory
@@ -83,7 +84,7 @@ class ExposedProjectLockRepository(
                 it[ProjectLockTable.expiresAt] = expires
             }
             ProjectLockInfo(userId, username, now, expires)
-        } catch (e: org.jetbrains.exposed.v1.exceptions.ExposedSQLException) {
+        } catch (e: ExposedSQLException) {
             val sqlState = (e.cause as? java.sql.SQLException)?.sqlState
             if (sqlState != null && sqlState.startsWith("23")) {
                 log.debug("Lock acquisition race lost for project {} by user {}", projectId, userId)

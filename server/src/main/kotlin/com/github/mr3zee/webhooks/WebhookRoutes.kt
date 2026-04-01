@@ -1,5 +1,6 @@
 package com.github.mr3zee.webhooks
 
+import com.github.mr3zee.AppJson
 import com.github.mr3zee.api.ApiRoutes
 import com.github.mr3zee.api.StatusUpdatePayload
 import io.ktor.http.*
@@ -52,7 +53,7 @@ fun Route.webhookRoutes() {
             }
 
             val payload = try {
-                com.github.mr3zee.AppJson.decodeFromString<StatusUpdatePayload>(rawText)
+                AppJson.decodeFromString<StatusUpdatePayload>(rawText)
             } catch (_: SerializationException) {
                 call.respond(HttpStatusCode.BadRequest, "Invalid JSON body")
                 return@post

@@ -1,7 +1,9 @@
 package com.github.mr3zee.execution.executors
 
+import com.github.mr3zee.model.GitHubActionOutputs
 import com.github.mr3zee.model.SubBuild
 import com.github.mr3zee.model.SubBuildStatus
+import com.github.mr3zee.model.TeamCityOutputs
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -83,10 +85,10 @@ class BuildPollingService(
                 val buildNumber = json["number"]?.jsonPrimitive?.content ?: buildId
                 val buildStatus = status ?: "UNKNOWN"
                 return mapOf(
-                    com.github.mr3zee.model.TeamCityOutputs.BUILD_ID to buildId,
-                    com.github.mr3zee.model.TeamCityOutputs.BUILD_NUMBER to buildNumber,
-                    com.github.mr3zee.model.TeamCityOutputs.BUILD_URL to "$serverUrl/viewLog.html?buildId=$buildId",
-                    com.github.mr3zee.model.TeamCityOutputs.BUILD_STATUS to buildStatus,
+                    TeamCityOutputs.BUILD_ID to buildId,
+                    TeamCityOutputs.BUILD_NUMBER to buildNumber,
+                    TeamCityOutputs.BUILD_URL to "$serverUrl/viewLog.html?buildId=$buildId",
+                    TeamCityOutputs.BUILD_STATUS to buildStatus,
                 )
             }
 
@@ -359,10 +361,10 @@ class BuildPollingService(
 
                     if (status == "completed") {
                         return mapOf(
-                            com.github.mr3zee.model.GitHubActionOutputs.RUN_ID to runId,
-                            com.github.mr3zee.model.GitHubActionOutputs.RUN_URL to (json["html_url"]?.jsonPrimitive?.content
+                            GitHubActionOutputs.RUN_ID to runId,
+                            GitHubActionOutputs.RUN_URL to (json["html_url"]?.jsonPrimitive?.content
                                 ?: "$baseUrl/$owner/$repo/actions/runs/$runId"),
-                            com.github.mr3zee.model.GitHubActionOutputs.RUN_STATUS to (conclusion ?: "unknown"),
+                            GitHubActionOutputs.RUN_STATUS to (conclusion ?: "unknown"),
                         )
                     }
                 }

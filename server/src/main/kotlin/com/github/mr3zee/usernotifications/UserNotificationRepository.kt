@@ -1,5 +1,6 @@
 package com.github.mr3zee.usernotifications
 
+import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.model.UserNotification
 import com.github.mr3zee.model.UserNotificationType
 import com.github.mr3zee.persistence.UserNotificationTable
@@ -45,7 +46,7 @@ class ExposedUserNotificationRepository(private val db: Database) : UserNotifica
             id = this[UserNotificationTable.id].value.toString(),
             userId = this[UserNotificationTable.userId].value.toString(),
             type = type,
-            teamId = teamIdValue?.let { com.github.mr3zee.model.TeamId(it) },
+            teamId = teamIdValue?.let { TeamId(it) },
             teamName = this[UserNotificationTable.teamName],
             title = this[UserNotificationTable.title],
             message = this[UserNotificationTable.message],

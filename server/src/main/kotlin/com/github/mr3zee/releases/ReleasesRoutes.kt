@@ -4,10 +4,13 @@ import com.github.mr3zee.NotFoundException
 import com.github.mr3zee.api.*
 import com.github.mr3zee.auth.userSession
 import com.github.mr3zee.model.BlockId
+import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.model.ReleaseId
+import com.github.mr3zee.model.ReleaseStatus
 import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.tags.TagValidation
 import io.ktor.http.*
+import io.ktor.server.application.ApplicationCall
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -26,8 +29,8 @@ fun Route.releaseRoutes() {
             val limit = (call.request.queryParameters["limit"]?.toIntOrNull() ?: 20).coerceIn(1, 200)
             val search = call.request.queryParameters["q"]
             val statusStr = call.request.queryParameters["status"]
-            val status = statusStr?.let { runCatching { com.github.mr3zee.model.ReleaseStatus.valueOf(it) }.getOrNull() }
-            val projectId = call.request.queryParameters["projectId"]?.let { com.github.mr3zee.model.ProjectId(it) }
+            val status = statusStr?.let { runCatching { ReleaseStatus.valueOf(it) }.getOrNull() }
+            val projectId = call.request.queryParameters["projectId"]?.let { ProjectId(it) }
             val tag = call.request.queryParameters["tag"]
             val teamId = call.request.queryParameters["teamId"]?.let { TeamId(it) }
             val (releases, totalCount) = service.listReleases(
@@ -224,7 +227,7 @@ fun Route.releaseRoutes() {
     }
 }
 
-private fun io.ktor.server.application.ApplicationCall.requireReleaseId(): ReleaseId {
+private fun ApplicationCall.requireReleaseId(): ReleaseId {
     val raw = parameters["id"]
         ?: throw IllegalArgumentException("Missing id")
     try {
@@ -243,7 +246,7 @@ private const val MAX_APPROVAL_INPUTS = 20
 
 private val BLOCK_ID_PATTERN = Regex("^[a-zA-Z0-9_.-]+$")
 
-private fun io.ktor.server.application.ApplicationCall.requireBlockId(): BlockId {
+private fun ApplicationCall.requireBlockId(): BlockId {
     val raw = parameters["blockId"]
         ?: throw IllegalArgumentException("Missing blockId")
     if (raw.length > 100) {

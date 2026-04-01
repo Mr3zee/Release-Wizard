@@ -4,6 +4,7 @@ import com.cronutils.model.CronType
 import com.cronutils.model.definition.CronDefinitionBuilder
 import com.cronutils.model.time.ExecutionTime
 import com.cronutils.parser.CronParser
+import org.slf4j.LoggerFactory
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import kotlin.time.Instant
@@ -60,7 +61,7 @@ object CronUtils {
             // SCHED-H2: Log warning when interval cannot be computed (library bug or unusual expression).
             // The cron expression has already been parsed and validated — rejecting here could block
             // valid expressions that trigger edge cases in the cron-utils interval computation.
-            val log = org.slf4j.LoggerFactory.getLogger("com.github.mr3zee.schedules.CronUtils")
+            val log = LoggerFactory.getLogger("com.github.mr3zee.schedules.CronUtils")
             log.warn("Could not compute interval for cron expression '{}': {}", cronExpression, e.message)
         }
     }

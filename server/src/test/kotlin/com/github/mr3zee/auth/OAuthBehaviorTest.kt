@@ -7,6 +7,7 @@ import com.github.mr3zee.model.UserId
 import com.github.mr3zee.persistence.OAuthAccountTable
 import com.github.mr3zee.persistence.UserTable
 import com.github.mr3zee.testModule
+import io.ktor.client.HttpClient
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
@@ -60,7 +61,7 @@ class OAuthBehaviorTest {
         return username
     }
 
-    private suspend fun io.ktor.client.HttpClient.register(
+    private suspend fun HttpClient.register(
         username: String = "admin",
         password: String = "adminpass",
     ) = post(ApiRoutes.Auth.REGISTER) {
@@ -68,7 +69,7 @@ class OAuthBehaviorTest {
         setBody(RegisterRequest(username = username, password = password))
     }
 
-    private suspend fun io.ktor.client.HttpClient.login(
+    private suspend fun HttpClient.login(
         username: String = "admin",
         password: String = "adminpass",
     ) = post(ApiRoutes.Auth.LOGIN) {

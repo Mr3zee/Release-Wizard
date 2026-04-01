@@ -1,5 +1,6 @@
 package com.github.mr3zee.testpanel.server.routes
 
+import com.github.mr3zee.testpanel.model.GhRepo
 import com.github.mr3zee.testpanel.model.TestPanelState
 import io.ktor.http.*
 import io.ktor.server.response.*
@@ -17,7 +18,7 @@ fun Routing.gitHubRepoRoutes(state: TestPanelState) {
         // so that "test connection" works without manual setup in the test panel.
         val exists = state.currentState().ghRepos.any { "${it.owner}/${it.repo}" == repoKey }
         if (!exists) {
-            state.addGhRepo(com.github.mr3zee.testpanel.model.GhRepo(owner = owner, repo = repo))
+            state.addGhRepo(GhRepo(owner = owner, repo = repo))
         }
 
         call.respond(

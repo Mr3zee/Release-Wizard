@@ -1,7 +1,12 @@
 package com.github.mr3zee
 
 import com.github.mr3zee.api.*
+import com.github.mr3zee.auth.PatService
+import com.github.mr3zee.model.Block
+import com.github.mr3zee.model.BlockId
+import com.github.mr3zee.model.BlockType
 import com.github.mr3zee.model.ClientType
+import com.github.mr3zee.model.DagGraph
 import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.audit.auditModule
@@ -207,7 +212,7 @@ fun Application.testModule(
             }
         }
     }
-    val resolvedPatService = try { getKoin().getOrNull<com.github.mr3zee.auth.PatService>() } catch (_: Exception) { null }
+    val resolvedPatService = try { getKoin().getOrNull<PatService>() } catch (_: Exception) { null }
 
     install(Authentication) {
         session<UserSession>("session-auth") {
@@ -462,7 +467,7 @@ suspend fun HttpClient.loginAndCreateTeam(
 suspend fun HttpClient.createTestProject(
     teamId: TeamId,
     name: String = "Test Project",
-    dagGraph: com.github.mr3zee.model.DagGraph? = null,
+    dagGraph: DagGraph? = null,
 ): String {
     val response = post(ApiRoutes.Projects.BASE) {
         contentType(ContentType.Application.Json)
@@ -470,7 +475,7 @@ suspend fun HttpClient.createTestProject(
             CreateProjectRequest(
                 name = name,
                 teamId = teamId,
-                dagGraph = dagGraph ?: com.github.mr3zee.model.DagGraph(),
+                dagGraph = dagGraph ?: DagGraph(),
             )
         )
     }
@@ -488,12 +493,12 @@ suspend fun HttpClient.createTestProjectWithBlocks(
     return createTestProject(
         teamId = teamId,
         name = name,
-        dagGraph = com.github.mr3zee.model.DagGraph(
+        dagGraph = DagGraph(
             blocks = listOf(
-                com.github.mr3zee.model.Block.ActionBlock(
-                    id = com.github.mr3zee.model.BlockId("block-a"),
+                Block.ActionBlock(
+                    id = BlockId("block-a"),
                     name = "Build",
-                    type = com.github.mr3zee.model.BlockType.TEAMCITY_BUILD,
+                    type = BlockType.TEAMCITY_BUILD,
                 ),
             ),
         ),

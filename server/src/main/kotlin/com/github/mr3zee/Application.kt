@@ -1,6 +1,7 @@
 package com.github.mr3zee
 
 import com.github.mr3zee.api.ErrorResponse
+import com.github.mr3zee.api.ProjectLockConflictResponse
 import com.github.mr3zee.auth.AccountLockoutRepository
 import com.github.mr3zee.auth.AuthService
 import com.github.mr3zee.auth.PatService
@@ -9,10 +10,15 @@ import com.github.mr3zee.auth.authModule
 import com.github.mr3zee.auth.authRoutes
 import com.github.mr3zee.auth.oauthRoutes
 import com.github.mr3zee.auth.patRoutes
+import com.github.mr3zee.connections.ConnectionsRepository
 import com.github.mr3zee.connections.connectionRoutes
 import com.github.mr3zee.connections.connectionsModule
 import com.github.mr3zee.execution.ExecutionEngine
 import com.github.mr3zee.execution.RecoveryService
+import com.github.mr3zee.model.ConnectionConfig
+import com.github.mr3zee.model.ConnectionType
+import com.github.mr3zee.model.TeamRole
+import com.github.mr3zee.model.UserId
 import com.github.mr3zee.notifications.NotificationListener
 import com.github.mr3zee.notifications.notificationRoutes
 import com.github.mr3zee.notifications.notificationsModule
@@ -38,6 +44,7 @@ import com.github.mr3zee.schedules.scheduleRoutes
 import com.github.mr3zee.schedules.schedulesModule
 import com.github.mr3zee.tags.tagRoutes
 import com.github.mr3zee.tags.tagsModule
+import com.github.mr3zee.teams.TeamRepository
 import com.github.mr3zee.teams.myInviteRoutes
 import com.github.mr3zee.teams.myJoinRequestRoutes
 import com.github.mr3zee.teams.teamRoutes
@@ -83,10 +90,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.serialization.SerializationException
+import org.koin.core.Koin
 import org.koin.dsl.module
 import org.koin.java.KoinJavaComponent.getKoin
-import org.koin.ktor.plugin.Koin
+import org.koin.ktor.plugin.Koin as KoinPlugin
 import org.koin.logger.slf4jLogger
+import org.slf4j.Logger
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -105,7 +114,7 @@ fun Application.module() {
 
     val executionScope = CoroutineScope(SupervisorJob(coroutineContext.job) + Dispatchers.Default)
 
-    install(Koin) {
+    install(KoinPlugin) {
         slf4jLogger()
         modules(
             appModule(dbConfig, encryptionConfig, authConfig, webhookConfig, passwordPolicyConfig, oauthConfig = oauthConfig, devModeConfig = devModeConfig, patConfig = patConfig),
@@ -298,7 +307,7 @@ fun Application.module() {
             // HMAC-based stateless nonce manager for OAuth state parameter validation.
             // Cryptographic verification works across replicas without shared storage.
             // Uses the session signing key as the HMAC secret.
-            val oauthNonceManager = io.ktor.util.StatelessHmacNonceManager(
+            val oauthNonceManager = StatelessHmacNonceManager(
                 key = hex(resolvedAuthConfig.sessionSignKey),
                 timeoutMillis = 600_000, // 10 minutes — generous for slow OAuth flows
             )
@@ -421,7 +430,7 @@ fun Application.module() {
             val correlationId = call.attributes.getOrNull(CorrelationIdKey)
             call.respond(
                 HttpStatusCode.Conflict,
-                com.github.mr3zee.api.ProjectLockConflictResponse(
+                ProjectLockConflictResponse(
                     error = cause.message ?: "Project is locked",
                     code = "LOCK_CONFLICT",
                     lock = cause.lock,
@@ -691,20 +700,20 @@ fun Application.configureRouting(
 }
 
 private suspend fun seedDevConnections(
-    koin: org.koin.core.Koin,
-    userId: com.github.mr3zee.model.UserId,
+    koin: Koin,
+    userId: UserId,
     devModeConfig: DevModeConfig,
-    log: org.slf4j.Logger,
+    log: Logger,
 ) {
     try {
-        val teamRepo = koin.get<com.github.mr3zee.teams.TeamRepository>()
-        val connRepo = koin.get<com.github.mr3zee.connections.ConnectionsRepository>()
+        val teamRepo = koin.get<TeamRepository>()
+        val connRepo = koin.get<ConnectionsRepository>()
 
         val team = teamRepo.createTeamWithMember(
             name = "Dev Team",
             description = "Auto-created for local development",
             userId = userId.value,
-            role = com.github.mr3zee.model.TeamRole.TEAM_LEAD,
+            role = TeamRole.TEAM_LEAD,
         )
         log.info("Seed dev team '{}' created", team.name)
 
@@ -712,8 +721,8 @@ private suspend fun seedDevConnections(
 
         connRepo.create(
             name = "Test Panel \u2014 TeamCity",
-            type = com.github.mr3zee.model.ConnectionType.TEAMCITY,
-            config = com.github.mr3zee.model.ConnectionConfig.TeamCityConfig(
+            type = ConnectionType.TEAMCITY,
+            config = ConnectionConfig.TeamCityConfig(
                 serverUrl = devModeConfig.teamcityBaseUrl,
                 token = "dev",
                 pollingIntervalSeconds = 5,
@@ -723,8 +732,8 @@ private suspend fun seedDevConnections(
 
         connRepo.create(
             name = "Test Panel \u2014 Slack",
-            type = com.github.mr3zee.model.ConnectionType.SLACK,
-            config = com.github.mr3zee.model.ConnectionConfig.SlackConfig(
+            type = ConnectionType.SLACK,
+            config = ConnectionConfig.SlackConfig(
                 botToken = "xoxb-dev-mode-token",
             ),
             teamId = teamId,
@@ -732,8 +741,8 @@ private suspend fun seedDevConnections(
 
         connRepo.create(
             name = "Test Panel \u2014 GitHub",
-            type = com.github.mr3zee.model.ConnectionType.GITHUB,
-            config = com.github.mr3zee.model.ConnectionConfig.GitHubConfig(
+            type = ConnectionType.GITHUB,
+            config = ConnectionConfig.GitHubConfig(
                 baseUrl = devModeConfig.githubApiBaseUrl,
                 owner = "owner",
                 repo = "repo",

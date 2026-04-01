@@ -2,8 +2,13 @@ package com.github.mr3zee.auth
 
 import com.github.mr3zee.*
 import com.github.mr3zee.api.*
+import com.github.mr3zee.model.Block
+import com.github.mr3zee.model.BlockId
+import com.github.mr3zee.model.BlockType
 import com.github.mr3zee.model.ClientType
+import com.github.mr3zee.model.DagGraph
 import com.github.mr3zee.model.TeamId
+import io.ktor.client.HttpClient
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.cookies.HttpCookies
@@ -373,7 +378,7 @@ class SecurityHardeningTest {
     }
 }
 
-private suspend fun createTestProject(client: io.ktor.client.HttpClient, teamId: TeamId): String {
+private suspend fun createTestProject(client: HttpClient, teamId: TeamId): String {
     val response = client.post(ApiRoutes.Projects.BASE) {
         contentType(ContentType.Application.Json)
         setBody(CreateProjectRequest(name = "Test Project", teamId = teamId))
@@ -381,19 +386,19 @@ private suspend fun createTestProject(client: io.ktor.client.HttpClient, teamId:
     return response.body<ProjectResponse>().project.id.value
 }
 
-private suspend fun createTestProjectWithBlocks(client: io.ktor.client.HttpClient, teamId: TeamId): String {
+private suspend fun createTestProjectWithBlocks(client: HttpClient, teamId: TeamId): String {
     val response = client.post(ApiRoutes.Projects.BASE) {
         contentType(ContentType.Application.Json)
         setBody(
             CreateProjectRequest(
                 name = "Test Project",
                 teamId = teamId,
-                dagGraph = com.github.mr3zee.model.DagGraph(
+                dagGraph = DagGraph(
                     blocks = listOf(
-                        com.github.mr3zee.model.Block.ActionBlock(
-                            id = com.github.mr3zee.model.BlockId("block-a"),
+                        Block.ActionBlock(
+                            id = BlockId("block-a"),
                             name = "Build",
-                            type = com.github.mr3zee.model.BlockType.TEAMCITY_BUILD,
+                            type = BlockType.TEAMCITY_BUILD,
                         ),
                     ),
                 ),

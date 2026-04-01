@@ -5,6 +5,7 @@ import com.github.mr3zee.execution.ExecutionContext
 import com.github.mr3zee.execution.ExecutionScope
 import com.github.mr3zee.model.Block
 import com.github.mr3zee.model.ConnectionConfig
+import com.github.mr3zee.model.GitHubPublicationOutputs
 import com.github.mr3zee.model.Parameter
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -109,9 +110,9 @@ class GitHubPublicationExecutor(
         val actualTag = responseBody["tag_name"]?.jsonPrimitive?.content ?: fallbackTagName
         val releaseId = responseBody["id"]?.jsonPrimitive?.content ?: ""
         return mapOf(
-            com.github.mr3zee.model.GitHubPublicationOutputs.RELEASE_URL to releaseUrl,
-            com.github.mr3zee.model.GitHubPublicationOutputs.TAG_NAME to actualTag,
-            com.github.mr3zee.model.GitHubPublicationOutputs.RELEASE_ID to releaseId,
+            GitHubPublicationOutputs.RELEASE_URL to releaseUrl,
+            GitHubPublicationOutputs.TAG_NAME to actualTag,
+            GitHubPublicationOutputs.RELEASE_ID to releaseId,
         )
     }
 

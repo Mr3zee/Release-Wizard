@@ -62,6 +62,7 @@ import com.github.mr3zee.model.Block
 import com.github.mr3zee.keyboard.ProvideShortcutActions
 import com.github.mr3zee.keyboard.ShortcutActions
 import com.github.mr3zee.theme.AppTypography
+import com.github.mr3zee.theme.AppColors
 import com.github.mr3zee.theme.LocalAppColors
 import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.util.resolve
@@ -923,7 +924,7 @@ private fun SidebarToggleButton(
     expandedIcon: androidx.compose.ui.graphics.vector.ImageVector,
     collapsedIcon: androidx.compose.ui.graphics.vector.ImageVector,
     tooltip: String,
-    colors: com.github.mr3zee.theme.AppColors,
+    colors: AppColors,
     testTag: String,
 ) {
     var isHovered by remember { mutableStateOf(false) }

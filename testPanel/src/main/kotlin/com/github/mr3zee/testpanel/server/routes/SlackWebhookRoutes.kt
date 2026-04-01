@@ -2,6 +2,7 @@ package com.github.mr3zee.testpanel.server.routes
 
 import com.github.mr3zee.testpanel.model.TestPanelState
 import io.ktor.http.*
+import io.ktor.server.application.ApplicationCall
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -72,7 +73,7 @@ fun Routing.slackApiRoutes(state: TestPanelState) {
     }
 }
 
-private suspend fun handleAuthTest(call: io.ktor.server.application.ApplicationCall) {
+private suspend fun handleAuthTest(call: ApplicationCall) {
     val responseJson = buildJsonObject {
         put("ok", true)
         put("team", "Test Panel")

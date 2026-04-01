@@ -4,9 +4,12 @@ import com.github.mr3zee.ForbiddenException
 import com.github.mr3zee.NotFoundException
 import com.github.mr3zee.api.*
 import com.github.mr3zee.audit.AuditService
+import com.github.mr3zee.auth.AuthService
 import com.github.mr3zee.auth.UserSession
 import com.github.mr3zee.model.*
+import com.github.mr3zee.usernotifications.UserNotificationGenerator
 import kotlinx.coroutines.CancellationException
+import org.slf4j.LoggerFactory
 
 interface TeamService {
     suspend fun createTeam(request: CreateTeamRequest, session: UserSession): TeamResponse
@@ -39,11 +42,11 @@ class DefaultTeamService(
     private val teamRepository: TeamRepository,
     private val teamAccessService: TeamAccessService,
     private val auditService: AuditService,
-    private val authService: com.github.mr3zee.auth.AuthService,
-    private val notificationGenerator: com.github.mr3zee.usernotifications.UserNotificationGenerator,
+    private val authService: AuthService,
+    private val notificationGenerator: UserNotificationGenerator,
 ) : TeamService {
 
-    private val log = org.slf4j.LoggerFactory.getLogger(DefaultTeamService::class.java)
+    private val log = LoggerFactory.getLogger(DefaultTeamService::class.java)
 
     override suspend fun createTeam(request: CreateTeamRequest, session: UserSession): TeamResponse {
         val name = sanitizeName(request.name)
@@ -291,7 +294,7 @@ class DefaultTeamService(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            val log = org.slf4j.LoggerFactory.getLogger(DefaultTeamService::class.java)
+            val log = LoggerFactory.getLogger(DefaultTeamService::class.java)
             log.warn("Failed to cancel pending join request for user {} in team {}: {}", session.userId, teamId.value, e.message)
         }
         auditService.log(teamId, session, AuditAction.INVITE_ACCEPTED, AuditTargetType.USER, session.userId, "Accepted invite")

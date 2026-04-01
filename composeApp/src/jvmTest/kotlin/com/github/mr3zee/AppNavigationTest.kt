@@ -16,6 +16,7 @@ import com.github.mr3zee.api.ScheduleApiClient
 import com.github.mr3zee.api.TeamApiClient
 import com.github.mr3zee.api.UserTeamInfo
 import com.github.mr3zee.api.WebhookTriggerApiClient
+import com.github.mr3zee.auth.AuthEventBus
 import com.github.mr3zee.auth.AuthViewModel
 import com.github.mr3zee.auth.LoginScreen
 import com.github.mr3zee.connections.ConnectionsViewModel
@@ -551,7 +552,7 @@ class AppNavigationTest {
         waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("connection_list_screen").fetchSemanticsNodes().isNotEmpty() }
 
         // Simulate session expiry via AuthEventBus
-        com.github.mr3zee.auth.AuthEventBus.emitSessionExpired()
+        AuthEventBus.emitSessionExpired()
         // The TestApp doesn't listen to AuthEventBus directly, but AuthViewModel.onSessionExpired clears user.
         // We need to call it directly since TestApp is simplified.
         // Instead, verify the navigation controller can handle the reset.

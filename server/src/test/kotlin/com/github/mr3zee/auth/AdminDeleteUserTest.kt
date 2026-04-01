@@ -7,6 +7,7 @@ import com.github.mr3zee.model.TeamRole
 import com.github.mr3zee.model.UserRole
 import com.github.mr3zee.registerAndApproveUser
 import com.github.mr3zee.testModule
+import HttpClient
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
@@ -20,13 +21,13 @@ class AdminDeleteUserTest {
 
     // ── Helper functions ──────────────────────────────────────
 
-    private suspend fun io.ktor.client.HttpClient.getUserId(): String {
+    private suspend fun HttpClient.getUserId(): String {
         val meResponse = get(ApiRoutes.Auth.ME)
         val userInfo = meResponse.body<UserInfo>()
         return userInfo.id ?: error("Expected user ID")
     }
 
-    private suspend fun io.ktor.client.HttpClient.deleteUser(
+    private suspend fun HttpClient.deleteUser(
         userId: String,
         confirmTeamLeadTransfer: Boolean = false,
     ) = delete(ApiRoutes.Auth.deleteUser(userId)) {
@@ -34,11 +35,11 @@ class AdminDeleteUserTest {
         setBody(AdminDeleteUserRequest(confirmTeamLeadTransfer = confirmTeamLeadTransfer))
     }
 
-    private suspend fun io.ktor.client.HttpClient.getDeleteInfo(userId: String) =
+    private suspend fun HttpClient.getDeleteInfo(userId: String) =
         get(ApiRoutes.Auth.deleteUserPreCheck(userId))
 
-    private suspend fun io.ktor.client.HttpClient.promoteToAdmin(
-        superadminClient: io.ktor.client.HttpClient,
+    private suspend fun HttpClient.promoteToAdmin(
+        superadminClient: HttpClient,
         userId: String,
         username: String,
         password: String,

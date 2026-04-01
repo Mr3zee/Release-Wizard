@@ -8,7 +8,9 @@ import com.github.mr3zee.api.ReleaseApiClient
 import com.github.mr3zee.editor.DagEditorScreen
 import com.github.mr3zee.editor.DagEditorViewModel
 import com.github.mr3zee.model.*
+import ProjectId
 import com.github.mr3zee.releases.*
+import UiMessage
 import io.ktor.client.*
 import io.ktor.client.engine.mock.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -1974,7 +1976,7 @@ class ReleaseScreensTest {
         val client = releaseListClient(projects = projects)
         val vm = ReleaseListViewModel(ReleaseApiClient(client), ProjectApiClient(client), MutableStateFlow(TeamId("test-team")), pollingIntervalMs = pollingDisabled)
 
-        var startReleaseProjectId: com.github.mr3zee.model.ProjectId? = null
+        var startReleaseProjectId: ProjectId? = null
         setContent {
             MaterialTheme {
                 ReleaseListScreen(
@@ -2004,7 +2006,7 @@ class ReleaseScreensTest {
         waitForIdle()
 
         // Should have navigated to start release with the project ID
-        assertEquals(com.github.mr3zee.model.ProjectId("p1"), startReleaseProjectId)
+        assertEquals(ProjectId("p1"), startReleaseProjectId)
     }
 
     // QA-RELLIST-14: Project filter chips appear when projects are loaded
@@ -2382,7 +2384,7 @@ class ReleaseScreensTest {
         blockExecutions: List<BlockExecution> = emptyList(),
         isConnected: Boolean = true,
         reconnectAttempt: Int = 0,
-        error: com.github.mr3zee.util.UiMessage? = null,
+        error: UiMessage? = null,
         projectName: String? = null,
         onBack: () -> Unit = {},
         onCancel: () -> Unit = {},
@@ -2672,7 +2674,7 @@ class ReleaseScreensTest {
 
         setReleaseDetailContent(
             release = release,
-            error = com.github.mr3zee.util.UiMessage.Raw("Something went wrong"),
+            error = UiMessage.Raw("Something went wrong"),
             onDismissError = { errorDismissed = true },
         )
 
@@ -3112,7 +3114,7 @@ class ReleaseScreensTest {
 
         setReleaseDetailContent(
             release = release,
-            error = com.github.mr3zee.util.UiMessage.ServerError,
+            error = UiMessage.ServerError,
         )
 
         // Should show snackbar with server error message

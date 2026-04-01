@@ -25,6 +25,7 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.cookies.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.test.Test
 
@@ -308,7 +309,7 @@ class WritingAuditTest {
     @Test
     fun `project list loading spinner has accessible content description`() = runComposeUiTest {
         // Use a client that hangs so we stay in loading state
-        val neverComplete = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val neverComplete = CompletableDeferred<Unit>()
         val hangingClient = HttpClient(MockEngine {
             neverComplete.await()
             respond(

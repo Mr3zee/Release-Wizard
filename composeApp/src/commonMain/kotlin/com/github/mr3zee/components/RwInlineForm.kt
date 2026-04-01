@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.i18n.packStringResource
+import kotlinx.coroutines.yield
 import releasewizard.composeapp.generated.resources.*
 
 /**
@@ -59,7 +60,7 @@ fun RwInlineForm(
         val focusRequester = remember { FocusRequester() }
 
         LaunchedEffect(Unit) {
-            kotlinx.coroutines.yield() // Ensure layout is complete before requesting focus
+            yield() // Ensure layout is complete before requesting focus
             focusRequester.requestFocus()
         }
 

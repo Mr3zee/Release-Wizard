@@ -50,6 +50,7 @@ import com.github.mr3zee.components.RwTooltip
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.outlined.AccountCircle
 import com.github.mr3zee.components.SidebarNavItem
+import com.github.mr3zee.notifications.NotificationBellItem
 import com.github.mr3zee.i18n.packStringResource
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.LocalAppColors
@@ -200,7 +201,7 @@ fun AppShell(
 
                     // ── Notifications + Profile ──────────────────────────────
                     HorizontalDivider(color = colors.chromeBorder)
-                    com.github.mr3zee.notifications.NotificationBellItem(
+                    NotificationBellItem(
                         unreadCount = unreadNotificationCount,
                         isActive = isNotificationsActive,
                         isCollapsed = collapsed,

@@ -4,6 +4,7 @@ package com.github.mr3zee.oauth
 
 import com.github.mr3zee.AppJson
 import com.github.mr3zee.OAuthConfig
+import com.github.mr3zee.WebhookConfig
 import com.github.mr3zee.api.*
 import com.github.mr3zee.jsonClient
 import com.github.mr3zee.login
@@ -33,6 +34,7 @@ import com.github.mr3zee.teams.teamsModule
 import com.github.mr3zee.triggers.triggersModule
 import com.github.mr3zee.webhooks.webhooksModule
 import com.github.mr3zee.configureRouting
+import io.ktor.client.HttpClient
 import io.ktor.client.call.*
 import io.ktor.client.plugins.cookies.*
 import io.ktor.client.request.*
@@ -189,8 +191,8 @@ class OAuthIntegrationTest {
 
         // Install OAuth authentication provider with real Google credentials
         val resolvedOAuthConfig = getKoin().get<OAuthConfig>()
-        val resolvedHttpClient = getKoin().get<io.ktor.client.HttpClient>()
-        val resolvedWebhookConfig = getKoin().get<com.github.mr3zee.WebhookConfig>()
+        val resolvedHttpClient = getKoin().get<HttpClient>()
+        val resolvedWebhookConfig = getKoin().get<WebhookConfig>()
 
         install(Authentication) {
             session<UserSession>("session-auth") {

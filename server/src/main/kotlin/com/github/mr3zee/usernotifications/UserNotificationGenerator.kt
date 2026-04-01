@@ -1,6 +1,7 @@
 package com.github.mr3zee.usernotifications
 
 import com.github.mr3zee.api.ReleaseEvent
+import com.github.mr3zee.auth.AuthService
 import com.github.mr3zee.execution.ExecutionEngine
 import com.github.mr3zee.model.*
 import com.github.mr3zee.releases.ReleasesRepository
@@ -16,7 +17,7 @@ class UserNotificationGenerator(
     private val repository: UserNotificationRepository,
     private val releasesRepository: ReleasesRepository,
     private val teamRepository: TeamRepository,
-    private val authService: com.github.mr3zee.auth.AuthService,
+    private val authService: AuthService,
 ) {
     private val log = LoggerFactory.getLogger(UserNotificationGenerator::class.java)
 

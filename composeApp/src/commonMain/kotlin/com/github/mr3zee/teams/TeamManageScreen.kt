@@ -32,6 +32,7 @@ import com.github.mr3zee.model.*
 import com.github.mr3zee.components.RwBadge
 import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.Spacing
+import com.github.mr3zee.util.UiMessage
 import com.github.mr3zee.util.displayName
 import com.github.mr3zee.util.resolve
 import com.github.mr3zee.i18n.packStringResource
@@ -516,7 +517,7 @@ private fun LazyListScope.sectionHeader(
 private fun InviteUserInlineForm(
     visible: Boolean,
     isInviting: Boolean,
-    error: com.github.mr3zee.util.UiMessage?,
+    error: UiMessage?,
     onDismiss: () -> Unit,
     onClearError: () -> Unit,
     onInvite: (String) -> Unit,

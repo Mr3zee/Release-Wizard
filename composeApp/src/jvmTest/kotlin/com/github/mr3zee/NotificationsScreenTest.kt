@@ -16,6 +16,7 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.cookies.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
@@ -47,7 +48,7 @@ class NotificationsScreenTest {
     )
 
     private fun notificationsToJson(list: List<UserNotification>): String {
-        val notifJson = json.encodeToString(kotlinx.serialization.builtins.ListSerializer(UserNotification.serializer()), list)
+        val notifJson = json.encodeToString(ListSerializer(UserNotification.serializer()), list)
         return """{"notifications":$notifJson,"pagination":{"totalCount":${list.size},"offset":0,"limit":30}}"""
     }
 

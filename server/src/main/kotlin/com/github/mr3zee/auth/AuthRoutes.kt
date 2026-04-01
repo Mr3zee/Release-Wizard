@@ -1,5 +1,6 @@
 package com.github.mr3zee.auth
 
+import com.github.mr3zee.OAuthConfig
 import com.github.mr3zee.PasswordPolicyConfig
 import com.github.mr3zee.WebhookConfig
 import com.github.mr3zee.api.*
@@ -8,15 +9,18 @@ import com.github.mr3zee.model.UserId
 import com.github.mr3zee.model.isAdmin
 import com.github.mr3zee.plugins.CorrelationIdKey
 import com.github.mr3zee.teams.TeamRepository
-import kotlinx.coroutines.CancellationException
+import com.github.mr3zee.usernotifications.UserNotificationGenerator
 import io.ktor.http.*
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.auth.*
+import io.ktor.server.plugins.ContentTransformationException
 import io.ktor.server.plugins.ratelimit.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.koin.ktor.ext.inject
 import org.slf4j.LoggerFactory
@@ -33,9 +37,9 @@ fun Route.authRoutes() {
     val passwordPolicyConfig by inject<PasswordPolicyConfig>()
     val webhookConfig by inject<WebhookConfig>()
     val oauthService by inject<OAuthService>()
-    val oauthConfig by inject<com.github.mr3zee.OAuthConfig>()
-    val notificationGenerator by inject<com.github.mr3zee.usernotifications.UserNotificationGenerator>()
-    val executionScope by inject<kotlinx.coroutines.CoroutineScope>()
+    val oauthConfig by inject<OAuthConfig>()
+    val notificationGenerator by inject<UserNotificationGenerator>()
+    val executionScope by inject<CoroutineScope>()
 
     // Public: password policy + available OAuth providers (no auth needed)
     rateLimit(RateLimitName("authenticated-api")) {
@@ -503,7 +507,7 @@ fun Route.authRoutes() {
                 ?: return@delete call.respond(HttpStatusCode.BadRequest, ErrorResponse(error = "Missing userId", code = "BAD_REQUEST"))
             val request = try {
                 call.receive<AdminDeleteUserRequest>()
-            } catch (_: io.ktor.server.plugins.ContentTransformationException) {
+            } catch (_: ContentTransformationException) {
                 // No body or malformed body — default to no team-lead transfer confirmation.
                 // This supports existing clients (e.g. rejectUser) that send no body on DELETE.
                 AdminDeleteUserRequest()

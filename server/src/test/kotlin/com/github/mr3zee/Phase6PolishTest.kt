@@ -5,7 +5,9 @@ import com.github.mr3zee.audit.AuditRepository
 import com.github.mr3zee.auth.PasswordValidator
 import com.github.mr3zee.model.AuditAction
 import com.github.mr3zee.model.AuditTargetType
+import com.github.mr3zee.model.ConnectionConfig
 import com.github.mr3zee.model.ConnectionType
+import com.github.mr3zee.model.NotificationConfig
 import com.github.mr3zee.schedules.CronUtils
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -159,7 +161,7 @@ class Phase6PolishTest {
             setBody(CreateConnectionRequest(
                 name = "test-conn",
                 type = ConnectionType.SLACK,
-                config = com.github.mr3zee.model.ConnectionConfig.SlackConfig(botToken = "xoxb-test-token"),
+                config = ConnectionConfig.SlackConfig(botToken = "xoxb-test-token"),
                 teamId = teamId,
             ))
         }
@@ -186,7 +188,7 @@ class Phase6PolishTest {
             setBody(CreateConnectionRequest(
                 name = "gh-conn",
                 type = ConnectionType.GITHUB,
-                config = com.github.mr3zee.model.ConnectionConfig.GitHubConfig(
+                config = ConnectionConfig.GitHubConfig(
                     owner = "owner", repo = "repo", token = "ghp_test123"
                 ),
                 teamId = teamId,
@@ -273,7 +275,7 @@ class Phase6PolishTest {
             setBody(CreateNotificationConfigRequest(
                 projectId = project.project.id,
                 type = "slack",
-                config = com.github.mr3zee.model.NotificationConfig.SlackNotification(
+                config = NotificationConfig.SlackNotification(
                     webhookUrl = "https://hooks.slack.com/services/test",
                     channel = "#test",
                 ),

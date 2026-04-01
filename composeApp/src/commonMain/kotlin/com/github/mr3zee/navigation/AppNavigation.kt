@@ -10,6 +10,7 @@ import com.github.mr3zee.api.ScheduleApiClient
 import com.github.mr3zee.api.TeamApiClient
 import com.github.mr3zee.api.UserTeamInfo
 import com.github.mr3zee.api.WebhookTriggerApiClient
+import com.github.mr3zee.api.PatApiClient
 import com.github.mr3zee.automation.ProjectAutomationScreen
 import com.github.mr3zee.automation.ProjectAutomationViewModel
 import com.github.mr3zee.connections.ConnectionFormScreen
@@ -19,7 +20,10 @@ import com.github.mr3zee.editor.DagEditorScreen
 import com.github.mr3zee.editor.DagEditorViewModel
 import com.github.mr3zee.model.TeamId
 import com.github.mr3zee.model.TeamRole
+import com.github.mr3zee.model.UserRole
 import com.github.mr3zee.model.isAdmin
+import com.github.mr3zee.notifications.NotificationsScreen
+import com.github.mr3zee.notifications.NotificationsViewModel
 import com.github.mr3zee.profile.AdminUsersScreen
 import com.github.mr3zee.profile.AdminUsersViewModel
 import com.github.mr3zee.profile.ProfileScreen
@@ -48,7 +52,7 @@ fun AppNavigation(
     mavenTriggerApiClient: MavenTriggerApiClient,
     userTeams: List<UserTeamInfo>,
     currentUserId: String? = null,
-    currentUserRole: com.github.mr3zee.model.UserRole? = null,
+    currentUserRole: UserRole? = null,
     onLogout: () -> Unit,
     onAccountDeleted: () -> Unit = onLogout,
     onTeamChanged: (TeamId) -> Unit,
@@ -56,8 +60,8 @@ fun AppNavigation(
     profileViewModel: ProfileViewModel? = null,
     patViewModel: PatViewModel? = null,
     authApiClient: AuthApiClient? = null,
-    patApiClient: com.github.mr3zee.api.PatApiClient? = null,
-    notificationsViewModel: com.github.mr3zee.notifications.NotificationsViewModel? = null,
+    patApiClient: PatApiClient? = null,
+    notificationsViewModel: NotificationsViewModel? = null,
 ) {
     val isTeamLead = userTeams.any { it.role == TeamRole.TEAM_LEAD }
     // Track teams created in this session so the UI shows "Member" immediately,
@@ -277,7 +281,7 @@ fun AppNavigation(
         is Screen.Notifications -> {
             val vm = notificationsViewModel ?: return
             LaunchedEffect(Unit) { vm.loadIfNeeded() }
-            com.github.mr3zee.notifications.NotificationsScreen(
+            NotificationsScreen(
                 viewModel = vm,
                 onNavigate = onNavigate,
                 onBack = { onGoBack() },

@@ -5,6 +5,7 @@ import com.github.mr3zee.jsonClient
 import com.github.mr3zee.loginAndCreateTeam
 import com.github.mr3zee.model.UserRole
 import com.github.mr3zee.testModule
+import io.ktor.client.HttpClient
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
@@ -18,7 +19,7 @@ class AuthRoutesTest {
     private val testUsername = "admin"
     private val testPassword = "adminpass"
 
-    private suspend fun io.ktor.client.HttpClient.register(
+    private suspend fun HttpClient.register(
         username: String = testUsername,
         password: String = testPassword,
     ) = post(ApiRoutes.Auth.REGISTER) {
@@ -26,7 +27,7 @@ class AuthRoutesTest {
         setBody(RegisterRequest(username = username, password = password))
     }
 
-    private suspend fun io.ktor.client.HttpClient.login(
+    private suspend fun HttpClient.login(
         username: String = testUsername,
         password: String = testPassword,
     ) = post(ApiRoutes.Auth.LOGIN) {

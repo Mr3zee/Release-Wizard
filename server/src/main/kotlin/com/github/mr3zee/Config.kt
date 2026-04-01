@@ -1,6 +1,7 @@
 package com.github.mr3zee
 
 import io.ktor.server.config.*
+import org.slf4j.LoggerFactory
 
 data class DatabaseConfig(
     val url: String,
@@ -183,7 +184,7 @@ fun ApplicationConfig.webhookConfig(): WebhookConfig {
     )
 }
 
-private val configLog = org.slf4j.LoggerFactory.getLogger("com.github.mr3zee.Config")
+private val configLog = LoggerFactory.getLogger("com.github.mr3zee.Config")
 
 fun ApplicationConfig.oauthConfig(): OAuthConfig {
     val clientId = propertyOrNull("app.auth.oauth.google.clientId")?.getString()?.ifBlank { null }

@@ -18,6 +18,7 @@ import com.github.mr3zee.theme.AppTypography
 import com.github.mr3zee.theme.Spacing
 import com.github.mr3zee.i18n.packStringResource
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.yield
 import kotlin.time.Duration.Companion.milliseconds
 import releasewizard.composeapp.generated.resources.*
 
@@ -55,7 +56,7 @@ fun RwInlineConfirmation(
         // Debounce + focus: enable confirm button after 300ms and request focus for Escape handling
         LaunchedEffect(Unit) {
             confirmEnabled = false
-            kotlinx.coroutines.yield() // Ensure layout is complete before requesting focus
+            yield() // Ensure layout is complete before requesting focus
             focusRequester.requestFocus()
             delay(300.milliseconds)
             confirmEnabled = true

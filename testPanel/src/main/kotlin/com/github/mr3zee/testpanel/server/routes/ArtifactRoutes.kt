@@ -2,6 +2,7 @@ package com.github.mr3zee.testpanel.server.routes
 
 import com.github.mr3zee.testpanel.model.TestPanelState
 import io.ktor.http.*
+import io.ktor.server.application.ApplicationCall
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.json.*
@@ -17,7 +18,7 @@ fun Routing.artifactRoutes(state: TestPanelState) {
 }
 
 private suspend fun handleArtifactRequest(
-    call: io.ktor.server.application.ApplicationCall,
+    call: ApplicationCall,
     state: TestPanelState,
     locator: String?,
     subpathParts: List<String>?,

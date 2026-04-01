@@ -7,6 +7,7 @@ import com.github.mr3zee.api.ReleaseApiClient
 import com.github.mr3zee.model.Parameter
 import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.model.ReleaseId
+import com.github.mr3zee.navigation.Screen
 import com.github.mr3zee.navigation.parseUrlPath
 import com.github.mr3zee.navigation.toUrlPath
 import com.github.mr3zee.releases.StartReleaseScreen
@@ -226,13 +227,13 @@ class StartReleaseScreenTest {
 
     @Test
     fun `round-trip StartRelease URL routing`() {
-        val screen = com.github.mr3zee.navigation.Screen.StartRelease(ProjectId("abc"))
+        val screen = Screen.StartRelease(ProjectId("abc"))
         assertEquals(screen, parseUrlPath(screen.toUrlPath()))
     }
 
     @Test
     fun `StartRelease URL format is correct`() {
-        val screen = com.github.mr3zee.navigation.Screen.StartRelease(ProjectId("p1"))
+        val screen = Screen.StartRelease(ProjectId("p1"))
         assertEquals("/projects/p1/start-release", screen.toUrlPath())
     }
 }

@@ -4,6 +4,10 @@ import androidx.compose.ui.test.*
 import com.github.mr3zee.api.*
 import com.github.mr3zee.createTestProjectWithBlocks
 import com.github.mr3zee.e2e.E2eTestBase
+import com.github.mr3zee.model.Block
+import com.github.mr3zee.model.BlockId
+import com.github.mr3zee.model.BlockType
+import com.github.mr3zee.model.DagGraph
 import com.github.mr3zee.model.Parameter
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -123,12 +127,12 @@ class StartReleaseE2eTest : E2eTestBase() {
             setBody(CreateProjectRequest(
                 name = "Param Project",
                 teamId = teamId,
-                dagGraph = com.github.mr3zee.model.DagGraph(
+                dagGraph = DagGraph(
                     blocks = listOf(
-                        com.github.mr3zee.model.Block.ActionBlock(
-                            id = com.github.mr3zee.model.BlockId("b1"),
+                        Block.ActionBlock(
+                            id = BlockId("b1"),
                             name = "Build",
-                            type = com.github.mr3zee.model.BlockType.TEAMCITY_BUILD,
+                            type = BlockType.TEAMCITY_BUILD,
                         ),
                     ),
                 ),
