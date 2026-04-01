@@ -7,7 +7,7 @@ import com.github.mr3zee.model.TeamRole
 import com.github.mr3zee.model.UserRole
 import com.github.mr3zee.registerAndApproveUser
 import com.github.mr3zee.testModule
-import HttpClient
+import io.ktor.client.HttpClient
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*

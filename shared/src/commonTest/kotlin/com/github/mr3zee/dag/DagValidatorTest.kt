@@ -361,6 +361,71 @@ class DagValidatorTest {
     }
 
     @Test
+    fun `detects too many outputs`() {
+        val outputs = (1..DagValidator.MAX_OUTPUTS_PER_BLOCK + 1).map {
+            BlockOutput("output$it")
+        }
+        val block = Block.ActionBlock(
+            id = BlockId("a"),
+            name = "a",
+            type = BlockType.TEAMCITY_BUILD,
+            outputs = outputs,
+        )
+        val graph = DagGraph(blocks = listOf(block))
+        val errors = DagValidator.validate(graph)
+        assertTrue(errors.any { it is ValidationError.TooManyOutputs })
+        val err = errors.filterIsInstance<ValidationError.TooManyOutputs>().first()
+        assertEquals(BlockId("a"), err.blockId)
+        assertEquals(DagValidator.MAX_OUTPUTS_PER_BLOCK + 1, err.count)
+    }
+
+    @Test
+    fun `outputs at max count is valid`() {
+        val outputs = (1..DagValidator.MAX_OUTPUTS_PER_BLOCK).map {
+            BlockOutput("output$it")
+        }
+        val block = Block.ActionBlock(
+            id = BlockId("a"),
+            name = "a",
+            type = BlockType.TEAMCITY_BUILD,
+            outputs = outputs,
+        )
+        val graph = DagGraph(blocks = listOf(block))
+        val errors = DagValidator.validate(graph)
+        assertTrue(errors.none { it is ValidationError.TooManyOutputs })
+    }
+
+    @Test
+    fun `detects output name too long`() {
+        val longName = "o".repeat(DagValidator.MAX_OUTPUT_NAME_LENGTH + 1)
+        val block = Block.ActionBlock(
+            id = BlockId("a"),
+            name = "a",
+            type = BlockType.TEAMCITY_BUILD,
+            outputs = listOf(BlockOutput(longName)),
+        )
+        val graph = DagGraph(blocks = listOf(block))
+        val errors = DagValidator.validate(graph)
+        assertTrue(errors.any { it is ValidationError.OutputNameTooLong })
+        val err = errors.filterIsInstance<ValidationError.OutputNameTooLong>().first()
+        assertEquals(BlockId("a"), err.blockId)
+    }
+
+    @Test
+    fun `output name at max length is valid`() {
+        val name = "o".repeat(DagValidator.MAX_OUTPUT_NAME_LENGTH)
+        val block = Block.ActionBlock(
+            id = BlockId("a"),
+            name = "a",
+            type = BlockType.TEAMCITY_BUILD,
+            outputs = listOf(BlockOutput(name)),
+        )
+        val graph = DagGraph(blocks = listOf(block))
+        val errors = DagValidator.validate(graph)
+        assertTrue(errors.none { it is ValidationError.OutputNameTooLong })
+    }
+
+    @Test
     fun `detects block description too long in nested container`() {
         val longDescription = "x".repeat(DagValidator.MAX_BLOCK_DESCRIPTION_LENGTH + 1)
         val nestedBlock = Block.ActionBlock(

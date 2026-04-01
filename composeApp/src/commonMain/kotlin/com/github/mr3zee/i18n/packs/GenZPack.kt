@@ -310,6 +310,8 @@ object GenZPack {
             "editor_toolbar_redo" to "Redo Slay",
             "editor_toolbar_undo" to "Undo Fr",
             "editor_validation_block_description_too_long" to $$"Vibe check too long bestie: %1$d / %2$d",
+            "editor_validation_too_many_outputs" to $$"Too many outputs no cap (max %1$d)",
+            "editor_validation_output_name_too_long" to $$"Output name is too long fr (max %1$d)",
             "editor_validation_block_name_too_long" to "Block name is too long ngl",
             "editor_validation_cycle" to $$"Cycle detected involving %1$d blocks, it's giving loop",
             "editor_validation_duplicate_id" to $$"Duplicate block ID: %1$s no cap",

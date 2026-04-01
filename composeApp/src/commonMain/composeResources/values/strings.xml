@@ -286,6 +286,8 @@
     <string name="editor_validation_parameter_key_too_long">Parameter key too long (max %1$d)</string>
     <string name="editor_validation_parameter_value_too_long">Parameter value too long (max %1$d)</string>
     <string name="editor_validation_block_description_too_long">Block description too long: %1$d / %2$d</string>
+    <string name="editor_validation_too_many_outputs">Too many outputs (max %1$d)</string>
+    <string name="editor_validation_output_name_too_long">Output name too long (max %1$d)</string>
     <string name="editor_empty_canvas_hint">Drag from an output port to an input port to connect blocks</string>
     <string name="editor_empty_canvas_no_blocks">Add blocks from the toolbar to get started</string>
     <string name="editor_zoom_fit">Reset view</string>

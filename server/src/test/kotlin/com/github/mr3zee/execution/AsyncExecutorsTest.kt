@@ -434,6 +434,432 @@ class AsyncExecutorsTest {
         assertEquals(2, artifacts.size, "maxFiles=2 should limit to 2 artifacts")
     }
 
+    // --- TeamCity Custom Output Capture ---
+
+    @Test
+    fun `teamcity executor fetches custom outputs from resulting-properties`() = runBlocking {
+        val client = mockClient { request ->
+            val url = request.url.toString()
+            when {
+                url.contains("/app/rest/buildQueue") -> respond(
+                    """{"id":"42","buildTypeId":"bt1","state":"queued"}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                url.contains("/app/rest/builds?locator=snapshotDependency") -> respond(
+                    """{"build":[]}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                url.contains("/resulting-properties") -> respond(
+                    """{"property":[{"name":"version","value":"1.2.3"},{"name":"commitHash","value":"abc123"},{"name":"irrelevant","value":"skip"}]}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                url.contains("/app/rest/builds/id:42") -> respond(
+                    """{"state":"finished","status":"SUCCESS","number":"42"}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                else -> respond("{}", HttpStatusCode.OK)
+            }
+        }
+
+        val pollingService = BuildPollingService(client)
+        val executor = TeamCityBuildExecutor(client, pollingService)
+
+        val block = Block.ActionBlock(
+            id = BlockId("tc-custom"),
+            name = "Build",
+            type = BlockType.TEAMCITY_BUILD,
+            connectionId = ConnectionId("conn-1"),
+            outputs = listOf(
+                BlockOutput(name = "version", description = "Release version"),
+                BlockOutput(name = "commitHash", description = "Git commit"),
+            ),
+        )
+
+        val outputs = executor.execute(
+            block = block,
+            parameters = listOf(Parameter(key = "buildTypeId", value = "bt1")),
+            context = context(
+                config = ConnectionConfig.TeamCityConfig(
+                    serverUrl = "https://tc.example.com",
+                    token = "t",
+                    pollingIntervalSeconds = 1,
+                ),
+            ),
+        )
+
+        // Standard outputs should still be present
+        assertEquals("42", outputs["buildNumber"])
+        assertEquals("SUCCESS", outputs["buildStatus"])
+        // Custom outputs should be captured
+        assertEquals("1.2.3", outputs["version"])
+        assertEquals("abc123", outputs["commitHash"])
+        // Irrelevant TC property should NOT be in outputs
+        assertNull(outputs["irrelevant"])
+    }
+
+    @Test
+    fun `teamcity executor skips custom output fetch when no custom outputs defined`() = runBlocking {
+        var resultingPropertiesCalled = false
+
+        val client = mockClient { request ->
+            val url = request.url.toString()
+            when {
+                url.contains("/resulting-properties") -> {
+                    resultingPropertiesCalled = true
+                    respond("{}", HttpStatusCode.OK)
+                }
+                url.contains("/app/rest/buildQueue") -> respond(
+                    """{"id":"42","buildTypeId":"bt1","state":"queued"}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                url.contains("/app/rest/builds?locator=snapshotDependency") -> respond(
+                    """{"build":[]}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                url.contains("/app/rest/builds/id:42") -> respond(
+                    """{"state":"finished","status":"SUCCESS","number":"42"}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                else -> respond("{}", HttpStatusCode.OK)
+            }
+        }
+
+        val pollingService = BuildPollingService(client)
+        val executor = TeamCityBuildExecutor(client, pollingService)
+
+        val block = Block.ActionBlock(
+            id = BlockId("tc-no-custom"),
+            name = "Build",
+            type = BlockType.TEAMCITY_BUILD,
+            connectionId = ConnectionId("conn-1"),
+            // No custom outputs — only known outputs exist on this block type
+        )
+
+        executor.execute(
+            block = block,
+            parameters = listOf(Parameter(key = "buildTypeId", value = "bt1")),
+            context = context(
+                config = ConnectionConfig.TeamCityConfig(
+                    serverUrl = "https://tc.example.com",
+                    token = "t",
+                    pollingIntervalSeconds = 1,
+                ),
+            ),
+        )
+
+        assertFalse(resultingPropertiesCalled, "Should not call resulting-properties when no custom outputs are defined")
+    }
+
+    @Test
+    fun `teamcity executor handles resulting-properties failure gracefully`() = runBlocking {
+        val client = mockClient { request ->
+            val url = request.url.toString()
+            when {
+                url.contains("/app/rest/buildQueue") -> respond(
+                    """{"id":"42","buildTypeId":"bt1","state":"queued"}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                url.contains("/app/rest/builds?locator=snapshotDependency") -> respond(
+                    """{"build":[]}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                url.contains("/resulting-properties") -> respond(
+                    "Internal Server Error",
+                    HttpStatusCode.InternalServerError,
+                )
+                url.contains("/app/rest/builds/id:42") -> respond(
+                    """{"state":"finished","status":"SUCCESS","number":"42"}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                else -> respond("{}", HttpStatusCode.OK)
+            }
+        }
+
+        val pollingService = BuildPollingService(client)
+        val executor = TeamCityBuildExecutor(client, pollingService)
+
+        val block = Block.ActionBlock(
+            id = BlockId("tc-fail"),
+            name = "Build",
+            type = BlockType.TEAMCITY_BUILD,
+            connectionId = ConnectionId("conn-1"),
+            outputs = listOf(BlockOutput(name = "version")),
+        )
+
+        val outputs = executor.execute(
+            block = block,
+            parameters = listOf(Parameter(key = "buildTypeId", value = "bt1")),
+            context = context(
+                config = ConnectionConfig.TeamCityConfig(
+                    serverUrl = "https://tc.example.com",
+                    token = "t",
+                    pollingIntervalSeconds = 1,
+                ),
+            ),
+        )
+
+        // Standard outputs should still be present despite resulting-properties failure
+        assertEquals("42", outputs["buildNumber"])
+        assertEquals("SUCCESS", outputs["buildStatus"])
+        // Custom output should be absent (not error)
+        assertNull(outputs["version"])
+    }
+
+    @Test
+    fun `teamcity executor filters blank custom output names`() = runBlocking {
+        var resultingPropertiesCalled = false
+
+        val client = mockClient { request ->
+            val url = request.url.toString()
+            when {
+                url.contains("/resulting-properties") -> {
+                    resultingPropertiesCalled = true
+                    respond("{}", HttpStatusCode.OK)
+                }
+                url.contains("/app/rest/buildQueue") -> respond(
+                    """{"id":"42","buildTypeId":"bt1","state":"queued"}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                url.contains("/app/rest/builds?locator=snapshotDependency") -> respond(
+                    """{"build":[]}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                url.contains("/app/rest/builds/id:42") -> respond(
+                    """{"state":"finished","status":"SUCCESS","number":"42"}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                else -> respond("{}", HttpStatusCode.OK)
+            }
+        }
+
+        val pollingService = BuildPollingService(client)
+        val executor = TeamCityBuildExecutor(client, pollingService)
+
+        // Block with only blank-named outputs — should not trigger API call
+        val block = Block.ActionBlock(
+            id = BlockId("tc-blank"),
+            name = "Build",
+            type = BlockType.TEAMCITY_BUILD,
+            connectionId = ConnectionId("conn-1"),
+            outputs = listOf(BlockOutput(name = ""), BlockOutput(name = "  ")),
+        )
+
+        executor.execute(
+            block = block,
+            parameters = listOf(Parameter(key = "buildTypeId", value = "bt1")),
+            context = context(
+                config = ConnectionConfig.TeamCityConfig(
+                    serverUrl = "https://tc.example.com",
+                    token = "t",
+                    pollingIntervalSeconds = 1,
+                ),
+            ),
+        )
+
+        assertFalse(resultingPropertiesCalled, "Should not call resulting-properties when all custom output names are blank")
+    }
+
+    @Test
+    fun `teamcity executor excludes known output names from custom fetch`() = runBlocking {
+        val client = mockClient { request ->
+            val url = request.url.toString()
+            when {
+                url.contains("/app/rest/buildQueue") -> respond(
+                    """{"id":"42","buildTypeId":"bt1","state":"queued"}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                url.contains("/app/rest/builds?locator=snapshotDependency") -> respond(
+                    """{"build":[]}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                url.contains("/resulting-properties") -> respond(
+                    """{"property":[{"name":"buildId","value":"overridden"},{"name":"myParam","value":"good"}]}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                url.contains("/app/rest/builds/id:42") -> respond(
+                    """{"state":"finished","status":"SUCCESS","number":"42"}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                else -> respond("{}", HttpStatusCode.OK)
+            }
+        }
+
+        val pollingService = BuildPollingService(client)
+        val executor = TeamCityBuildExecutor(client, pollingService)
+
+        // Include a known output name (buildId) and a custom one (myParam)
+        val block = Block.ActionBlock(
+            id = BlockId("tc-clash"),
+            name = "Build",
+            type = BlockType.TEAMCITY_BUILD,
+            connectionId = ConnectionId("conn-1"),
+            outputs = listOf(
+                BlockOutput(name = "buildId"),
+                BlockOutput(name = "myParam"),
+            ),
+        )
+
+        val outputs = executor.execute(
+            block = block,
+            parameters = listOf(Parameter(key = "buildTypeId", value = "bt1")),
+            context = context(
+                config = ConnectionConfig.TeamCityConfig(
+                    serverUrl = "https://tc.example.com",
+                    token = "t",
+                    pollingIntervalSeconds = 1,
+                ),
+            ),
+        )
+
+        // buildId should come from the polling service, NOT from resulting-properties
+        assertEquals("42", outputs["buildId"])
+        // Custom param should be fetched from resulting-properties
+        assertEquals("good", outputs["myParam"])
+    }
+
+    @Test
+    fun `teamcity executor does not overwrite artifacts output with custom output`() = runBlocking {
+        val client = mockClient { request ->
+            val url = request.url.toString()
+            when {
+                url.contains("/app/rest/buildQueue") -> respond(
+                    """{"id":"42","buildTypeId":"bt1","state":"queued"}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                url.contains("/app/rest/builds?locator=snapshotDependency") -> respond(
+                    """{"build":[]}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                url.contains("/artifacts/children") -> respond(
+                    """{"file":[{"name":"app.jar","size":1024}]}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                url.contains("/resulting-properties") -> respond(
+                    """{"property":[{"name":"artifacts","value":"malicious"}]}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                url.contains("/app/rest/builds/id:42") -> respond(
+                    """{"state":"finished","status":"SUCCESS","number":"42"}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                else -> respond("{}", HttpStatusCode.OK)
+            }
+        }
+
+        val pollingService = BuildPollingService(client)
+        val artifactService = TeamCityArtifactService(client)
+        val executor = TeamCityBuildExecutor(client, pollingService, artifactService)
+
+        // User tries to capture "artifacts" as a custom output — should be blocked by RESERVED_OUTPUT_KEYS
+        val block = Block.ActionBlock(
+            id = BlockId("tc-reserved"),
+            name = "Build",
+            type = BlockType.TEAMCITY_BUILD,
+            connectionId = ConnectionId("conn-1"),
+            outputs = listOf(BlockOutput(name = "artifacts")),
+        )
+
+        val outputs = executor.execute(
+            block = block,
+            parameters = listOf(
+                Parameter(key = "buildTypeId", value = "bt1"),
+                Parameter(key = "artifactsGlob", value = "**/*.jar"),
+            ),
+            context = context(
+                config = ConnectionConfig.TeamCityConfig(
+                    serverUrl = "https://tc.example.com",
+                    token = "t",
+                    pollingIntervalSeconds = 1,
+                ),
+            ),
+        )
+
+        // artifacts should be the real artifact JSON, not the TC property value
+        val artifactsJson = outputs["artifacts"] ?: error("outputs should contain 'artifacts'")
+        assertFalse(artifactsJson.contains("malicious"), "Custom output named 'artifacts' must not overwrite the real artifacts output")
+        assertTrue(artifactsJson.contains("app.jar"), "Artifacts output should contain the real artifact paths")
+    }
+
+    @Test
+    fun `teamcity executor handles empty resulting-properties array`() = runBlocking {
+        val client = mockClient { request ->
+            val url = request.url.toString()
+            when {
+                url.contains("/app/rest/buildQueue") -> respond(
+                    """{"id":"42","buildTypeId":"bt1","state":"queued"}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                url.contains("/app/rest/builds?locator=snapshotDependency") -> respond(
+                    """{"build":[]}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                url.contains("/resulting-properties") -> respond(
+                    """{"property":[]}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                url.contains("/app/rest/builds/id:42") -> respond(
+                    """{"state":"finished","status":"SUCCESS","number":"42"}""",
+                    HttpStatusCode.OK,
+                    headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()),
+                )
+                else -> respond("{}", HttpStatusCode.OK)
+            }
+        }
+
+        val pollingService = BuildPollingService(client)
+        val executor = TeamCityBuildExecutor(client, pollingService)
+
+        val block = Block.ActionBlock(
+            id = BlockId("tc-empty"),
+            name = "Build",
+            type = BlockType.TEAMCITY_BUILD,
+            connectionId = ConnectionId("conn-1"),
+            outputs = listOf(BlockOutput(name = "version")),
+        )
+
+        val outputs = executor.execute(
+            block = block,
+            parameters = listOf(Parameter(key = "buildTypeId", value = "bt1")),
+            context = context(
+                config = ConnectionConfig.TeamCityConfig(
+                    serverUrl = "https://tc.example.com",
+                    token = "t",
+                    pollingIntervalSeconds = 1,
+                ),
+            ),
+        )
+
+        // Standard outputs should be present
+        assertEquals("42", outputs["buildNumber"])
+        // Custom output not found in empty properties — should be absent
+        assertNull(outputs["version"])
+    }
+
     // --- GitHub Action Executor ---
 
     @Test

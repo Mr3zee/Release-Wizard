@@ -8,9 +8,9 @@ import com.github.mr3zee.api.ReleaseApiClient
 import com.github.mr3zee.editor.DagEditorScreen
 import com.github.mr3zee.editor.DagEditorViewModel
 import com.github.mr3zee.model.*
-import ProjectId
+import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.releases.*
-import UiMessage
+import com.github.mr3zee.util.UiMessage
 import io.ktor.client.*
 import io.ktor.client.engine.mock.*
 import io.ktor.client.plugins.contentnegotiation.*

@@ -10,7 +10,7 @@ import com.github.mr3zee.model.BlockId
 import com.github.mr3zee.model.BlockType
 import com.github.mr3zee.model.DagGraph
 import com.github.mr3zee.model.Parameter
-import ProjectId
+import com.github.mr3zee.model.ProjectId
 import com.github.mr3zee.testModule
 import io.ktor.client.call.*
 import io.ktor.client.request.*

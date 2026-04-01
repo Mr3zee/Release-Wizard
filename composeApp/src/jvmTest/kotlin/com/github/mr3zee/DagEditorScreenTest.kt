@@ -2858,9 +2858,9 @@ class DagEditorScreenTest {
     // ---- Block outputs read-only display ----
 
     @Test
-    fun `block outputs displayed in overview tab when block has outputs`() = runComposeUiTest {
+    fun `block custom outputs displayed in parameters tab for TC blocks`() = runComposeUiTest {
         val projectWithOutputs = """{"project":{"id":"p1","name":"Test Project","description":"","dagGraph":{"blocks":[
-            {"kind":"action","id":"b1","name":"Publish","type":"GITHUB_PUBLICATION","parameters":[],"outputs":[{"name":"artifact_url","description":"URL of the published artifact"}],"timeoutSeconds":null,"connectionId":null}
+            {"kind":"action","id":"b1","name":"Build","type":"TEAMCITY_BUILD","parameters":[{"key":"buildTypeId","value":"bt1"}],"outputs":[{"name":"version","description":"Release version from TC"}],"timeoutSeconds":300,"connectionId":null}
         ],"edges":[],"positions":{"b1":{"x":100,"y":100}}},"parameters":[],"createdAt":"2026-03-13T00:00:00Z","updatedAt":"2026-03-13T00:00:00Z"}}"""
 
         val vm = editorViewModel(getJson = projectWithOutputs)
@@ -2884,14 +2884,22 @@ class DagEditorScreenTest {
             onAllNodesWithTag("block_name_field").fetchSemanticsNodes().isNotEmpty()
         }
 
-        // Overview tab (index 0) is selected by default — verify outputs section
+        // Switch to Parameters tab (index 1)
+        onNodeWithTag("properties_tab_1").performClick()
+        waitForIdle()
+
+        // Outputs section should be in the Parameters tab
         onNodeWithText("Outputs").assertExists()
-        onNodeWithText("artifact_url").assertExists()
-        onNodeWithText("URL of the published artifact").assertExists()
+        // Known TC outputs should be visible
+        onNodeWithText("buildId").assertExists()
+        // Custom output should be visible as editable field
+        onNodeWithTag("custom_output_name_field_0").assertExists()
+        // Add Custom Output button should be present for TC blocks
+        onNodeWithTag("add_custom_output_button").assertExists()
     }
 
     @Test
-    fun `block without outputs does not show outputs section in overview`() = runComposeUiTest {
+    fun `block known outputs shown in parameters tab`() = runComposeUiTest {
         // Default projectJson has no custom outputs, but knownOutputs() adds system outputs for all action blocks
         val vm = editorViewModel()
         setContent {
@@ -2913,6 +2921,10 @@ class DagEditorScreenTest {
         waitUntil(timeoutMillis = 3000L) {
             onAllNodesWithTag("block_name_field").fetchSemanticsNodes().isNotEmpty()
         }
+
+        // Switch to Parameters tab (index 1)
+        onNodeWithTag("properties_tab_1").performClick()
+        waitForIdle()
 
         // "Outputs" header should appear because knownOutputs() provides system outputs for TEAMCITY_BUILD
         onNodeWithText("Outputs").assertExists()

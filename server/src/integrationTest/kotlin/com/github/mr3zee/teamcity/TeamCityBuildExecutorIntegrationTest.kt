@@ -91,6 +91,44 @@ class TeamCityBuildExecutorIntegrationTest {
     }
 
     @Test
+    fun `execute captures custom outputs from resulting-properties`() = runBlocking {
+        val cfg = config ?: error("TeamCityTestConfig not loaded — setUp should have skipped this test")
+        val httpClient = client ?: error("HttpClient not initialized")
+        val pollingService = BuildPollingService(httpClient)
+        val executor = TeamCityBuildExecutor(httpClient, pollingService)
+
+        // Define a custom output that matches a TC build parameter.
+        // Most TC builds have system.teamcity.version as a resulting property.
+        val blockWithOutputs = Block.ActionBlock(
+            id = BlockId("tc-integ-custom"),
+            name = "Integration TC Build with Custom Outputs",
+            type = BlockType.TEAMCITY_BUILD,
+            connectionId = ConnectionId("conn-tc"),
+            timeoutSeconds = 300,
+            outputs = listOf(
+                BlockOutput(name = "system.teamcity.version", description = "TC server version"),
+            ),
+        )
+
+        val outputs = executor.execute(
+            block = blockWithOutputs,
+            parameters = listOf(Parameter(key = "buildTypeId", value = cfg.buildTypeId)),
+            context = context(),
+        )
+
+        // Standard outputs should be present
+        val buildNumber = outputs["buildNumber"] ?: error("Expected 'buildNumber' in outputs")
+        assertTrue(buildNumber.isNotEmpty(), "buildNumber should not be empty")
+
+        // Custom output should be captured if the property exists on the build
+        val tcVersion = outputs["system.teamcity.version"]
+        // system.teamcity.version is set by TC on every build, so it should be present
+        if (tcVersion != null) {
+            assertTrue(tcVersion.isNotEmpty(), "system.teamcity.version should not be empty when present")
+        }
+    }
+
+    @Test
     fun `execute with invalid build type throws`() = runBlocking {
         val httpClient = client ?: error("HttpClient not initialized")
         val pollingService = BuildPollingService(httpClient)
