@@ -55,6 +55,10 @@ object ApiRoutes {
             fun accept(id: String) = "$BASE/$id/accept"
             fun decline(id: String) = "$BASE/$id/decline"
         }
+
+        object MyJoinRequests {
+            const val BASE = "$API_V1/auth/me/join-requests"
+        }
     }
 
     object Connections {

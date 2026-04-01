@@ -388,7 +388,7 @@ object RickRollPack {
             "releases_archive" to "Never Gonna Say Goodbye (Archive)",
             "releases_archive_confirmation" to "Say goodbye to this release? It will be moved to the archive.",
             "releases_artifacts" to "Artifacts",
-            "releases_block_output_entry" to $$"%1$s: %2$s",
+
             "releases_block_inputs" to "Inputs",
             "releases_block_outputs" to "Outputs",
             "releases_block_status" to $$"Status: %1$s",
@@ -556,6 +556,7 @@ object RickRollPack {
             "teams_manage" to "Manage",
             "teams_manage_title" to "Gotta Make You Understand (Manage Team)",
             "teams_member_badge" to "No Stranger",
+            "teams_requested_badge" to "Waiting to Give You Up",
             "teams_members_count" to $$"Members (%1$d)",
             "teams_members_section" to "No Strangers to Love",
             "teams_my_invites" to "My invites",

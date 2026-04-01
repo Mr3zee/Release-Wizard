@@ -385,7 +385,7 @@ object RickAndMortyPack {
             "releases_archive" to "Archive",
             "releases_archive_confirmation" to "Archive this release, Morty? It'll move to the *burp* archive. Whatever.",
             "releases_artifacts" to "Artifacts",
-            "releases_block_output_entry" to $$"%1$s: %2$s",
+
             "releases_block_inputs" to "Inputs, Morty",
             "releases_block_outputs" to "Outputs",
             "releases_block_status" to $$"Status: %1$s",
@@ -553,6 +553,7 @@ object RickAndMortyPack {
             "teams_manage" to "Manage",
             "teams_manage_title" to "Manage *burp* Team",
             "teams_member_badge" to "Member",
+            "teams_requested_badge" to "Requested, *burp*",
             "teams_members_count" to $$"Members (%1$d)",
             "teams_members_section" to "Members",
             "teams_my_invites" to "My Invites, *burp*",

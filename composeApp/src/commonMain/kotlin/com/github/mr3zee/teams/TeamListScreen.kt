@@ -69,6 +69,7 @@ fun TeamListScreen(
     val pagination by viewModel.pagination.collectAsState()
     val isLoadingMore by viewModel.isLoadingMore.collectAsState()
     val pendingInviteTeamIds by viewModel.pendingInviteTeamIds.collectAsState()
+    val pendingJoinRequestTeamIds by viewModel.pendingJoinRequestTeamIds.collectAsState()
 
     var showCreateDialog by remember { mutableStateOf(false) }
 
@@ -263,6 +264,7 @@ fun TeamListScreen(
                             onAcceptInvite = { viewModel.acceptInvite(teamResponse.team.id, onInviteAccepted) },
                             isMember = teamResponse.team.id in memberTeamIds,
                             hasPendingInvite = teamResponse.team.id in pendingInviteTeamIds,
+                            hasPendingJoinRequest = teamResponse.team.id in pendingJoinRequestTeamIds,
                             modifier = Modifier.widthIn(max = 1200.dp),
                         )
                     }
@@ -289,6 +291,7 @@ private fun TeamListItem(
     onAcceptInvite: () -> Unit,
     isMember: Boolean,
     hasPendingInvite: Boolean = false,
+    hasPendingJoinRequest: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     ListItemCard(
@@ -331,6 +334,12 @@ private fun TeamListItem(
             ) {
                 Text(packStringResource(Res.string.teams_accept_invite))
             }
+        } else if (hasPendingJoinRequest) {
+            RwBadge(
+                text = packStringResource(Res.string.teams_requested_badge),
+                color = MaterialTheme.colorScheme.outline,
+                testTag = "requested_badge_${teamResponse.team.id.value}",
+            )
         } else {
             RwButton(onClick = onJoinRequest, variant = RwButtonVariant.Ghost) {
                 Text(packStringResource(Res.string.teams_request_to_join))

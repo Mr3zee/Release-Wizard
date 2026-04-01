@@ -85,6 +85,7 @@ interface TeamRepository {
     suspend fun findPendingJoinRequestsByTeam(teamId: TeamId): List<JoinRequest>
     suspend fun updateJoinRequestStatus(id: String, status: JoinRequestStatus, reviewedByUserId: String): Boolean
     suspend fun findExistingPendingJoinRequest(teamId: TeamId, userId: String): JoinRequest?
+    suspend fun findPendingJoinRequestsByUser(userId: String): List<JoinRequest>
 
     /** TEAM-L3: Cancel any pending join request for a user in a team (e.g., after invite accept). */
     suspend fun cancelPendingJoinRequest(teamId: TeamId, userId: String, reviewedByUserId: String? = null)
@@ -687,6 +688,13 @@ class ExposedTeamRepository(private val db: Database) : TeamRepository {
             }
             .singleOrNull() ?: return@dbQuery null
         mapJoinRequestRows(listOf(row)).firstOrNull()
+    }
+
+    override suspend fun findPendingJoinRequestsByUser(userId: String): List<JoinRequest> = dbQuery {
+        val rows = JoinRequestTable.selectAll()
+            .where { (JoinRequestTable.userId eq UUID.fromString(userId)) and (JoinRequestTable.status eq JoinRequestStatus.PENDING) }
+            .toList()
+        mapJoinRequestRows(rows)
     }
 
     // TEAM-L3: Cancel pending join requests when user joins via invite

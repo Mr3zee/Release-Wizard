@@ -387,7 +387,7 @@ object HelldiversPack {
             "releases_archive" to "Decommission",
             "releases_archive_confirmation" to "This deployment will be moved to the archive. It will no longer appear in active operations, Citizen.",
             "releases_artifacts" to "War Materiel",
-            "releases_block_output_entry" to $$"%1$s: %2$s",
+
             "releases_block_inputs" to "Supply Requisition",
             "releases_block_outputs" to "Outputs",
             "releases_block_status" to $$"Status: %1$s",
@@ -555,6 +555,7 @@ object HelldiversPack {
             "teams_manage" to "Command",
             "teams_manage_title" to "Battalion Command",
             "teams_member_badge" to "Helldiver",
+            "teams_requested_badge" to "Awaiting Orders",
             "teams_members_count" to $$"Helldivers (%1$d)",
             "teams_members_section" to "Helldivers",
             "teams_my_invites" to "My orders",

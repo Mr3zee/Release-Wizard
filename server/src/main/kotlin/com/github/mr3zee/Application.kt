@@ -39,6 +39,7 @@ import com.github.mr3zee.schedules.schedulesModule
 import com.github.mr3zee.tags.tagRoutes
 import com.github.mr3zee.tags.tagsModule
 import com.github.mr3zee.teams.myInviteRoutes
+import com.github.mr3zee.teams.myJoinRequestRoutes
 import com.github.mr3zee.teams.teamRoutes
 import com.github.mr3zee.audit.auditModule
 import com.github.mr3zee.teams.teamsModule
@@ -645,6 +646,7 @@ fun Application.configureRouting(
             rateLimit(RateLimitName("authenticated-api")) {
                 teamRoutes()
                 myInviteRoutes()
+                myJoinRequestRoutes()
                 projectRoutes()
                 projectLockRoutes()
                 connectionRoutes()

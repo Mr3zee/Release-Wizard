@@ -383,7 +383,7 @@ object GenZPack {
             "releases_archive" to "Archive It",
             "releases_archive_confirmation" to "You sure you wanna archive this release bestie? It moves to the archive era fr.",
             "releases_artifacts" to "Artifacts",
-            "releases_block_output_entry" to $$"%1$s: %2$s",
+
             "releases_block_inputs" to "Inputs",
             "releases_block_outputs" to "Outputs",
             "releases_block_status" to $$"Status: %1$s",
@@ -553,6 +553,7 @@ object GenZPack {
             "teams_manage" to "Manage",
             "teams_manage_title" to "Manage Squad",
             "teams_member_badge" to "Member",
+            "teams_requested_badge" to "Requested",
             "teams_members_count" to $$"Members (%1$d)",
             "teams_members_section" to "Members",
             "teams_my_invites" to "My Invites",

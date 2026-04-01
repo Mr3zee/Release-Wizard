@@ -189,6 +189,14 @@ fun Route.teamRoutes() {
     }
 }
 
+fun Route.myJoinRequestRoutes() {
+    val service by inject<TeamService>()
+
+    get(ApiRoutes.Auth.MyJoinRequests.BASE) {
+        call.respond(service.getMyJoinRequests(call.userSession()))
+    }
+}
+
 fun Route.myInviteRoutes() {
     val service by inject<TeamService>()
 

@@ -335,7 +335,7 @@
     <string name="releases_webhook_no_updates_finished">No status updates were reported by this build</string>
     <string name="releases_block_inputs">Inputs</string>
     <string name="releases_block_outputs">Outputs</string>
-    <string name="releases_block_output_entry">%1$s: %2$s</string>
+
     <string name="releases_approval_progress">%1$d of %2$d approvals received</string>
     <string name="releases_error_failed_at">Failed at: %1$s</string>
     <string name="releases_artifacts">Artifacts</string>
@@ -424,6 +424,7 @@
     <string name="teams_description_optional">Description (optional)</string>
     <string name="teams_description_placeholder">e.g., Manages Android library releases</string>
     <string name="teams_member_badge">Member</string>
+    <string name="teams_requested_badge">Requested</string>
     <string name="teams_request_to_join">Request to join</string>
     <string name="teams_accept_invite">Accept invite</string>
     <string name="teams_join_request_submitted">Join request submitted</string>

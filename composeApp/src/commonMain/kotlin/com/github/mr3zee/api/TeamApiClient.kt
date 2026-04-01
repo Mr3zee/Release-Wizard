@@ -105,6 +105,13 @@ class TeamApiClient(private val client: HttpClient) {
         client.post(serverUrl(ApiRoutes.Teams.rejectJoinRequest(teamId.value, requestId)))
     }
 
+    // My Join Requests
+
+    suspend fun getMyJoinRequests(): JoinRequestListResponse {
+        val response = client.get(serverUrl(ApiRoutes.Auth.MyJoinRequests.BASE))
+        return response.body()
+    }
+
     // My Invites
 
     suspend fun getMyInvites(): InviteListResponse {

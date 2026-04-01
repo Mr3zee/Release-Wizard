@@ -4,6 +4,8 @@ import androidx.compose.ui.test.*
 import com.github.mr3zee.api.UserNotificationApiClient
 import com.github.mr3zee.model.UserNotification
 import com.github.mr3zee.model.UserNotificationType
+import com.github.mr3zee.model.TeamId
+import com.github.mr3zee.navigation.Screen
 import com.github.mr3zee.notifications.NotificationsScreen
 import com.github.mr3zee.notifications.NotificationsViewModel
 import com.github.mr3zee.theme.AppTheme
@@ -262,5 +264,90 @@ class NotificationsScreenTest {
 
         waitUntil(timeoutMillis = 1000L) { unreadCount.get() == 0 }
         assertEquals(0, unreadCount.get())
+    }
+
+    // --- JOIN_REQUEST_RECEIVED notification tests ---
+
+    @Test
+    fun `join request received notification displays correctly`() = runComposeUiTest {
+        val notifications = AtomicReference(listOf(
+            UserNotification(
+                id = "n10", userId = "u1", type = UserNotificationType.JOIN_REQUEST_RECEIVED,
+                teamId = TeamId("t1"), teamName = "Alpha Team",
+                title = "Join request received", message = "User 'bob' has requested to join team 'Alpha Team'.",
+                targetType = "team-manage", targetId = "t1",
+                read = false, timestamp = 1711929600000,
+            ),
+        ))
+        val client = notificationClient(notifications)
+        val vm = createViewModel(client)
+        setContent {
+            LaunchedEffect(Unit) { vm.loadIfNeeded() }
+            AppTheme {
+                NotificationsScreen(viewModel = vm, onNavigate = {}, onBack = {})
+            }
+        }
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Join request received").fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithText("Join request received").assertIsDisplayed()
+        onNodeWithText("User 'bob' has requested to join team 'Alpha Team'.", useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun `join request received notification navigates to team manage`() = runComposeUiTest {
+        val navigatedScreen = AtomicReference<Screen?>(null)
+        val notifications = AtomicReference(listOf(
+            UserNotification(
+                id = "n10", userId = "u1", type = UserNotificationType.JOIN_REQUEST_RECEIVED,
+                teamId = TeamId("t1"), teamName = "Alpha Team",
+                title = "Join request received", message = "User 'bob' has requested to join team 'Alpha Team'.",
+                targetType = "team-manage", targetId = "t1",
+                read = false, timestamp = 1711929600000,
+            ),
+        ))
+        val client = notificationClient(notifications)
+        val vm = createViewModel(client)
+        setContent {
+            LaunchedEffect(Unit) { vm.loadIfNeeded() }
+            AppTheme {
+                NotificationsScreen(viewModel = vm, onNavigate = { navigatedScreen.set(it) }, onBack = {})
+            }
+        }
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Join request received").fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithTag("notification_item_n10").performClick()
+        waitUntil(timeoutMillis = 2000L) { navigatedScreen.get() != null }
+        assertEquals(Screen.TeamManage(TeamId("t1")), navigatedScreen.get())
+    }
+
+    @Test
+    fun `rejected join request notification does not navigate`() = runComposeUiTest {
+        val navigatedScreen = AtomicReference<Screen?>(null)
+        val notifications = AtomicReference(listOf(
+            UserNotification(
+                id = "n11", userId = "u1", type = UserNotificationType.JOIN_REQUEST_DECIDED,
+                teamId = TeamId("t1"), teamName = "Alpha Team",
+                title = "Join request rejected", message = "Your request to join team 'Alpha Team' was rejected.",
+                targetType = null, targetId = null,
+                read = false, timestamp = 1711929600000,
+            ),
+        ))
+        val client = notificationClient(notifications)
+        val vm = createViewModel(client)
+        setContent {
+            LaunchedEffect(Unit) { vm.loadIfNeeded() }
+            AppTheme {
+                NotificationsScreen(viewModel = vm, onNavigate = { navigatedScreen.set(it) }, onBack = {})
+            }
+        }
+        waitUntil(timeoutMillis = 3000L) {
+            onAllNodesWithText("Join request rejected").fetchSemanticsNodes().isNotEmpty()
+        }
+        onNodeWithTag("notification_item_n11").performClick()
+        waitForIdle()
+        // Should NOT have navigated
+        assertEquals(null, navigatedScreen.get())
     }
 }

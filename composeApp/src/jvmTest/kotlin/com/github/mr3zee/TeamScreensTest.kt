@@ -230,6 +230,91 @@ class TeamScreensTest {
         onNodeWithText("Join request submitted", useUnmergedTree = true).assertExists()
     }
 
+    // --- QA-TEAMLIST-4b: Pending join request shows "Requested" badge ---
+
+    @Test
+    fun `pending join request shows requested badge instead of join button`() = runComposeUiTest {
+        val client = HttpClient(MockEngine { request ->
+            val path = request.url.encodedPath
+            val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            when {
+                path.endsWith("/teams") -> respond(teamsListJson, status = HttpStatusCode.OK, headers = jsonHeaders)
+                path.endsWith("/me/invites") -> respond("""{"invites":[]}""", status = HttpStatusCode.OK, headers = jsonHeaders)
+                path.endsWith("/me/join-requests") -> respond(
+                    """{"requests":[{"id":"jr1","teamId":"t2","teamName":"Beta Squad","userId":"me","username":"me","status":"PENDING","createdAt":0}]}""",
+                    status = HttpStatusCode.OK, headers = jsonHeaders,
+                )
+                else -> respond("{}", status = HttpStatusCode.OK, headers = jsonHeaders)
+            }
+        }) {
+            install(ContentNegotiation) { json(AppJson) }
+            install(HttpCookies)
+            expectSuccess = true
+        }
+        val vm = TeamListViewModel(TeamApiClient(client))
+        setContent {
+            MaterialTheme {
+                TeamListScreen(
+                    viewModel = vm,
+                    onTeamClick = {},
+                    onTeamCreated = {},
+                    onMyInvites = {},
+                    memberTeamIds = setOf(TeamId("t1")),
+                )
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Alpha Team", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        // t1 is a member
+        onNodeWithTag("member_badge_t1", useUnmergedTree = true).assertExists()
+        // t2 has pending join request — should show "Requested" badge, NOT "Request to join" button
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("requested_badge_t2", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("requested_badge_t2", useUnmergedTree = true).assertExists()
+        onAllNodesWithText("Request to join", useUnmergedTree = true).assertCountEquals(0)
+    }
+
+    @Test
+    fun `request to join optimistically shows requested badge`() = runComposeUiTest {
+        val joinRequestJson = """{"id":"jr1","teamId":"t2","teamName":"Beta Squad","userId":"me","username":"me","status":"PENDING","createdAt":0}"""
+        val client = HttpClient(MockEngine { request ->
+            val path = request.url.encodedPath
+            val method = request.method
+            val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            when {
+                path.endsWith("/teams") -> respond(teamsListJson, status = HttpStatusCode.OK, headers = jsonHeaders)
+                path.endsWith("/me/invites") -> respond("""{"invites":[]}""", status = HttpStatusCode.OK, headers = jsonHeaders)
+                path.endsWith("/me/join-requests") && method == HttpMethod.Get -> respond("""{"requests":[]}""", status = HttpStatusCode.OK, headers = jsonHeaders)
+                path.endsWith("/teams/t2/join-requests") && method == HttpMethod.Post -> respond(joinRequestJson, status = HttpStatusCode.Created, headers = jsonHeaders)
+                else -> respond("{}", status = HttpStatusCode.OK, headers = jsonHeaders)
+            }
+        }) {
+            install(ContentNegotiation) { json(AppJson) }
+            install(HttpCookies)
+            expectSuccess = true
+        }
+        val vm = TeamListViewModel(TeamApiClient(client))
+        setContent {
+            MaterialTheme {
+                TeamListScreen(
+                    viewModel = vm,
+                    onTeamClick = {},
+                    onTeamCreated = {},
+                    onMyInvites = {},
+                    memberTeamIds = setOf(TeamId("t1")),
+                )
+            }
+        }
+
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithText("Request to join", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        // Click "Request to join" on t2
+        onNodeWithText("Request to join", useUnmergedTree = true).performClick()
+        // Should optimistically show "Requested" badge
+        waitUntil(timeoutMillis = 3000L) { onAllNodesWithTag("requested_badge_t2", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("requested_badge_t2", useUnmergedTree = true).assertExists()
+        // "Request to join" button should be gone
+        onAllNodesWithText("Request to join", useUnmergedTree = true).assertCountEquals(0)
+    }
+
     // --- QA-TEAMLIST-5: Empty search results state ---
 
     @Test

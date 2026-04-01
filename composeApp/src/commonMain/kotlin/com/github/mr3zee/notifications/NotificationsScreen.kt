@@ -333,6 +333,7 @@ private fun notificationTypeIcon(type: UserNotificationType): ImageVector = when
     UserNotificationType.RELEASE_COMPLETED -> Icons.Outlined.RocketLaunch
     UserNotificationType.TEAM_INVITE_RECEIVED -> Icons.Outlined.GroupAdd
     UserNotificationType.JOIN_REQUEST_DECIDED -> Icons.Outlined.PersonAdd
+    UserNotificationType.JOIN_REQUEST_RECEIVED -> Icons.Outlined.PersonAdd
     UserNotificationType.MEMBER_ROLE_CHANGED -> Icons.Outlined.ManageAccounts
     UserNotificationType.ACCOUNT_PENDING_APPROVAL -> Icons.Outlined.SupervisedUserCircle
     UserNotificationType.UNKNOWN -> Icons.Outlined.Notifications
@@ -345,6 +346,7 @@ private fun navigateToTarget(notification: UserNotification, onNavigate: (Screen
     return when (targetType) {
         "release" -> { onNavigate(Screen.ReleaseView(com.github.mr3zee.model.ReleaseId(targetId))); true }
         "team" -> { onNavigate(Screen.TeamDetail(com.github.mr3zee.model.TeamId(targetId))); true }
+        "team-manage" -> { onNavigate(Screen.TeamManage(com.github.mr3zee.model.TeamId(targetId))); true }
         "admin-users" -> { onNavigate(Screen.AdminUsers); true }
         else -> false
     }

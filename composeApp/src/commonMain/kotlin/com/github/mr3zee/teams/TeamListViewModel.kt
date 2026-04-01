@@ -59,6 +59,9 @@ class TeamListViewModel(
     // Map teamId -> inviteId for accepting invites directly from the list
     private val _pendingInviteByTeamId = MutableStateFlow<Map<TeamId, String>>(emptyMap())
 
+    private val _pendingJoinRequestTeamIds = MutableStateFlow<Set<TeamId>>(emptySet())
+    val pendingJoinRequestTeamIds: StateFlow<Set<TeamId>> = _pendingJoinRequestTeamIds
+
     private val pageSize = 50
 
     init {
@@ -68,6 +71,7 @@ class TeamListViewModel(
             }
         }
         loadPendingInvites()
+        loadPendingJoinRequests()
     }
 
     fun setSearchQuery(query: String) {
@@ -82,6 +86,7 @@ class TeamListViewModel(
             try {
                 loadTeamsInternal(silent = true)
                 loadPendingInvites()
+                loadPendingJoinRequests()
             } finally {
                 _isManualRefresh.value = false
             }
@@ -154,6 +159,18 @@ class TeamListViewModel(
         }
     }
 
+    private fun loadPendingJoinRequests() {
+        viewModelScope.launch {
+            try {
+                val response = apiClient.getMyJoinRequests()
+                _pendingJoinRequestTeamIds.value = response.requests.map { it.teamId }.toSet()
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                // Best effort — don't block team list if join requests fail to load
+            }
+        }
+    }
+
     private fun loadPendingInvites() {
         viewModelScope.launch {
             try {
@@ -193,6 +210,7 @@ class TeamListViewModel(
             _message.value = null
             try {
                 apiClient.submitJoinRequest(teamId)
+                _pendingJoinRequestTeamIds.value = _pendingJoinRequestTeamIds.value + teamId
                 _message.value = UiMessage.JoinRequestSubmitted
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e

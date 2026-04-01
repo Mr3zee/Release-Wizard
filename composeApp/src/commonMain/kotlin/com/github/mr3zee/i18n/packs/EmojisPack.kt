@@ -383,7 +383,7 @@ object EmojisPack {
             "releases_archive" to "\ud83d\udce6\ud83d\udcc2",
             "releases_archive_confirmation" to "\ud83d\udce6\ud83d\udcc2\ud83d\ude80\u274c\ud83d\udc41\ufe0f",
             "releases_artifacts" to "\ud83d\udce6\ud83d\udc8e",
-            "releases_block_output_entry" to $$"%1$s: %2$s",
+
             "releases_block_inputs" to "\ud83d\udce5",
             "releases_block_outputs" to "\ud83d\udce4",
             "releases_block_status" to $$"\ud83d\udcca %1$s",
@@ -551,6 +551,7 @@ object EmojisPack {
             "teams_manage" to "\u2699\ufe0f",
             "teams_manage_title" to "\u2699\ufe0f\ud83d\udc65",
             "teams_member_badge" to "\ud83c\udfc5",
+            "teams_requested_badge" to "\u23f3",
             "teams_members_count" to $$"\ud83d\udc65 (%1$d)",
             "teams_members_section" to "\ud83d\udc65",
             "teams_my_invites" to "\u2709\ufe0f\ud83d\udce5",

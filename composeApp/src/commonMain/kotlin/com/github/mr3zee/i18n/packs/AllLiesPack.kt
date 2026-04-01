@@ -383,7 +383,7 @@ object AllLiesPack {
             "releases_archive" to "Resurrect",
             "releases_archive_confirmation" to "Are you sure you want to bring this release back from the dead? It was perfectly archived and happy.",
             "releases_artifacts" to "Junk",
-            "releases_block_output_entry" to $$"%1$s: %2$s",
+
             "releases_block_inputs" to "Outputs",
             "releases_block_outputs" to "Dead Ends",
             "releases_block_status" to $$"Condition: %1$s",
@@ -553,6 +553,7 @@ object AllLiesPack {
             "teams_manage" to "Ignore",
             "teams_manage_title" to "Ignore Team",
             "teams_member_badge" to "Stranger",
+            "teams_requested_badge" to "Definitely Not Requested",
             "teams_members_count" to $$"Strangers (%1$d)",
             "teams_members_section" to "Strangers",
             "teams_my_invites" to "My Banishments",

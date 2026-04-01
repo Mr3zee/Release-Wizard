@@ -28,6 +28,7 @@ interface TeamService {
     suspend fun approveJoinRequest(teamId: TeamId, requestId: String, session: UserSession)
     suspend fun rejectJoinRequest(teamId: TeamId, requestId: String, session: UserSession)
 
+    suspend fun getMyJoinRequests(session: UserSession): JoinRequestListResponse
     suspend fun getMyInvites(session: UserSession): InviteListResponse
     suspend fun acceptInvite(inviteId: String, session: UserSession)
     suspend fun declineInvite(inviteId: String, session: UserSession)
@@ -199,7 +200,7 @@ class DefaultTeamService(
     // Join Requests
 
     override suspend fun submitJoinRequest(teamId: TeamId, session: UserSession): JoinRequest {
-        teamRepository.findById(teamId) ?: throw NotFoundException("Team not found")
+        val team = teamRepository.findById(teamId) ?: throw NotFoundException("Team not found")
         if (teamAccessService.isMember(teamId, session.userId)) {
             throw IllegalArgumentException("Already a member of this team")
         }
@@ -209,6 +210,13 @@ class DefaultTeamService(
         }
         val joinRequest = teamRepository.createJoinRequest(teamId, session.userId)
         auditService.log(teamId, session, AuditAction.JOIN_REQUEST_SUBMITTED, AuditTargetType.USER, session.userId, "Submitted join request")
+        try {
+            notificationGenerator.onJoinRequestSubmitted(session.userId, session.username, teamId, team.name)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
+            log.warn("Failed to generate join-request-submitted notification: {}", e.message)
+        }
         return joinRequest
     }
 
@@ -258,6 +266,12 @@ class DefaultTeamService(
         } catch (@Suppress("TooGenericExceptionCaught") e: Exception) {
             log.warn("Failed to generate join-request-rejected notification: {}", e.message)
         }
+    }
+
+    // My Join Requests (user-facing)
+
+    override suspend fun getMyJoinRequests(session: UserSession): JoinRequestListResponse {
+        return JoinRequestListResponse(requests = teamRepository.findPendingJoinRequestsByUser(session.userId))
     }
 
     // My Invites (user-facing)

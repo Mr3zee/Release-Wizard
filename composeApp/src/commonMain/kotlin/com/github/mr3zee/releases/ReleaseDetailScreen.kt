@@ -18,8 +18,11 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.github.mr3zee.components.RwButton
@@ -466,6 +469,38 @@ private fun BlockDetailPanel(
                     ),
             )
         }
+        // Sticky header: name + type | status | close
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = block.name,
+                    style = AppTypography.heading,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = block.typeLabel(),
+                    style = AppTypography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag("block_type_label"),
+                )
+            }
+            Text(
+                text = execution.status.displayName(),
+                style = AppTypography.label,
+                modifier = Modifier.testTag("block_status_text"),
+            )
+            RwButton(onClick = onDismiss, variant = RwButtonVariant.Ghost) {
+                Text(packStringResource(Res.string.common_close))
+            }
+        }
+
         val execScrollState = rememberScrollState()
         Box(modifier = Modifier.weight(1f, fill = false)) {
         Column(
@@ -474,45 +509,13 @@ private fun BlockDetailPanel(
                 .verticalScroll(execScrollState)
                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
         ) {
-            // Header row: name + type | status + duration | close
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = block.name,
-                        style = AppTypography.heading,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = block.typeLabel(),
-                        style = AppTypography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.testTag("block_type_label"),
-                    )
-                }
-                Text(
-                    text = execution.status.displayName(),
-                    style = AppTypography.label,
-                    modifier = Modifier.testTag("block_status_text"),
-                )
-                RwButton(onClick = onDismiss, variant = RwButtonVariant.Ghost) {
-                    Text(packStringResource(Res.string.common_close))
-                }
-            }
-
             if (block.description.isNotBlank()) {
-                Spacer(modifier = Modifier.height(Spacing.xs))
                 RwMarkdownText(
                     markdown = block.description,
                     modifier = Modifier.testTag("block_description_text"),
                 )
+                Spacer(modifier = Modifier.height(Spacing.sm))
             }
-
-            Spacer(modifier = Modifier.height(Spacing.sm))
 
             // Stop block inline confirmation
             RwInlineConfirmation(
@@ -633,30 +636,22 @@ private fun BlockDetailPanel(
                 Spacer(modifier = Modifier.height(Spacing.sm))
                 Text(
                     text = packStringResource(Res.string.releases_block_inputs),
-                    style = AppTypography.label,
+                    style = AppTypography.subheading,
                     modifier = Modifier.testTag("block_inputs_label"),
                 )
                 inputEntries.forEach { (key, value) ->
-                    Text(
-                        text = packStringResource(Res.string.releases_block_output_entry, key, value),
-                        style = AppTypography.bodySmall,
-                        modifier = Modifier.padding(start = Spacing.md),
-                    )
+                    KeyValueText(key = key, value = value, modifier = Modifier.padding(start = Spacing.md))
                 }
             }
             if (outputEntries.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(Spacing.sm))
                 Text(
                     text = packStringResource(Res.string.releases_block_outputs),
-                    style = AppTypography.label,
+                    style = AppTypography.subheading,
                     modifier = Modifier.testTag("block_outputs_label"),
                 )
                 outputEntries.forEach { (key, value) ->
-                    Text(
-                        text = packStringResource(Res.string.releases_block_output_entry, key, value),
-                        style = AppTypography.bodySmall,
-                        modifier = Modifier.padding(start = Spacing.md),
-                    )
+                    KeyValueText(key = key, value = value, modifier = Modifier.padding(start = Spacing.md))
                 }
             }
 
@@ -875,5 +870,20 @@ private fun WebhookStatusSection(block: Block, execution: BlockExecution, hasSub
             )
         }
     }
+}
+
+@Composable
+private fun KeyValueText(key: String, value: String, modifier: Modifier = Modifier) {
+    Text(
+        text = buildAnnotatedString {
+            withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) {
+                append(key)
+            }
+            append(": ")
+            append(value)
+        },
+        style = AppTypography.bodySmall,
+        modifier = modifier,
+    )
 }
 

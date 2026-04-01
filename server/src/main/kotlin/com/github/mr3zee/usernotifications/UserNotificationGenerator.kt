@@ -161,6 +161,34 @@ class UserNotificationGenerator(
         )
     }
 
+    suspend fun onJoinRequestSubmitted(
+        requestingUserId: String,
+        requestingUsername: String,
+        teamId: TeamId,
+        teamName: String,
+    ) {
+        val members = teamRepository.findMembers(teamId)
+        val teamLeadIds = members
+            .filter { it.role == TeamRole.TEAM_LEAD }
+            .map { it.userId.value }
+
+        for (leadId in teamLeadIds) {
+            repository.insert(
+                UserNotification(
+                    id = "",
+                    userId = leadId,
+                    type = UserNotificationType.JOIN_REQUEST_RECEIVED,
+                    teamId = teamId,
+                    teamName = sanitize(teamName),
+                    title = "Join request received",
+                    message = "User '${sanitize(requestingUsername)}' has requested to join team '${sanitize(teamName)}'.",
+                    targetType = "team-manage",
+                    targetId = teamId.value,
+                )
+            )
+        }
+    }
+
     suspend fun onJoinRequestDecided(
         requestingUserId: String,
         teamId: TeamId,
@@ -177,8 +205,8 @@ class UserNotificationGenerator(
                 teamName = sanitize(teamName),
                 title = "Join request $decision",
                 message = "Your request to join team '${sanitize(teamName)}' was $decision.",
-                targetType = "team",
-                targetId = teamId.value,
+                targetType = if (approved) "team" else null,
+                targetId = if (approved) teamId.value else null,
             )
         )
     }
